@@ -73,6 +73,7 @@ class AdbHandler(Handler, ChineseMixin):
             from app.v1.device_common.device_model import Device
             device_ip = Device(pk=self._model.pk).ip_address
         self.func(adb_cmd_prefix + "disconnect " + device_ip)
+        self.func(adb_cmd_prefix + "tcpip 5555")
         self.func(adb_cmd_prefix + "connect " + device_ip)
         self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
         self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")

@@ -1,0 +1,15 @@
+stages:
+  - deploy
+
+docker-deploy:
+  stage: deploy
+  script:
+    - whoami
+    - ssh root@10.80.13.138 python3 update.py
+    - ssh root@10.80.12.138 python3 update.py
+    - ssh root@10.80.11.138 python3 update.py
+    - ssh root@10.80.5.138 python3 update.py
+    - ssh root@10.80.1.138 python3 update.py
+
+  only:
+    - master

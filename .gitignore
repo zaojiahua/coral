@@ -1,0 +1,10 @@
+__pycache__/
+.idea/
+*log
+
+/app/config/secure.py
+/app/config/ip.py
+/app/config/local.py
+/adb.exe
+/AdbWinApi.dll
+/AdbWinUsbApi.dll

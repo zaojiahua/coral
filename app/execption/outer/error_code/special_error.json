@@ -1,0 +1,39 @@
+[
+  {
+    "error_code": -2,
+    "description": "adb protocol fault"
+  },{
+    "error_code": -3,
+    "description": "device not found，多见设备没连/连错wifi"
+  },{
+    "error_code": -5,
+    "description": "device offline"
+  },{
+    "error_code": -7,
+    "description": "unable to connet device，多见于设备没有从其他服务器正常移除就注册进来"
+  },{
+    "error_code": -16,
+    "description": "job内有无法识别的宏，--检查job内容"
+  },{
+    "error_code": -19,
+    "description": "无法找到中间文件（job前序缺少坐标等文件输出）"
+  },{
+    "error_code": -22,
+    "description": "job unit内缺失config文件，检查是否丢文件"
+  },{
+    "error_code": -23,
+    "description": "job 判定unit缺失input文件，（名字输入错误，手机内存满）"
+  },{
+    "error_code": -24,
+    "description": "job 判定unit缺失参考图片 --检查job"
+  },{
+    "error_code": -25,
+    "description": "1<surf <4 图标识别所圈特征过弱 换方法或圈大一点"
+  },{
+    "error_code": -26,
+    "description": "job unit内缺失范围选择文件--检查job"
+  },{
+    "error_code": -32,
+    "description": "job执行没有生成结果"
+  }
+]

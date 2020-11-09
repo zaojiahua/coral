@@ -1,0 +1,56 @@
+version: '3'
+
+services:
+  web:
+    container_name: machexec_container
+    build: .
+    ports:
+      - "5037:5037"
+    privileged: true
+    restart: always
+    depends_on:
+      - redis
+    volumes:
+      - /TMach_source/source:/app/source
+      - /TMach_source/Pacific:/app/Pacific
+      - /dev/bus/usb:/dev/bus/usb
+      - /TMach_source/coral-log:/app/coral-log/
+    networks:
+      tmach_net:
+        ipv4_address: 172.19.0.2
+
+  redis:
+    image: redis
+    restart: always
+    container_name: redis_container
+    command: redis-server --requirepass 123456
+    ports:
+      - "6378:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      tmach_net:
+        ipv4_address: 172.19.0.3
+  nginx:
+    container_name: nginx_container
+    build: ./nginx
+    restart: always
+    ports:
+      - "5000:80"
+      - "5001:81"
+    depends_on:
+      - web
+    volumes:
+      - /TMach_source/source:/media/
+    networks:
+      tmach_net:
+        ipv4_address: 172.19.0.4
+
+volumes:
+  redis_data:
+
+networks:
+  tmach_net:
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16

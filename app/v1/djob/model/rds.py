@@ -1,0 +1,16 @@
+from astra import models
+
+from app.libs.extension.field import OwnerList
+from app.libs.extension.model import BaseModel
+from app.v1.eblock.model.eblock import Eblock
+
+
+class RDS(BaseModel):
+    error = models.CharField()
+    is_error = models.BooleanField()
+    finish = models.BooleanField()
+    tboard = models.IntegerField()
+    error_msg = models.CharField()
+    eblock_list = OwnerList(to=dict)
+    last_node = models.CharField()
+    job_assessment_value = models.CharField()

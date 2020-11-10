@@ -288,6 +288,7 @@ class DoorKeeper(object):
             for i in range(3):
                 self.adb_cmd_obj.run_cmd(f"adb {num} shell setprop service.adb.tcp.port 5555")
                 self.adb_cmd_obj.run_cmd(f"adb {num} tcpip 5555")
+                time.sleep(1)
                 if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} shell getprop service.adb.tcp.port", "5555"):
                     return 0
             return -2

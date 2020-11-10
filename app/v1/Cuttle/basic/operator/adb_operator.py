@@ -107,7 +107,7 @@ class AdbHandler(Handler, ChineseMixin):
         from app.v1.device_common.device_model import Device
         result_list = result.split(mark)
         battery_level = int(result_list[0])
-        charging = False if result_list[1] == "Discharging" else True
+        charging = False if result_list[1] == "Discharging" or result_list[1].strip() == "Not charging" else True
         if int(battery_level) <= 10 and charging == False:
             on_or_off_singal_port({
                 "port": Device(pk=self._model.pk).power_port,

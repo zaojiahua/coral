@@ -4,7 +4,7 @@ from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 from app.v1.Cuttle.basic.setting import right_switch_percent
 
 
-class ComplexHandler(ImageHandler,AreaSelectedMixin):
+class ComplexHandler(ImageHandler, AreaSelectedMixin):
 
     def smart_ocr_point(self, info_body) -> int:
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
@@ -56,6 +56,13 @@ class ComplexHandler(ImageHandler,AreaSelectedMixin):
             ocr_obj.get_result_ignore_speed()
             ocr_obj.point()
         return ocr_obj.result
+
+    def initiative_remove_interference(self, *args):
+        # 主动清除异常方法，return 2
+        with Complex_Center(**self.kwargs) as ocr_obj:
+            ocr_obj.snap_shot()
+            self.image = ocr_obj.default_pic_path
+            return 2
 
     # 复合unit输入参数例子：
     # kwargs = {'model': Dummy_model, 'many': False, 'execCmdDict':

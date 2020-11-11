@@ -32,7 +32,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         "configArea": -26
     }
     # mark 为int 因为img func 返回int
-    process_list = [Abnormal(mark=1, method="clear", code=1)]
+    process_list = [Abnormal(mark=1, method="clear", code=1),
+                    Abnormal(mark=2, method="clear", code=0)]
 
     def img_compare_func3(self, exec_content, **kwargs) -> int:
         # 均值方差对比方法
@@ -256,11 +257,10 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def clear(self, *args):
         with Complex_Center(inputImgFile=self.image,**self.kwargs) as ocr_obj:
             ocr_obj.get_result(parse_function=self._parse_function)
-            for retry in range(3):
+            if ocr_obj.result == 0:
                 ocr_obj.point()
-                if ocr_obj.result == 0:
-                    return
-            return
+                return 0
+            return ocr_obj.result
 
     def model_order(self):
         # 暂时不对image进行排队处理

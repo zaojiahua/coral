@@ -201,7 +201,7 @@ class AideMonitor(object):
         if int(battery_data.get("devicepowers")[0].get("battery_level")) >= 100:
             self.logger.debug(f"battery is already full for device:{self.device_object.pk} ")
             self.do_action_for_battery(False)
-        elif int(battery_data.get("devicepowers")[0].get("battery_level")) <= 20:
+        elif int(battery_data.get("devicepowers")[0].get("battery_level")) <= 25:
             self.logger.debug(f"battery lower than 30% for device:{self.device_object.pk} ")
             self.do_action_for_battery(True)
         battery_list = []

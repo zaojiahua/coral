@@ -1,4 +1,5 @@
 import logging
+import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
@@ -15,7 +16,7 @@ from app.v1.Cuttle.basic.operator.camera_operator import camera_start_3
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict
-from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema
+from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema
 from app.v1.device_common.device_model import Device
 from app.v1.tboard.views.get_dut_progress import get_dut_progress_inner
 from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
@@ -164,3 +165,26 @@ class PaneBorderView(MethodView):
     def post(self):
         schema = OriginalPicSchema()
         return schema.load(request.get_json())
+
+
+class FilePushView(MethodView):
+    def post(self):
+        try:
+            file = request.files.get("image")
+            name = request.form.to_dict().get("name")
+            file.save(name)
+            subproc = subprocess.Popen("adb devices", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            restr = subproc.communicate()[0]
+            response = restr.strip().decode()
+            ip_list = []
+            for i in response.split("\n")[1:]:
+                item = i.split("\t")[0]
+                if "." in item:
+                    ip_list.append(item)
+            for ip in ip_list:
+                subproc = subprocess.Popen(f"adb -s {ip} push {name} /sdcard/DCIM/Screenshots/snap.jpg ",
+                                           shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                restr = subproc.communicate()[0]
+            return jsonify({"status": "ok"}), 200
+        except Exception as e:
+            return jsonify({"fail": repr(e)}), 400

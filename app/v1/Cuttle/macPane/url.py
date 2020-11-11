@@ -1,6 +1,6 @@
 from flask import Blueprint
 
-from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView
+from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, PaneConfigView, \
     PaneBorderView
 
@@ -38,3 +38,4 @@ pane.add_url_rule('/snap_shot/', view_func=PaneFunctionView.as_view('snap_shot_v
 pane.add_url_rule('/original_picture/', view_func=PaneOriginalView.as_view('original_picture_view'))
 pane.add_url_rule('/device_arm_camera/', view_func=PaneConfigView.as_view('device_in_slot'))
 pane.add_url_rule('/device_border/', view_func=PaneBorderView.as_view('device_border'))
+pane.add_url_rule('/file_push/', view_func=FilePushView.as_view('file_push'))

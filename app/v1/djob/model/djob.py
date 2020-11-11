@@ -365,7 +365,7 @@ class DJob(BaseModel):
             file_path = os.path.join(instance.device.rds_data_path, file_name)
 
             if os.path.getsize(file_path):
-                if job_assessment_value != 0:  # 针对正确的结果不推送文件
+                if int(job_assessment_value) != 0:  # 针对正确的结果不推送文件
                     if file_name.endswith((".png", ".jpg")):
                         json_data["file_name"] = file_name
 
@@ -400,6 +400,7 @@ class DJob(BaseModel):
 
         for djob_instance in instance.inner_job_list:
             rds_file_rename(djob_instance.device.rds_data_path, djob_instance.inner_job_index)
+            print("start reg----")
             self.push_log_and_pic(djob_instance, device, job, start_time, tboard, job_assessment_value, **kwargs)
 
     def fake_rds(self, e, error_traceback):

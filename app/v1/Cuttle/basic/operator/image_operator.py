@@ -7,7 +7,7 @@ import cv2
 import imageio
 import numpy as np
 
-from app.execption.outer.error_code.imgtool import ClearBouncedOK, OcrParseFail, VideoKeyPointNotFound
+from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNotFound
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin
 from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
@@ -75,7 +75,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         # 判断所选择区域内有指定文字
         words_list, path = self.words_prepare(exec_content, "requiredWords")
         # 此处不传递words给ocr service，避免不确定长度文字对结果的限制（会稍微影响速度）
-        with Complex_Center(inputImgFile=path,**self.kwargs) as ocr_obj:
+        with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             response = ocr_obj.get_result()
         identify_words_list = [item.get("text").strip().strip('",.\n') for item in response]
         for word in set(words_list):
@@ -89,7 +89,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def except_words(self, exec_content) -> int:
         # 判断所选择区域内没有有指定文字
         words_list, path = self.words_prepare(exec_content, "exceptWords")
-        with Complex_Center(inputImgFile=path,**self.kwargs) as ocr_obj:
+        with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             response = ocr_obj.get_result()
         identify_words_list = [item.get("text").strip('",.\n') for item in response]
         for word in set(words_list):
@@ -189,7 +189,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
 
     def match_words(self, data, input_path, point, refer=None, target=True):
         # 通过文字匹配单幅图片，return True说明匹配到，False 需要看下一张照片
-        with Complex_Center(inputImgFile=input_path,**self.kwargs) as ocr_obj:
+        with Complex_Center(inputImgFile=input_path, **self.kwargs) as ocr_obj:
             response = ocr_obj.get_result()
         identify_words_list = [item.get("text").strip().strip('",.\n') for item in response]
         response = self.words_judegment(data.get(f"{point}_words"), identify_words_list)
@@ -255,7 +255,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return words_list, path
 
     def clear(self, *args):
-        with Complex_Center(inputImgFile=self.image,**self.kwargs) as ocr_obj:
+        with Complex_Center(inputImgFile=self.image, **self.kwargs) as ocr_obj:
             ocr_obj.get_result(parse_function=self._parse_function)
             if ocr_obj.result == 0:
                 ocr_obj.point()
@@ -292,7 +292,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def _crop_image(self, image_path, area):
         try:
             image = cv2.imread(image_path)
-            if area[3] == area[2] == 0.99999 and area[0] == area[0] == 0 :
+            if area[3] == area[2] == 0.99999 and area[0] == area[0] == 0:
                 return image
             if any(np.array(area) < 1):
                 h, w = image.shape[:2]
@@ -319,7 +319,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def record_words(self, exec_content) -> int:
         data = self._validate(exec_content, ImageOutPutSchema)
         path = self._crop_image_and_save(data.get("refer_im"), data.get("areas")[0])
-        with Complex_Center(inputImgFile=path,**self.kwargs) as ocr_obj:
+        with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             self.image = path
             result = ocr_obj.get_result()
             words = result[0].get("text")

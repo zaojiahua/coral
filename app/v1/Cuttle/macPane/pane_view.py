@@ -182,7 +182,7 @@ class FilePushView(MethodView):
                 if "." in item:
                     ip_list.append(item)
             for ip in ip_list:
-                subproc = subprocess.Popen(f"adb -s {ip} push {name} /sdcard/DCIM/Screenshots/snap.jpg ",
+                subproc = subprocess.Popen(f"adb -s {ip} push {name} /sdcard/DCIM/Screenshots/{name} ",
                                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 restr = subproc.communicate()[0]
             return jsonify({"status": "ok"}), 200

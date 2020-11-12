@@ -201,7 +201,7 @@ class AideMonitor(object):
         if int(battery_data.get("devicepowers")[0].get("battery_level")) >= 100:
             self.logger.debug(f"battery is already full for device:{self.device_object.pk} ")
             self.do_action_for_battery(False)
-        elif int(battery_data.get("devicepowers")[0].get("battery_level")) <= 25:
+        elif int(battery_data.get("devicepowers")[0].get("battery_level")) <= 30:
             self.logger.debug(f"battery lower than 30% for device:{self.device_object.pk} ")
             self.do_action_for_battery(True)
         battery_list = []
@@ -214,7 +214,7 @@ class AideMonitor(object):
                 break
         return (battery_list, time_list)
 
-    def judge_4_charge(self, battery_data):
+    def  judge_4_charge(self, battery_data):
         """
         :return: 1 -->charge  0--> uncharge
         """
@@ -264,3 +264,6 @@ class AideMonitor(object):
                 if count >= 20:
                     stop_specific_device(self.device_object.device_label)
         return 1
+if __name__ == '__main__':
+    json = battery_data_transform
+    battery_data_transform()

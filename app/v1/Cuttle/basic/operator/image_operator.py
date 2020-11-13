@@ -9,6 +9,7 @@ import numpy as np
 
 from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNotFound
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
+from app.v1.Cuttle.basic.calculater_mixin.color_calculate import ColorMixin
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin
 from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
 from app.v1.Cuttle.basic.common_utli import get_file_name, threshold_set
@@ -23,7 +24,7 @@ from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_thre
 VideoSearchPosition = 0.5
 
 
-class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin):
+class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin,ColorMixin):
     _error_dict = {
         "configFile": -22,
         "inputImgFile": -23,

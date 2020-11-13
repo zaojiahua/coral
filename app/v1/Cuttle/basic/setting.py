@@ -13,6 +13,10 @@ icon_threshold = 25
 icon_threshold_camera = 10
 icon_rate = 500
 
+color_threshold = 60
+color_rate = 1500
+
+
 BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量
 
 Continues_Number = 1  # 连续多张判断准则，适用于性能测试
@@ -31,7 +35,7 @@ handler_config = {
     "swipe": ("AdbHandler", "HandHandler"),
     "snap_shot": ("AdbHandler", "CameraHandler")
 }
-
+strip_str = '<>[]{}/",.\n'
 # imageTool排除干扰词
 bounced_words = ["确定", "同意", "同意并继续", "暂不开启", "允许", "好的", "开始", "继续", "取消", "我知道了", "跳过", "以后再说", "仅使用期间允许", "始终允许",
-                 "下一步", "暂不升级", "不了，谢谢", "知道了","不开启"]
+                 "下一步", "暂不升级", "不了，谢谢", "知道了","不开启","仅在使用此应用时允许"]

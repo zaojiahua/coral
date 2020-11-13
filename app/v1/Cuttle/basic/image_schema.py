@@ -54,6 +54,10 @@ class ImageSchema(ImageBasicSchema):
 class ImageRealtimeSchema(ImageBasicSchema):
     input_im_2 = fields.String(required=True, data_key="inputImgFile2", validate=(vertify_exist, verify_image))
 
+class ImageColorSchema(ImageBasicSchema):
+    color = fields.String(required=True, data_key="color")
+
+
 class ImageAreaSchema(ImageSchema):
     area_config = fields.String(required=True, data_key="configArea", validate=vertify_exist)
 

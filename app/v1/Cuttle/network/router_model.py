@@ -169,7 +169,7 @@ class Router:
                 break
         if ip_index is None:
             logger.error("The index value for the specified IP was not found.")
-            return -1
+            return 2
         logger.debug(f"Get IP index:{ip_index}")
         return ip_index
 
@@ -208,6 +208,8 @@ class Router:
 
         if wait_to_unbind_ip_index == -1:
             return -1
+        if wait_to_unbind_ip_index == 2:
+            return 2
 
         unbind_data = {"method": "delete",
                        "params": {"key": f"key-{wait_to_unbind_ip_index}", "index": wait_to_unbind_ip_index,
@@ -220,6 +222,8 @@ class Router:
         if unbind_data_ret == -1:
             logger.error("Gettted unbind_data failed.")
             return -1
+        elif unbind_data_ret == 2:
+            return 0
         unbind_data_info, unbind_ip_index = unbind_data_ret
         unbind_response = requests.post(url=cls.req_static_url(), headers=cls.opt_headers(),
                                         data={"data": json.dumps(unbind_data_info)})

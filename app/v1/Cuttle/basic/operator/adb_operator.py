@@ -48,6 +48,18 @@ class AdbHandler(Handler, ChineseMixin):
             words = result.group(1)
             if self.is_chinese(words):
                 return True, self.chinese_support(words)
+        elif "input tap" in self.exec_content:
+            # 兼容点击相对坐标
+            regex = re.compile("shell input tap ([\d.]*?) ([\d.]*)")
+            result = re.search(regex, self.exec_content)
+            x = float(result.group(1))
+            y = float(result.group(2))
+            if any((x < 1, y < 1)):
+                from app.v1.device_common.device_model import Device
+                w = Device(pk=self._model.pk).device_width * x
+                h = Device(pk=self._model.pk).device_height * y
+                self.exec_content = self.exec_content.replace(str(x), str(w))
+                self.exec_content = self.exec_content.replace(str(y), str(h))
         return False, None
 
     def func(self, exec_content, **kwargs) -> str:

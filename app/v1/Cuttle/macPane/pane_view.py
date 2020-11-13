@@ -8,6 +8,7 @@ from flask.views import MethodView
 
 from app.config.ip import HOST_IP
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS
+from app.execption.outer.error_code.adb import DeviceBindFail
 from app.execption.outer.error_code.camera import ArmReInit, NoCamera, NoArm, RemoveBeforeAdd
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -17,6 +18,7 @@ from app.v1.Cuttle.basic.operator.hand_operate import hand_init
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema
+from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
 from app.v1.tboard.views.get_dut_progress import get_dut_progress_inner
 from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
@@ -79,10 +81,9 @@ class PaneDeleteView(MethodView):
             for ip in data.get("assistance_ip_address"):
                 h.disconnect(ip)
         # 解除路由器IP绑定 start after jsp finished
-
-        # res = unbind_spec_ip(data.get("ip_address"))
-        # if res != 0:
-        #     raise DeviceBindFail
+        res = unbind_spec_ip(data.get("ip_address"))
+        if res != 0:
+            raise DeviceBindFail
         return jsonify({"status": "success"}), 200
 
 

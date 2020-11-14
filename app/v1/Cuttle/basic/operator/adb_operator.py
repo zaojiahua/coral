@@ -34,7 +34,8 @@ class AdbHandler(Handler, ChineseMixin):
         Abnormal("daemon not running", "reconnect", -1),
         Abnormal("battery mark", "save_battery", 0),
         Abnormal("unable to connect", "reconnect", -7),
-        Abnormal("cpu", "save_cpu_info", 0)
+        Abnormal("cpu", "save_cpu_info", 0),
+        Abnormal("battery fail mark", "_get_battery_datil", 0)
     ]
 
     def before_execute(self, *args, **kwargs):
@@ -150,7 +151,13 @@ class AdbHandler(Handler, ChineseMixin):
     def after_unit(self):
         time.sleep(0.5)
 
-    def _get_battery_info(self, battery_path, device_label, logger):
+    def _get_battery_detail(self):
+        from app.v1.device_common.device_model import Device
+        device_ip = Device(pk=self._model.pk).ip_address
+        battery_detail = self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "shell dumpsys battery")
+        self._get_battery_info(battery_detail)
+
+    def _get_battery_info(self, battery_data):
         """
         标准格式：
             AC powered: false
@@ -183,42 +190,34 @@ class AdbHandler(Handler, ChineseMixin):
             else:
                 return item
 
-        with open(battery_path, "r", encoding="utf-8") as f:
-            ac_power, usb_power, battery_level = None, None, None
-            for line in f.readlines():
-                ac_power = get_value(ac_power, r"AC powered: (true|false)", line)
-                usb_power = get_value(usb_power, r"USB powered: (true|false)", line)
-                battery_level = get_value(battery_level, r"level: ([0-9]+)", line)
-                if ac_power is not None and usb_power is not None and battery_level is not None:
-                    break
+        print("here we go..")
+        ac_power, usb_power, battery_level = None, None, None
+        for line in battery_data.split("\n"):
+            ac_power = get_value(ac_power, r"AC powered: (true|false)", line.strip("\r"))
+            usb_power = get_value(usb_power, r"USB powered: (true|false)", line.strip("\r"))
+            battery_level = get_value(battery_level, r"level: ([0-9]+)", line.strip("\r"))
+            if ac_power is not None and usb_power is not None and battery_level is not None:
+                break
 
         if ac_power is None and usb_power is None:
-            logger.error("Get the battery.dat file but unable to obtain charge state")
+            self._model.logger.error("Get the battery.dat file but unable to obtain charge state")
             return
         if battery_level is None:
-            logger.error("Get the battery.dat file but unable to obtain power")
+            self._model.logger.error("Get the battery.dat file but unable to obtain power")
             return
         from app.v1.device_common.device_model import Device
-        if int(battery_level) <= 10:
-            on_or_off_singal_port({
-                "port": Device(pk=device_label).power_port,
-                "action": True
-            })
         from app.libs.http_client import request
         json_data = {
-            "device": Device(pk=device_label).id,
+            "device": Device(pk=self._model.pk).id,
             "cabinet": HOST_IP.split(".")[-2],
             "record_datetime": datetime.now(),
             "battery_level": int(battery_level),
             "charging": literal_eval(ac_power.capitalize()) or literal_eval(usb_power.capitalize())
         }
-        logger.debug(f"send battery info to reef:{json_data}")
-        file = open(battery_path, "rb")
+        self._model.logger.debug(f"send battery info to reef:{json_data}")
         try:
-            response = request(method="POST", url=battery_url, data=json_data,
-                               files={"battery_file": file})
-            logger.info(f"push battery to reef response:{response}")
+            response = request(method="POST", url=battery_url, data=json_data)
+            self._model.logger.info(f"push battery to reef response:{response}")
         except ServerError:
             pass
-        file.close()
         return 0

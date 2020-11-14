@@ -35,7 +35,7 @@ class AdbHandler(Handler, ChineseMixin):
         Abnormal("battery mark", "save_battery", 0),
         Abnormal("unable to connect", "reconnect", -7),
         Abnormal("cpu", "save_cpu_info", 0),
-        Abnormal("battery fail mark", "_get_battery_datil", 0)
+        Abnormal("battery fail mark", "_get_battery_detail", 0)
     ]
 
     def before_execute(self, *args, **kwargs):
@@ -151,7 +151,7 @@ class AdbHandler(Handler, ChineseMixin):
     def after_unit(self):
         time.sleep(0.5)
 
-    def _get_battery_detail(self):
+    def _get_battery_detail(self,*args):
         from app.v1.device_common.device_model import Device
         device_ip = Device(pk=self._model.pk).ip_address
         battery_detail = self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "shell dumpsys battery")

@@ -1,6 +1,5 @@
 import os
 import random
-import string
 
 import cv2
 
@@ -11,7 +10,7 @@ from app.libs.functools import handler_switcher
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec
-from app.v1.Cuttle.basic.setting import orc_server_ip
+from app.v1.Cuttle.basic.setting import orc_server_ip, chinese_ingore
 
 
 class Complex_Center(object):
@@ -31,6 +30,7 @@ class Complex_Center(object):
         self.mode = 0 if (device.has_arm is False and device.has_camera is False) else 1
         self.logger = setup_logger(f'coral-ocr', f'coral-ocr.log')
         self.kwargs = kwargs
+        self.crop_offset = [0, 0, device.device_width, device.device_height]
 
     def __enter__(self):
         return self
@@ -119,14 +119,18 @@ class Complex_Center(object):
 
     def cal_realy_xy(self, pic_x, pic_y, input_pic_path):
         from app.v1.device_common.device_model import Device
-        if Device(pk=self.device_label).has_camera:
+        device = Device(pk=self.device_label)
+        if device.has_camera:
             # 摄像头识别到的文字位置，需要根据手机屏幕与摄像头照片分辨率换算回实际手机上像素位置
             src = cv2.imread(input_pic_path)
             pic_h, pic_w = src.shape[:2]
-            device_width = Device(pk=self.device_label).device_width
-            device_height = Device(pk=self.device_label).device_height
+            device_width = device.device_width
+            device_height = device.device_height
             self.cx = pic_x * (device_width / pic_w)
             self.cy = pic_y * (device_height / pic_h)
+        elif self.crop_offset != [0, 0, device.device_width, device.device_height]:
+            self.cx = pic_x + int(self.crop_offset[0])
+            self.cy = pic_y + int(self.crop_offset[1])
         else:
             self.cx = pic_x
             self.cy = pic_y
@@ -172,7 +176,9 @@ class Complex_Center(object):
 
     @handler_switcher
     def point(self, **kwargs):
-        cmd_list = [f"shell input tap {self.cx + self.x_shift} {self.cy + self.y_shift}", "<4ccmd><sleep>0.5"]
+        cmd_list = [f"shell input tap {self.cx + self.x_shift} {self.cy + self.y_shift}"]
+        if kwargs.get("ignore_sleep") is not True:
+            cmd_list.append( "<4ccmd><sleep>0.5")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
         self.logger.info(f"in coral cor ready to point{self.cx+ self.x_shift},{self.cy+ self.y_shift}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
@@ -215,3 +221,11 @@ class Complex_Center(object):
             raise ComplexSnapShotFail(error_code=self.result,
                                       description=str(self.result))
         self.logger.debug("snap-shot in smart ocr finished ")
+
+    def picture_crop(self):
+        src = cv2.imread(self.default_pic_path)
+        h, w = src.shape[:2]
+        self.crop_offset = [0, int(h * chinese_ingore), w, h]
+        cv2.imwrite(self.default_pic_path,
+                    src[self.crop_offset[1]:self.crop_offset[3], self.crop_offset[0]:self.crop_offset[2]])
+        return 0

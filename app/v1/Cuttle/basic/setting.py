@@ -23,6 +23,8 @@ Continues_Number = 1  # 连续多张判断准则，适用于性能测试
 camera_w = 1280  # 摄像头拍摄分辨率，需要根据具体摄像头设置
 camera_h = 720
 
+chinese_ingore = 0.55
+
 right_switch_percent = 0.87
 
 CamObjList = []

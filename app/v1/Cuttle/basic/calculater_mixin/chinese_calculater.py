@@ -54,9 +54,10 @@ class ChineseMixin(object):
             # 先依次敲击9宫格键盘，输入内容
             for coor_tuple in coor_tuple_list:
                 ocr_obj.set_xy(*coor_tuple)
-                ocr_obj.point()
+                ocr_obj.point(ignore_sleep=True)
             # 再通过ocr的方式截图-识别-找到需要输入的词并点击
             ocr_obj.snap_shot()
+            ocr_obj.picture_crop()
             ocr_obj.get_result()
             ocr_obj.point()
         return ocr_obj.result

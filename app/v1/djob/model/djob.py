@@ -380,18 +380,16 @@ class DJob(BaseModel):
 
                         pic.close()
 
-                    elif file_name.endswith((".txt", ".log", ".json")):
-                        json_data["file_name"] = file_name
-
-                        log = open(file_path, "rb")
-
-                        try:
-                            request(method="POST", url=upload_rds_log_file_url, data=json_data,
-                                    files={"log_file": log})
-                        except APIException as e:
-                            instance.logger.error(f"{file_path} push failed: {e}")
-                            copyfile(file_path, os.path.join(ERROR_FILE_DIR, file_name))
-                        log.close()
+                if file_name.endswith((".txt", ".log", ".json")):
+                    json_data["file_name"] = file_name
+                    log = open(file_path, "rb")
+                    try:
+                        request(method="POST", url=upload_rds_log_file_url, data=json_data,
+                                files={"log_file": log})
+                    except APIException as e:
+                        instance.logger.error(f"{file_path} push failed: {e}")
+                        copyfile(file_path, os.path.join(ERROR_FILE_DIR, file_name))
+                    log.close()
 
         def rds_file_rename(path, prefix):
             for _file_name in os.listdir(path):

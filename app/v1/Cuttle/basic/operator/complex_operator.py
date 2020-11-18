@@ -1,3 +1,4 @@
+from app.execption.outer.error_code.imgtool import EndPointWrongFormat
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
@@ -63,6 +64,18 @@ class ComplexHandler(ImageHandler, AreaSelectedMixin):
             ocr_obj.snap_shot()
             self.image = ocr_obj.default_pic_path
             return 2
+
+    def press_and_swipe(self, info_body) -> int:
+        with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
+            ocr_obj.snap_shot()
+            self.image = ocr_obj.default_pic_path
+            ocr_obj.get_result()
+            try:
+                x_end, y_end = info_body.get("endPoint").split(" ")
+            except:
+                raise EndPointWrongFormat
+            ocr_obj.swipe(x_end, y_end, speed=20000, ignore_sleep=True)
+        return ocr_obj.result
 
     # 复合unit输入参数例子：
     # kwargs = {'model': Dummy_model, 'many': False, 'execCmdDict':

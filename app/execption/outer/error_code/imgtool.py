@@ -80,3 +80,11 @@ class IconTooWeek(APIException):
     error_code = 2010
     code = 400
     description = "icon is too week so that surf cannot find any descriptor"
+
+class EndPointWrongFormat(APIException):
+    """
+    复合unit内，偏移量格式错误，多见与多一个空格或写成小数
+    """
+    error_code = 2011
+    code = 400
+    description = "press and swipe end point get wrong format"

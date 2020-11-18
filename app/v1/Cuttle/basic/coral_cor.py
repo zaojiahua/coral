@@ -178,7 +178,7 @@ class Complex_Center(object):
     def point(self, **kwargs):
         cmd_list = [f"shell input tap {self.cx + self.x_shift} {self.cy + self.y_shift}"]
         if kwargs.get("ignore_sleep") is not True:
-            cmd_list.append( "<4ccmd><sleep>0.5")
+            cmd_list.append("<4ccmd><sleep>0.5")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
         self.logger.info(f"in coral cor ready to point{self.cx+ self.x_shift},{self.cy+ self.y_shift}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
@@ -186,17 +186,22 @@ class Complex_Center(object):
     @handler_switcher
     def long_press(self, **kwargs):
         cmd_list = [
-            f"shell input swipe {self.cx + self.x_shift} {self.cy + self.y_shift} {self.cx + self.x_shift} {self.cy + self.y_shift} 2000",
-            "<4ccmd><sleep>1"]
+            f"shell input swipe {self.cx + self.x_shift} {self.cy + self.y_shift} {self.cx + self.x_shift} {self.cy + self.y_shift} 2000"]
+        if kwargs.get("ignore_sleep") is not True:
+            cmd_list.append("<4ccmd><sleep>1")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
         self.logger.info(f"in coral cor ready to long press point{self.cx},{self.cy}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
 
     @handler_switcher
-    def swipe(self, x_end=0, y_end=0, **kwargs):
+    def swipe(self, x_end=None, y_end=None, **kwargs):
+        speed = kwargs.get("speed") if isinstance(kwargs.get("speed"), int) else 2000
+        x_end = self.cx if x_end is None else x_end
+        y_end = self.cy if y_end is None else y_end
         cmd_list = [
-            f"shell input swipe {self.cx} {self.cy} {self.cx + float(x_end)} {self.cy + float(y_end)}",
-            "<4ccmd><sleep>1"]
+            f"shell input swipe {self.cx} {self.cy} {float(x_end)} {float(y_end)} {speed}"]
+        if kwargs.get("ignore_sleep") is not True:
+            cmd_list.append("<4ccmd><sleep>1")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
         self.logger.info(
             f"in coral cor ready to swipe{self.cx, self.cy},{self.cx + float(x_end), self.cy + float(y_end)}")

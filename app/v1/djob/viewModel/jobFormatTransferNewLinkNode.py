@@ -44,8 +44,8 @@ class JobFormatTransform:
                 )
                 SwitchNextKeyDict = self.findSwitchNextKeyDict(originaldata['linkDataArray'], nodeDict['key'])
                 for k, v in SwitchNextKeyDict.items():
-                    if self.isEnd(v, originaldata['nodeDataArray']):  # 判断下一个执行块是否为End
-                        SwitchNextKeyDict[k] = 'end'
+                    value = self.checkEndORFailORSuccess(v, originaldata['nodeDataArray'])
+                    SwitchNextKeyDict[k] = value if value is not None else v
                 jobLinkDict[str(nodeDict['key'])] = self.switchNextLinkformat(SwitchNextKeyDict)
                 jobNodeDict[str(nodeDict['key'])] = blockDict
 

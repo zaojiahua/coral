@@ -176,11 +176,11 @@ class Complex_Center(object):
 
     @handler_switcher
     def point(self, **kwargs):
-        cmd_list = [f"shell input tap {self.cx + self.x_shift} {self.cy + self.y_shift}"]
+        cmd_list = [f"shell input tap {min(self.cx + self.x_shift,0)} {min(self.cy + self.y_shift,0)}"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>0.5")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
-        self.logger.info(f"in coral cor ready to point{self.cx+ self.x_shift},{self.cy+ self.y_shift}")
+        self.logger.info(f"in coral cor ready to point{min(self.cx + self.x_shift,0)},{min(self.cy + self.y_shift,0)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
 
     @handler_switcher

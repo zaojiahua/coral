@@ -176,7 +176,7 @@ class Complex_Center(object):
 
     @handler_switcher
     def point(self, **kwargs):
-        cmd_list = [f"shell input tap {min(self.cx + self.x_shift,0)} {min(self.cy + self.y_shift,0)}"]
+        cmd_list = [f"shell input tap {max(self.cx + self.x_shift,0)} {max(self.cy + self.y_shift,0)}"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>0.5")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)

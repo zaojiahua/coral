@@ -56,9 +56,9 @@ class FeatureCompareMixin:
         l = self.shape_identify(input_img, icon_img)
         if len(l) < 4:
             self._model.logger.error(f"Too few feature points：{len(l)}")
-            number = str(random.random())[:5]
-            cv2.imwrite(f"fail-image-{number}.jpg", input_img)
-            cv2.imwrite(f"fail-icon{number}.jpg", icon_img)
+            number = str(random.random())[:6]
+            cv2.imwrite(f"{number}-fail-image.jpg", input_img)
+            cv2.imwrite(f"{number}-fail-icon.jpg", icon_img)
             raise ValidationError(message={"identifyIconFail": "flann result less than 4 points"})
         self._model.logger.info(f" icon feature number:{len(l)}")
         code, centroids = FeatureCompareMixin.kmeans_clustering(l, 4)  # five centroids

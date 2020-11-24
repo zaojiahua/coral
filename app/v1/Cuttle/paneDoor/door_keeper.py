@@ -131,8 +131,8 @@ class DoorKeeper(object):
             logger.info("[get device info]: no device found")
             return {}
         screen_size = self.get_screen_size_internal(num)
+        phone_model = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.oppo.market.name")
         ret_dict = {
-            "phone_model_name": self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell getprop ro.build.product"),
             "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell getprop ro.board.platform"),
             "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell getprop ro.serialno"),
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
@@ -146,9 +146,11 @@ class DoorKeeper(object):
             "device_height": screen_size[1],
             "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
         }
+        ret_dict["phone_model_name"] = phone_model if phone_model is not "" else self.adb_cmd_obj.run_cmd_to_get_result(
+            f"adb {num} shell getprop ro.build.product"),
         color_os = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.opporom")
         rom_version = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.ota")
-        ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else\
+        ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
             self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")
         ret_dict = self._get_device_dpi(ret_dict, num)
         ret_dict["device_label"] = (
@@ -172,11 +174,13 @@ class DoorKeeper(object):
         if not self.is_device_connected():
             logger.info("[get device info]: no device found")
             raise DeviceNotInUsb
-        productName = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.product")
-        if "more than one" in productName:
+        phone_model = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.oppo.market.name")
+        if "more than one" in phone_model:
             raise NoMoreThanOneDevice
-        if "device not found" in productName:
+        if "device not found" in phone_model:
             raise DeviceNotInUsb
+        productName = phone_model if phone_model is not "" else self.adb_cmd_obj.run_cmd_to_get_result(
+            "adb -d shell getprop ro.build.product")
         ret_dict = {
             "productName": productName,
             "cpuName": self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.board.platform"),

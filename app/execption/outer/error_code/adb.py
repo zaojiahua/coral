@@ -28,7 +28,7 @@ class DeviceCannotSetprop(APIException):
 class DeviceRegisterInterrupt(APIException):
     error_code = 1004
     code = 400
-    description = "part of device finished registration, orders fail"
+    description = "part of device finished registration, others fail"
 
 
 class DeviceBindFail(APIException):

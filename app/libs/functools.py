@@ -99,7 +99,7 @@ def run_time(func):
         local_time = time.time()
         result = func(*args, **kw)
         all_time = time.time() - local_time
-        if all_time > 5:
+        if all_time > 8:
             logging.getLogger(REQUEST_LOG_TIME_STATISTICS).error(f'{kw}, time:{all_time}')
         return result
 

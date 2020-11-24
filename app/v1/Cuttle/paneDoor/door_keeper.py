@@ -146,14 +146,14 @@ class DoorKeeper(object):
             "device_height": screen_size[1],
             "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
         }
-        ret_dict["phone_model_name"] = phone_model if phone_model is not "" else self.adb_cmd_obj.run_cmd_to_get_result(
-            f"adb {num} shell getprop ro.build.product")
+        old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell getprop ro.build.product")
+        ret_dict["phone_model_name"] = phone_model if phone_model is not "" else old_phone_model
         color_os = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.opporom")
         rom_version = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.ota")
         ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
             self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")
         ret_dict = self._get_device_dpi(ret_dict, num)
-        ret_dict["device_label"] = ret_dict["phone_model_name"] + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"]
+        ret_dict["device_label"] = old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"]
 
         logger.info(f"[get device info] device info dict :{ret_dict}")
         return ret_dict
@@ -179,8 +179,8 @@ class DoorKeeper(object):
             raise NoMoreThanOneDevice
         if "device not found" in phone_model:
             raise DeviceNotInUsb
-        productName = phone_model if phone_model is not "" else self.adb_cmd_obj.run_cmd_to_get_result(
-            "adb -d shell getprop ro.build.product")
+        old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -d shell getprop ro.build.product")
+        productName = phone_model if phone_model is not "" else old_phone_model
         ret_dict = {
             "productName": productName,
             "cpuName": self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.board.platform"),
@@ -193,7 +193,7 @@ class DoorKeeper(object):
         romVersion = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.ota")
         ret_dict["buildInc"] = color_os + "_" + romVersion if romVersion is not "" and color_os is not "" else \
             self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")
-        ret_dict["deviceID"] = (ret_dict["productName"] + "---" + ret_dict["cpuName"] + "---" + ret_dict["cpuID"])
+        ret_dict["deviceID"] = (old_phone_model + "---" + ret_dict["cpuName"] + "---" + ret_dict["cpuID"])
         self._check_device_already_in_cabinet(ret_dict["deviceID"])
         phone_model_info_dict, status = self.is_new_phone_model(productName)
         if not status:

@@ -147,14 +147,14 @@ class DoorKeeper(object):
             "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
         }
         ret_dict["phone_model_name"] = phone_model if phone_model is not "" else self.adb_cmd_obj.run_cmd_to_get_result(
-            f"adb {num} shell getprop ro.build.product"),
+            f"adb {num} shell getprop ro.build.product")
         color_os = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.opporom")
         rom_version = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.ota")
         ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
             self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")
         ret_dict = self._get_device_dpi(ret_dict, num)
-        ret_dict["device_label"] = (
-                ret_dict["phone_model_name"] + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
+        ret_dict["device_label"] = ret_dict["phone_model_name"] + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"]
+
         logger.info(f"[get device info] device info dict :{ret_dict}")
         return ret_dict
 

@@ -13,6 +13,7 @@ from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Abnormal, Handler
+from app.v1.Cuttle.basic.setting import adb_disconnect_threshold
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 
 adb_cmd_prefix = "adb "
@@ -37,6 +38,7 @@ class AdbHandler(Handler, ChineseMixin):
         Abnormal("cpu", "save_cpu_info", 0),
         Abnormal("battery fail mark", "_get_battery_detail", 0)
     ]
+    discharging_mark_list = ["Discharging","Not charging"]
 
     def before_execute(self, *args, **kwargs):
         if self._model.is_connected == False:
@@ -81,7 +83,7 @@ class AdbHandler(Handler, ChineseMixin):
 
     def reconnect(self, *args):
         if self.kwargs.get("assist_device_serial_number"):
-            device_ip = self.kwargs.get("assist_device_serial_number")
+            return 0
         else:
             from app.v1.device_common.device_model import Device
             device_ip = Device(pk=self._model.pk).ip_address
@@ -91,6 +93,9 @@ class AdbHandler(Handler, ChineseMixin):
         self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
         self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
         self._model.is_connected = True
+        self._model.disconnect_times += 1
+        if self._model.disconnect_times >= adb_disconnect_threshold:
+            pass #todo send reef to set device disconnect
         return 0
 
     def disconnect(self, ip=None):
@@ -120,12 +125,13 @@ class AdbHandler(Handler, ChineseMixin):
         from app.v1.device_common.device_model import Device
         result_list = result.split(mark)
         battery_level = int(result_list[0])
-        charging = False if result_list[1] == "Discharging" or result_list[1].strip() == "Not charging" else True
+        charging = False if result_list[1].strip() in self.discharging_mark_list else True
         if int(battery_level) <= 10 and charging == False:
             on_or_off_singal_port({
                 "port": Device(pk=self._model.pk).power_port,
                 "action": True
             })
+        self._model.disconnect_times = 0
         try:
             json_data = {
                 "device": Device(pk=self._model.pk).id,
@@ -190,7 +196,6 @@ class AdbHandler(Handler, ChineseMixin):
             else:
                 return item
 
-        print("here we go..")
         ac_power, usb_power, battery_level = None, None, None
         for line in battery_data.split("\n"):
             ac_power = get_value(ac_power, r"AC powered: (true|false)", line.strip("\r"))
@@ -215,6 +220,7 @@ class AdbHandler(Handler, ChineseMixin):
             "charging": literal_eval(ac_power.capitalize()) or literal_eval(usb_power.capitalize())
         }
         self._model.logger.debug(f"send battery info to reef:{json_data}")
+        self._model.disconnect_times = 0
         try:
             response = request(method="POST", url=battery_url, data=json_data)
             self._model.logger.info(f"push battery to reef response:{response}")

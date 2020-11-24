@@ -7,6 +7,7 @@ from app.libs.log import setup_logger
 class AdbDevice(BaseModel):
     is_connected = models.BooleanField()
     is_busy = models.BooleanField()
+    disconnect_times = models.IntegerField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

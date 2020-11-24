@@ -5,7 +5,6 @@ import subprocess
 import sys
 import threading
 import time
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict
@@ -67,10 +66,23 @@ class DoorKeeper(object):
         if not dev_info_dict:
             raise DeviceNotInUsb
         if device_id != "" and device_id != dev_info_dict["device_label"]:
-            logger.warning("set device id is not equal with usb device")
+            logger.warning("set device idle is not equal with usb device")
             raise DeviceChanged
         self.open_wifi_service(num=num)
         return dev_info_dict
+
+    def reconnect_device(self, cpu_id):
+        if cpu_id is None or len(cpu_id) < 1:
+            return -1
+        real_cpu_id = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -d shell getprop ro.serialno")
+        if "more than one" in real_cpu_id:
+            raise NoMoreThanOneDevice
+        elif "device not found" in real_cpu_id:
+            raise DeviceNotInUsb
+        elif cpu_id != real_cpu_id and cpu_id is not None:
+            raise DeviceChanged
+        else:
+            return self.open_device_wifi_service()
 
     def open_wifi_service(self, num="-d"):
         rootable = self.is_device_rootable(num)
@@ -81,6 +93,7 @@ class DoorKeeper(object):
         if 0 != self.set_adb_wifi_property_internal(rootable, num):
             logger.error("Failed to set adb wifi property.")
             raise DeviceCannotSetprop
+        return 0
 
     def muti_register(self, device_name):
         error_happened = False
@@ -126,12 +139,17 @@ class DoorKeeper(object):
                 f"adb {num} shell getprop ro.build.version.release"),
             "rom_version": self.adb_cmd_obj.run_cmd_to_get_result(
                 f"adb {num} shell getprop ro.build.version.incremental"),
-            "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell getprop ro.product.manufacturer").capitalize(),
+            "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
+                f"adb {num} shell getprop ro.product.manufacturer").capitalize(),
             "ip_address": self.get_dev_ip_address_internal(num),
             "device_width": screen_size[0],
             "device_height": screen_size[1],
             "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
         }
+        color_os = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.opporom")
+        rom_version = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.ota")
+        ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else\
+            self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")
         ret_dict = self._get_device_dpi(ret_dict, num)
         ret_dict["device_label"] = (
                 ret_dict["phone_model_name"] + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
@@ -164,10 +182,13 @@ class DoorKeeper(object):
             "cpuName": self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.board.platform"),
             "cpuID": self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.serialno"),
             "buildVer": self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.release"),
-            "buildInc": self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental"),
             "ipAddress": self.get_dev_ip_address_internal("-d"),
             "startTimeKey": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         }
+        color_os = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.opporom")
+        romVersion = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.ota")
+        ret_dict["buildInc"] = color_os + "_" + romVersion if romVersion is not "" and color_os is not "" else \
+            self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")
         ret_dict["deviceID"] = (ret_dict["productName"] + "---" + ret_dict["cpuName"] + "---" + ret_dict["cpuID"])
         self._check_device_already_in_cabinet(ret_dict["deviceID"])
         phone_model_info_dict, status = self.is_new_phone_model(productName)

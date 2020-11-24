@@ -13,6 +13,8 @@ icon_threshold = 25
 icon_threshold_camera = 10
 icon_rate = 500
 
+adb_disconnect_threshold = 15
+
 color_threshold = 60
 color_rate = 1500
 

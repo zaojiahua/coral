@@ -3,6 +3,7 @@ import random
 
 import cv2
 
+from app.config.ip import OCR_IP
 from app.config.url import coral_ocr_url
 from app.execption.outer.error_code.imgtool import OcrRetryTooManyTimes, OcrParseFail, OcrWorkPathNotFound, \
     ComplexSnapShotFail, NotFindIcon, OcrShiftWrongFormat
@@ -10,7 +11,7 @@ from app.libs.functools import handler_switcher
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec
-from app.v1.Cuttle.basic.setting import orc_server_ip, chinese_ingore
+from app.v1.Cuttle.basic.setting import chinese_ingore
 
 
 class Complex_Center(object):
@@ -168,10 +169,10 @@ class Complex_Center(object):
         # if sys.platform.startswith("win"):
         if self.kwargs.get("ocr_choice") == 2:
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
-                               data=kwargs, ip=f"http://{orc_server_ip}:8090")
+                               data=kwargs, ip=f"http://{OCR_IP}:8090")
         else:
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
-                               data=kwargs, ip=f"http://{orc_server_ip}:8089")
+                               data=kwargs, ip=f"http://{OCR_IP}:8089")
         return response
 
     @handler_switcher

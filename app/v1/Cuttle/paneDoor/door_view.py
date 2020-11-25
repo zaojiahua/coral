@@ -59,7 +59,7 @@ class SetMutiDevice(DeviceBase):
 
 class OpenPort(DeviceBase):
     def post(self):
-        if 0 == self.door_keeper.reconnect_device(request.get_json().get("cpu_id")):
+        if request.get_json() is not None and 0 == self.door_keeper.reconnect_device(request.get_json().get("cpu_id")):
             return jsonify({"state": "DONE"}), 200
         else:
             return jsonify({"state": "Fail"}), 400

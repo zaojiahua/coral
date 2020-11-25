@@ -71,18 +71,22 @@ class DoorKeeper(object):
         self.open_wifi_service(num=num)
         return dev_info_dict
 
-    def reconnect_device(self, cpu_id):
-        if cpu_id is None or len(cpu_id) < 1:
+    def reconnect_device(self, device_label):
+        if device_label is None or len(device_label) < 1:
             return -1
         real_cpu_id = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -d shell getprop ro.serialno")
         if "more than one" in real_cpu_id:
             raise NoMoreThanOneDevice
         elif "device not found" in real_cpu_id:
             raise DeviceNotInUsb
-        elif cpu_id != real_cpu_id and cpu_id is not None:
+        elif device_label.split("---")[-1] != real_cpu_id and device_label.split("---")[-1] is not None:
             raise DeviceChanged
         else:
-            return self.open_device_wifi_service()
+            ip = self.get_dev_ip_address_internal("-d")
+            from app.v1.device_common.device_model import Device
+            res = request(method="PATCH", url=device_url+str(Device(pk=device_label).id)+"/", json={"ip_address": ip})
+            logger.info(f"response from reef: {res}")
+            return self.open_wifi_service()
 
     def open_wifi_service(self, num="-d"):
         rootable = self.is_device_rootable(num)
@@ -90,7 +94,8 @@ class DoorKeeper(object):
         if remountable == 2:
             rootable = self.is_device_rootable(num)
             self.is_device_remountable(num)
-        if 0 != self.set_adb_wifi_property_internal(rootable, num):
+        wifi_response = self.set_adb_wifi_property_internal(rootable, num)
+        if wifi_response != 0:
             logger.error("Failed to set adb wifi property.")
             raise DeviceCannotSetprop
         return 0
@@ -286,21 +291,21 @@ class DoorKeeper(object):
 
     def is_device_rootable(self, num="-d"):
         # "adbd is already running as root" or "restarting adbd as root" or "error: device not found"
-        if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} root", "already running", 3, 3):
+        if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} root", "already running", 1, 3):
             return True
         return False
 
     def is_device_remountable(self, num="-d"):
-        if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} remount", "remount succeeded", 3, 5):
+        if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} remount", "remount succeeded", 1, 5):
             return True
         else:
-            if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} disable-verity", "Verity disabled on /system", 3, 5):
-                self.adb_cmd_obj.run_cmd(f"adb {num} reboot")
-                logger.error("find authority problem already set adb disable-verity, now restart phone")
-                time.sleep(15)
-                return 2
-            else:
-                return False
+            # if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} disable-verity", "Verity disabled on /system", 3, 5):
+            #     self.adb_cmd_obj.run_cmd(f"adb {num} reboot")
+            #     logger.error("find authority problem already set adb disable-verity, now restart phone")
+            #     time.sleep(15)
+            #     return 2
+            # else:
+            return False
 
     def set_adb_wifi_property_internal(self, rootable, num="-d"):
         if rootable:

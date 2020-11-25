@@ -69,6 +69,7 @@ class DoorKeeper(object):
             logger.warning("set device idle is not equal with usb device")
             raise DeviceChanged
         self.open_wifi_service(num=num)
+        self.adb_cmd_obj.run_cmd_to_get_result(f"adb connect {dev_info_dict.get('ip_address')}")
         return dev_info_dict
 
     def reconnect_device(self, device_label):

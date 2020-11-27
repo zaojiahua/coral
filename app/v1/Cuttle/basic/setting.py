@@ -31,7 +31,6 @@ right_switch_percent = 0.87
 
 CamObjList = []
 normal_result = (False, None)
-orc_server_ip = "10.80.20.139"
 handler_config = {
     # 当复合unit中新增adb方法，需要更新此配置文件，指明其可能性
     "point": ("AdbHandler", "HandHandler"),

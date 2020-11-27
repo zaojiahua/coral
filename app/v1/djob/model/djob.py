@@ -242,7 +242,7 @@ class DJob(BaseModel):
     def _execute_switch(self, job_node):
         switch_node_dict = self.switch_node_dict
 
-        if switch_node_dict.setdefault(job_node.node_key, 0) >= 3:
+        if switch_node_dict.setdefault(job_node.node_key, 0) >= 5:
             # 如果任务执行循环是else分支会造成死循环，需要避免,因此采用向上抛出异常
             raise JobMaxRetryCycleException()
         else:

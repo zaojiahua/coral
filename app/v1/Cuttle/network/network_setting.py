@@ -2,7 +2,6 @@ import logging
 from app.config.ip import HOST_IP
 from app.config.log import NETWORK_LOG_NAME
 
-
 logger = logging.getLogger(NETWORK_LOG_NAME)
 
 ROUTER_IP = ".".join(HOST_IP.split('.')[:3]) + '.1'
@@ -13,3 +12,6 @@ is_route_using = False
 
 stok = None
 cookie = None
+
+new_stok = None
+NEWPASS = "4s3NyBzdUlUL80v"

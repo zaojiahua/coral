@@ -34,6 +34,9 @@ SUCCESS_TYPE = "success"
 FAILED_TYPE = "fail"
 START_TYPE = "start"
 
+# unit setting
+RESULT_TYPE = "#3AFFF3"  # 结果unit的标示
+
 # job exec result
 SUCCESS = 0
 FAILED = 1

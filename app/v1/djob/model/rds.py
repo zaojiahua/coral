@@ -13,4 +13,5 @@ class RDS(BaseModel):
     error_msg = models.CharField()
     eblock_list = OwnerList(to=dict)
     last_node = models.CharField()
+    is_use_result_unit = models.BooleanField()
     job_assessment_value = models.CharField()

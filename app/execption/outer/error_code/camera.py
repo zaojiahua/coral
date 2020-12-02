@@ -1,5 +1,9 @@
 from app.execption.outer.error import APIException
 
+"""
+定义的错误码范围(5000 ~ 5999)
+"""
+
 
 class NoSrc(APIException):
     """
@@ -22,12 +26,6 @@ class NoCamera(APIException):
     description = "camera id not found"
 
 
-class CameraInitFail(APIException):
-    error_code = 5005
-    code = 400
-    description = "HK camera init fail"
-
-
 class ArmReInit(APIException):
     error_code = 5003
     code = 400
@@ -38,3 +36,9 @@ class RemoveBeforeAdd(APIException):
     error_code = 5004
     code = 400
     description = "remove request must after add"
+
+
+class CameraInitFail(APIException):
+    error_code = 5005
+    code = 400
+    description = "HK camera init fail"

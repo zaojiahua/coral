@@ -1,5 +1,13 @@
 [
   {
+    "error_code": 0,
+    "description": "任务执行成功"
+  },
+  {
+    "error_code": 1,
+    "description": "任务执行失败"
+  },
+  {
     "error_code": -2,
     "description": "adb protocol fault"
   },{

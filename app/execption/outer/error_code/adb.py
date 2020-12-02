@@ -1,5 +1,9 @@
 from app.execption.outer.error import APIException
 
+"""
+定义的错误码范围(1000 ~ 1999)
+"""
+
 
 class NoMoreThanOneDevice(APIException):
     error_code = 1000

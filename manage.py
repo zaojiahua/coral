@@ -6,7 +6,7 @@ from werkzeug.exceptions import HTTPException
 from app.app import app
 from app.config.setting import TOTAL_LOG_NAME, LOG_DIR, BASE_DIR
 from app.execption.outer.error import APIException
-from app.execption.outer.error_code.total import ServerError
+from app.execption.outer.error_code.total import ServerError, RecvHttpException
 from app.libs.logresponse import LogResponse
 
 logger = logging.getLogger(TOTAL_LOG_NAME)
@@ -26,10 +26,7 @@ def global_error(error):
     if isinstance(error, HTTPException):
         logger.exception(f"HTTPException:{error}")
         logger.critical(f"HTTPException:{error}")
-        code = error.code
-        description = error.description
-        error_code = 1007
-        return APIException(description, code, error_code)
+        return RecvHttpException(description=error.description, code=error.code)
     else:
         logger.exception(f"unexpectedly Execption:{error}")
         logger.critical(f"unexpectedly Execption:{error}")

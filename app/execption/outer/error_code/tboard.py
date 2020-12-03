@@ -1,5 +1,9 @@
 from app.execption.outer.error_code.total import NotFound
 
+"""
+定义的错误码范围(8000 ~ 8999)
+"""
+
 
 class TboardNotExist(NotFound):
     error_code = 8001
@@ -20,6 +24,6 @@ class CreateTboardError(NotFound):
 
 
 class DutNotExist(NotFound):
-    error_code = 8101
+    error_code = 8004
     code = 404
     description = 'Dut not exist'

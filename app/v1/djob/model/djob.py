@@ -112,6 +112,8 @@ class DJob(BaseModel):
         # 当用户指定unit结果作为最终结果会将result赋值给job_assessment_value，作为最终结果值
         if self.job_assessment_value == "":
             self.job_assessment_value = self.computed_result()
+        else:  # 已经存在，说明结果unit事先声明设置了
+            self.rds.is_use_result_unit = True
         self.rds.job_assessment_value = self.job_assessment_value
         self.rds.finish = True
         self.end_time = datetime.now()

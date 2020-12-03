@@ -1,4 +1,5 @@
 from app.execption.outer.error_code.djob import InnerJobUnedited
+from app.v1.djob.config.setting import RESULT_TYPE
 
 
 class JobFormatTransform:
@@ -15,22 +16,22 @@ class JobFormatTransform:
                 jobLinkDict['start'] = self.findNextKey(originaldata['linkDataArray'], nodeDict['key'])
 
             elif nodeDict.get('category', '') == 'Job':  # Job
-                if nodeDict.get("jobLabel") is None:
+                if nodeDict.get('jobLabel') is None:
                     raise InnerJobUnedited()
-                jobNodeDict[str(nodeDict['key'])] = {"blockName": nodeDict.get('text'), "nodeType": "job",
-                                                     "jobLabel": nodeDict["jobLabel"],
-                                                     "jobId": nodeDict.get("jobId"),
-                                                     "assistDevice": nodeDict.get("assistDevice")}
+                jobNodeDict[str(nodeDict['key'])] = {'blockName': nodeDict.get('text'), 'nodeType': 'job',
+                                                     'jobLabel': nodeDict['jobLabel'],
+                                                     'jobId': nodeDict.get('jobId'),
+                                                     'assistDevice': nodeDict.get('assistDevice')}
                 jobLinkDict[str(nodeDict['key'])] = self.findNextLinkDict(originaldata, nodeDict['key'])
 
             elif nodeDict.get('category', '') == 'normalBlock':
                 if 'unitLists' not in nodeDict or not nodeDict['unitLists']:  # 判断存在并不为空
                     return -1
-                blockDict = dict(nodeType="normal")
+                blockDict = dict(nodeType='normal')
 
                 jobLinkDict[str(nodeDict['key'])] = self.findNextLinkDict(originaldata, nodeDict['key'])
 
-                blockDict['execDict'] = dict(unitLists=self.getUnitLists(nodeDict.get("unitLists", "")),
+                blockDict['execDict'] = dict(unitLists=self.getUnitLists(nodeDict.get('unitLists', '')),
                                              blockName=nodeDict.get('text')
                                              )
 
@@ -88,16 +89,20 @@ class JobFormatTransform:
         return UnitLists
 
     def getUnitList(self, UnitListKey, nodeDataArray):
-        unitDict = {"unitList": [], "key": UnitListKey}
+        unitDict = {'unitList': [], 'key': UnitListKey}
         for nodeDict in nodeDataArray:
             if str(nodeDict.get('group', '')) == UnitListKey:
                 try:
                     tempDict = nodeDict.get('unitMsg', '')
                 except:
                     return -1
+                if tempDict.get('finalResult'):  # 适配，之前会有这一行，需要保证全部删除，再进行设置
+                    del tempDict['finalResult']
+                if nodeDict.get("star") == RESULT_TYPE:  # 对结果unit进行设置
+                    tempDict['finalResult'] = True
                 tempDict['jobUnitName'] = nodeDict.get('text', '')
                 tempDict['key'] = nodeDict['key']
-                unitDict["unitList"].append(tempDict)
+                unitDict['unitList'].append(tempDict)
         return unitDict
 
     def findReferDatDict(self, linkdata):
@@ -106,8 +111,8 @@ class JobFormatTransform:
         :param linkdata:
         :return:
         """
-        if linkdata.get("referDatDict", None):
-            return dict(checkDict=dict(referDatDict=linkdata.get("referDatDict")))
+        if linkdata.get('referDatDict', None):
+            return dict(checkDict=dict(referDatDict=linkdata.get('referDatDict')))
 
     def findNextLinkDict(self, originaldata, key):
         """
@@ -117,7 +122,7 @@ class JobFormatTransform:
         :param key:
         :return:
         """
-        linkArray = originaldata.get("linkDataArray")
+        linkArray = originaldata.get('linkDataArray')
         for linkdata in linkArray:
             if str(key) == str(linkdata.get('from')):
                 nextKey = str(linkdata.get('to'))
@@ -180,12 +185,12 @@ class JobFormatTransform:
                     return True
 
         assert existEnd, (
-            "warning:can not find End block in job-flow-dict"
+            'warning:can not find End block in job-flow-dict'
         )
 
 
 if __name__ == '__main__':
     from app.libs import jsonutil
 
-    print(JobFormatTransform(jsonutil.read_json_file("ui.json")).jobDataFormat())
-    jsonutil.dump_json_file(JobFormatTransform(jsonutil.read_json_file("1.json")).jobDataFormat(), "2.json")
+    print(JobFormatTransform(jsonutil.read_json_file('ui.json')).jobDataFormat())
+    jsonutil.dump_json_file(JobFormatTransform(jsonutil.read_json_file('ui.json')).jobDataFormat(), '2.json')

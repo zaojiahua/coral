@@ -1,5 +1,9 @@
 from app.execption.outer.error import APIException
 
+"""
+定义的错误码范围(2000 ~ 2999)
+"""
+
 
 class OcrRetryTooManyTimes(APIException):
     """
@@ -80,6 +84,7 @@ class IconTooWeek(APIException):
     error_code = 2010
     code = 400
     description = "icon is too week so that surf cannot find any descriptor"
+
 
 class EndPointWrongFormat(APIException):
     """

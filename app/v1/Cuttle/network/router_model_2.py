@@ -55,7 +55,7 @@ class NewRouter:
                                "table": "dhcp_clients",
                                "para": {
                                    "start": "0",
-                                   "end": "1"
+                                   "end": "500"
                                }
                            }
                            })
@@ -233,6 +233,7 @@ class NewRouter:
 
 if __name__ == '__main__':
     NewRouter.get_stok()
+    print(NewRouter.client_table())
     # ret = NewRouter.bind_ip("10.81.3.5")
-    ret = NewRouter.unbind_ip("10.81.3.3")
-    print(ret)
+    # ret = NewRouter.unbind_ip("10.81.3.3")
+    # print(ret)

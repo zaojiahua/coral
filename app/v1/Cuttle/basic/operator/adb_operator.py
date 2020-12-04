@@ -38,7 +38,7 @@ class AdbHandler(Handler, ChineseMixin):
         Abnormal("cpu", "save_cpu_info", 0),
         Abnormal("battery fail mark", "_get_battery_detail", 0)
     ]
-    discharging_mark_list = ["Discharging","Not charging"]
+    discharging_mark_list = ["Discharging", "Not charging"]
 
     def before_execute(self, *args, **kwargs):
         if self._model.is_connected == False:
@@ -88,14 +88,14 @@ class AdbHandler(Handler, ChineseMixin):
             from app.v1.device_common.device_model import Device
             device_ip = Device(pk=self._model.pk).ip_address
         self.func(adb_cmd_prefix + "disconnect " + device_ip)
-        self.func(adb_cmd_prefix + "tcpip 5555")
+        self.func(adb_cmd_prefix + "-s " + device_ip + "tcpip 5555")
         self.func(adb_cmd_prefix + "connect " + device_ip)
         self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
         self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
         self._model.is_connected = True
         self._model.disconnect_times += 1
         if self._model.disconnect_times >= adb_disconnect_threshold:
-            pass #todo send reef to set device disconnect
+            pass  # todo send reef to set device disconnect
         return 0
 
     def disconnect(self, ip=None):
@@ -157,7 +157,7 @@ class AdbHandler(Handler, ChineseMixin):
     def after_unit(self):
         time.sleep(0.5)
 
-    def _get_battery_detail(self,*args):
+    def _get_battery_detail(self, *args):
         from app.v1.device_common.device_model import Device
         device_ip = Device(pk=self._model.pk).ip_address
         battery_detail = self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "shell dumpsys battery")

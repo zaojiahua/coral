@@ -120,9 +120,9 @@ class HandHandler(Handler, DefaultMixin):
 
 if __name__ == '__main__':
 
-    hand_serial_obj = HandSerial(timeout=2)
-    hand_serial_obj.connect(com_id="COM7")
-    hand_reset_orders = ['G01 X70.0Y-176.0Z8F15000 \r\n', 'G01 Z0F15000 \r\n',"G01 X10Y-120Z8F15000 \r\n"]
+    hand_serial_obj = HandSerial(timeout=1.8)
+    hand_serial_obj.connect(com_id="/dev/ttyACM0")
+    hand_reset_orders = ['G01 X70.0Y-176.0Z8F10000 \r\n', 'G01 Z0F10000 \r\n',"G01 X10Y-120Z8F10000 \r\n"]
     init = [
         "$x \r\n",
         "$h \r\n",

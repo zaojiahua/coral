@@ -48,6 +48,7 @@ class DJobWorker(BaseModel):
                     self.run_single_djob()
                     break
                 except Exception as ex:
+                    self.logger.exception(f" run single djob exception: {ex}")
                     error_traceback = traceback.format_exc()
                     error = ex
                     if not isinstance(ex, ClearBouncedOK) or (

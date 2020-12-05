@@ -240,6 +240,7 @@ class Device(models.Model):
         self.flag = False
 
     def start_device_sequence_loop(self, aide_monitor_instance):
+        self.logger.error(f"new device {self.device_label} into sequence_loop")
         # ------------------------Loop------------------------
         add_device_thread_status(self.device_label)
         while self.flag:

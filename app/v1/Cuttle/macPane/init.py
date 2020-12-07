@@ -92,6 +92,8 @@ def set_border(device_dict, device_obj):
         "phone_model": device_dict.get("phone_model").get("id")
     }
     res = request(url=coordinate_url, params=params)
+    if len(res) <1:
+        return
     device_obj.update_device_border(res[0])
     # y_border = (res.get("inside_upper_left_x") - res.get("outside_upper_left_x") + (
     #         res.get("outside_under_right_x") - res.get("inside_under_right_x"))) / 2

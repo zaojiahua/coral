@@ -15,7 +15,8 @@ from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import camera_dq_dict, CamObjList, normal_result
 
-from ctypes import cast, POINTER, byref, sizeof, memset, c_ubyte, cdll
+# from ctypes import cast, POINTER, byref, sizeof, memset, c_ubyte,
+from ctypes import *
 
 MoveToPress = 9
 FpsMax = 80
@@ -63,6 +64,7 @@ def camera_start_2(camera_id, device_object):
 def camera_start_3(camera_id, device_object):
     # HK摄像头
     response = camera_init_HK(1)
+    print(response)
     camera_start_HK(*response, device_object)
 
 
@@ -97,22 +99,30 @@ def camera_start_HK(data_buf, nPayloadSize, stFrameInfo, device_object):
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
         if ret == 0:
             stParam = MV_SAVE_IMAGE_PARAM_EX()
-            m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 2048
+            print(stParam)
+            m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 3000
             m_pBufForSaveImage = (c_ubyte * m_nBufSizeForSaveImage)()
+            # set xxsize in stparam to 0
             memset(byref(stParam), 0, sizeof(stParam))
             stParam.enImageType = MV_Image_Jpeg
             stParam.enPixelType = stFrameInfo.enPixelType
             stParam.nWidth = stFrameInfo.nWidth
             stParam.nHeight = stFrameInfo.nHeight
             stParam.nDataLen = stFrameInfo.nFrameLen
+
             stParam.pData = cast(byref(data_buf), POINTER(c_ubyte))
             stParam.pImageBuffer = cast(byref(m_pBufForSaveImage), POINTER(c_ubyte))
             stParam.nBufferSize = m_nBufSizeForSaveImage
             stParam.nJpgQuality = 80
             cam_obj.MV_CC_SaveImageEx2(stParam)
-            cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
-            image = np.asarray(m_pBufForSaveImage, dtype="uint8")
+            print(stParam.nImageLen)
+            # memory copy
+            cdll.msvcrt.memcpy(byref((c_ubyte * stParam.nImageLen)()), stParam.pImageBuffer, stParam.nImageLen)
+            image = np.asarray(stParam.pImageBuffer,dtype="uint8")
             dq.append(image)
+            cv2.namedWindow("aaa.jpg",cv2.WINDOW_NORMAL)
+            cv2.imshow("aaa.jpg",image)
+            cv2.waitKey(1)
         else:
             continue
         if g_bExit == True:
@@ -234,3 +244,8 @@ class CameraHandler(Handler):
                 return cv2.warpPerspective(src, after_transform, (height, weight))
         except IndexError as e:
             return np.zeros((1280, 720))
+
+if __name__ == '__main__':
+    import collections
+    FakeDevice = collections.namedtuple("fakeDevice", ["pk", "has_camera"])
+    camera_start_3(1,FakeDevice(0,True))

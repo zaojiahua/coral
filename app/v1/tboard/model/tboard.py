@@ -40,22 +40,25 @@ class TBoard(BaseModel):
                 dut.remove()
 
     def start_tboard(self, jobs):
+        try:
+            job_cache_proxy = JobCacheProxy(jobs)
+            job_cache_proxy.sync()
 
-        job_cache_proxy = JobCacheProxy(jobs)
-        job_cache_proxy.sync()
+            for job in jobs:
+                job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job['job_label']}.zip")
+                with zipfile.ZipFile(job_msg_name, 'r') as zip_ref:
+                    zip_ref.extractall(os.path.join(self.tboard_path, job["job_label"]))
+                if job.get("inner_job", []):
+                    for inner_job in job["inner_job"]:
+                        job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{inner_job['job_label']}.zip")
+                        with zipfile.ZipFile(job_msg_name, 'r') as zip_ref:
+                            zip_ref.extractall(os.path.join(self.tboard_path, inner_job["job_label"]))
 
-        for job in jobs:
-            job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job['job_label']}.zip")
-            with zipfile.ZipFile(job_msg_name, 'r') as zip_ref:
-                zip_ref.extractall(os.path.join(self.tboard_path, job["job_label"]))
-            if job.get("inner_job", []):
-                for inner_job in job["inner_job"]:
-                    job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{inner_job['job_label']}.zip")
-                    with zipfile.ZipFile(job_msg_name, 'r') as zip_ref:
-                        zip_ref.extractall(os.path.join(self.tboard_path, inner_job["job_label"]))
-
-        for dut in self.dut_list.smembers():
-            dut.start_dut()
+            for dut in self.dut_list.smembers():
+                dut.start_dut()
+        except Exception as e:
+            logger.error(e)
+            logger.exception(e)
 
     def send_tborad_finish(self):
         # 在多线程模式下，当前线程执行send_tborad_finish 会将tboard_id删除，tboard_id default 为0

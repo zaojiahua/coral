@@ -17,7 +17,7 @@ from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.djob.config.setting import NORMAL_TYPE, SWITCH_TYPE, END_TYPE, FAILED_TYPE, ADBC_TYPE, TEMPER_TYPE, \
-    IMGTOOL_TYPE, SUCCESS_TYPE, SUCCESS, FAILED, INNER_DJOB_TYPE, DJOB, ERROR_STACK, COMPLEX_TYPE, ERROR_FILE_DIR
+    IMGTOOL_TYPE, SUCCESS_TYPE, SUCCESS, FAILED, INNER_DJOB_TYPE, DJOB, COMPLEX_TYPE, ERROR_FILE_DIR
 from app.v1.djob.model.device import DjobDevice
 from app.v1.djob.model.job import Job
 from app.v1.djob.model.joblink import JobLink
@@ -432,8 +432,9 @@ class DJob(BaseModel):
         self.rds.tboard = self.tboard_id
         self.rds.job_assessment_value = self.job_assessment_value
         self.rds.is_error = True
-        if int(self.job_assessment_value) in ERROR_STACK:  # 内容过大，针对未知异常进行详细信息的保存
-            self.rds.error_msg = error_traceback
+        self.rds.error_msg = error_traceback
+        # if int(self.job_assessment_value) in ERROR_STACK:  # 内容过大，针对未知异常进行详细信息的保存
+        #     self.rds.error_msg = error_traceback
 
 
 if __name__ == "__main__":

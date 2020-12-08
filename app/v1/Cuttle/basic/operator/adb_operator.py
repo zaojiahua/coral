@@ -51,7 +51,7 @@ class AdbHandler(Handler, ChineseMixin):
             words = result.group(1)
             if self.is_chinese(words):
                 return True, self.chinese_support(words)
-        elif "input tap" in self.exec_content:
+        elif "input tap" in self.exec_content :
             # 兼容点击相对坐标
             regex = re.compile("shell input tap ([\d.]*?) ([\d.]*)")
             result = re.search(regex, self.exec_content)
@@ -83,7 +83,7 @@ class AdbHandler(Handler, ChineseMixin):
 
     def reconnect(self, *args):
         if self.kwargs.get("assist_device_serial_number"):
-            return 0
+            device_ip = self.kwargs.get("assist_device_serial_number")
         else:
             from app.v1.device_common.device_model import Device
             device_ip = Device(pk=self._model.pk).ip_address

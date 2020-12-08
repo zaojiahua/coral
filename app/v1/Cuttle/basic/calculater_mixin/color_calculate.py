@@ -1,10 +1,11 @@
 import os
-import  random
+import random
+
 import cv2
 import numpy as np
 
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
-from app.v1.Cuttle.basic.image_schema import ImageColorSchema
+from app.v1.Cuttle.basic.image_schema import ImageColorSchema, ImageMainColorSchema
 from app.v1.Cuttle.basic.setting import color_rate, color_threshold, strip_str
 
 
@@ -45,3 +46,20 @@ class ColorMixin(object):
             else:
                 return 1
         return 0
+
+    def is_main_excepted_color(self, exec_content) -> int:
+        # todo 尚未调试&添加对应unit
+        data = self._validate(exec_content, ImageMainColorSchema)
+        input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0]).astype(np.int32)
+        r_required, g_required, b_required = data.get("color").split(",")
+        image_flat = input_crop.reshape(-1, 3)
+        unmatch_number = 0
+        for pixel in image_flat:
+            b_input, g_input, r_input = cv2.split(pixel)
+            if max((b_input - int(b_required)), (g_input - int(g_required)), (r_input - int(r_required))) >= (
+                    1 - data.get("threshold", 0.99)) * color_rate:
+                unmatch_number += 1
+            if unmatch_number / len(image_flat) >= float(data.get("percent")):
+                return 1
+        else:
+            return 0

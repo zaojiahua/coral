@@ -57,6 +57,9 @@ class ImageRealtimeSchema(ImageBasicSchema):
 class ImageColorSchema(ImageBasicSchema):
     color = fields.String(required=True, data_key="color")
 
+class ImageMainColorSchema(ImageColorSchema):
+    percent = fields.String(required=True, data_key="percent")
+
 
 class ImageAreaSchema(ImageSchema):
     area_config = fields.String(required=True, data_key="configArea", validate=vertify_exist)

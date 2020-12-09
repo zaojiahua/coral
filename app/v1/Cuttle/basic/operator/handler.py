@@ -11,6 +11,7 @@ from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
+Standard = collections.namedtuple("Standard", ["mark","code"])
 
 Dummy_model = collections.namedtuple("Dummy_model", ["is_busy", "pk", "logger"])
 
@@ -18,6 +19,7 @@ Dummy_model = collections.namedtuple("Dummy_model", ["is_busy", "pk", "logger"])
 class Handler():
     process_list = []
     skip_list = []
+    standard_list = []
 
     def __init__(self, *args, **kwargs):
         self._model = kwargs.get("model", Dummy_model(False, 0, setup_logger(f'dummy', 'dummy.log')))
@@ -77,7 +79,7 @@ class Handler():
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:
-        # 此处参数result可能为str(adb),int(complex,hand,imgtool,camera)但返回值一定归结与int
+        # 此处参数result可能为str(adb，complex),int(complex,hand,imgtool,camera)但返回值一定归结与int
         # 默认后处理方法，对abnormal对象，根据条件进行处理，可按需要继承重写
         if funcname not in self.skip_list:
             for abnormal in self.process_list:
@@ -90,12 +92,15 @@ class Handler():
 
     @after_execute.register(str)
     def _(self, result, funcname):
-        # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配
+        # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
         if funcname not in self.skip_list:
             for abnormal in self.process_list:
-                if abnormal.mark in result:
+                if isinstance(abnormal.mark,str)and abnormal.mark in result:
                     getattr(self, abnormal.method)(result)
                     return abnormal.code
+            for standard in self.standard_list:
+                if standard.mark == result:
+                    return standard.code
         return 0
 
     def before_execute(self, **kwargs):

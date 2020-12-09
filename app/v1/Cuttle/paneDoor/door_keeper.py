@@ -291,8 +291,9 @@ class DoorKeeper(object):
         return True
 
     def is_device_rootable(self, num="-d"):
-        # "adbd is already running as root" or "restarting adbd as root" or "error: device not found"
-        if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} root", "already running", 1, 3):
+        # "adbd is already running as root" or "restarting adbd as root" or "error: device not found" or cannot run root in production mode
+        root_response = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} root", 3)
+        if "already running" in root_response or "restarting adbd" in root_response:
             return True
         return False
 

@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -112,8 +113,8 @@ class JobViewModel:
 
         if exec_job_body.get("jobNodesDict", None) is None or exec_job_body.get("jobLinksDict", None) is None:
             raise JobExecBodyException(description=f"not this job {self.job_label}")
-
-        self.node_dict = self.parse(exec_job_body.get("jobNodesDict", None))
+        # 这里必须进行深拷贝，不然会影响缓存中的数据
+        self.node_dict = self.parse(copy.deepcopy(exec_job_body.get("jobNodesDict", None)))
         self.link_dict = exec_job_body.get("jobLinksDict", None)
 
         if self.start_name not in self.link_dict.keys():

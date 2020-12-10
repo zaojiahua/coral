@@ -10,7 +10,7 @@ from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import camera_w, camera_h
 from app.v1.Cuttle.boxSvc.box_views import get_port_temperature
 from app.v1.device_common.device_manager import add_device_thread_status, remove_device_thread_status
-from app.v1.device_common.setting import key_map_position
+from app.v1.device_common.setting import key_map_position, default_key_map_position
 from app.v1.djob import DJobWorker
 from app.v1.stew.model.aide_monitor import send_battery_check
 from app.v1.tboard.model.dut import Dut
@@ -131,10 +131,18 @@ class Device(models.Model):
             if kwargs.get("avoid_push") is not True:
                 request(method="POST", url=device_create_update_url, json=self.data)
             self.flag = True
-            self.kx1, self.ky1, self.kx2, self.ky2 = key_map_position.get(self.phone_model_name,(178, 1394, 901, 1852))
+            self.kx1, self.ky1, self.kx2, self.ky2 = self._relative_to_absolute(
+                key_map_position.get(self.phone_model_name, default_key_map_position))
         except Exception as e:
             print(repr(e))
             func(self, **kwargs)  # 4
+
+    def _relative_to_absolute(self, coordinate):
+        if any((i < 1 for i in coordinate)):
+            coordinate = int(self.device_width * coordinate[0]), int(self.device_height * coordinate[1]), int(
+                self.device_width * coordinate[2]), int(self.device_height * coordinate[3])
+        return coordinate
+
 
     def _update_attr_from_cedar(self, **kwargs):
         self.logger.info(f"add device resource info:{kwargs}")

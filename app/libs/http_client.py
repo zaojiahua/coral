@@ -68,6 +68,8 @@ def _response_exec(response, filter_unique_key, error_log_hide, **kwargs):
                 logger.error(f"_response_exec exception: url: {response.url} detail: {error}")
             raise RequestException(description=f"url: {response.url} detail: {error}", code=response.status_code)
         except JSONDecodeError:
+            logger.error(f"response data is not json format, "
+                         f"url: {response.url} status_code: {response.status_code} detail: {getattr(response,'content', response)}")
             raise ServerError()
     try:
         result: dict = response.json()  # result 默认返回json
@@ -150,24 +152,10 @@ def request(method="GET", url="", **kwargs):
 
 
 if __name__ == '__main__':
-    v = {
-        "requestName": "insertDJob",
-        "DJobDict": {
-            "deviceID": "dior---msm8226---c1a65aca",
-            "jobID": "job-fa6fe5c1-7bfa-4615-a74d-0a43c100a399"
-        },
-        "djobSource": "Tbod",
-        "originTbodStamp": "2019-09-02 15:07:31.445181"
 
-    }
-
-    content = request_file("/media/ui_json/ui_LaNvQOn.json")
-    with open("2.json", "wb") as code:
-        code.write(content.content)
-
-    # a = request(
-    #     url="http://10.80.2.138:8000/api/v1/cedar/device/?fields=cabinet,ip_address,device_name,id,tempport&device_label=cactus---mt6765---65a4066f7d29",
-    #     filter_unique_key=True)
+    a = requests.get(
+        url="http://www.baidu.com")
+    print(a.json())
     # r = requests.request(method="POST", url='http://httpbin.org/put', data=[{'key': 'value'}])
     # print(a)
     # a = request(url="https://api.github.com/users/octocat/received_events")

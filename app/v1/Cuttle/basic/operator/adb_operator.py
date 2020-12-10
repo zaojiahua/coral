@@ -11,8 +11,9 @@ from app.config.setting import PROJECT_SIBLING_DIR
 from app.config.url import battery_url
 from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
+from app.v1.Cuttle.basic.calculater_mixin.abnormal_calculater import AbnormalMixin
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
-from app.v1.Cuttle.basic.operator.handler import Abnormal, Handler
+from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import adb_disconnect_threshold
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 
@@ -20,25 +21,23 @@ adb_cmd_prefix = "adb "
 if sys.platform.startswith("win"):
     coding = "utf-8"
     mark = "\r\n"
+    find_command = "findstr"
 else:
     coding = "utf-8"
     mark = "\n"
+    find_command = "grep"
 
 
-class AdbHandler(Handler, ChineseMixin):
-    process_list = [
-        # mark 为str 因为adb func 返回str
-        Abnormal(mark="restarting adbd as root", method="reconnect", code=-6),
-        Abnormal("device offline", "reconnect", -5),
-        Abnormal("not found", "reconnect", -3),
-        Abnormal("protocol fault", "reconnect", -2),
-        Abnormal("daemon not running", "reconnect", -1),
-        Abnormal("battery mark", "save_battery", 0),
-        Abnormal("unable to connect", "reconnect", -7),
-        Abnormal("cpu", "save_cpu_info", 0),
-        Abnormal("battery fail mark", "_get_battery_detail", 0)
-    ]
+class AdbHandler(Handler, ChineseMixin, AbnormalMixin):
     discharging_mark_list = ["Discharging", "Not charging"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.process_list.extend([
+            Abnormal("battery mark", "save_battery", 0),
+            Abnormal("cpu", "save_cpu_info", 0),
+            Abnormal("battery fail mark", "_get_battery_detail", 0)
+        ])
 
     def before_execute(self, *args, **kwargs):
         if self._model.is_connected == False:
@@ -88,7 +87,7 @@ class AdbHandler(Handler, ChineseMixin):
             from app.v1.device_common.device_model import Device
             device_ip = Device(pk=self._model.pk).ip_address
         self.func(adb_cmd_prefix + "disconnect " + device_ip)
-        self.func(adb_cmd_prefix + "-s " + device_ip + "tcpip 5555")
+        self.func(adb_cmd_prefix + "-s " + device_ip + " tcpip 5555")
         self.func(adb_cmd_prefix + "connect " + device_ip)
         self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
         self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")

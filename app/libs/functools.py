@@ -97,7 +97,14 @@ def method_dispatch(func):
 def run_time(func):
     def wrapper(*args, **kw):
         local_time = time.time()
-        result = func(*args, **kw)
+        try:
+            result = func(*args, **kw)
+        except Exception as e:
+            all_time = time.time() - local_time
+            logging.getLogger(REQUEST_LOG_TIME_STATISTICS).error(f'{func} runtime exception:{e}, \n'
+                                                                 f' {kw}, time:{all_time}')
+            raise e
+
         all_time = time.time() - local_time
         if all_time > 8:
             logging.getLogger(REQUEST_LOG_TIME_STATISTICS).error(f'{kw}, time:{all_time}')

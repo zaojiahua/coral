@@ -28,7 +28,7 @@ else:
     find_command = "grep"
 
 
-class AdbHandler(Handler, ChineseMixin, AbnormalMixin):
+class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
     discharging_mark_list = ["Discharging", "Not charging"]
 
     def __init__(self, *args, **kwargs):

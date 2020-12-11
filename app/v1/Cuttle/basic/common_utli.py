@@ -23,5 +23,24 @@ def handler_exec(request_body, handler_name):
     response = UnitFactory().create(handler_name, request_body)
     return response.get("result")
 
+
 def threshold_set(threshold):
     return (1 - threshold) * 100 * 15
+
+def precise_match(identify_words_list, words_list):
+    for word in set(words_list):
+        for indentify_word in set(identify_words_list):
+            if word == indentify_word:
+                break
+        else:
+            return 1
+    return 0
+
+def blur_match(identify_words_list, words_list):
+    for word in set(words_list):
+        for indentify_word in set(identify_words_list):
+            if word in indentify_word:
+                break
+        else:
+            return 1
+    return 0

@@ -46,7 +46,7 @@ def check_boot_up_reason():
 
 def clean_device(logger, executer):
     # todo change into one api when reef supported
-    param = {"status": "idle", "fields": "id,device_label"}
+    param = {"status": "idle", "fields": "id,device_label","cabinet_id":HOST_IP.split(".")[-2]}
     res = request(url=device_url, params=param)
     for device in res.get("devices"):
         executer.submit(send_device_leave_to_reef, device, logger).add_done_callback(executor_callback)

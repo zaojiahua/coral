@@ -63,8 +63,7 @@ def camera_start_2(camera_id, device_object):
 
 def camera_start_3(camera_id, device_object):
     # HK摄像头
-    response = camera_init_HK(1)
-    print(response)
+    response = camera_init_HK(3)
     camera_start_HK(*response, device_object)
 
 
@@ -77,7 +76,7 @@ def camera_init_HK(start_mode):
     stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
     check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
     check_result(CamObj.MV_CC_OpenDevice, start_mode, 0)
-    check_result(CamObj.MV_CC_StartGrabbing)
+    response = check_result(CamObj.MV_CC_StartGrabbing)
 
     stParam = MVCC_INTVALUE()
     memset(byref(stParam), 0, sizeof(MVCC_INTVALUE))
@@ -99,8 +98,7 @@ def camera_start_HK(data_buf, nPayloadSize, stFrameInfo, device_object):
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
         if ret == 0:
             stParam = MV_SAVE_IMAGE_PARAM_EX()
-            print(stParam)
-            m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 3000
+            m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 2048
             m_pBufForSaveImage = (c_ubyte * m_nBufSizeForSaveImage)()
             # set xxsize in stparam to 0
             memset(byref(stParam), 0, sizeof(stParam))
@@ -113,16 +111,11 @@ def camera_start_HK(data_buf, nPayloadSize, stFrameInfo, device_object):
             stParam.pData = cast(byref(data_buf), POINTER(c_ubyte))
             stParam.pImageBuffer = cast(byref(m_pBufForSaveImage), POINTER(c_ubyte))
             stParam.nBufferSize = m_nBufSizeForSaveImage
-            stParam.nJpgQuality = 80
+            stParam.nJpgQuality = 70
             cam_obj.MV_CC_SaveImageEx2(stParam)
-            print(stParam.nImageLen)
-            # memory copy
-            cdll.msvcrt.memcpy(byref((c_ubyte * stParam.nImageLen)()), stParam.pImageBuffer, stParam.nImageLen)
-            image = np.asarray(stParam.pImageBuffer,dtype="uint8")
+            #cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
+            image = np.asarray(m_pBufForSaveImage, dtype="uint8")
             dq.append(image)
-            cv2.namedWindow("aaa.jpg",cv2.WINDOW_NORMAL)
-            cv2.imshow("aaa.jpg",image)
-            cv2.waitKey(1)
         else:
             continue
         if g_bExit == True:

@@ -10,10 +10,11 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_ST
 def hand_init(arm_com_id, device_obj):
     """
     1. 解锁机械臂，并将机械臂移动至Home位置
-    2. 设置坐标模式为绝对值模式
+    2. 设置坐标模式为绝对值模式f
     3. 设置HOME点为操作原点
     :return:
     """
+    # todo ttyACM0-1 may changed when restart server or reconnect usb
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[device_obj.pk] = hand_serial_obj

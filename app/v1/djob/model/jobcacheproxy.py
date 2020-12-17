@@ -26,12 +26,15 @@ class JobCacheProxy:
         update_job_list = []
 
         for job in self.jobs:
-            if job_syn_resource_massage.get(job["job_label"]) != job["updated_time"]:
+            # 没有缓存的zip或zip需要更新
+            if not os.path.exists(os.path.join(JOB_SYN_RESOURCE_DIR, f"{job['job_label']}.zip")) \
+                    or job_syn_resource_massage.get(job["job_label"]) != job["updated_time"]:
                 update_job_list.append(job)
                 temp[(job["job_label"])] = job["updated_time"]
             if job.get("inner_job", []):
                 for inner_job in job["inner_job"]:
-                    if job_syn_resource_massage.get(inner_job["job_label"]) != inner_job["updated_time"]:
+                    if not os.path.exists(os.path.join(JOB_SYN_RESOURCE_DIR, f"{inner_job['job_label']}.zip")) \
+                            or job_syn_resource_massage.get(inner_job["job_label"]) != inner_job["updated_time"]:
                         update_job_list.append(inner_job)
                         temp[(inner_job["job_label"])] = inner_job["updated_time"]
 

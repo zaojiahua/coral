@@ -1,9 +1,9 @@
 import os
-import random
-
+import  random
 import cv2
 import numpy as np
 
+from app.v1.Cuttle.basic.common_utli import precise_match, blur_match
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageColorSchema, ImageMainColorSchema
 from app.v1.Cuttle.basic.setting import color_rate, color_threshold, strip_str
@@ -27,6 +27,14 @@ class ColorMixin(object):
 
     def is_excepted_color_words(self, exec_content) -> int:
         # 判断所选区域内文字为期待的颜色
+        identify_words_list, words_list = self._is_color_words(exec_content)
+        return precise_match(identify_words_list, words_list)
+
+    def is_excepted_color_word_blur(self, exec_content) -> int:
+        identify_words_list, words_list = self._is_color_words(exec_content)
+        return blur_match(identify_words_list, words_list)
+
+    def _is_color_words(self, exec_content):
         data = self._validate(exec_content, ImageColorSchema)
         input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0])
         r, g, b = (int(i) for i in data.get("color").split(","))
@@ -39,13 +47,8 @@ class ColorMixin(object):
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             response = ocr_obj.get_result()
         identify_words_list = [item.get("text").strip().strip(strip_str) for item in response]
-        for word in set(words_list):
-            for indentify_word in set(identify_words_list):
-                if word == indentify_word:
-                    break
-            else:
-                return 1
-        return 0
+        return identify_words_list, words_list
+
 
     def is_main_excepted_color(self, exec_content) -> int:
         # todo 尚未调试&添加对应unit

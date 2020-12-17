@@ -16,7 +16,7 @@ class AssistDeviceOrderError(APIException):
 
 class AssistDeviceNotFind(APIException):
     """
-    主机没有指定编号的僚机
+    主设备没有相应僚机编号的僚机设备
     """
     code = 400
     error_code = 4001

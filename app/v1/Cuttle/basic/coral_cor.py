@@ -210,8 +210,15 @@ class Complex_Center(object):
 
     def _shift(self, xyShift):
         try:
-            return (int(xyShift.split(" ")[0]), int(xyShift.split(" ")[1]))
-        except Exception:
+            x_shift = float(xyShift.split(" ")[0])
+            y_shift = float(xyShift.split(" ")[1])
+            if any((x_shift < 1, y_shift < 1)):
+                from app.v1.device_common.device_model import Device
+                x_shift = Device(pk=self.device_label).device_width * x_shift
+                y_shift = Device(pk=self.device_label).device_height * y_shift
+            return (int(x_shift), int(y_shift))
+        except Exception as e:
+            print(repr(e))
             raise OcrShiftWrongFormat
 
     @handler_switcher

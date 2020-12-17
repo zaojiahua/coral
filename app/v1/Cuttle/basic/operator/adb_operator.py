@@ -62,6 +62,23 @@ class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
                 h = Device(pk=self._model.pk).device_height * y
                 self.exec_content = self.exec_content.replace(str(x), str(w))
                 self.exec_content = self.exec_content.replace(str(y), str(h))
+        elif "input swipe" in self.exec_content:
+            regex = re.compile("shell input swipe ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*)")
+            result = re.search(regex, self.exec_content)
+            x1 = float(result.group(1))
+            y1 = float(result.group(2))
+            x2 = float(result.group(3))
+            y2 = float(result.group(4))
+            if any((x1 < 1, y2 < 1, x2 < 1, y2 < 1)):
+                from app.v1.device_common.device_model import Device
+                w1 = Device(pk=self._model.pk).device_width * x1
+                h1 = Device(pk=self._model.pk).device_height * y1
+                w2 = Device(pk=self._model.pk).device_width * x2
+                h2 = Device(pk=self._model.pk).device_height * y2
+                self.exec_content = self.exec_content.replace(str(x1), str(w1))
+                self.exec_content = self.exec_content.replace(str(y1), str(h1))
+                self.exec_content = self.exec_content.replace(str(y1), str(w2))
+                self.exec_content = self.exec_content.replace(str(y1), str(h2))
         return False, None
 
     def func(self, exec_content, **kwargs) -> str:

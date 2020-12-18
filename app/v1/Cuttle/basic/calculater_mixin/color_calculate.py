@@ -18,9 +18,9 @@ class ColorMixin(object):
         input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0]).astype(np.int32)
         b_input, g_input, r_input = cv2.split(input_crop)
         r_required, g_required, b_required = data.get("color").split(",")
-        differ_b = np.mean(np.abs(b_input)) - int(b_required)
-        differ_g = np.mean(np.abs(g_input)) - int(g_required)
-        differ_r = np.mean(np.abs(r_input)) - int(r_required)
+        differ_b = np.abs(np.mean(np.abs(b_input)) - int(b_required))
+        differ_g = np.abs(np.mean(np.abs(g_input)) - int(g_required))
+        differ_r = np.abs(np.mean(np.abs(r_input)) - int(r_required))
         self._model.logger.info(f"differ r g b :{differ_r} {differ_g} {differ_b}")
         result = 0 if (max(differ_b, differ_g, differ_r) - (1 - data.get("threshold", 0.99)) * color_rate) <= 0 else 1
         return result

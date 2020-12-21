@@ -10,7 +10,6 @@ from sklearn import preprocessing
 
 from app.config.url import user_url, device_url, job_url, rds_large_amount_url
 from app.execption.outer.error_code.total import RequestException
-
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 
@@ -57,8 +56,8 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
                       "earliest_used_time,phone_models,phone_models.phone_model_name,android_version,"
                       "android_version.version,rom_version,rom_version.version",
             "job_deleted": False,
-            "job_type": "Joblib"
-                        ""
+            "job_type": "Joblib",
+            "draft": False
         },
         "rdsPara": {
             "start_time__gt": str(datetime.now() - timedelta(days=5)),
@@ -183,7 +182,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
             return np.array(tmp_matrix).T, back_up_job_list
         except Exception as e:
             self.logger.error(f"exception happen in filter job ,info: {repr(e)}")
-            return [],[]
+            return [], []
 
     def calculate_matrix(self, rds_data_list, job_feature_list):
         # todo modify this function for adding job-lifetime and deltT into matrix

@@ -16,7 +16,6 @@ from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
 from app.v1.eblock.model.macro_replace import MacroHandler
 
 
-@lru_cache()
 def get_assist_device_ident(device_label, assist_device_serial_number):
     """
     获取主机下的僚机信息并返回,不存在则返回None

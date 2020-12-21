@@ -30,7 +30,7 @@
     "description": "job unit内缺失config文件，检查是否丢文件"
   },{
     "error_code": -23,
-    "description": "job 判定unit缺失input文件，（名字输入错误，手机内存满）"
+    "description": "job 判定unit缺失input文件截图丢失，（名字输入错误，手机内存满）"
   },{
     "error_code": -24,
     "description": "job 判定unit缺失参考图片 --检查job"

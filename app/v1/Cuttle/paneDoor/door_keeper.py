@@ -37,8 +37,8 @@ class DoorKeeper(object):
         dev_info_dict = self.open_device_wifi_service(kwargs.pop("deviceID"))
         # self.set_tmac_client_apk_internal(remountable)
         res = bind_spec_ip(dev_info_dict.get("ip_address"), dev_info_dict["device_label"])
-        # if res != 0:
-        #     raise DeviceBindFail
+        if res != 0:
+            raise DeviceBindFail
         # if kwargs.get("phone_model_id"):
         #     request(method="PATCH", url=phone_model_url+str(kwargs.get("phone_model_id"))+"/", json=kwargs)
         # elif kwargs:

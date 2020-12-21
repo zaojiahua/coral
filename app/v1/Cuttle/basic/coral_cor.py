@@ -222,7 +222,9 @@ class Complex_Center(object):
             f"pull /sdcard/snap.png {self.default_pic_path}"
         ]
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
-        self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
+        from app.v1.device_common.device_model import Device
+        device = Device(pk=self.device_label)
+        self.result = handler_exec(request_body, kwargs.get("handler")[1 if device.has_camera is True else 0])
         if self.result != 0:
             raise ComplexSnapShotFail(error_code=self.result,
                                       description=str(self.result))

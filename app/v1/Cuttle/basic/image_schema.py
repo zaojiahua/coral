@@ -51,8 +51,10 @@ class ImageOutPutSchema(ImageOriginalSchema):
 class ImageSchema(ImageBasicSchema):
     refer_im = fields.String(required=True, data_key="referImgFile", validate=(vertify_exist, verify_image))
 
+
 class ImageRealtimeSchema(ImageBasicSchema):
     input_im_2 = fields.String(required=True, data_key="inputImgFile2", validate=(vertify_exist, verify_image))
+
 
 class ImageColorSchema(ImageBasicSchema):
     color = fields.String(required=True, data_key="color")
@@ -72,9 +74,11 @@ class ImageAreaSchema(ImageSchema):
         data["crop_areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
         return data
 
+
 class ImageAreaWithoutInputSchema(ImageSchema):
     area_config = fields.String(required=True, data_key="configArea", validate=vertify_exist)
     input_im = fields.String(required=False, data_key="inputImgFile")
+
     @post_load()
     def explain(self, data, **kwargs):
         crop_area_path = data.get("area_config")
@@ -131,3 +135,34 @@ class VideoPicSchema(VideoBaseSchema):
         start_icon_config = data.get("start_icon_config")
         data = self._get_data(data, end_config_path, "end_icon")
         return self._get_data(data, start_icon_config, "start_icon")
+
+
+class IconTestSchema(Schema):
+    config_area = fields.Method(deserialize="load_config", data_key="configArea",required=False)
+    input_image = fields.Method(deserialize="load_picture", data_key="inputImgFile")
+    config_file = fields.Method(deserialize="load_config", data_key="configFile")
+
+    def load_config(self, value):
+        value.save(f"{value.filename}")
+        with open(f"{value.filename}", "r") as f:
+            content = json.load(f)
+        os.remove(value.filename)
+        return content
+
+    def load_picture(self, value):
+        value.save(f"{value.filename}")
+        return f"{value.filename}"
+
+    @post_load()
+    def explain(self, data, **kwargs):
+        area = data.get("config_file")
+        areas = [area["area" + str(i)] for i in range(1, len(area.keys())) if
+                 "area" + str(i) in area.keys()]
+        threshold = float(area.get("threshold", 0.99))
+        data["areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
+        data["threshold"] = threshold
+        crop_area = data.get("config_area")
+        areas = [crop_area["area" + str(i)] for i in range(1, len(crop_area.keys())) if
+                     "area" + str(i) in crop_area.keys()] if crop_area is not None else []
+        data["crop_areas"] = areas if areas != [] else [[1, 1, 1, 1]]
+        return data

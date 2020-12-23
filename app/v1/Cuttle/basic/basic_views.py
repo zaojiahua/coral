@@ -1,13 +1,17 @@
-import traceback
+from flask import request, jsonify
+
+from flask.views import MethodView
 
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.model import HandDevice, AdbDevice
+# 下面5条不可去掉
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import CameraHandler
 from app.v1.Cuttle.basic.operator.complex_operator import ComplexHandler
 from app.v1.Cuttle.basic.operator.hand_operate import HandHandler
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
+from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 
 
 # ------入口函数，使用with表达式生明对应handler和device，并显式调用execute方法-----
@@ -67,3 +71,30 @@ class UnitFactory(object):
         model_obj = model(is_busy=False, pk=pk, logger=setup_logger(f'{handler_type}-{pk}', f'{handler_type}-{pk}.log'))
         return eval(handler_type)(model=model_obj, many=isinstance(input_data.get('execCmdList'), list),
                                   **input_data).execute()
+
+
+class TestClass(MethodView):
+    def post(self):
+        try:
+            image_handler = ImageHandler(model=Dummy_model, many=False)
+            return jsonify(image_handler.test_icon_exist(request.files)), 200
+        except Exception as e:
+            return jsonify({"status": repr(e)}), 400
+
+
+if __name__ == '__main__':
+    test_dict = {
+        "execCmdDict": {
+            "configArea": {
+                "content": "<1ijobFile>Tmach ",
+            },
+            "configFile": {
+                "content": "<1ijobFile>Tmach ",
+            },
+            "inputImgFile": {
+                "content": "<blkOutPath>Tmach ",
+            },
+            "referImgFile": {
+                "content": "<1ijobFile>Tmach ",
+            }
+    }}

@@ -56,7 +56,7 @@ class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
             result = re.search(regex, self.exec_content)
             x = float(result.group(1))
             y = float(result.group(2))
-            if any((x < 1, y < 1)):
+            if any((0 < x < 1, 0 < y < 1)):
                 from app.v1.device_common.device_model import Device
                 w = Device(pk=self._model.pk).device_width * x
                 h = Device(pk=self._model.pk).device_height * y
@@ -69,7 +69,7 @@ class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
             y1 = float(result.group(2))
             x2 = float(result.group(3))
             y2 = float(result.group(4))
-            if any((x1 < 1, y2 < 1, x2 < 1, y2 < 1)):
+            if any((0 < x1 < 1, 0 < y2 < 1, 0 < x2 < 1, 0 < y2 < 1)):
                 from app.v1.device_common.device_model import Device
                 w1 = Device(pk=self._model.pk).device_width * x1
                 h1 = Device(pk=self._model.pk).device_height * y1

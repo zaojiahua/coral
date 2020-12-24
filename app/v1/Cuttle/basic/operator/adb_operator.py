@@ -77,8 +77,8 @@ class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
                 h2 = Device(pk=self._model.pk).device_height * y2
                 self.exec_content = self.exec_content.replace(str(x1), str(w1))
                 self.exec_content = self.exec_content.replace(str(y1), str(h1))
-                self.exec_content = self.exec_content.replace(str(y1), str(w2))
-                self.exec_content = self.exec_content.replace(str(y1), str(h2))
+                self.exec_content = self.exec_content.replace(str(x2), str(w2))
+                self.exec_content = self.exec_content.replace(str(y2), str(h2))
         return False, None
 
     def func(self, exec_content, **kwargs) -> str:

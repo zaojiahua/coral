@@ -150,6 +150,9 @@ class FeatureCompareMixin:
     def shape_identify(self, input_img, icon_img):
         kp1, des1 = self.feature_detection_by_surf(input_img)
         kp2, des2 = self.feature_detection_by_surf(icon_img)
+        if len(kp1) < 5 or len(kp2) < 5:
+            self._model.logger.error("Too few key points are detected on the picture to be compared.")
+            return 1
         good_match = self.fast_feature_matching_by_flann(des1, des2, 0.5)
         response = self.print_list(kp1, good_match) if good_match else []
         return response

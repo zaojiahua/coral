@@ -1,4 +1,5 @@
-from app.execption.inner.adb import UnknowHandler
+import cv2
+import numpy as np
 
 
 def get_file_name(path):
@@ -27,6 +28,7 @@ def handler_exec(request_body, handler_name):
 def threshold_set(threshold):
     return (1 - threshold) * 100 * 15
 
+
 def precise_match(identify_words_list, words_list):
     for word in set(words_list):
         for indentify_word in set(identify_words_list):
@@ -36,6 +38,7 @@ def precise_match(identify_words_list, words_list):
             return 1
     return 0
 
+
 def blur_match(identify_words_list, words_list):
     for word in set(words_list):
         for indentify_word in set(identify_words_list):
@@ -44,3 +47,10 @@ def blur_match(identify_words_list, words_list):
         else:
             return 1
     return 0
+
+
+def judge_pic_same(path_1, path_2):
+    src_1 = cv2.imread(path_1)
+    src_2 = cv2.imread(path_2)
+    difference = cv2.subtract(src_1, src_2)
+    return np.count_nonzero(difference) < (src_1.shape[0] * src_1.shape[1]) / 2000

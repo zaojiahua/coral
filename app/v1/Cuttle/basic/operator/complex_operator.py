@@ -1,8 +1,9 @@
 import subprocess
 import sys
 
-from app.execption.outer.error_code.imgtool import EndPointWrongFormat
+from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParseFail, SwipeAndFindWordsFail
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
+from app.v1.Cuttle.basic.common_utli import judge_pic_same
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.handler import Standard
@@ -14,7 +15,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     standard_list = [
         Standard("", 1)
     ]
-
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -119,3 +119,30 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     #      'work_path': 'D:\\Pacific\\chiron---msm8998---3613ef3d\\1599471222.1818228\\djobwork\\',
     #      'device_label': 'chiron---msm8998---3613ef3d'}
     # info_body = {'xyShift': '0 0', 'requiredWords': '蓝牙'}
+    def icon_found_with_direction(self, content):
+        # 自动找icon
+        from app.v1.device_common.device_model import Device
+        device_width = Device(pk=self._model.pk).device_width
+        device_height = Device(pk=self._model.pk).device_height
+        center_x = int(device_width / 2)
+        center_y = int(device_height / 2)
+        mapping_dict = {"left": (max((center_x - 400), 0), center_y),
+                        "right": (min((center_x + 400), device_width), center_y),
+                        "down": (center_x, (min((center_y + 450), device_height))),
+                        "up": (center_x, (max((center_y - 450), 0)))}
+        for i in range(8):
+            with Complex_Center(**content, **self.kwargs) as ocr_obj:
+                try:
+                    ocr_obj.snap_shot()
+                    if hasattr(self, "image") and judge_pic_same(ocr_obj.default_pic_path, self.image):
+                        raise SwipeAndFindWordsFail
+                    self.image = ocr_obj.default_pic_path
+                    ocr_obj.get_result()
+                    ocr_obj.point()
+                except OcrParseFail:
+                    ocr_obj.cx = center_x
+                    ocr_obj.cy = center_y
+                    x_end, y_end = mapping_dict.get(content.get("direction"), (900, 700))
+                    ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=500)
+                    continue
+            return ocr_obj.result

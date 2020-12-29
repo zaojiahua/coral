@@ -93,3 +93,9 @@ class EndPointWrongFormat(APIException):
     error_code = 2011
     code = 400
     description = "press and swipe end point get wrong format"
+
+class SwipeAndFindWordsFail(APIException):
+    error_code = 2012
+    code = 400
+    description = "can not find required words until swipe to the end"
+

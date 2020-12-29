@@ -57,10 +57,7 @@ class FeatureCompareMixin:
         l = self.shape_identify(input_img, icon_img)
         if len(l) < 4:
             self._model.logger.error(f"Too few feature points：{len(l)}")
-            number = str(random.random())[:6]
-            cv2.imwrite(f"{number}-fail-image.jpg", input_img)
-            cv2.imwrite(f"{number}-fail-icon.jpg", icon_img)
-            raise ValidationError(message={"identifyIconFail": "flann result less than 4 points"})
+            raise IconTooWeek
         self._model.logger.info(f" icon feature number:{len(l)}")
         code, centroids = FeatureCompareMixin.kmeans_clustering(l, 4)  # five centroids
         max_centro = Counter(code).most_common(1)[0][0]
@@ -155,7 +152,7 @@ class FeatureCompareMixin:
         if len(kp1) < 4 or len(kp2) < 4:
             if isinstance(self._model.logger, logging.Logger):
                 self._model.logger.error("Too few key points are detected on the picture to be compared.")
-            return []
+            raise IconTooWeek
         good_match = self.fast_feature_matching_by_flann(des1, des2, 0.5)
         response = self.print_list(kp1, good_match) if good_match else []
         return response

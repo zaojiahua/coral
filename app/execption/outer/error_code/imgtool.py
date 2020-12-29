@@ -79,7 +79,7 @@ class OcrShiftWrongFormat(APIException):
 
 class IconTooWeek(APIException):
     """
-    复合unit内，选区的图标特征过弱，一个特征点都没有，建议直接换方法
+    复合unit内，选区的图标特征过弱，特征点小于4个
     """
     error_code = 2010
     code = 400

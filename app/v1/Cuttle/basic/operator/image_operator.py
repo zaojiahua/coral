@@ -37,6 +37,11 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     process_list = [Abnormal(mark=1, method="clear", code=1),
                     Abnormal(mark=2, method="clear", code=0)]
 
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.skip_list.extend(AreaSelectedMixin.skip_list)
+
+
     def img_compare_func3(self, exec_content, **kwargs) -> int:
         # 均值方差对比方法
         data = self._validate(exec_content, ImageSchema)

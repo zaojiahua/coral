@@ -2,18 +2,29 @@ import subprocess
 import sys
 
 from app.execption.outer.error_code.imgtool import EndPointWrongFormat
-from app.v1.Cuttle.basic.calculater_mixin.abnormal_calculater import AbnormalMixin
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.handler import Standard
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
-from app.v1.Cuttle.basic.setting import right_switch_percent
+from app.v1.Cuttle.basic.setting import right_switch_percent, normal_result
 
 
-class ComplexHandler(ImageHandler, AreaSelectedMixin, AbnormalMixin):
+class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     standard_list = [
         Standard("", 1)
     ]
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.process_list.extend(AdbHandler.process_list)
+
+    def before_execute(self, **kwargs):
+        # 默认的前置处理方法，根据functionName找到对应方法
+        opt_type = self.exec_content.pop("functionName")
+        self.func = getattr(self, opt_type)
+        return normal_result
 
     def smart_ocr_point(self, content) -> int:
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
@@ -87,6 +98,7 @@ class ComplexHandler(ImageHandler, AreaSelectedMixin, AbnormalMixin):
 
     def has_adb_response(self, content) -> str:
         # return string类型，通过基类的after execute方法处理可能的异常
+        # 此方法在windows下和linux下区别很多，情况需要运行后发现再依次添加
         content = content.get("adbCommand")
         self._model.logger.debug(f"adb input:{content}")
         content = content.replace("grep", "findstr") if sys.platform.startswith("win") else content.replace("findstr",

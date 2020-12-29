@@ -1,3 +1,4 @@
+import logging
 import random
 from collections import Counter
 
@@ -108,7 +109,8 @@ class FeatureCompareMixin:
         search_params = dict(checks=50)
 
         flann = cv2.FlannBasedMatcher(index_params, search_params)  # 初始化flann匹配,为descriptor建立索引树
-        matches = flann.knnMatch(np.asarray(des1,np.float32), np.asarray(des2,np.float32), k=2)  # k值为2，对des1和des2进行knn匹配
+        matches = flann.knnMatch(np.asarray(des1, np.float32), np.asarray(des2, np.float32),
+                                 k=2)  # k值为2，对des1和des2进行knn匹配
 
         # 准备一个空mask存储goodmatches
         matches_mask = [[0, 0] for i in range(len(matches))]
@@ -150,15 +152,15 @@ class FeatureCompareMixin:
     def shape_identify(self, input_img, icon_img):
         kp1, des1 = self.feature_detection_by_surf(input_img)
         kp2, des2 = self.feature_detection_by_surf(icon_img)
-        if len(kp1) < 5 or len(kp2) < 5:
-            self._model.logger.error("Too few key points are detected on the picture to be compared.")
-            return 1
+        if len(kp1) < 4 or len(kp2) < 4:
+            if isinstance(self._model.logger, logging.Logger):
+                self._model.logger.error("Too few key points are detected on the picture to be compared.")
+            return []
         good_match = self.fast_feature_matching_by_flann(des1, des2, 0.5)
         response = self.print_list(kp1, good_match) if good_match else []
         return response
 
-
-    def print_list(self,kp1, good_match):
+    def print_list(self, kp1, good_match):
         return np.float32([kp1[kpp.queryIdx].pt for kpp in good_match])
 
 

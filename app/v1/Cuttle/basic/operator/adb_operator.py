@@ -11,7 +11,6 @@ from app.config.setting import PROJECT_SIBLING_DIR
 from app.config.url import battery_url
 from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
-from app.v1.Cuttle.basic.calculater_mixin.abnormal_calculater import AbnormalMixin
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import adb_disconnect_threshold
@@ -28,16 +27,22 @@ else:
     find_command = "grep"
 
 
-class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
+class AdbHandler(Handler, ChineseMixin):
     discharging_mark_list = ["Discharging", "Not charging"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.process_list.extend([
-            Abnormal("battery mark", "save_battery", 0),
-            Abnormal("cpu", "save_cpu_info", 0),
-            Abnormal("battery fail mark", "_get_battery_detail", 0)
-        ])
+    process_list = [
+        # mark 为str 因为adb func 返回str
+        Abnormal(mark="restarting adbd as root", method="reconnect", code=-6),
+        Abnormal("device offline", "reconnect", -5),
+        #  此处windows和linux 有较多区别，windows下不能保证完全正常运行
+        Abnormal("inaccessible or not found", "ignore", -8),
+        Abnormal("not found", "reconnect", -3),
+        Abnormal("protocol fault", "reconnect", -2),
+        Abnormal("daemon not running", "reconnect", -1),
+        Abnormal("unable to connect", "reconnect", -7),
+        Abnormal("battery mark", "save_battery", 0),
+        Abnormal("cpu", "save_cpu_info", 0),
+        Abnormal("battery fail mark", "_get_battery_detail", 0)
+    ]
 
     def before_execute(self, *args, **kwargs):
         if self._model.is_connected == False:
@@ -81,7 +86,7 @@ class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
                 self.exec_content = self.exec_content.replace(str(y2), str(h2))
         return False, None
 
-    def func(self, exec_content, **kwargs) -> str:
+    def str_func(self, exec_content, **kwargs) -> str:
         exec_content = self._compatible_sleep(exec_content)
         self._model.logger.debug(f"adb input:{exec_content}")
         if len(exec_content) == 0:
@@ -103,11 +108,11 @@ class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
         else:
             from app.v1.device_common.device_model import Device
             device_ip = Device(pk=self._model.pk).ip_address
-        self.func(adb_cmd_prefix + "disconnect " + device_ip)
-        self.func(adb_cmd_prefix + "-s " + device_ip + " tcpip 5555")
-        self.func(adb_cmd_prefix + "connect " + device_ip)
-        self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
-        self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
+        self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
+        self.str_func(adb_cmd_prefix + "-s " + device_ip + " tcpip 5555")
+        self.str_func(adb_cmd_prefix + "connect " + device_ip)
+        self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
+        self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
         self._model.is_connected = True
         self._model.disconnect_times += 1
         if self._model.disconnect_times >= adb_disconnect_threshold:
@@ -117,7 +122,7 @@ class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
     def disconnect(self, ip=None):
         from app.v1.device_common.device_model import Device
         device_ip = Device(pk=self._model.pk).ip_address if ip is None else ip
-        self.func(adb_cmd_prefix + "disconnect " + device_ip)
+        self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
         if hasattr(self._model, "is_connected"):
             self._model.is_connected = False
         return 0
@@ -176,7 +181,7 @@ class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
     def _get_battery_detail(self, *args):
         from app.v1.device_common.device_model import Device
         device_ip = Device(pk=self._model.pk).ip_address
-        battery_detail = self.func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "shell dumpsys battery")
+        battery_detail = self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "shell dumpsys battery")
         self._get_battery_info(battery_detail)
 
     def _get_battery_info(self, battery_data):
@@ -243,3 +248,6 @@ class AdbHandler(AbnormalMixin, Handler, ChineseMixin):
         except ServerError:
             pass
         return 0
+
+    def ignore(self, *args):
+        pass

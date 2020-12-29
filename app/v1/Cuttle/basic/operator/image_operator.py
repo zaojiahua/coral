@@ -24,7 +24,7 @@ from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_thre
 VideoSearchPosition = 0.5
 
 
-class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin,ColorMixin):
+class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin, ColorMixin):
     _error_dict = {
         "configFile": -22,
         "inputImgFile": -23,
@@ -34,7 +34,12 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     }
     # mark 为int 因为img func 返回int
     process_list = [Abnormal(mark=1, method="clear", code=1),
-                    Abnormal(mark=2, method="clear", code=0)]
+                                  Abnormal(mark=2, method="clear", code=0)]
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.skip_list.extend(AreaSelectedMixin.skip_list)
+
 
     def img_compare_func3(self, exec_content, **kwargs) -> int:
         # 均值方差对比方法

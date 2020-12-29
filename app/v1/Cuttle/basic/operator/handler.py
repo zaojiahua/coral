@@ -68,7 +68,7 @@ class Handler():
             return {"result": result}
         assert (hasattr(self, "func") and hasattr(self, "exec_content")), "func and exec_content should be set"
         try:
-            result = self.func(self.exec_content, **kwargs)
+            result = self.do(self.exec_content, **kwargs)
         except ValidationError as e:
             print(f"error message:{e.messages}")
             return {"result": self._error_dict[list(e.messages.keys())[0]]}
@@ -76,6 +76,15 @@ class Handler():
         if self.extra_result:
             response.update(self.extra_result)
         return response
+
+    @method_dispatch
+    def do(self, exec_content, **kwargs) :
+        return self.func(exec_content, **kwargs)
+
+    @do.register(str)
+    def _(self,exec_content, **kwargs):
+        return self.str_func(exec_content, **kwargs)
+
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:

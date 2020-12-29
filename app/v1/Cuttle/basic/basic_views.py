@@ -54,6 +54,7 @@ class UnitFactory(object):
     model_dict = {
         "HandHandler": HandDevice,
         "AdbHandler": AdbDevice,
+        "ComplexHandler": AdbDevice,
     }
 
     def __new__(cls, *args, **kwargs):

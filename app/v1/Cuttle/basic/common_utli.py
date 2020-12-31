@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from app.execption.outer.error_code.imgtool import ColorPositionCrossMax
+
 
 def get_file_name(path):
     return ".".join(path.split(".")[:-1])
@@ -54,3 +56,10 @@ def judge_pic_same(path_1, path_2):
     src_2 = cv2.imread(path_2)
     difference = cv2.subtract(src_1, src_2)
     return np.count_nonzero(difference) < (src_1.shape[0] * src_1.shape[1]) / 2000
+
+
+def check_color_by_position(src, x, y):
+    try:
+        return src[x][y]
+    except KeyError:
+        raise ColorPositionCrossMax

@@ -99,3 +99,8 @@ class SwipeAndFindWordsFail(APIException):
     code = 400
     description = "can not find required words until swipe to the end"
 
+class ColorPositionCrossMax(APIException):
+    error_code = 2013
+    code = 400
+    description = "color position exceed max border"
+

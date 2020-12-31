@@ -146,3 +146,5 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=500)
                     continue
             return ocr_obj.result
+
+

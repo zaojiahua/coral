@@ -127,14 +127,14 @@ class Complex_Center(object):
             pic_h, pic_w = src.shape[:2]
             device_width = device.device_width
             device_height = device.device_height
-            self.cx = pic_x * (device_width / pic_w)
-            self.cy = pic_y * (device_height / pic_h)
+            self.cx = int(pic_x * (device_width / pic_w))
+            self.cy = int(pic_y * (device_height / pic_h))
         elif self.crop_offset != [0, 0, device.device_width, device.device_height]:
-            self.cx = pic_x + int(self.crop_offset[0])
-            self.cy = pic_y + int(self.crop_offset[1])
+            self.cx = int(pic_x + int(self.crop_offset[0]))
+            self.cy = int(pic_y + int(self.crop_offset[1]))
         else:
-            self.cx = pic_x
-            self.cy = pic_y
+            self.cx = int(pic_x)
+            self.cy = int(pic_y)
 
     def add_bias(self, x_bias, y_bias):
         self.cx += x_bias

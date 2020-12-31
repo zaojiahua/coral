@@ -10,6 +10,28 @@ def vertify_exist(path):
         raise ValidationError('path not exist')
 
 
+def vertify_format(str):
+    coor_list = str.strip().split(" ")
+    if len(coor_list) != 2:
+        raise ValidationError('params wrong format --only one blank')
+    try:
+        for coor in coor_list:
+            if float(coor) > 5000:
+                raise ValidationError('need isdigit(<5000) parameters ')
+    except ValueError:
+        raise ValidationError('color coordinate should be digit')
+
+
+def vertify_not_relative_coor(str):
+    coor_list = str.strip().split(" ")
+    try:
+        for coor in coor_list:
+            if float(coor) < 1:
+                raise ValidationError('color coordinate should be absolutely')
+    except ValueError:
+        raise ValidationError('color coordinate should be digit')
+
+
 def verify_image(image_path):
     im = cv2.imread(image_path)
     if im is None:
@@ -27,6 +49,7 @@ class ImageOriginalSchema(Schema):
 
     @post_load()
     def explain(self, data, **kwargs):
+        print("test:schema:",data,kwargs)
         path = data.get("config")
         with open(path, "r") as json_file:
             json_data = json.load(json_file)
@@ -58,6 +81,12 @@ class ImageRealtimeSchema(ImageBasicSchema):
 
 class ImageColorSchema(ImageBasicSchema):
     color = fields.String(required=True, data_key="color")
+
+
+class ImageColorRelativePositionSchema(ImageSchema):
+    requiredWords = fields.String(required=True, data_key="requiredWords")
+    xyShift = fields.String(required=True, data_key="xyShift", validate=vertify_format)
+    position = fields.String(required=True, data_key="position", validate=(vertify_not_relative_coor, vertify_format))
 
 
 class ImageAreaSchema(ImageSchema):
@@ -138,7 +167,7 @@ class VideoPicSchema(VideoBaseSchema):
 
 
 class IconTestSchema(Schema):
-    config_area = fields.Method(deserialize="load_config", data_key="configArea",required=False)
+    config_area = fields.Method(deserialize="load_config", data_key="configArea", required=False)
     input_image = fields.Method(deserialize="load_picture", data_key="inputImgFile")
     config_file = fields.Method(deserialize="load_config", data_key="configFile")
 
@@ -163,6 +192,6 @@ class IconTestSchema(Schema):
         data["threshold"] = threshold
         crop_area = data.get("config_area")
         areas = [crop_area["area" + str(i)] for i in range(1, len(crop_area.keys())) if
-                     "area" + str(i) in crop_area.keys()] if crop_area is not None else []
+                 "area" + str(i) in crop_area.keys()] if crop_area is not None else []
         data["crop_areas"] = areas if areas != [] else [[1, 1, 1, 1]]
         return data

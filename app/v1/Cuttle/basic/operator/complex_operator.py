@@ -130,7 +130,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                         "right": (min((center_x + 400), device_width), center_y),
                         "down": (center_x, (min((center_y + 450), device_height))),
                         "up": (center_x, (max((center_y - 450), 0)))}
-        for i in range(8):
+        for i in range(15):
             with Complex_Center(**content, **self.kwargs) as ocr_obj:
                 try:
                     ocr_obj.snap_shot()
@@ -146,3 +146,5 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=500)
                     continue
             return ocr_obj.result
+        else:
+            return 1

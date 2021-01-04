@@ -156,6 +156,8 @@ class DoorKeeper(object):
         ret_dict["phone_model_name"] = phone_model if phone_model is not "" else old_phone_model
         color_os = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.opporom")
         rom_version = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.ota")
+        if len(rom_version) == 0:
+            rom_version = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.id")
         ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
             self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")
         ret_dict = self._get_device_dpi(ret_dict, num)
@@ -197,7 +199,7 @@ class DoorKeeper(object):
         }
         color_os = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.opporom")
         romVersion = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.ota")
-        if romVersion  ==  "":
+        if len(romVersion) == 0:
             romVersion = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.id")
         ret_dict["buildInc"] = color_os + "_" + romVersion if romVersion is not "" and color_os is not "" else \
             self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")

@@ -177,11 +177,12 @@ class Complex_Center(object):
 
     @handler_switcher
     def point(self, **kwargs):
-        cmd_list = [f"shell input tap {max(self.cx + self.x_shift,0)} {max(self.cy + self.y_shift,0)}"]
+        cmd_list = [f"shell input tap {max(self.cx + self.x_shift, 0)} {max(self.cy + self.y_shift, 0)}"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>0.5")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
-        self.logger.info(f"in coral cor ready to point{min(self.cx + self.x_shift,0)},{min(self.cy + self.y_shift,0)}")
+        self.logger.info(
+            f"in coral cor ready to point{min(self.cx + self.x_shift, 0)},{min(self.cy + self.y_shift, 0)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
 
     @handler_switcher
@@ -212,7 +213,7 @@ class Complex_Center(object):
         try:
             x_shift = float(xyShift.split(" ")[0])
             y_shift = float(xyShift.split(" ")[1])
-            if x_shift != 0 and y_shift != 0 and any((-1 < x_shift < 1, -1 < y_shift < 1)):
+            if all((-1 < x_shift < 1, -1 < y_shift < 1)):
                 from app.v1.device_common.device_model import Device
                 x_shift = Device(pk=self.device_label).device_width * x_shift
                 y_shift = Device(pk=self.device_label).device_height * y_shift

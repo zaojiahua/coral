@@ -62,9 +62,9 @@ class DoorKeeper(object):
         return id_list
 
     def get_already_connected_device_id_list(self):
-        response = request(url=device_url, params={"fields": "ip_address", "status__in": "ReefList[idle{%,%}busy]"})
+        response = request(url=device_url, params={"fields": "cpu_id", "status__in": "ReefList[idle{%,%}busy]"})
         id_list = response.get("devices")
-        return [i.get("ip_address") for i in id_list]
+        return [i.get("cpu_id") for i in id_list]
 
     def authorize_device_manually(self, **kwargs):
         length = np.hypot(kwargs.get("device_height"), kwargs.get("device_width"))

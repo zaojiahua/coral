@@ -212,7 +212,7 @@ class Complex_Center(object):
         try:
             x_shift = float(xyShift.split(" ")[0])
             y_shift = float(xyShift.split(" ")[1])
-            if any((-1 < x_shift < 1, -1 < y_shift < 1)):
+            if x_shift != 0 and y_shift != 0 and any((-1 < x_shift < 1, -1 < y_shift < 1)):
                 from app.v1.device_common.device_model import Device
                 x_shift = Device(pk=self.device_label).device_width * x_shift
                 y_shift = Device(pk=self.device_label).device_height * y_shift

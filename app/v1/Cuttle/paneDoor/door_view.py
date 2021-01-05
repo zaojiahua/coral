@@ -48,7 +48,7 @@ class SetDeviceManual(DeviceBase):
 
 class GetMutiDevice(DeviceBase):
     def get(self):
-        respnse_body = self.door_keeper.get_mutidevice_list()
+        respnse_body = self.door_keeper.get_device_connect_id(multi=True)
         return jsonify({"total_device_number": len(respnse_body)}), 200
 
 class SetMutiDevice(DeviceBase):

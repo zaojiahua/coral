@@ -249,7 +249,7 @@ class Device(models.Model):
         self.flag = False
 
     def start_device_sequence_loop(self, aide_monitor_instance):
-        self.logger.error(f"new device {self.device_label} into sequence_loop")
+        self.logger.info(f"new device {self.device_label} into sequence_loop")
         # ------------------------Loop------------------------
         add_device_thread_status(self.device_label)
         while self.flag:
@@ -278,4 +278,5 @@ class Device(models.Model):
                 time.sleep(2)
             except Exception as e:
                 self.logger.error(f"Exception in async_loop: {repr(e)}")
+                raise e
         self.logger.warning(f"--flag changed--：{self.flag}")

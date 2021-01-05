@@ -79,7 +79,7 @@ class OcrShiftWrongFormat(APIException):
 
 class IconTooWeek(APIException):
     """
-    复合unit内，选区的图标特征过弱，一个特征点都没有，建议直接换方法
+    复合unit内，选区的图标特征过弱，特征点小于4个
     """
     error_code = 2010
     code = 400
@@ -93,3 +93,14 @@ class EndPointWrongFormat(APIException):
     error_code = 2011
     code = 400
     description = "press and swipe end point get wrong format"
+
+class SwipeAndFindWordsFail(APIException):
+    error_code = 2012
+    code = 400
+    description = "can not find required words until swipe to the end"
+
+class ColorPositionCrossMax(APIException):
+    error_code = 2013
+    code = 400
+    description = "color position exceed max border"
+

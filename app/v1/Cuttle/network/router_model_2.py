@@ -142,18 +142,21 @@ class NewRouter:
 
     @staticmethod
     def spec_ip_mac(spec_ip, client_list):
-        ip_mac = ""
+        ip_info = {}
         # i : Dict
         for i in client_list:
             # client_info : Str
             for client_info in i:
                 if i[client_info]["ipaddr"] == spec_ip:
                     ip_mac = i[client_info].get("macaddr")
+                    ip_expires = i[client_info].get("expires")
+                    ip_info["ip_mac"] = ip_mac
+                    ip_info["ip_expires"] = ip_expires
                     break
-        if ip_mac == "":
+        if ip_info == {}:
             logger.error(f"Info for the specified IP was not found： {spec_ip}")
             return -1
-        return ip_mac
+        return ip_info
 
     @classmethod
     def static_table(cls):
@@ -192,12 +195,13 @@ class NewRouter:
     def bind_ip(cls, ip):
         client_list = cls.client_table()
         # 获取设备mac地址
-        ip_mac = cls.spec_ip_mac(ip, client_list)
-        if ip_mac == "":
+        ip_info = cls.spec_ip_mac(ip, client_list)
+        if ip_info == -1:
             logger.error(f"Getted MACaddr failed.")
             return -1
-
-        bind_data = cls.bind_data(ip_mac, ip)
+        if ip_info['ip_expires'] == "PERMANENT":
+            return 0
+        bind_data = cls.bind_data(ip_info['ip_mac'], ip)
         bind_response = requests.post(url=cls.req_url(),
                                       headers=cls.headers,
                                       data=bind_data)

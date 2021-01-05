@@ -6,6 +6,7 @@ from flask_cors import CORS
 
 from app.config.setting import EXPOSE_HEADERS, SERVER_INIT
 from app.libs.log import logger_init
+from app.v1.Cuttle.basic.url import basic
 from app.v1.Cuttle.boxSvc.url import resource
 from app.v1.Cuttle.macPane.init import pane_init
 from app.v1.Cuttle.macPane.url import pane
@@ -27,6 +28,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(resource, url_prefix='/resource')
     app.register_blueprint(door, url_prefix='/door')
     app.register_blueprint(pane, url_prefix='/pane')
+    app.register_blueprint(basic, url_prefix='/basic')
 
 
 def register_extensions(app):

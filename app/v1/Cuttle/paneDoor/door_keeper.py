@@ -1,5 +1,6 @@
 import logging
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -52,11 +53,12 @@ class DoorKeeper(object):
         return 0
 
     def get_connected_device_list(self, adb_response):
+        split = "\n" if platform.system() == "Windows" else "\r\n"
         id_list = []
-        for i in adb_response.split("\n")[1:]:
-            item = i.split("\t")[0]
+        for i in adb_response.split(split)[1:]:
+            item = i.split(" ")[0]
             if not "." in item and not "emulator" in item and not "no permissions" in item:
-                id_list.append(item)
+                id_list.append(item.strip().strip("\r\t"))
         return id_list
 
     def get_already_connected_device_id_list(self):
@@ -137,7 +139,7 @@ class DoorKeeper(object):
         screen_size = self.get_screen_size_internal(f"-s {s_id}")
         phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.oppo.market.name")
         old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
-        phone_model = phone_model if phone_model is not "" else old_phone_model
+        phone_model = phone_model if len(phone_model) != 0 else old_phone_model
         ret_dict = {
             "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.board.platform"),
             "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
@@ -195,7 +197,7 @@ class DoorKeeper(object):
         s_id = self.get_device_connect_id(multi=False)
         phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.oppo.market.name")
         old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
-        productName = phone_model if phone_model is not "" else old_phone_model
+        productName = phone_model if len(phone_model) != 0 else old_phone_model
         ret_dict = {
             "productName": productName,
             "cpuName": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.board.platform"),
@@ -210,15 +212,14 @@ class DoorKeeper(object):
         #     romVersion = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.id")
         # ret_dict["buildInc"] = color_os + "_" + romVersion if romVersion is not "" and color_os is not "" else \
         #     self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.incremental")
-        # ret_dict["deviceID"] = (old_phone_model + "---" + ret_dict["cpuName"] + "---" + ret_dict["cpuID"])
-        # self._check_device_already_in_cabinet(ret_dict["deviceID"])
+        ret_dict["deviceID"] = (old_phone_model + "---" + ret_dict["cpuName"] + "---" + ret_dict["cpuID"])
+        self._check_device_already_in_cabinet(ret_dict["deviceID"])
         phone_model_info_dict, status = self.is_new_phone_model(productName)
         if not status:
             ret_dict.update(phone_model_info_dict)
         else:
             ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         logger.info(f"[get device info] device info dict :{ret_dict}")
-        # ret_dict["phone_model_id"] = ret_dict.pop("id")
         return ret_dict
 
     def get_assis_device(self):

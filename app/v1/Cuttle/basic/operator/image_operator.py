@@ -324,8 +324,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return 0
 
     def record_words(self, exec_content) -> int:
-        data = self._validate(exec_content, ImageOutPutSchema)
-        path = self._crop_image_and_save(data.get("refer_im"), data.get("areas")[0])
+        data = self._validate(exec_content, ImageSchema)
+        path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             self.image = path
             result = ocr_obj.get_result()

@@ -53,9 +53,8 @@ class DoorKeeper(object):
         return 0
 
     def get_connected_device_list(self, adb_response):
-        split = "\n" if platform.system() == "Windows" else "\r\n"
         id_list = []
-        for i in adb_response.split(split)[1:]:
+        for i in adb_response.split("\n")[1:]:
             item = i.split(" ")[0]
             if not "." in item and not "emulator" in item and not "no permissions" in item:
                 id_list.append(item.strip().strip("\r\t"))

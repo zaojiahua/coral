@@ -49,7 +49,6 @@ class ImageOriginalSchema(Schema):
 
     @post_load()
     def explain(self, data, **kwargs):
-        print("test:schema:",data,kwargs)
         path = data.get("config")
         with open(path, "r") as json_file:
             json_data = json.load(json_file)

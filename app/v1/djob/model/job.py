@@ -9,7 +9,7 @@ class Job(BaseModel):
     node_dict: dict = DictField()
     link_dict: dict = DictField()
     curr_node_key = models.CharField()
-    job_label = models.CharField()
+    # job_label = models.CharField()
 
     @property
     def start_name(self):

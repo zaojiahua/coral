@@ -72,3 +72,13 @@ class JobExecUnknownException(APIException):
     code = 400
     error_code = 4007
     description = 'Job exec unknown exception'
+
+
+class JobFlowNotFound(APIException):
+    """
+    任务执行的罗辑流程图缺失
+    """
+    code = 400
+    error_code = 4008
+    description = 'job flow not found'
+

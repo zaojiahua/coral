@@ -22,8 +22,8 @@ JOB_ASSESS_SCORE = "jobAssessScore"
 JOB_ASSESS_DICT = "jobAssessDict"
 
 # 下发的djob归属
-TBOARD = "tboard"
-DJOB = "djob"
+TBOARD = "tboard"  # tboard下发的任务
+DJOB = "djob"  # 内部下发的 innerjob
 
 # job node type
 SWITCH_TYPE = "switch"

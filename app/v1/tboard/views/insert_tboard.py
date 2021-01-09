@@ -43,5 +43,4 @@ def insert_tboard_inner(**kwargs):
                "state": "OK",
                "id": tboard_obj.tboard_id,
                "board_name": tboard_obj.board_name
-
            }, 200

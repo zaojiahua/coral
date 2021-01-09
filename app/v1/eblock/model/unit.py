@@ -102,7 +102,7 @@ class Unit(BaseModel):
     ocrChoice = models.IntegerField()
     unit_list_index = models.IntegerField()
 
-    load = ("detail", "key", "execModName", "jobUnitName")
+    load = ("detail", "key", "execModName", "jobUnitName", "finalResult")
 
     def process_unit(self, logger, handler: MacroHandler, **kwargs):
         assist_device_ident = get_assist_device_ident(self.device_label,

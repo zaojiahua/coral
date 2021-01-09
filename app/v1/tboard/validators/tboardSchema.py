@@ -11,7 +11,14 @@ def get_tboard_default_name():
     return 'TBoard-{:.0f}'.format(time.time())
 
 
+class UIJsonFileSchema(BaseSchema):
+    id = fields.Integer(required=True)
+    order = fields.Integer(required=True)
+
+
 class JobSchema(BaseSchema):
+    flow_execute_mode = fields.Str(required=True)
+    job_flows = fields.Nested(UIJsonFileSchema, many=True, required=True)
     job_label = fields.Str(required=True)
     updated_time = fields.Str(required=True)
     url = fields.Str(required=True)

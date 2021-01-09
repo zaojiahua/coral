@@ -16,14 +16,13 @@ def remove_djob_inner(djob_pk):
         raise RemoveJobException(description=f"djob_worker not exist")
 
     if djob_worker.using_djob is not None and djob_worker.using_djob == djob:
-        djob_worker.using_djob.stop_flag = True
-        djob_worker.using_djob.inform_eblock_stop()
+        djob_worker.using_djob.stop_djob()
 
         djob_worker.logger.info(f"a working djob has been deleted")
         return {"status": "a working djob has been deleted"}, 204
 
     else:
-        djob_worker.djob_list.lrem(1, djob)
+        djob_worker.djozb_list.lrem(1, djob)
 
         djob.remove()
 

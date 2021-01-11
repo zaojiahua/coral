@@ -104,3 +104,8 @@ class ColorPositionCrossMax(APIException):
     code = 400
     description = "color position exceed max border"
 
+class RecordWordsFindNoWords(APIException):
+    error_code = 2014
+    code = 400
+    description = "color position exceed max border"
+

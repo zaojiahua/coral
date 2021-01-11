@@ -7,7 +7,7 @@ import cv2
 import imageio
 import numpy as np
 
-from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNotFound
+from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNotFound, RecordWordsFindNoWords
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.calculater_mixin.color_calculate import ColorMixin
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin
@@ -329,6 +329,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             self.image = path
             result = ocr_obj.get_result()
+            if not isinstance(result, list) or len(result) == 0:
+                raise RecordWordsFindNoWords
             words = result[0].get("text")
             self._write_down(data.get("output_path"), f"{words}")
         return 0

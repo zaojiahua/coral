@@ -108,6 +108,8 @@ class AdbHandler(Handler, ChineseMixin):
         else:
             from app.v1.device_common.device_model import Device
             device_ip = Device(pk=self._model.pk).ip_address
+        if len(device_ip) < 2:
+            return -1
         self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
         self.str_func(adb_cmd_prefix + "-s " + device_ip + " tcpip 5555")
         self.str_func(adb_cmd_prefix + "connect " + device_ip)

@@ -23,7 +23,7 @@ class AreaSelectedMixin(object):
             f"feature point number:{len(feature_point_list)},threshold:{threshold - (1 - data.get('threshold', 0.99)) * icon_rate}")
         return 0 if len(feature_point_list) >= threshold - (1 - data.get("threshold", 0.99)) * icon_rate else 1
 
-    def smart_ocr_point_crop(self, info_body) -> int:
+    def smart_ocr_point_crop(self, info_body, match_function="get_result") -> int:
         data = self._validate(info_body, ImageOriginalSchema)
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
@@ -32,10 +32,13 @@ class AreaSelectedMixin(object):
             crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("areas")[0])
             self.image = ocr_obj.default_pic_path
             ocr_obj._pic_path = crop_path
-            ocr_obj.get_result()
+            getattr(ocr_obj, match_function)()
             ocr_obj.add_bias(x0, y0)
             ocr_obj.point()
         return ocr_obj.result
+
+    def smart_ocr_point_ignore_speed(self, info_body) -> int:
+        return self.smart_ocr_point_crop(info_body, match_function="get_result_ignore_speed")
 
     def smart_icon_point_crop(self, info_body) -> int:
         data = self._validate(info_body, ImageAreaWithoutInputSchema)

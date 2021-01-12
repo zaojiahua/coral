@@ -69,13 +69,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.point()
         return ocr_obj.result
 
-    def smart_ocr_point_ignore_speed(self, content) -> int:
-        with Complex_Center(**content, **self.kwargs) as ocr_obj:
-            ocr_obj.snap_shot()
-            self.image = ocr_obj.default_pic_path
-            ocr_obj.get_result_ignore_speed()
-            ocr_obj.point()
-        return ocr_obj.result
 
     def initiative_remove_interference(self, *args):
         # 主动清除异常方法，return 2

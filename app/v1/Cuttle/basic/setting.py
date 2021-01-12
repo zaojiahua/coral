@@ -15,7 +15,7 @@ icon_rate = 500
 
 adb_disconnect_threshold = 15
 
-color_threshold = 60
+color_threshold = 30
 color_rate = 1500
 
 BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量

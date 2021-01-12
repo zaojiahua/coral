@@ -35,8 +35,9 @@ class ColorMixin(object):
         data = self._validate(exec_content, ImageColorSchema)
         input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0])
         r, g, b = (int(i) for i in data.get("color").split(","))
-        lower_bgr = np.array([b - color_threshold, g - color_threshold, r - color_threshold])
-        upper_bgr = np.array([b + color_threshold, g + color_threshold, r + color_threshold])
+        th = (1 - data.get("threshold", 0.99)) * color_threshold
+        lower_bgr = np.array([b - th, g - th, r - th])
+        upper_bgr = np.array([b + th, g + th, r + th])
         binaryzation = cv2.inRange(input_crop, lower_bgr, upper_bgr)
         words_list = exec_content.get("requiredWords").split(",")
         path = os.path.join(self.kwargs.get("work_path"), f"ocr-{random.random()}.png")
@@ -52,7 +53,8 @@ class ColorMixin(object):
         input_crop_path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         src_refer = cv2.imread(data.get("refer_im"))
         position_list = data.get("position").strip().split(' ')
-        refer_b, refer_g, refer_r = check_color_by_position(src_refer, int(float(position_list[1])), int(float(position_list[0])))
+        refer_b, refer_g, refer_r = check_color_by_position(src_refer, int(float(position_list[1])),
+                                                            int(float(position_list[0])))
         # input  refer
         with Complex_Center(inputImgFile=input_crop_path, **data, **self.kwargs) as ocr_obj:
             ocr_obj.default_pic_path = input_crop_path

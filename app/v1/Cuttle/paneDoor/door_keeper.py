@@ -56,7 +56,8 @@ class DoorKeeper(object):
         id_list = []
         for i in adb_response.split("\n")[1:]:
             item = i.split(" ")[0]
-            if not "." in item and not "emulator" in item and not "no permissions" in item:
+            descriptor = i.split(" ")[7]
+            if not "." in item and not "emulator" in item and "no"!= descriptor:
                 id_list.append(item.strip().strip("\r\t"))
         return id_list
 

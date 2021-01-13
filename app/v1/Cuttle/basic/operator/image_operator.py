@@ -287,6 +287,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
 
         return data
 
+
+
     @staticmethod
     def _parse_function(result_list):
         for i in result_list:

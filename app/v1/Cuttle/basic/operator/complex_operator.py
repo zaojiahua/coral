@@ -7,6 +7,7 @@ from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParse
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.common_utli import judge_pic_same
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.image_schema import SimpleSchema
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.handler import Standard
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
@@ -71,6 +72,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.point()
         return ocr_obj.result
 
+
     def initiative_remove_interference(self, *args):
         # 主动清除异常方法，return 2
         with Complex_Center(**self.kwargs) as ocr_obj:
@@ -93,11 +95,20 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     def has_adb_response(self, content) -> str:
         # return string类型，通过基类的after execute方法处理可能的异常
         # 此方法在windows下和linux下区别很多，情况需要运行后发现再依次添加
-        content = content.get("adbCommand")
-        self._model.logger.debug(f"adb input:{content}")
-        content = content.replace("grep", "findstr") if sys.platform.startswith("win") else content.replace("findstr",
-                                                                                                            "grep")
-        execute_result = self.send_adb_request(content)
+        content = SimpleSchema().load(content)
+        adb_content = content.get("adbCommand")
+        self._model.logger.debug(f"adb input:{adb_content}")
+        adb_content = adb_content.replace("grep", "findstr") if sys.platform.startswith("win") else adb_content.replace(
+            "findstr", "grep")
+        sub_proc = subprocess.Popen(adb_content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        restr = sub_proc.communicate()[0]
+        try:
+            execute_result = restr.strip().decode("utf-8")
+        except UnicodeDecodeError:
+            execute_result = restr.strip().decode("gbk")
+            print("cmd to exec in adb's result:", adb_content, "decode error happened")
+        with open(content.get("outputPath"), "w")as f:
+            f.write(execute_result)
         self._model.logger.debug(f"adb response:{execute_result}")
         return execute_result
 

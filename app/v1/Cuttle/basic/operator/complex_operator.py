@@ -1,7 +1,9 @@
+import datetime
 import subprocess
 import sys
 
-from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParseFail, SwipeAndFindWordsFail
+from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParseFail, SwipeAndFindWordsFail, \
+    CannotFindRecentVideo
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.common_utli import judge_pic_same
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
@@ -69,7 +71,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.point()
         return ocr_obj.result
 
-
     def initiative_remove_interference(self, *args):
         # 主动清除异常方法，return 2
         with Complex_Center(**self.kwargs) as ocr_obj:
@@ -96,13 +97,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         self._model.logger.debug(f"adb input:{content}")
         content = content.replace("grep", "findstr") if sys.platform.startswith("win") else content.replace("findstr",
                                                                                                             "grep")
-        sub_proc = subprocess.Popen(content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        restr = sub_proc.communicate()[0]
-        try:
-            execute_result = restr.strip().decode("utf-8")
-        except UnicodeDecodeError:
-            execute_result = restr.strip().decode("gbk")
-            print("cmd to exec in adb's result:", content, "decode error happened")
+        execute_result = self.send_adb_request(content)
         self._model.logger.debug(f"adb response:{execute_result}")
         return execute_result
 
@@ -141,3 +136,32 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return ocr_obj.result
         else:
             return 1
+
+    def pull_recent_video(self, content):
+        content = content.get("adbCommand")
+        video_name_in_server = content.get("videoName")
+        execute_result = self.send_adb_request(content)
+        resource_list = execute_result.split(" ")
+        recent_time = datetime.datetime.now()
+        file_list = [f for f in resource_list if f.endswith(".mp4")]
+        file_list.sort(key=lambda x: x[3:-4])
+        if len(file_list) == 0:
+            raise CannotFindRecentVideo
+        video_name = file_list[-1]
+        if (datetime.datetime.strptime(video_name, "VID%Y%m%d%H%M%S.mp4") - recent_time).seconds > 600:
+            raise CannotFindRecentVideo
+        self.send_adb_request(
+            f"adb -s ip pull /sdcard/DCIM/Camera/{video_name} {self.kwargs.get('work_path')}{video_name_in_server}")
+        return 0
+
+        "<3adbcTool> shell ls /sdcard/DCIM/Camera/ && echo videoFindMark"
+
+    def send_adb_request(self, content):
+        sub_proc = subprocess.Popen(content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        restr = sub_proc.communicate()[0]
+        try:
+            execute_result = restr.strip().decode("utf-8")
+        except UnicodeDecodeError:
+            execute_result = restr.strip().decode("gbk")
+            print("cmd to exec in adb's result:", content, "decode error happened")
+        return execute_result

@@ -109,3 +109,8 @@ class RecordWordsFindNoWords(APIException):
     code = 400
     description = "color position exceed max border"
 
+class CannotFindRecentVideo(APIException):
+    error_code = 2015
+    code = 400
+    description = "can not find recent video in 300s"
+

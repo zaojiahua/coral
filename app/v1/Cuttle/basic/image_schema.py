@@ -204,3 +204,7 @@ class IconTestSchema(Schema):
 class SimpleSchema(Schema):
     outputPath = fields.String(required=True)
     adbCommand = fields.String(required=True, validate=vertify_has_grep)
+
+class SimpleVideoPullSchema(Schema):
+    outputPath = fields.String(required=True)
+    videoName = fields.String(required=True)

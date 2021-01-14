@@ -7,7 +7,7 @@ from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParse
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.common_utli import judge_pic_same
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
-from app.v1.Cuttle.basic.image_schema import SimpleSchema
+from app.v1.Cuttle.basic.image_schema import SimpleSchema, SimpleVideoPullSchema
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.handler import Standard
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
@@ -149,6 +149,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return 1
 
     def pull_recent_video(self, content):
+        content = SimpleVideoPullSchema().load(content)
         content = content.get("adbCommand")
         video_name_in_server = content.get("videoName")
         execute_result = self.send_adb_request(content)
@@ -161,11 +162,12 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         video_name = file_list[-1]
         if (datetime.datetime.strptime(video_name, "VID%Y%m%d%H%M%S.mp4") - recent_time).seconds > 600:
             raise CannotFindRecentVideo
+        from app.v1.device_common.device_model import Device
+        device_ip = Device(pk=self._model.pk).ip_address
         self.send_adb_request(
-            f"adb -s ip pull /sdcard/DCIM/Camera/{video_name} {self.kwargs.get('work_path')}{video_name_in_server}")
+            f"adb -s {device_ip} pull /sdcard/DCIM/Camera/{video_name} {self.kwargs.get('work_path')}{video_name_in_server}")
         return 0
 
-        "<3adbcTool> shell ls /sdcard/DCIM/Camera/ && echo videoFindMark"
 
     def send_adb_request(self, content):
         sub_proc = subprocess.Popen(content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

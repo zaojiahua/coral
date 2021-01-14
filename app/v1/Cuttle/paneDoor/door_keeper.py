@@ -63,8 +63,10 @@ class DoorKeeper(object):
 
     def get_already_connected_device_id_list(self):
         response = request(url=device_url, params={"fields": "cpu_id", "status__in": "ReefList[idle{%,%}busy]"})
+        assis_response = request(url=device_assis_url, params={"fields": "serial_number", "is_active": True})
         id_list = response.get("devices")
-        return [i.get("cpu_id") for i in id_list]
+        assis_id_list = assis_response.get("subsidiarydevice")
+        return [i.get("cpu_id") for i in id_list] + [i.get("serial_number") for i in assis_id_list]
 
     def authorize_device_manually(self, **kwargs):
         length = np.hypot(kwargs.get("device_height"), kwargs.get("device_width"))

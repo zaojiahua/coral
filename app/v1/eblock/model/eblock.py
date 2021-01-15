@@ -1,6 +1,7 @@
 import func_timeout
 from astra import models
 
+from app.config.ip import ADB_TYPE
 from app.execption.outer.error_code.eblock import EblockTimeOut, EblockEarlyStop
 from app.libs.extension.field import OwnerList
 from app.libs.extension.model import BaseModel
@@ -27,8 +28,10 @@ class Eblock(BaseModel):
             self.rds_path = kwargs["rds_path"]
             self.work_path = kwargs["work_path"]
             self.temp_port_list = kwargs["temp_port_list"]
-            self.ip_address = kwargs["ip_address"]
             self.device_id = kwargs["device_id"]
+            from app.v1.device_common.device_model import Device
+            self.ip_address = Device(pk=self.device_id).connect_number
+            kwargs["ip_address"] = self.ip_address
             unit_list_index = 0
             for unit_list_dict in kwargs["unit_lists"]:
                 unit_list_index += 1

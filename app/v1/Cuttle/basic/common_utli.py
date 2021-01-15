@@ -12,7 +12,7 @@ def adb_unit_maker(cmd_list, device_label, connect_number):
     # 由于新增僚机adb有线连接可能，需要将原有复合unit内所有adb部分增加前置层
     # 缓存内僚机存储形式确定好之后需要对应修改此方法
     from app.v1.device_common.device_model import Device
-    ip = Device(pk=device_label).ip_address
+    ip = Device(pk=device_label).connect_number
     request_body = {
         "ip_address": ip,
         "device_label": device_label,

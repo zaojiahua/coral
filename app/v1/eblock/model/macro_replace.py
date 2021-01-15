@@ -71,7 +71,7 @@ class MacroHandler(object):
         if adb_ip_prefix in cmd:
             cmd = cmd.replace(adb_ip_prefix, REEF_IP)
         if adb_tool_prefix in cmd:
-            script = f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}:5555"
+            script = f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}"
             cmd = cmd.replace(adb_tool_prefix, script)
             cmd = self._adb_cmd_prefix + " " + cmd
         return cmd, save_file

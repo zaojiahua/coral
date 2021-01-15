@@ -1,6 +1,7 @@
 from flask import jsonify, request
 from flask.views import MethodView
 
+from app.config.ip import ADB_TYPE
 from app.v1.Cuttle.paneDoor.door_keeper import DoorKeeper
 from app.v1.device_common.device_model import Device
 
@@ -59,6 +60,8 @@ class SetMutiDevice(DeviceBase):
 
 class OpenPort(DeviceBase):
     def post(self):
+        if ADB_TYPE == 1:
+            return jsonify({"state": "adb serial do not need reconnect"}), 200
         if request.get_json() is not None and 0 == self.door_keeper.reconnect_device(request.get_json().get("cpu_id")):
             return jsonify({"state": "DONE"}), 200
         else:

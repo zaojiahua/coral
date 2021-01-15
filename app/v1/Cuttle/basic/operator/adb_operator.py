@@ -6,7 +6,7 @@ import time
 from ast import literal_eval
 from datetime import datetime
 
-from app.config.ip import HOST_IP
+from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import PROJECT_SIBLING_DIR
 from app.config.url import battery_url
 from app.execption.outer.error_code.total import ServerError
@@ -103,6 +103,8 @@ class AdbHandler(Handler, ChineseMixin):
         return execute_result
 
     def reconnect(self, *args):
+        if ADB_TYPE == 1:
+            return 0
         if self.kwargs.get("assist_device_serial_number"):
             device_ip = self.kwargs.get("assist_device_serial_number")
         else:
@@ -122,6 +124,8 @@ class AdbHandler(Handler, ChineseMixin):
         return 0
 
     def disconnect(self, ip=None):
+        if ADB_TYPE == 1:
+            return 0
         from app.v1.device_common.device_model import Device
         device_ip = Device(pk=self._model.pk).ip_address if ip is None else ip
         self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
@@ -182,8 +186,8 @@ class AdbHandler(Handler, ChineseMixin):
 
     def _get_battery_detail(self, *args):
         from app.v1.device_common.device_model import Device
-        device_ip = Device(pk=self._model.pk).ip_address
-        battery_detail = self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "shell dumpsys battery")
+        device_ip = Device(pk=self._model.pk).connect_number
+        battery_detail = self.str_func(adb_cmd_prefix + "-s " + device_ip + "shell dumpsys battery")
         self._get_battery_info(battery_detail)
 
     def _get_battery_info(self, battery_data):

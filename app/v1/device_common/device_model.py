@@ -2,6 +2,7 @@ import time
 
 from astra import models
 
+from app.config.ip import ADB_TYPE
 from app.config.url import device_create_update_url
 from app.libs.http_client import request
 from app.libs.log import setup_logger
@@ -74,6 +75,10 @@ class Device(models.Model):
         return redis_client
 
     @property
+    def connect_number(self):
+        return self.ip_address + ":5555" if ADB_TYPE == 0 else self.cpu_id
+
+    @property
     def data(self):
         """
         get all attribute by dict format
@@ -142,7 +147,6 @@ class Device(models.Model):
             coordinate = int(self.device_width * coordinate[0]), int(self.device_height * coordinate[1]), int(
                 self.device_width * coordinate[2]), int(self.device_height * coordinate[3])
         return coordinate
-
 
     def _update_attr_from_cedar(self, **kwargs):
         self.logger.info(f"add device resource info:{kwargs}")
@@ -273,7 +277,7 @@ class Device(models.Model):
                     aide_monitor_instance.start_battery_management()
                 if self.temp_port_list.smembers():
                     get_port_temperature(self.temp_port_list.smembers())
-                send_battery_check(self.device_label, self.ip_address)
+                send_battery_check(self.device_label, self.connect_number)
                 time.sleep(2)
             except Exception as e:
                 self.logger.error(f"Exception in async_loop: {repr(e)}")

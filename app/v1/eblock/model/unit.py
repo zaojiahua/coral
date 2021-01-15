@@ -4,6 +4,7 @@ from functools import lru_cache
 from astra import models
 from func_timeout import func_set_timeout
 
+from app.config.ip import ADB_TYPE
 from app.config.url import device_url
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
 from app.execption.outer.error_code.eblock import EblockCannotFindFile
@@ -37,7 +38,9 @@ def get_assist_device_ident(device_label, assist_device_serial_number):
     )
     for subsidiary_device in device_detail_msg["subsidiarydevice"]:
         if subsidiary_device["order"] == assist_device_serial_number:
-            return subsidiary_device["ip_address"]
+            connect_number = subsidiary_device.get("ip_address") + ":5555" if ADB_TYPE == 0 else subsidiary_device.get(
+                "serial_number")
+            return connect_number
     raise AssistDeviceNotFind(
         description="Job used the no. 1 assist device of the primary device, but the primary device did not")
 

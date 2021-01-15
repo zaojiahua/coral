@@ -134,6 +134,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                 try:
                     ocr_obj.snap_shot()
                     if hasattr(self, "image") and judge_pic_same(ocr_obj.default_pic_path, self.image):
+                        # return 1
                         raise SwipeAndFindWordsFail
                     self.image = ocr_obj.default_pic_path
                     ocr_obj.get_result()
@@ -163,9 +164,9 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         if (datetime.datetime.strptime(video_name, "VID%Y%m%d%H%M%S.mp4") - recent_time).seconds > 600:
             raise CannotFindRecentVideo
         from app.v1.device_common.device_model import Device
-        device_ip = Device(pk=self._model.pk).ip_address
+        connect_number = Device(pk=self._model.pk).connect_number
         self.send_adb_request(
-            f"adb -s {device_ip} pull /sdcard/DCIM/Camera/{video_name} {self.kwargs.get('work_path')}{video_name_in_server}")
+            f"adb -s {connect_number} pull /sdcard/DCIM/Camera/{video_name} {self.kwargs.get('work_path')}{video_name_in_server}")
         return 0
 
 

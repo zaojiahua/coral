@@ -1,6 +1,7 @@
 import logging
 import os
 import platform
+import random
 import re
 import subprocess
 import sys
@@ -12,7 +13,7 @@ from typing import Dict
 
 import numpy as np
 
-from app.config.ip import HOST_IP
+from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url
@@ -41,12 +42,13 @@ class DoorKeeper(object):
             logger.warning("set device idle is not equal with usb device")
             raise DeviceChanged
         logger.info(f"[get device info] device info dict :{dev_info_dict}")
-        self.open_wifi_service(num=f"-s {s_id}")
-        self.adb_cmd_obj.run_cmd_to_get_result(f"adb connect {dev_info_dict.get('ip_address')}")
-        # self.set_tmac_client_apk_internal(remountable)
-        res = bind_spec_ip(dev_info_dict.get("ip_address"), dev_info_dict["device_label"])
-        # if res != 0:
-        #     raise DeviceBindFail
+        if ADB_TYPE == 0:
+            self.open_wifi_service(num=f"-s {s_id}")
+            self.adb_cmd_obj.run_cmd_to_get_result(f"adb connect {dev_info_dict.get('ip_address')}")
+            # self.set_tmac_client_apk_internal(remountable)
+            res = bind_spec_ip(dev_info_dict.get("ip_address"), dev_info_dict["device_label"])
+            # if res != 0:
+            #     raise DeviceBindFail
         dev_info_dict.update(kwargs)
         self.send_dev_info_to_reef(kwargs.pop("deviceName"), dev_info_dict)  # now report dev_info_dict to reef directly
         logger.info(f"set device success")
@@ -148,17 +150,14 @@ class DoorKeeper(object):
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
                 f"adb -s {s_id} shell getprop ro.build.version.release"),
             "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
-                f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(),
-            "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}"),
-            "device_width": screen_size[0],
-            "device_height": screen_size[1],
-            "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
-            "phone_model_name": phone_model
-        }
+                f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(), "device_width": screen_size[0],
+            "device_height": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
+            "phone_model_name": phone_model, "ip_address": self.get_dev_ip_address_internal(
+                f"-s {s_id}") if ADB_TYPE == 0 else f"0.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(0,255)}"}
         color_os = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.opporom")
         rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.ota")
         if len(rom_version) == 0:
-            rom_version = self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.display.id")
+            rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.id")
         ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
             self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")
         ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
@@ -200,20 +199,11 @@ class DoorKeeper(object):
         phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.oppo.market.name")
         old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
         productName = phone_model if len(phone_model) != 0 else old_phone_model
-        ret_dict = {
-            "productName": productName,
-            "cpuName": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.board.platform"),
-            "cpuID": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
-            # "buildVer": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.release"),
-            "ipAddress": self.get_dev_ip_address_internal(f"-s {s_id}"),
-            # "startTimeKey": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        }
-        # color_os = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.opporom")
-        # romVersion = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.ota")
-        # if len(romVersion) == 0:
-        #     romVersion = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.id")
-        # ret_dict["buildInc"] = color_os + "_" + romVersion if romVersion is not "" and color_os is not "" else \
-        #     self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.incremental")
+        ret_dict = {"productName": productName,
+                    "cpuName": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.board.platform"),
+                    "cpuID": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
+                    "ipAddress": self.get_dev_ip_address_internal(
+                        f"-s {s_id}") if ADB_TYPE == 0 else f"adb-serial-random-ip(start with 0)"}
         ret_dict["deviceID"] = (old_phone_model + "---" + ret_dict["cpuName"] + "---" + ret_dict["cpuID"])
         self._check_device_already_in_cabinet(ret_dict["deviceID"])
         phone_model_info_dict, status = self.is_new_phone_model(productName)
@@ -250,7 +240,8 @@ class DoorKeeper(object):
         #         1
         #     ]
         # }
-        self.open_wifi_service(f"-s {kwargs.get('serial_number')}")
+        if ADB_TYPE == 0:
+            self.open_wifi_service(f"-s {kwargs.get('serial_number')}")
         kwargs["is_active"] = True
         res = request(method="POST", url=device_assis_create_update_url, json=kwargs)
         logger.info(f"response from reef: {res}")

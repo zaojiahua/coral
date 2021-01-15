@@ -3,10 +3,10 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-from flask import request, jsonify
+from flask import request, jsonify, Response
 from flask.views import MethodView
 
-from app.config.ip import HOST_IP
+from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS
 from app.execption.outer.error_code.adb import DeviceBindFail
 from app.execption.outer.error_code.camera import ArmReInit, NoCamera, NoArm, RemoveBeforeAdd

@@ -187,7 +187,7 @@ class AdbHandler(Handler, ChineseMixin):
     def _get_battery_detail(self, *args):
         from app.v1.device_common.device_model import Device
         device_ip = Device(pk=self._model.pk).connect_number
-        battery_detail = self.str_func(adb_cmd_prefix + "-s " + device_ip + "shell dumpsys battery")
+        battery_detail = self.str_func(adb_cmd_prefix + "-s " + device_ip + " shell dumpsys battery")
         self._get_battery_info(battery_detail)
 
     def _get_battery_info(self, battery_data):

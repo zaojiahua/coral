@@ -10,6 +10,7 @@ from app.execption.outer.error import APIException
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.libs.thread_extensions import executor_callback
+from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
@@ -77,7 +78,8 @@ def recover_device(executer, logger):
                 set_border(device_dict, device_obj)
         except (AttributeError, APIException):
             pass
-        # start a loop for each device when recover
+        # start a loop for each device when recover+
+        recover_root(device_obj.device_label,device_obj.connect_number)
         aide_monitor_instance = AideMonitor(device_obj)
         t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(device_dict.get("device_label"))
@@ -85,6 +87,15 @@ def recover_device(executer, logger):
         if device_obj.ip_address != "0.0.0.0":
             executer.submit(device_obj.start_device_async_loop, aide_monitor_instance)
 
+def recover_root(device_label,connect_num):
+    cmd_list = [
+        f"adb  -s {connect_num} root",
+    ]
+    jsdata = {}
+    jsdata["ip_address"] = connect_num
+    jsdata["device_label"] = device_label
+    jsdata["execCmdList"] = cmd_list
+    UnitFactory().create("AdbHandler", jsdata)
 
 def set_border(device_dict, device_obj):
     params = {

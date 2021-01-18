@@ -49,6 +49,8 @@ class DoorKeeper(object):
             res = bind_spec_ip(dev_info_dict.get("ip_address"), dev_info_dict["device_label"])
             # if res != 0:
             #     raise DeviceBindFail
+        else:
+            self.is_device_rootable(num=f"-s {s_id}")
         dev_info_dict.update(kwargs)
         self.send_dev_info_to_reef(kwargs.pop("deviceName"), dev_info_dict)  # now report dev_info_dict to reef directly
         logger.info(f"set device success")
@@ -159,7 +161,7 @@ class DoorKeeper(object):
         if len(rom_version) == 0:
             rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.id")
         ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
-            self.adb_cmd_obj.run_cmd_to_get_result("adb -d shell getprop ro.build.version.incremental")
+            self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.incremental")
         ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         ret_dict["device_label"] = old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"]
         return ret_dict

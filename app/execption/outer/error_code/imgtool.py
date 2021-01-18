@@ -107,7 +107,7 @@ class ColorPositionCrossMax(APIException):
 class RecordWordsFindNoWords(APIException):
     error_code = 2014
     code = 400
-    description = "color position exceed max border"
+    description = "record-words unit can not find any words in crop-picture"
 
 class CannotFindRecentVideo(APIException):
     error_code = 2015

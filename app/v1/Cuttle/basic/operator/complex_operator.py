@@ -100,13 +100,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         self._model.logger.debug(f"adb input:{adb_content}")
         adb_content = adb_content.replace("grep", "findstr") if sys.platform.startswith("win") else adb_content.replace(
             "findstr", "grep")
-        sub_proc = subprocess.Popen(adb_content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        restr = sub_proc.communicate()[0]
-        try:
-            execute_result = restr.strip().decode("utf-8")
-        except UnicodeDecodeError:
-            execute_result = restr.strip().decode("gbk")
-            print("cmd to exec in adb's result:", adb_content, "decode error happened")
+        execute_result = self.send_adb_request(adb_content)
         with open(content.get("outputPath"), "w")as f:
             f.write(execute_result)
         self._model.logger.debug(f"adb response:{execute_result}")
@@ -150,10 +144,11 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return 1
 
     def pull_recent_video(self, content):
+        #
         content = SimpleVideoPullSchema().load(content)
-        content = content.get("adbCommand")
+        adb_content = content.get("adbCommand")
         video_name_in_server = content.get("videoName")
-        execute_result = self.send_adb_request(content)
+        execute_result = self.send_adb_request(adb_content)
         resource_list = execute_result.split(" ")
         recent_time = datetime.datetime.now()
         file_list = [f for f in resource_list if f.endswith(".mp4")]
@@ -165,9 +160,14 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             raise CannotFindRecentVideo
         from app.v1.device_common.device_model import Device
         connect_number = Device(pk=self._model.pk).connect_number
-        self.send_adb_request(
+        response = self.send_adb_request(
             f"adb -s {connect_number} pull /sdcard/DCIM/Camera/{video_name} {self.kwargs.get('work_path')}{video_name_in_server}")
-        return 0
+        return response
+
+
+    def add_judgements_standard(self):
+        pass
+
 
 
     def send_adb_request(self, content):
@@ -179,3 +179,5 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             execute_result = restr.strip().decode("gbk")
             print("cmd to exec in adb's result:", content, "decode error happened")
         return execute_result
+
+

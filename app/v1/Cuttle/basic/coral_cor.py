@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 
 import cv2
 
@@ -22,6 +23,7 @@ class Complex_Center(object):
                  **kwargs):
         self.device_label = device_label
         self._pic_path = inputImgFile
+        shutil.copy(inputImgFile, os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png"))
         self._searching_word = requiredWords
         self.x_shift, self.y_shift = self._shift(xyShift)
         self.default_pic_path = os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png")
@@ -80,6 +82,7 @@ class Complex_Center(object):
                 if self._searching_word or parse_function.__name__ != self.default_parse_response.__name__:
                     pic_x, pic_y = parse_function(response.get("result"))
                     self.cal_realy_xy(pic_x, pic_y, pic_path)
+                    self.result = 0
                     break
                 else:
                     self.result = response.get('result')

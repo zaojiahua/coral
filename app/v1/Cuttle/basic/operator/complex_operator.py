@@ -112,7 +112,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     #      'work_path': 'D:\\Pacific\\chiron---msm8998---3613ef3d\\1599471222.1818228\\djobwork\\',
     #      'device_label': 'chiron---msm8998---3613ef3d'}
     # info_body = {'xyShift': '0 0', 'requiredWords': '蓝牙'}
-    def icon_found_with_direction(self, content):
+    def icon_found_with_direction(self, content, click=True):
         # 自动找icon
         from app.v1.device_common.device_model import Device
         device_width = Device(pk=self._model.pk).device_width
@@ -128,11 +128,11 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                 try:
                     ocr_obj.snap_shot()
                     if hasattr(self, "image") and judge_pic_same(ocr_obj.default_pic_path, self.image):
-                        # return 1
-                        raise SwipeAndFindWordsFail
+                        return 1
                     self.image = ocr_obj.default_pic_path
                     ocr_obj.get_result()
-                    ocr_obj.point()
+                    if click:
+                        ocr_obj.point()
                 except OcrParseFail:
                     ocr_obj.cx = center_x
                     ocr_obj.cy = center_y
@@ -181,3 +181,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         return execute_result
 
 
+
+    def icon_found_with_direction_no_click(self, content):
+        return self.icon_found_with_direction(content, click=False)

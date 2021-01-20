@@ -105,6 +105,9 @@ class ColorPositionCrossMax(APIException):
     description = "color position exceed max border"
 
 class RecordWordsFindNoWords(APIException):
+    """
+    文字记录unit 不能在截图的选区中发现任何文字
+    """
     error_code = 2014
     code = 400
     description = "record-words unit can not find any words in crop-picture"

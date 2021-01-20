@@ -23,7 +23,8 @@ class Complex_Center(object):
                  **kwargs):
         self.device_label = device_label
         self._pic_path = inputImgFile
-        shutil.copy(inputImgFile, os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png"))
+        if type(inputImgFile) == str and inputImgFile.split(".")[-1].upper() in ["PNG", "JPG", "JPEG", "GIF", "TIF"]:
+            shutil.copy(inputImgFile, os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png"))
         self._searching_word = requiredWords
         self.x_shift, self.y_shift = self._shift(xyShift)
         self.default_pic_path = os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png")

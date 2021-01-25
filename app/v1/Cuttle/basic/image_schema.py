@@ -205,7 +205,15 @@ class SimpleSchema(Schema):
     outputPath = fields.String(required=True)
     adbCommand = fields.String(required=True, validate=vertify_has_grep)
 
+
+def has_format(path: str):
+    part_list = path.split(".")
+    if len(part_list) < 2 or part_list[-1].lower() not in ("mp4","jpg"):
+        raise ValidationError('picture or video should have .mp4 or .jpg')
+
+
+
 class SimpleVideoPullSchema(Schema):
     # outputPath = fields.String(required=True)
     adbCommand = fields.String(required=True)
-    videoName = fields.String(required=True)
+    fileName = fields.String(required=True,validate=has_format)

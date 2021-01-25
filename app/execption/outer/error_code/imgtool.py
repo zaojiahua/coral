@@ -112,8 +112,8 @@ class RecordWordsFindNoWords(APIException):
     code = 400
     description = "record-words unit can not find any words in crop-picture"
 
-class CannotFindRecentVideo(APIException):
+class CannotFindRecentVideoOrImage(APIException):
     error_code = 2015
     code = 400
-    description = "can not find recent video in 300s"
+    description = "can not find recent video or Imgae in 300s"
 

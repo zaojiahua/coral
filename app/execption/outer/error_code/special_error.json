@@ -44,6 +44,9 @@
     "error_code": -26,
     "description": "job unit内缺失范围选择文件--检查job"
   },{
+    "error_code": -27,
+    "description": "推送文件unit格式有误"
+  },{
     "error_code": -32,
     "description": "job执行没有生成结果"
   }

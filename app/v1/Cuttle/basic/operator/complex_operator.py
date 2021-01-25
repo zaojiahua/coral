@@ -3,7 +3,7 @@ import subprocess
 import sys
 
 from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParseFail, SwipeAndFindWordsFail, \
-    CannotFindRecentVideo
+    CannotFindRecentVideoOrImage
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.common_utli import judge_pic_same
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
@@ -71,7 +71,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.change_x(device_width * right_switch_percent)
             ocr_obj.point()
         return ocr_obj.result
-
 
     def initiative_remove_interference(self, *args):
         # 主动清除异常方法，return 2
@@ -143,32 +142,33 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         else:
             return 1
 
-    def pull_recent_video(self, content):
-        #
+    def pull_recent_video_or_picture(self, content):
+        # 需要接受所有格式的文件pull请求
+        from app.v1.device_common.device_model import Device
+        connect_number = Device(pk=self._model.pk).connect_number
+        logger = Device(pk=self._model.pk).logger
         content = SimpleVideoPullSchema().load(content)
         adb_content = content.get("adbCommand")
-        video_name_in_server = content.get("videoName")
+        file_name_in_server = content.get("fileName")
+        format = file_name_in_server.split(".")[-1]
         execute_result = self.send_adb_request(adb_content)
         resource_list = execute_result.split(" ")
         recent_time = datetime.datetime.now()
-        file_list = [f for f in resource_list if f.endswith(".mp4")]
+        file_list = [f.strip("\r\n") for f in resource_list if f.endswith(format)]
         file_list.sort(key=lambda x: x[3:-4])
         if len(file_list) == 0:
-            raise CannotFindRecentVideo
-        video_name = file_list[-1]
-        if (datetime.datetime.strptime(video_name, "VID%Y%m%d%H%M%S.mp4") - recent_time).seconds > 600:
-            raise CannotFindRecentVideo
-        from app.v1.device_common.device_model import Device
-        connect_number = Device(pk=self._model.pk).connect_number
+            raise CannotFindRecentVideoOrImage
+        file_name = file_list[-1].strip().strip('\t')
+        logger.debug(f"recent file: {file_name}")
+        name_format = "VID%Y%m%d%H%M%S.mp4" if format == "mp4" else "IMG%Y%m%d%H%M%S.jpg"
+        if (recent_time - datetime.datetime.strptime(file_name, name_format) ).seconds > 600:
+            raise CannotFindRecentVideoOrImage
         response = self.send_adb_request(
-            f"adb -s {connect_number} pull /sdcard/DCIM/Camera/{video_name} {self.kwargs.get('work_path')}{video_name_in_server}")
+            f"adb -s {connect_number} pull /sdcard/DCIM/Camera/{file_name} {file_name_in_server}")
         return response
-
 
     def add_judgements_standard(self):
         pass
-
-
 
     def send_adb_request(self, content):
         sub_proc = subprocess.Popen(content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -179,8 +179,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             execute_result = restr.strip().decode("gbk")
             print("cmd to exec in adb's result:", content, "decode error happened")
         return execute_result
-
-
 
     def icon_found_with_direction_no_click(self, content):
         return self.icon_found_with_direction(content, click=False)

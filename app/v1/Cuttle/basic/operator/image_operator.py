@@ -31,7 +31,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         "inputImgFile": -23,
         "referImgFile": -24,
         "identifyIconFail": -25,
-        "configArea": -26
+        "configArea": -26,
+        "fileName":-27
     }
     # mark 为int 因为img func 返回int
     process_list = [Abnormal(mark=1, method="clear", code=1),

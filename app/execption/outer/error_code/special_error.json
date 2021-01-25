@@ -46,5 +46,9 @@
   },{
     "error_code": -32,
     "description": "job执行没有生成结果"
+  },
+  {
+    "error_code": -2000,
+    "description": "can not find required words when use color judgment by words shift"
   }
 ]

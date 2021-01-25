@@ -61,6 +61,8 @@ class ColorMixin(object):
             ocr_obj.get_result()
             x = ocr_obj.cx + ocr_obj.x_shift
             y = ocr_obj.cy + ocr_obj.y_shift
+        if type(ocr_obj.result) == int and ocr_obj.result != 0:
+            return -2000
         b, g, r = check_color_by_position(cv2.imread(input_crop_path), y, x)
         return self._color_judge(b, refer_b, g, refer_g, r, refer_r, data)
 

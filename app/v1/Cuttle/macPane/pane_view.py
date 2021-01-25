@@ -82,8 +82,8 @@ class PaneDeleteView(MethodView):
                 h.disconnect(ip)
         # 解除路由器IP绑定 start after jsp finished
         res = unbind_spec_ip(data.get("ip_address"))
-        if res != 0:
-            raise DeviceBindFail
+        # if res != 0:
+        #     raise DeviceBindFail
         return jsonify({"status": "success"}), 200
 
 

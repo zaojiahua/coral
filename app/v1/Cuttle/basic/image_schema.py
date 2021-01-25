@@ -41,6 +41,11 @@ def verify_image(image_path):
         raise ValidationError('image need bigger size ')
 
 
+def vertify_has_grep(cmd):
+    if not "grep" in cmd and not "findstr" in cmd:
+        raise ValidationError('input adb order should have "grep"/"findstr" ')
+
+
 class ImageOriginalSchema(Schema):
     config = fields.String(required=True, data_key="configFile", validate=vertify_exist)
 
@@ -197,3 +202,8 @@ class IconTestSchema(Schema):
                  "area" + str(i) in crop_area.keys()] if crop_area is not None else []
         data["crop_areas"] = areas if areas != [] else [[1, 1, 1, 1]]
         return data
+
+
+class SimpleSchema(Schema):
+    outputPath = fields.String(required=True)
+    adbCommand = fields.String(required=True, validate=vertify_has_grep)

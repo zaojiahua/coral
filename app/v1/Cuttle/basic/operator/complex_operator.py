@@ -5,6 +5,7 @@ from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParse
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.common_utli import judge_pic_same
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.image_schema import SimpleSchema
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.handler import Standard
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
@@ -69,14 +70,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.point()
         return ocr_obj.result
 
-    def smart_ocr_point_ignore_speed(self, content) -> int:
-        with Complex_Center(**content, **self.kwargs) as ocr_obj:
-            ocr_obj.snap_shot()
-            self.image = ocr_obj.default_pic_path
-            ocr_obj.get_result_ignore_speed()
-            ocr_obj.point()
-        return ocr_obj.result
-
     def initiative_remove_interference(self, *args):
         # 主动清除异常方法，return 2
         with Complex_Center(**self.kwargs) as ocr_obj:
@@ -99,17 +92,20 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     def has_adb_response(self, content) -> str:
         # return string类型，通过基类的after execute方法处理可能的异常
         # 此方法在windows下和linux下区别很多，情况需要运行后发现再依次添加
-        content = content.get("adbCommand")
-        self._model.logger.debug(f"adb input:{content}")
-        content = content.replace("grep", "findstr") if sys.platform.startswith("win") else content.replace("findstr",
-                                                                                                            "grep")
-        sub_proc = subprocess.Popen(content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        content = SimpleSchema().load(content)
+        adb_content = content.get("adbCommand")
+        self._model.logger.debug(f"adb input:{adb_content}")
+        adb_content = adb_content.replace("grep", "findstr") if sys.platform.startswith("win") else adb_content.replace(
+            "findstr", "grep")
+        sub_proc = subprocess.Popen(adb_content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         restr = sub_proc.communicate()[0]
         try:
             execute_result = restr.strip().decode("utf-8")
         except UnicodeDecodeError:
             execute_result = restr.strip().decode("gbk")
-            print("cmd to exec in adb's result:", content, "decode error happened")
+            print("cmd to exec in adb's result:", adb_content, "decode error happened")
+        with open(content.get("outputPath"), "w")as f:
+            f.write(execute_result)
         self._model.logger.debug(f"adb response:{execute_result}")
         return execute_result
 
@@ -119,7 +115,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     #      'work_path': 'D:\\Pacific\\chiron---msm8998---3613ef3d\\1599471222.1818228\\djobwork\\',
     #      'device_label': 'chiron---msm8998---3613ef3d'}
     # info_body = {'xyShift': '0 0', 'requiredWords': '蓝牙'}
-    def icon_found_with_direction(self, content):
+    def icon_found_with_direction(self, content, click=True):
         # 自动找icon
         from app.v1.device_common.device_model import Device
         device_width = Device(pk=self._model.pk).device_width
@@ -135,10 +131,11 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                 try:
                     ocr_obj.snap_shot()
                     if hasattr(self, "image") and judge_pic_same(ocr_obj.default_pic_path, self.image):
-                        raise SwipeAndFindWordsFail
+                        return 1
                     self.image = ocr_obj.default_pic_path
                     ocr_obj.get_result()
-                    ocr_obj.point()
+                    if click:
+                        ocr_obj.point()
                 except OcrParseFail:
                     ocr_obj.cx = center_x
                     ocr_obj.cy = center_y
@@ -148,3 +145,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return ocr_obj.result
         else:
             return 1
+
+    def icon_found_with_direction_no_click(self, content):
+        return self.icon_found_with_direction(content, click=False)

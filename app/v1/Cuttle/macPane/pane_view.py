@@ -54,7 +54,7 @@ class PaneUpdateView(MethodView):
         data = request.get_json()
         device_object = Device(pk=data.get("device_label"))
         try:
-            device_object.update_attr(**data)
+            device_object.update_attr(**data,avoid_push=True)
             pic_push(device_object, pic_name=SUCCESS_PIC_NAME)
             return jsonify({"status": "success"}), 200
         except Exception as e:

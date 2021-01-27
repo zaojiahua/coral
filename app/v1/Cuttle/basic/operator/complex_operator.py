@@ -161,6 +161,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         file_name = file_list[-1].strip().strip('\t')
         logger.debug(f"recent file: {file_name}")
         name_format = "VID%Y%m%d%H%M%S.mp4" if format == "mp4" else "IMG%Y%m%d%H%M%S.jpg"
+        name_format_2 = "Record_%Y-%m-%d-%H-%M-%S.mp4" if format == "mp4" else "Screenshot_%Y-%m-%d-%H-%M-%S-%f.jpg"
         if (recent_time - datetime.datetime.strptime(file_name, name_format) ).seconds > 600:
             raise CannotFindRecentVideoOrImage
         response = self.send_adb_request(

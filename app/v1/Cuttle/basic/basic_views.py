@@ -74,11 +74,22 @@ class UnitFactory(object):
                                   **input_data).execute()
 
 
-class TestClass(MethodView):
+class TestIconClass(MethodView):
     def post(self):
         try:
             image_handler = ImageHandler(model=Dummy_model, many=False)
             return jsonify(image_handler.test_icon_exist(request.files)), 200
+        except Exception as e:
+            return jsonify({"status": repr(e)}), 400
+
+class TestOcrClass(MethodView):
+    def post(self):
+        try:
+            image_handler = ImageHandler(model=Dummy_model, many=False)
+            request_params = {}
+            request_params.update(request.files)
+            request_params.update(request.form.to_dict())
+            return jsonify(image_handler.test_ocr_result(request_params)), 200
         except Exception as e:
             return jsonify({"status": repr(e)}), 400
 

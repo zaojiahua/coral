@@ -7,7 +7,8 @@ from astra import models
 
 from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url
 from app.execption.outer.error import APIException
-from app.execption.outer.error_code.djob import JobExecBodyException, JobExecUnknownException, JobMaxRetryCycleException
+from app.execption.outer.error_code.djob import JobExecBodyException, JobExecUnknownException, \
+    JobMaxRetryCycleException, InnerJobNotAssociated
 from app.execption.outer.error_code.eblock import EblockEarlyStop
 from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, DictField, OwnerList, OwnerForeignKey, \
     OwnerFloatField
@@ -98,7 +99,9 @@ class DJobFlow(BaseModel):
             self.fake_rds(ex, error_traceback)
 
     def prepare(self):
-        if self.source == DJOB:  # djob 只有一个job flow 且未传,需要自己获取
+        if self.source == DJOB:  # djob 表明为innerjob, 只有一个job flow 且未传,需要自己获取
+            if not os.path.exists(os.path.join(self.tboard_path, self.job_label)):
+                raise InnerJobNotAssociated
             self.flow_id = int(os.listdir(os.path.join(self.tboard_path, self.job_label))[0])
 
         self.create_rds()  # 关联rds

@@ -25,6 +25,11 @@ JOB_ASSESS_DICT = "jobAssessDict"
 TBOARD = "tboard"  # tboard下发的任务
 DJOB = "djob"  # 内部下发的 innerjob
 
+
+# 任务执行方式
+SINGLE_SPLIT = "SingleSplit"  # 存在先后执行顺序，中间失败直接结束执行
+FLOW_EXECUTE_MODE = [SINGLE_SPLIT]
+
 # job node type
 SWITCH_TYPE = "switch"
 INNER_DJOB_TYPE = "job"

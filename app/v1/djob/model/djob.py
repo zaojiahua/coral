@@ -11,6 +11,7 @@ from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, Owner
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
+from app.v1.djob.config.setting import SINGLE_SPLIT
 from app.v1.djob.model.djobflow import DJobFlow
 
 """
@@ -53,7 +54,7 @@ class DJob(BaseModel):
 
         self.start_time = datetime.now()
 
-        if self.flow_execute_mode == "SingleSplit":
+        if self.flow_execute_mode == SINGLE_SPLIT:
             for flow_id in self.job_flows_order:
                 self.current_djob_flow = DJobFlow(flow_id=flow_id, device_label=self.device_label,
                                                   job_label=self.job_label, source=self.source,

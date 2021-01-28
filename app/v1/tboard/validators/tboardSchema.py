@@ -3,6 +3,7 @@ import time
 from marshmallow import fields, post_load, validate
 
 from app.libs.extension.schema import BaseSchema
+from app.v1.djob.config.setting import FLOW_EXECUTE_MODE
 from app.v1.tboard.validators.role import Role
 from app.v1.tboard.viewModel.tborad import TBoardViewModel
 
@@ -17,7 +18,7 @@ class UIJsonFileSchema(BaseSchema):
 
 
 class JobSchema(BaseSchema):
-    flow_execute_mode = fields.Str(required=True)
+    flow_execute_mode = fields.Str(required=True, validate=validate.OneOf(FLOW_EXECUTE_MODE))
     job_flows = fields.Nested(UIJsonFileSchema, many=True, required=True)
     job_label = fields.Str(required=True)
     updated_time = fields.Str(required=True)

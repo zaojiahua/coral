@@ -26,13 +26,13 @@ class DJobWorker(BaseModel):
         #     return {"status": "djob_manager queue is full"}
 
         self.djob_list.lpush(djob)
-        self.logger.info("(DJobWorker) add new DJobManager to wait list")
+        self.logger.info("(DJobWorker) add new DJob to wait list")
 
     def djob_process(self):
         self.logger.info(f"{self.device_label} djobworker djob_process ")
         while len(self.djob_list) > 0:
             self.using_djob = self.djob_list.rpop()
-            self.logger.info(f" DJobWorker ({self.pk}) pop a DJobManager "
+            self.logger.info(f" DJobWorker ({self.pk}) pop a DJob"
                              f"({self.using_djob.job_label, self.using_djob.device_label})from wait list and put execute")
 
             self.using_djob.run_job_with_flow_execute_mode()

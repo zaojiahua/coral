@@ -10,6 +10,28 @@ def vertify_exist(path):
         raise ValidationError('path not exist')
 
 
+def vertify_format(str):
+    coor_list = str.strip().split(" ")
+    if len(coor_list) != 2:
+        raise ValidationError('params wrong format --only one blank')
+    try:
+        for coor in coor_list:
+            if float(coor) > 5000:
+                raise ValidationError('need isdigit(<5000) parameters ')
+    except ValueError:
+        raise ValidationError('color coordinate should be digit')
+
+
+def vertify_not_relative_coor(str):
+    coor_list = str.strip().split(" ")
+    try:
+        for coor in coor_list:
+            if float(coor) < 1:
+                raise ValidationError('color coordinate should be absolutely')
+    except ValueError:
+        raise ValidationError('color coordinate should be digit')
+
+
 def verify_image(image_path):
     im = cv2.imread(image_path)
     if im is None:
@@ -17,6 +39,11 @@ def verify_image(image_path):
     s = im.shape[0] * im.shape[1]
     if s < 100:
         raise ValidationError('image need bigger size ')
+
+
+def vertify_has_grep(cmd):
+    if not "grep" in cmd and not "findstr" in cmd:
+        raise ValidationError('input adb order should have "grep"/"findstr" ')
 
 
 class ImageOriginalSchema(Schema):
@@ -51,11 +78,19 @@ class ImageOutPutSchema(ImageOriginalSchema):
 class ImageSchema(ImageBasicSchema):
     refer_im = fields.String(required=True, data_key="referImgFile", validate=(vertify_exist, verify_image))
 
+
 class ImageRealtimeSchema(ImageBasicSchema):
     input_im_2 = fields.String(required=True, data_key="inputImgFile2", validate=(vertify_exist, verify_image))
 
+
 class ImageColorSchema(ImageBasicSchema):
     color = fields.String(required=True, data_key="color")
+
+
+class ImageColorRelativePositionSchema(ImageSchema):
+    requiredWords = fields.String(required=True, data_key="requiredWords")
+    xyShift = fields.String(required=True, data_key="xyShift", validate=vertify_format)
+    position = fields.String(required=True, data_key="position", validate=(vertify_not_relative_coor, vertify_format))
 
 
 class ImageAreaSchema(ImageSchema):
@@ -72,9 +107,11 @@ class ImageAreaSchema(ImageSchema):
         data["crop_areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
         return data
 
+
 class ImageAreaWithoutInputSchema(ImageSchema):
     area_config = fields.String(required=True, data_key="configArea", validate=vertify_exist)
     input_im = fields.String(required=False, data_key="inputImgFile")
+
     @post_load()
     def explain(self, data, **kwargs):
         crop_area_path = data.get("area_config")
@@ -131,3 +168,39 @@ class VideoPicSchema(VideoBaseSchema):
         start_icon_config = data.get("start_icon_config")
         data = self._get_data(data, end_config_path, "end_icon")
         return self._get_data(data, start_icon_config, "start_icon")
+
+
+class IconTestSchema(Schema):
+    config_area = fields.Method(deserialize="load_config", data_key="configArea", required=False)
+    input_image = fields.Method(deserialize="load_picture", data_key="inputImgFile")
+    config_file = fields.Method(deserialize="load_config", data_key="configFile")
+
+    def load_config(self, value):
+        value.save(f"{value.filename}")
+        with open(f"{value.filename}", "r") as f:
+            content = json.load(f)
+        os.remove(value.filename)
+        return content
+
+    def load_picture(self, value):
+        value.save(f"{value.filename}")
+        return f"{value.filename}"
+
+    @post_load()
+    def explain(self, data, **kwargs):
+        area = data.get("config_file")
+        areas = [area["area" + str(i)] for i in range(1, len(area.keys())) if
+                 "area" + str(i) in area.keys()]
+        threshold = float(area.get("threshold", 0.99))
+        data["areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
+        data["threshold"] = threshold
+        crop_area = data.get("config_area")
+        areas = [crop_area["area" + str(i)] for i in range(1, len(crop_area.keys())) if
+                 "area" + str(i) in crop_area.keys()] if crop_area is not None else []
+        data["crop_areas"] = areas if areas != [] else [[1, 1, 1, 1]]
+        return data
+
+
+class SimpleSchema(Schema):
+    outputPath = fields.String(required=True)
+    adbCommand = fields.String(required=True, validate=vertify_has_grep)

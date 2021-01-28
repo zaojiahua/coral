@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 
 import cv2
 
@@ -22,6 +23,8 @@ class Complex_Center(object):
                  **kwargs):
         self.device_label = device_label
         self._pic_path = inputImgFile
+        if type(inputImgFile) == str and inputImgFile.split(".")[-1].upper() in ["PNG", "JPG", "JPEG", "GIF", "TIF"]:
+            shutil.copy(inputImgFile, os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png"))
         self._searching_word = requiredWords
         self.x_shift, self.y_shift = self._shift(xyShift)
         self.default_pic_path = os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png")
@@ -80,6 +83,7 @@ class Complex_Center(object):
                 if self._searching_word or parse_function.__name__ != self.default_parse_response.__name__:
                     pic_x, pic_y = parse_function(response.get("result"))
                     self.cal_realy_xy(pic_x, pic_y, pic_path)
+                    self.result = 0
                     break
                 else:
                     self.result = response.get('result')
@@ -121,20 +125,20 @@ class Complex_Center(object):
     def cal_realy_xy(self, pic_x, pic_y, input_pic_path):
         from app.v1.device_common.device_model import Device
         device = Device(pk=self.device_label)
-        if device.has_camera:
+        if device.has_camera or device.has_arm:
             # 摄像头识别到的文字位置，需要根据手机屏幕与摄像头照片分辨率换算回实际手机上像素位置
             src = cv2.imread(input_pic_path)
             pic_h, pic_w = src.shape[:2]
             device_width = device.device_width
             device_height = device.device_height
-            self.cx = pic_x * (device_width / pic_w)
-            self.cy = pic_y * (device_height / pic_h)
+            self.cx = int(pic_x * (device_width / pic_w))
+            self.cy = int(pic_y * (device_height / pic_h))
         elif self.crop_offset != [0, 0, device.device_width, device.device_height]:
-            self.cx = pic_x + int(self.crop_offset[0])
-            self.cy = pic_y + int(self.crop_offset[1])
+            self.cx = int(pic_x + int(self.crop_offset[0]))
+            self.cy = int(pic_y + int(self.crop_offset[1]))
         else:
-            self.cx = pic_x
-            self.cy = pic_y
+            self.cx = int(pic_x)
+            self.cy = int(pic_y)
 
     def add_bias(self, x_bias, y_bias):
         self.cx += x_bias
@@ -177,11 +181,12 @@ class Complex_Center(object):
 
     @handler_switcher
     def point(self, **kwargs):
-        cmd_list = [f"shell input tap {max(self.cx + self.x_shift,0)} {max(self.cy + self.y_shift,0)}"]
+        cmd_list = [f"shell input tap {max(self.cx + self.x_shift, 0)} {max(self.cy + self.y_shift, 0)}"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>0.5")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
-        self.logger.info(f"in coral cor ready to point{min(self.cx + self.x_shift,0)},{min(self.cy + self.y_shift,0)}")
+        self.logger.info(
+            f"in coral cor ready to point{min(self.cx + self.x_shift, 0)},{min(self.cy + self.y_shift, 0)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
 
     @handler_switcher
@@ -212,7 +217,7 @@ class Complex_Center(object):
         try:
             x_shift = float(xyShift.split(" ")[0])
             y_shift = float(xyShift.split(" ")[1])
-            if any((-1 < x_shift < 1, -1 < y_shift < 1)):
+            if all((-1 < x_shift < 1, -1 < y_shift < 1)):
                 from app.v1.device_common.device_model import Device
                 x_shift = Device(pk=self.device_label).device_width * x_shift
                 y_shift = Device(pk=self.device_label).device_height * y_shift

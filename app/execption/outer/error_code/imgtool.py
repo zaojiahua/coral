@@ -93,3 +93,22 @@ class EndPointWrongFormat(APIException):
     error_code = 2011
     code = 400
     description = "press and swipe end point get wrong format"
+
+class SwipeAndFindWordsFail(APIException):
+    error_code = 2012
+    code = 400
+    description = "can not find required words until swipe to the end"
+
+class ColorPositionCrossMax(APIException):
+    error_code = 2013
+    code = 400
+    description = "color position exceed max border"
+
+class RecordWordsFindNoWords(APIException):
+    """
+    文字记录unit 不能在截图的选区中发现任何文字
+    """
+    error_code = 2014
+    code = 400
+    description = "record words can not find any words"
+

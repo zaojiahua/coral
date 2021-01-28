@@ -7,11 +7,12 @@ import cv2
 import imageio
 import numpy as np
 
-from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNotFound
+from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNotFound, RecordWordsFindNoWords
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.calculater_mixin.color_calculate import ColorMixin
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin
 from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
+from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
 from app.v1.Cuttle.basic.common_utli import get_file_name, threshold_set
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, VideoWordsSchema, \
@@ -24,7 +25,7 @@ from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_thre
 VideoSearchPosition = 0.5
 
 
-class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin, ColorMixin):
+class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin,ColorMixin,TestMixin):
     _error_dict = {
         "configFile": -22,
         "inputImgFile": -23,
@@ -34,7 +35,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     }
     # mark 为int 因为img func 返回int
     process_list = [Abnormal(mark=1, method="clear", code=1),
-                                  Abnormal(mark=2, method="clear", code=0)]
+                    Abnormal(mark=2, method="clear", code=0)]
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
@@ -286,6 +287,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
 
         return data
 
+
+
     @staticmethod
     def _parse_function(result_list):
         for i in result_list:
@@ -323,11 +326,13 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return 0
 
     def record_words(self, exec_content) -> int:
-        data = self._validate(exec_content, ImageOutPutSchema)
-        path = self._crop_image_and_save(data.get("refer_im"), data.get("areas")[0])
+        data = self._validate(exec_content, ImageSchema)
+        path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             self.image = path
             result = ocr_obj.get_result()
+            if not isinstance(result, list) or len(result) == 0:
+                raise RecordWordsFindNoWords
             words = result[0].get("text")
             self._write_down(data.get("output_path"), f"{words}")
         return 0

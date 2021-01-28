@@ -14,7 +14,7 @@ class NoMoreThanOneDevice(APIException):
 class DeviceNotInUsb(APIException):
     error_code = 1001
     code = 400
-    description = "DO YOU FORGET CONNECT DEVICE?"
+    description = "DO YOU FORGET CONNECT DEVICE? or Your device already in other cabinet"
 
 
 class DeviceChanged(APIException):

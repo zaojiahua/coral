@@ -25,23 +25,22 @@ from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_thre
 VideoSearchPosition = 0.5
 
 
-class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin,ColorMixin,TestMixin):
+class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin, ColorMixin, TestMixin):
     _error_dict = {
         "configFile": -22,
         "inputImgFile": -23,
         "referImgFile": -24,
         "identifyIconFail": -25,
         "configArea": -26,
-        "fileName":-27
+        "fileName": -27
     }
     # mark 为int 因为img func 返回int
     process_list = [Abnormal(mark=1, method="clear", code=1),
                     Abnormal(mark=2, method="clear", code=0)]
 
-    def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.skip_list.extend(AreaSelectedMixin.skip_list)
-
 
     def img_compare_func3(self, exec_content, **kwargs) -> int:
         # 均值方差对比方法
@@ -288,8 +287,6 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
 
         return data
 
-
-
     @staticmethod
     def _parse_function(result_list):
         for i in result_list:
@@ -313,10 +310,10 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         except TypeError as e:
             return None
 
-    def _crop_image_and_save(self, image_path, area):
+    def _crop_image_and_save(self, image_path, area, mark=''):
         src = self._crop_image(image_path, area)
         if src is not None:
-            new_path = ".".join(image_path.split(".")[:-1]) + "-crop.jpg"
+            new_path = ".".join(image_path.split(".")[:-1]) + mark + "-crop.jpg"
             cv2.imwrite(new_path, src)
             return new_path
 

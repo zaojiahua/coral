@@ -205,7 +205,6 @@ class IconTestSchema(OcrTestSchema):
     class Meta:
         unknown = INCLUDE
 
-
     @post_load()
     def explain(self, data, **kwargs):
         area = data.get("config_file")

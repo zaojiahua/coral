@@ -82,6 +82,17 @@ class TestIconClass(MethodView):
         except Exception as e:
             return jsonify({"status": repr(e)}), 400
 
+
+class TestIconPositionClass(MethodView):
+    def post(self):
+        try:
+            image_handler = ImageHandler(model=Dummy_model, many=False)
+            response = image_handler.test_icon_position(request.files)
+            return jsonify(response), 200
+        except Exception as e:
+            return jsonify({"status": repr(e)}), 400
+
+
 class TestOcrClass(MethodView):
     def post(self):
         try:
@@ -109,4 +120,4 @@ if __name__ == '__main__':
             "referImgFile": {
                 "content": "<1ijobFile>Tmach ",
             }
-    }}
+        }}

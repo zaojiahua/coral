@@ -67,6 +67,14 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).recv()
         return 0
 
+    def move_rotate_arm(self,position):
+        pass
+    #   判断是否有对应机械臂
+    #   转换坐标，
+    #   发送指令得到结果
+
+
+
     def after_unit(self):
         self.reset_hand()
 

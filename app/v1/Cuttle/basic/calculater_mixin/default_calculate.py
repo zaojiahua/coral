@@ -46,6 +46,9 @@ class DefaultMixin(object):
                 opt_type = "long_press"
             else:
                 opt_type = "sliding"
+        elif 'rotate' in raw_commend:
+            pix_points = raw_commend[6:]
+            opt_type = 'rotate'
         else:
             pix_points = [int(i) for i in raw_commend.strip().split(' ')]
             opt_type = "double_click"
@@ -64,6 +67,9 @@ class DefaultMixin(object):
         return exec_content
 
     def transform_pix_point(self, k):
+        if isinstance(k,str):
+            # 旋转机械臂
+            return k
         if len(k) != 2 and len(k) != 4:
             raise CoordinateWrongFormat
         pix_point = [k] if len(k) == 2 else [k[:2], k[2:]]

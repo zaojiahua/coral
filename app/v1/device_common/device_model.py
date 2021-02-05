@@ -49,6 +49,7 @@ class Device(models.Model):
     flag = models.BooleanField()
     has_arm = models.BooleanField()
     has_camera = models.BooleanField()
+    has_rotate_camera = models.BooleanField()
     x1 = models.CharField()
     y1 = models.CharField()
     x2 = models.CharField()

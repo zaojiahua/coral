@@ -122,15 +122,14 @@ class Unit(BaseModel):
                 repalced_cmd_list = []
                 for cmd in cmd_list:
                     try:
-                        repalced_cmd, save_file = handler.replace(cmd, assist_device_ident=assist_device_ident)
+                        replaced_cmd, save_file = handler.replace(cmd, assist_device_ident=assist_device_ident)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
                         return
-
                     if save_file:
                         save_list.append(save_file)
-                    if repalced_cmd:
-                        repalced_cmd_list.append(repalced_cmd)
+                    if replaced_cmd:
+                        repalced_cmd_list.append(replaced_cmd)
                 logger.debug("----replace adb macro finished in eblock--(adbc)--")
                 cmd_dict["execCmdList"] = repalced_cmd_list
 

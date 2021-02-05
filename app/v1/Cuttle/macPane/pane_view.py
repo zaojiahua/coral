@@ -14,7 +14,7 @@ from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start_3
-from app.v1.Cuttle.basic.operator.hand_operate import hand_init
+from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema
@@ -54,7 +54,7 @@ class PaneUpdateView(MethodView):
         data = request.get_json()
         device_object = Device(pk=data.get("device_label"))
         try:
-            device_object.update_attr(**data,avoid_push=True)
+            device_object.update_attr(**data, avoid_push=True)
             pic_push(device_object, pic_name=SUCCESS_PIC_NAME)
             return jsonify({"status": "success"}), 200
         except Exception as e:
@@ -118,9 +118,11 @@ class PaneConfigView(MethodView):
         data = request.get_json()
         executer = ThreadPoolExecutor()
         if data.get("camera_id") is not None:
-            self.hardware_init(data.get("camera_id"), data.get("device_label"), executer)
+            self.hardware_init(data.get("camera_id"), data.get("device_label"), executer, rotate=False)
         if data.get("arm_id"):
-            self.hardware_init(data.get("arm_id"), data.get("device_label"), executer)
+            self.hardware_init(data.get("arm_id"), data.get("device_label"), executer, rotate=False)
+        if data.get("rotate_arm_id"):
+            self.hardware_init(data.get("rotate_arm_id"), data.get("device_label"), executer, rotate=True)
         return jsonify({"status": "success"}), 200
 
     def init_bright(self, device_label):
@@ -135,10 +137,15 @@ class PaneConfigView(MethodView):
         adjust_brightness_result = UnitFactory().create("AdbHandler", jsdata)
 
     @staticmethod
-    def hardware_init(port, device_label, executer):
+    def hardware_init(port, device_label, executer, rotate=False):
         try:
             device_object = Device(pk=device_label)
-            function, attribute = (camera_start_3, "has_camera") if isinstance(port, int) else (hand_init, "has_arm")
+            if rotate is True:
+                function, attribute = (rotate_hand_init, "has_rotate_arm")
+            elif isinstance(port, int):
+                function, attribute = (camera_start_3, "has_camera")
+            else:
+                function, attribute = (hand_init, "has_arm")
             setattr(device_object, attribute, True)
             future = executer.submit(function, port, device_object)
             exception = future.exception(timeout=1)

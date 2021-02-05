@@ -29,6 +29,23 @@ def hand_init(arm_com_id, device_obj):
     return 0
 
 
+def rotate_hand_init(arm_com_id, device_obj):
+    hand_serial_obj = HandSerial(timeout=2)
+    hand_serial_obj.connect(com_id=arm_com_id)
+    hand_serial_obj_dict[device_obj.pk] = hand_serial_obj
+    hand_reset_orders = [
+        "$G \r\n",
+        "$x \r\n",
+        "G92 X0Y0Z0 \r\n",
+        "G90 \r\n",
+        "G01 X0Y35Z0F1000 \r\n"
+    ]
+    for g_orders in hand_reset_orders:
+        hand_serial_obj.send_single_order(g_orders)
+        hand_serial_obj.recv(buffer_size=64)
+    return 0
+
+
 class HandHandler(Handler, DefaultMixin):
 
     def before_execute(self):
@@ -52,7 +69,7 @@ class HandHandler(Handler, DefaultMixin):
     def long_press(self, start_point, swipe_time=SWIPE_TIME, **kwargs):
         # 长按
         long_click_orders = self.__single_click_order(start_point[0])
-        hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2],wait=True)
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2], wait=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def sliding(self, point, swipe_time=SWIPE_TIME, **kwargs):
@@ -67,13 +84,21 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).recv()
         return 0
 
-    def move_rotate_arm(self,position):
+    def rotate(self, commend):
+        from app.v1.device_common.device_model import Device
+        rotate_camera = Device(pk=self._model.pk).has_rotate_camera
+        if rotate_camera is False:
+            return -9
+        hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
+        hand_serial_obj_dict.get(self._model.pk).recv()
+        return 0
+
+    def move_rotate_arm(self, position):
         pass
+
     #   判断是否有对应机械臂
     #   转换坐标，
     #   发送指令得到结果
-
-
 
     def after_unit(self):
         self.reset_hand()
@@ -126,11 +151,12 @@ class HandHandler(Handler, DefaultMixin):
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
         ]
 
+
 if __name__ == '__main__':
 
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id="COM7")
-    hand_reset_orders = ['G01 X70.0Y-176.0Z8F15000 \r\n', 'G01 Z0F15000 \r\n',"G01 X10Y-120Z8F15000 \r\n"]
+    hand_reset_orders = ['G01 X70.0Y-176.0Z8F15000 \r\n', 'G01 Z0F15000 \r\n', "G01 X10Y-120Z8F15000 \r\n"]
     init = [
         "$x \r\n",
         "$h \r\n",
@@ -146,4 +172,4 @@ if __name__ == '__main__':
             a = time.time()
             hand_serial_obj.send_single_order(g_orders)
             hand_serial_obj.recv()
-            print(time.time()-a)
+            print(time.time() - a)

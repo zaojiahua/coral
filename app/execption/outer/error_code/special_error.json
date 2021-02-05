@@ -23,6 +23,9 @@
     "error_code": -8,
     "description": "adb commend exec fail"
   },{
+    "error_code": -9,
+    "description": "Do not have rotate arm in rotate arm 's unit "
+  },{
     "error_code": -16,
     "description": "job内有无法识别的宏，--检查job内容"
   },{

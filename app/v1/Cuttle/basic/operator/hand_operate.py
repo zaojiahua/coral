@@ -48,6 +48,10 @@ def rotate_hand_init(arm_com_id, device_obj):
 
 class HandHandler(Handler, DefaultMixin):
 
+    def __init__(self,*args,**kwargs):
+        super(HandHandler, self).__init__(*args,**kwargs)
+        self.ignore_reset = False
+
     def before_execute(self):
         pix_points, opt_type = self.grouping(self.exec_content)
         self.exec_content = self.transform_pix_point(pix_points)
@@ -91,17 +95,14 @@ class HandHandler(Handler, DefaultMixin):
             return -9
         hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
         hand_serial_obj_dict.get(self._model.pk).recv()
+        self.ignore_reset = True
         return 0
 
-    def move_rotate_arm(self, position):
-        pass
 
-    #   判断是否有对应机械臂
-    #   转换坐标，
-    #   发送指令得到结果
 
     def after_unit(self):
-        self.reset_hand()
+        if self.ignore_reset is False:
+            self.reset_hand()
 
     # TODO 怎样处理如果传入点中有一个或多个计算出的坐标超过操作台范围
     def __list_click_order(self, axis_list):

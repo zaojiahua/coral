@@ -171,6 +171,26 @@ class Unit(BaseModel):
             logger.debug(f"unit finished result:{self.detail}")
             self.copy_save_file(save_list, handler)
 
+
+            # def _replace(item_iter,saving_container):
+            #     save_list = []
+            #     for item in item_iter:
+            #         try:
+            #             value = saving_container.get(item) if isinstance(saving_container,dict) else item
+            #             replaced_cmd, save_file = handler.replace(value, assist_device_ident=assist_device_ident)
+            #         except EblockCannotFindFile as ex:  # 解释失败,不记录结果
+            #             logger.error(f"unit replace fail {ex}")
+            #             return
+            #         if save_file:
+            #             save_list.append(save_file)
+            #         if replaced_cmd and isinstance(saving_container, dict):
+            #             if isinstance(saving_container, dict):
+            #                 saving_container[item] = replaced_cmd
+            #             else:
+            #                 saving_container.append(replaced_cmd)
+            #     return save_list,saving_container
+
+
         return _inner_func()
 
     def copy_save_file(self, save_list, handler: MacroHandler):

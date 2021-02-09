@@ -43,47 +43,21 @@ class AdbHandler(Handler, ChineseMixin):
         Abnormal("cpu", "save_cpu_info", 0),
         Abnormal("battery fail mark", "_get_battery_detail", 0)
     ]
+    before_match_rules = {
+        # 根据cmd中内容，执行对应的预处理方法
+        "shell input text": '_chinese_input',
+        "input tap": "_relative_point",
+        "input swipe": "_relative_swipe",
+        "G01": "_ignore_rotate_arm_commend"
+
+    }
 
     def before_execute(self, *args, **kwargs):
         if self._model.is_connected == False:
             self.reconnect()
-        if "shell input text" in self.exec_content:
-            regex = re.compile("shell input text ([\u4e00-\u9fa5]*).*")
-            result = re.search(regex, self.exec_content)
-            if result is None:
-                return False, None
-            words = result.group(1)
-            if self.is_chinese(words):
-                return True, self.chinese_support(words)
-        elif "input tap" in self.exec_content:
-            # 兼容点击相对坐标
-            regex = re.compile("shell input tap ([\d.]*?) ([\d.]*)")
-            result = re.search(regex, self.exec_content)
-            x = float(result.group(1))
-            y = float(result.group(2))
-            if any((0 < x < 1, 0 < y < 1)):
-                from app.v1.device_common.device_model import Device
-                w = Device(pk=self._model.pk).device_width * x
-                h = Device(pk=self._model.pk).device_height * y
-                self.exec_content = self.exec_content.replace(str(x), str(w))
-                self.exec_content = self.exec_content.replace(str(y), str(h))
-        elif "input swipe" in self.exec_content:
-            regex = re.compile("shell input swipe ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*)")
-            result = re.search(regex, self.exec_content)
-            x1 = float(result.group(1))
-            y1 = float(result.group(2))
-            x2 = float(result.group(3))
-            y2 = float(result.group(4))
-            if any((0 < x1 < 1, 0 < y2 < 1, 0 < x2 < 1, 0 < y2 < 1)):
-                from app.v1.device_common.device_model import Device
-                w1 = Device(pk=self._model.pk).device_width * x1
-                h1 = Device(pk=self._model.pk).device_height * y1
-                w2 = Device(pk=self._model.pk).device_width * x2
-                h2 = Device(pk=self._model.pk).device_height * y2
-                self.exec_content = self.exec_content.replace(str(x1), str(w1))
-                self.exec_content = self.exec_content.replace(str(y1), str(h1))
-                self.exec_content = self.exec_content.replace(str(x2), str(w2))
-                self.exec_content = self.exec_content.replace(str(y2), str(h2))
+        for key, value in self.before_match_rules.items():
+            if key in self.exec_content:
+                return getattr(self, value)()
         return False, None
 
     def str_func(self, exec_content, **kwargs) -> str:
@@ -257,3 +231,45 @@ class AdbHandler(Handler, ChineseMixin):
 
     def ignore(self, *args):
         pass
+
+    def _chinese_input(self):
+        regex = re.compile("shell input text ([\u4e00-\u9fa5]*).*")
+        result = re.search(regex, self.exec_content)
+        if result is None:
+            return False, None
+        words = result.group(1)
+        if self.is_chinese(words):
+            return True, self.chinese_support(words)
+
+    def _relative_point(self):
+        regex = re.compile("shell input tap ([\d.]*?) ([\d.]*)")
+        result = re.search(regex, self.exec_content)
+        x = float(result.group(1))
+        y = float(result.group(2))
+        if any((0 < x < 1, 0 < y < 1)):
+            from app.v1.device_common.device_model import Device
+            w = Device(pk=self._model.pk).device_width * x
+            h = Device(pk=self._model.pk).device_height * y
+            self.exec_content = self.exec_content.replace(str(x), str(w))
+            self.exec_content = self.exec_content.replace(str(y), str(h))
+
+    def _relative_swipe(self):
+        regex = re.compile("shell input swipe ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*)")
+        result = re.search(regex, self.exec_content)
+        x1 = float(result.group(1))
+        y1 = float(result.group(2))
+        x2 = float(result.group(3))
+        y2 = float(result.group(4))
+        if any((0 < x1 < 1, 0 < y2 < 1, 0 < x2 < 1, 0 < y2 < 1)):
+            from app.v1.device_common.device_model import Device
+            w1 = Device(pk=self._model.pk).device_width * x1
+            h1 = Device(pk=self._model.pk).device_height * y1
+            w2 = Device(pk=self._model.pk).device_width * x2
+            h2 = Device(pk=self._model.pk).device_height * y2
+            self.exec_content = self.exec_content.replace(str(x1), str(w1))
+            self.exec_content = self.exec_content.replace(str(y1), str(h1))
+            self.exec_content = self.exec_content.replace(str(x2), str(w2))
+            self.exec_content = self.exec_content.replace(str(y2), str(h2))
+
+    def _ignore_rotate_arm_commend(self):
+        return True, -9

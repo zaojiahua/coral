@@ -20,6 +20,8 @@ Rotate_horizontal = "<RotateHorizontal>"
 Rotate_vertical = "<RotateVertical>"
 Rotate_switch = "<RotateSwitch>"
 Rotate_switchHold = "<RotateSwitchHold>"
+RotateNormal = "<RotateNormal>"
+RotateInit = "<RotateInit>"
 
 job_editor_logo = "Tmach"
 
@@ -30,6 +32,8 @@ macro_dict = {
     Rotate_vertical: "G01 X0Y35Z0F1000 \r\n",
     Rotate_switch: "G01 X27Y35Z0F1000 \r\n<move>",
     Rotate_switchHold: "G01 X27Y35Z0F1000 \r\n<sleep><move>",
+    RotateNormal: "G01 X0Y35Z0F1000 \r\n",
+    RotateInit: "G01 X0Y00Z0F1000 \r\n"
 }
 
 

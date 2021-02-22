@@ -46,8 +46,8 @@ class DefaultMixin(object):
                 opt_type = "long_press"
             else:
                 opt_type = "sliding"
-        elif 'rotate' in raw_commend:
-            pix_points = raw_commend[6:]
+        elif 'G01' in raw_commend:
+            pix_points = raw_commend
             opt_type = 'rotate'
         else:
             pix_points = [int(i) for i in raw_commend.strip().split(' ')]

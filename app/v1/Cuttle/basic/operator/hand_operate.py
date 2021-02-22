@@ -30,7 +30,7 @@ def hand_init(arm_com_id, device_obj):
 
 
 def rotate_hand_init(arm_com_id, device_obj):
-    hand_serial_obj = HandSerial(timeout=5)
+    hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[device_obj.pk] = hand_serial_obj
     hand_reset_orders = [
@@ -38,7 +38,7 @@ def rotate_hand_init(arm_com_id, device_obj):
         "$x \r\n",
         "G92 X0Y0Z0 \r\n",
         "G90 \r\n",
-        "G01 X0Y35Z0F1000 \r\n"
+        "G01 X0Y35Z0F3000 \r\n"
     ]
     for g_orders in hand_reset_orders:
         hand_serial_obj.send_single_order(g_orders)
@@ -82,31 +82,34 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def reset_hand(self,hand_reset_orders="G01 X10Y-120Z12F12000 \r\n"):
+    def reset_hand(self, hand_reset_orders="G01 X10Y-120Z12F12000 \r\n"):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
         return 0
 
-    def rotate(self, commend):
+    def str_func(self, commend):
         from app.v1.device_common.device_model import Device
         sleep = False
         move = False
         if Device(pk=self._model.pk).has_rotate_arm is False:
             return -9
-        if '<sleep>' in commend:
-            commend = commend.replace('<sleep>', "")
+        if '<rotateSleep>' in commend:
+            commend = commend.replace('<rotateSleep>', "")
             sleep = True
-        elif '<move>' in commend:
+        if '<move>' in commend:
             commend = commend.replace('<move>', "")
             move = True
         hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
-        hand_serial_obj_dict.get(self._model.pk).recv()
         if sleep:
-            time.sleep(1)
+            time.sleep(2)
         if move:
-            self.reset_hand(hand_reset_orders="G01 X0Y0Z0F1000 \r\n")
+            self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")
+        hand_serial_obj_dict.get(self._model.pk).recv()
         self.ignore_reset = True
         return 0
+
+    def rotate(self, commend):
+        return self.str_func(commend)
 
     def after_unit(self):
         if self.ignore_reset is False:

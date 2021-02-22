@@ -28,12 +28,12 @@ job_editor_logo = "Tmach"
 macro_list = []
 macro_dict = {
     adb_ip_prefix: REEF_IP,
-    Rotate_horizontal: "G01 X0Y35Z90F5000 \r\n",
-    Rotate_vertical: "G01 X0Y35Z0F1000 \r\n",
-    Rotate_switch: "G01 X27Y35Z0F1000 \r\n<move>",
-    Rotate_switchHold: "G01 X27Y35Z0F1000 \r\n<sleep><move>",
-    RotateNormal: "G01 X0Y35Z0F1000 \r\n",
-    RotateInit: "G01 X0Y00Z0F1000 \r\n"
+    Rotate_horizontal: "G01 X0Y35Z90F7000 \r\n",
+    Rotate_vertical: "G01 X0Y35Z0F7000 \r\n",
+    Rotate_switch: "G01 X27Y35Z0F2500 \r\n<move>",
+    Rotate_switchHold: "G01 X27Y35Z0F2500 \r\n<rotateSleep><move>",
+    RotateNormal: "G01 X0Y35Z0F5000 \r\n",
+    RotateInit: "G01 X0Y00Z0F5000 \r\n"
 }
 
 

@@ -18,15 +18,21 @@ from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url
 from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevice, DeviceChanged, DeviceCannotSetprop, \
-    DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet
+    DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough
 from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
+from app.v1.Cuttle.basic.setting import hand_used_list
+from app.v1.Cuttle.macPane.init import get_tty_device_number
+from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
 from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
 
 logger = logging.getLogger(DOOR_LOG_NAME)
-
+try:
+    from app.config.ip import CORAL_TYPE
+except ImportError:
+    CORAL_TYPE = 1
 
 class DoorKeeper(object):
     def __init__(self):
@@ -51,17 +57,31 @@ class DoorKeeper(object):
             #     raise DeviceBindFail
         else:
             self.is_device_rootable(num=f"-s {s_id}")
+        if CORAL_TYPE > 2:
+            self.set_arm_or_camera(CORAL_TYPE, dev_info_dict["device_label"])
         dev_info_dict.update(kwargs)
         self.send_dev_info_to_reef(kwargs.pop("deviceName"), dev_info_dict)  # now report dev_info_dict to reef directly
         logger.info(f"set device success")
+
         return 0
+
+    def set_arm_or_camera(self, CORAL_TYPE, device_label):
+        port_list = get_tty_device_number()
+        rotate = True if CORAL_TYPE == 4 else False
+        executer = ThreadPoolExecutor()
+        try:
+            port = list(set(port_list) ^ set(hand_used_list)).pop()
+            hand_used_list.append(port)
+            PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
+        except IndexError:
+            raise ArmNorEnough
 
     def get_connected_device_list(self, adb_response):
         id_list = []
         for i in adb_response.split("\n")[1:]:
             item = i.split(" ")[0]
             descriptor = i.split(" ")[7]
-            if not "." in item and not "emulator" in item and "no"!= descriptor:
+            if not "." in item and not "emulator" in item and "no" != descriptor:
                 id_list.append(item.strip().strip("\r\t"))
         return id_list
 
@@ -102,7 +122,6 @@ class DoorKeeper(object):
                       json={"ip_address": ip})
         logger.info(f"response from reef: {res}")
         return self.open_wifi_service(f"-s {s_id}")
-
 
     def open_wifi_service(self, num="-d"):
         rootable = self.is_device_rootable(num)
@@ -155,7 +174,7 @@ class DoorKeeper(object):
                 f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(), "device_width": screen_size[0],
             "device_height": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
             "phone_model_name": phone_model, "ip_address": self.get_dev_ip_address_internal(
-                f"-s {s_id}") if ADB_TYPE == 0 else f"0.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(0,255)}"}
+                f"-s {s_id}") if ADB_TYPE == 0 else f"0.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}"}
         color_os = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.opporom")
         rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.ota")
         if len(rom_version) == 0:
@@ -274,7 +293,6 @@ class DoorKeeper(object):
         except RequestException:
             pass
 
-
     def is_device_connected(self):
         tmp_ret_str = self.adb_cmd_obj.run_cmd_to_get_result("adb -d devices -l", 6)
         if "device usb" not in tmp_ret_str and "device product" not in tmp_ret_str:
@@ -289,8 +307,7 @@ class DoorKeeper(object):
         return False
 
     def is_device_remountable(self, num="-d"):
-        return True if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} remount", "remount succeeded", 1, 5)else False
-
+        return True if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} remount", "remount succeeded", 1, 5) else False
 
     def set_adb_wifi_property_internal(self, rootable, num="-d"):
         if rootable:
@@ -303,7 +320,7 @@ class DoorKeeper(object):
             for i in range(3):
                 self.adb_cmd_obj.run_cmd(f"adb {num} shell setprop service.adb.tcp.port 5555")
                 self.adb_cmd_obj.run_cmd(f"adb {num} tcpip 5555")
-                time.sleep(1)
+                time.sleep(2)
                 if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} shell getprop service.adb.tcp.port", "5555"):
                     return 0
             return -2

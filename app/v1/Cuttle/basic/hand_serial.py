@@ -34,6 +34,7 @@ class HandSerial:
     def recv(self, buffer_size=32):
         # print(self.ser.read(buffer_size))
         rev = self.ser.read(buffer_size).decode()
+        print("rev:",rev)
         if 'ok' in rev or 'unlock' in rev:
             return 0
         return -1

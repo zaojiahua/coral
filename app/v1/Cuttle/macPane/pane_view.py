@@ -74,6 +74,11 @@ class PaneDeleteView(MethodView):
         # 推送结束图片
         if device_object.ip_address != "0.0.0.0":
             pic_push(device_object, pic_name=LEAVE_PIC_NAME)
+        if device_object.has_rotate_arm:
+            # todo  clear used list when only one arm for one server
+            from app.v1.Cuttle.basic.setting import hand_used_list
+            self._reset_arm(device_object)
+            hand_used_list.clear()
         # 移除redis中缓存
         device_object.simple_remove()
         if data.get("assistance_ip_address"):
@@ -84,8 +89,15 @@ class PaneDeleteView(MethodView):
         res = unbind_spec_ip(data.get("ip_address"))
         # if res != 0:
         #     raise DeviceBindFail
-        return jsonify({"status": "success"}), 200
+        print(device_object.has_arm)
+        print(device_object.has_rotate_arm)
 
+        return jsonify({"status": "success"}), 200
+    def _reset_arm(self,device_object):
+        hand_serial_obj = hand_serial_obj_dict[device_object.pk]
+        print(hand_serial_obj)
+        hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
+        hand_serial_obj.recv(buffer_size=64)
 
 class PaneAssisDeleteView(MethodView):
     def post(self):
@@ -114,6 +126,7 @@ class PaneOriginalView(MethodView):
 
 class PaneConfigView(MethodView):
 
+
     def post(self):
         data = request.get_json()
         executer = ThreadPoolExecutor()
@@ -138,6 +151,7 @@ class PaneConfigView(MethodView):
 
     @staticmethod
     def hardware_init(port, device_label, executer, rotate=False):
+        port = f'/dev/{port}'
         try:
             device_object = Device(pk=device_label)
             if rotate is True:
@@ -147,6 +161,7 @@ class PaneConfigView(MethodView):
             else:
                 function, attribute = (hand_init, "has_arm")
             setattr(device_object, attribute, True)
+            print("after set :",device_object.has_rotate_arm)
             future = executer.submit(function, port, device_object)
             exception = future.exception(timeout=1)
             if "PermissionError" in str(exception):

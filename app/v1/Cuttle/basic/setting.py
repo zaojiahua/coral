@@ -1,4 +1,5 @@
 hand_serial_obj_dict = {}
+hand_used_list = []
 camera_dq_dict = {}
 # 机械臂完全固定的参数
 HAND_MAX_X = 315

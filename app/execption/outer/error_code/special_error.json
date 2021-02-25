@@ -23,6 +23,9 @@
     "error_code": -8,
     "description": "adb commend exec fail"
   },{
+    "error_code": -9,
+    "description": "Do not have rotate arm in rotate arm 's unit "
+  },{
     "error_code": -16,
     "description": "job内有无法识别的宏，--检查job内容"
   },{
@@ -44,7 +47,14 @@
     "error_code": -26,
     "description": "job unit内缺失范围选择文件--检查job"
   },{
+    "error_code": -27,
+    "description": "推送文件unit格式有误"
+  },{
     "error_code": -32,
     "description": "job执行没有生成结果"
+  },
+  {
+    "error_code": -2000,
+    "description": "can not find required words when use color judgment by words shift"
   }
 ]

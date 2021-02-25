@@ -35,6 +35,7 @@ device_create_update_url = "/api/v1/coral/create_update_device/"
 device_assis_create_update_url = "/api/v1/coral/create_or_update_subsidiary_device/"
 device_logout = "/api/v1/coral/logout_device/"
 coordinate_url = "/api/v1/cedar/control_device_cut_coordinate/"
+device_assis_url = "/api/v1/cedar/subsidiary_device/"
 
 # ==================================device_power=======================================
 

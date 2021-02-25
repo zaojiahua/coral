@@ -4,6 +4,7 @@ from functools import lru_cache
 from astra import models
 from func_timeout import func_set_timeout
 
+from app.config.ip import ADB_TYPE
 from app.config.url import device_url
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
 from app.execption.outer.error_code.eblock import EblockCannotFindFile
@@ -37,7 +38,9 @@ def get_assist_device_ident(device_label, assist_device_serial_number):
     )
     for subsidiary_device in device_detail_msg["subsidiarydevice"]:
         if subsidiary_device["order"] == assist_device_serial_number:
-            return subsidiary_device["ip_address"]
+            connect_number = subsidiary_device.get("ip_address") + ":5555" if ADB_TYPE == 0 else subsidiary_device.get(
+                "serial_number")
+            return connect_number
     raise AssistDeviceNotFind(
         description="Job used the no. 1 assist device of the primary device, but the primary device did not")
 
@@ -119,15 +122,14 @@ class Unit(BaseModel):
                 repalced_cmd_list = []
                 for cmd in cmd_list:
                     try:
-                        repalced_cmd, save_file = handler.replace(cmd, assist_device_ident=assist_device_ident)
+                        replaced_cmd, save_file = handler.replace(cmd, assist_device_ident=assist_device_ident)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
                         return
-
                     if save_file:
                         save_list.append(save_file)
-                    if repalced_cmd:
-                        repalced_cmd_list.append(repalced_cmd)
+                    if replaced_cmd:
+                        repalced_cmd_list.append(replaced_cmd)
                 logger.debug("----replace adb macro finished in eblock--(adbc)--")
                 cmd_dict["execCmdList"] = repalced_cmd_list
 
@@ -138,6 +140,8 @@ class Unit(BaseModel):
                     target = PROCESSER_LIST[1]
                 elif Device(pk=self.device_label).has_camera and cmd_dict.get("have_second_choice", 0) == 2:
                     target = PROCESSER_LIST[2]
+                elif Device(pk=self.device_label).has_rotate_arm and cmd_dict.get("have_second_choice", 0) == 3:
+                    target = PROCESSER_LIST[1]
                 else:
                     target = PROCESSER_LIST[0]
 
@@ -168,6 +172,26 @@ class Unit(BaseModel):
 
             logger.debug(f"unit finished result:{self.detail}")
             self.copy_save_file(save_list, handler)
+
+
+            # def _replace(item_iter,saving_container):
+            #     save_list = []
+            #     for item in item_iter:
+            #         try:
+            #             value = saving_container.get(item) if isinstance(saving_container,dict) else item
+            #             replaced_cmd, save_file = handler.replace(value, assist_device_ident=assist_device_ident)
+            #         except EblockCannotFindFile as ex:  # 解释失败,不记录结果
+            #             logger.error(f"unit replace fail {ex}")
+            #             return
+            #         if save_file:
+            #             save_list.append(save_file)
+            #         if replaced_cmd and isinstance(saving_container, dict):
+            #             if isinstance(saving_container, dict):
+            #                 saving_container[item] = replaced_cmd
+            #             else:
+            #                 saving_container.append(replaced_cmd)
+            #     return save_list,saving_container
+
 
         return _inner_func()
 

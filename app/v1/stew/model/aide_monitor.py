@@ -23,7 +23,8 @@ def send_battery_check(device_label, device_ip):
     if not os.path.exists(work_path):
         os.makedirs(work_path)
     cmd_list = [
-        f"adb  -s {device_ip}:5555 shell cat sys/class/power_supply/battery/capacity sys/class/power_supply/battery/status && echo battery mark || echo battery fail mark",
+        #  todo 等产品确认编辑用例通信方式有线/无线
+        f"adb  -s {device_ip} shell cat sys/class/power_supply/battery/capacity sys/class/power_supply/battery/status && echo battery mark || echo battery fail mark",
         # f'adb  -s {device_ip}:5555 shell dumpsys battery > {os.path.join(work_path,"battery.dat")}',
         # f"adb -s {device_ip}:5555 shell echo battery"
     ]

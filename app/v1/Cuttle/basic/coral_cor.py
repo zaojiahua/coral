@@ -4,7 +4,7 @@ import shutil
 
 import cv2
 
-from app.config.ip import OCR_IP
+from app.config.ip import OCR_IP, ADB_TYPE
 from app.config.url import coral_ocr_url
 from app.execption.outer.error_code.imgtool import OcrRetryTooManyTimes, OcrParseFail, OcrWorkPathNotFound, \
     ComplexSnapShotFail, NotFindIcon, OcrShiftWrongFormat
@@ -63,9 +63,9 @@ class Complex_Center(object):
     @property
     def connect_number(self):
         from app.v1.device_common.device_model import Device
-        ip = Device(pk=self.device_label).ip_address if self.kwargs.get(
+        connect_number = Device(pk=self.device_label).connect_number if self.kwargs.get(
             "assist_device_serial_number") is None else self.kwargs.get("assist_device_serial_number")
-        return ip + ":5555"
+        return connect_number
 
     @staticmethod
     def default_parse_response(result):

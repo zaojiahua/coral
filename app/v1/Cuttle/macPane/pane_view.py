@@ -26,6 +26,10 @@ from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
 logger = logging.getLogger(PANE_LOG_NAME)
 from concurrent.futures._base import TimeoutError
 import copy
+try:
+    from app.config.ip import CORAL_TYPE
+except ImportError:
+    CORAL_TYPE = 1
 
 # mapping_dict = {0: ADB_SERVER_1, 1: ADB_SERVER_2, 2: ADB_SERVER_3}
 
@@ -39,7 +43,7 @@ def pic_push(device_object, pic_name="success.png"):
         "execBlockName": "set_config_success",
         "ip_address": device_object.ip_address,
         "device_label": device_object.device_label,
-        "execCmdList": ["<sleep>0.5",
+        "execCmdList": [
                         "adb -s " + device_object.ip_address + f":5555 shell am start -a android.intent.action.VIEW -d http://{pic_ip}:5000/static/{pic_name}"]
 
     }
@@ -86,16 +90,15 @@ class PaneDeleteView(MethodView):
             for ip in data.get("assistance_ip_address"):
                 h.disconnect(ip)
         # 解除路由器IP绑定 start after jsp finished
-        res = unbind_spec_ip(data.get("ip_address"))
-        # if res != 0:
-        #     raise DeviceBindFail
-        print(device_object.has_arm)
-        print(device_object.has_rotate_arm)
-
+        if CORAL_TYPE >= 2:
+            res = unbind_spec_ip(data.get("ip_address"))
+            # if res != 0:
+            #     raise DeviceBindFail
         return jsonify({"status": "success"}), 200
+
+
     def _reset_arm(self,device_object):
         hand_serial_obj = hand_serial_obj_dict[device_object.pk]
-        print(hand_serial_obj)
         hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
         hand_serial_obj.recv(buffer_size=64)
 

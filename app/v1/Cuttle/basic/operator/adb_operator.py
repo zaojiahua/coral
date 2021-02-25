@@ -13,7 +13,7 @@ from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
-from app.v1.Cuttle.basic.setting import adb_disconnect_threshold
+from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, normal_result
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 
 adb_cmd_prefix = "adb "
@@ -252,6 +252,7 @@ class AdbHandler(Handler, ChineseMixin):
             h = Device(pk=self._model.pk).device_height * y
             self.exec_content = self.exec_content.replace(str(x), str(w))
             self.exec_content = self.exec_content.replace(str(y), str(h))
+        return normal_result
 
     def _relative_swipe(self):
         regex = re.compile("shell input swipe ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*)")
@@ -270,6 +271,8 @@ class AdbHandler(Handler, ChineseMixin):
             self.exec_content = self.exec_content.replace(str(y1), str(h1))
             self.exec_content = self.exec_content.replace(str(x2), str(w2))
             self.exec_content = self.exec_content.replace(str(y2), str(h2))
+
+        return normal_result
 
     def _ignore_rotate_arm_commend(self):
         return True, -9

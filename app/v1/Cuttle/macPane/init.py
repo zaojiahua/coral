@@ -80,7 +80,7 @@ def recover_device(executer, logger):
                 executer = ThreadPoolExecutor()
                 # for key in key_parameter_list:
                 #     port = device_dict.get("paneslot").get("paneview").get(key)
-                port_list = get_tty_device_number()
+                port_list = ["rotate"]
                 rotate = True if CORAL_TYPE == 4 else False
                 for port in port_list:
                     PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer, rotate=rotate)

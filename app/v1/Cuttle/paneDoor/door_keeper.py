@@ -66,7 +66,7 @@ class DoorKeeper(object):
         return 0
 
     def set_arm_or_camera(self, CORAL_TYPE, device_label):
-        port_list = get_tty_device_number()
+        port_list = ['rotate']
         rotate = True if CORAL_TYPE == 4 else False
         executer = ThreadPoolExecutor()
         try:

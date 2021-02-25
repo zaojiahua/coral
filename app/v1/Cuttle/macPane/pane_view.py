@@ -135,7 +135,7 @@ class PaneConfigView(MethodView):
         if data.get("arm_id"):
             self.hardware_init(data.get("arm_id"), data.get("device_label"), executer, rotate=False)
         if data.get("rotate_arm_id"):
-            self.hardware_init(data.get("rotate_arm_id"), data.get("device_label"), executer, rotate=True)
+            self.hardware_init('rotate', data.get("device_label"), executer, rotate=True)
         return jsonify({"status": "success"}), 200
 
     def init_bright(self, device_label):

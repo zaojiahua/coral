@@ -25,6 +25,10 @@ class HandSerial:
             time.sleep(1)
             self.ser.write(deviate_order.encode())
             return 0
+        elif kwargs.get("ignore_reset"):
+            for g_order in g_orders:
+                self.ser.write(g_order.encode())
+            return 0
         else:
             g_orders.append(deviate_order)
             for g_order in g_orders:

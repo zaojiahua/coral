@@ -48,8 +48,7 @@ class AdbHandler(Handler, ChineseMixin):
         "shell input text": '_chinese_input',
         "input tap": "_relative_point",
         "input swipe": "_relative_swipe",
-        "G01": "_ignore_rotate_arm_commend"
-
+        "G01": "_ignore_unsupported_commend"
     }
 
     def before_execute(self, *args, **kwargs):
@@ -274,5 +273,5 @@ class AdbHandler(Handler, ChineseMixin):
 
         return normal_result
 
-    def _ignore_rotate_arm_commend(self):
+    def _ignore_unsupported_commend(self):
         return True, -9

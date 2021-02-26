@@ -16,6 +16,8 @@ icon_rate = 500
 
 adb_disconnect_threshold = 15
 
+last_swipe_end_point = (0,0)
+
 color_threshold = 40
 color_rate = 1500
 

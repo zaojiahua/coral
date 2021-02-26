@@ -82,10 +82,15 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def reset_hand(self, hand_reset_orders="G01 X10Y-120Z12F12000 \r\n"):
+    def reset_hand(self, hand_reset_orders="G01 X10Y-120Z12F12000 \r\n", **kwargs):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
         return 0
+
+    def continuous_swipe(self, commend, **kwargs):
+        sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0))
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
+        return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def str_func(self, commend):
         from app.v1.device_common.device_model import Device
@@ -162,6 +167,27 @@ class HandHandler(Handler, DefaultMixin):
             'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
         ]
+
+    def _sliding_contious_order(self, start_point, end_point, commond_index):
+        start_x, start_y = start_point
+        end_x, end_y = end_point
+        # 连续滑动保证动作无偏差
+        from app.v1.Cuttle.basic.setting import last_swipe_end_point
+        last_swipe_end_point[0] = start_x
+        last_swipe_end_point[1] = start_y
+        if start_x - last_swipe_end_point[0] < 10 and start_y - last_swipe_end_point[1] < 10:
+            start_x, start_y = last_swipe_end_point
+        # 首次动作有移动和下压动作
+        if commond_index == 0:
+            return [
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED)
+            ]
+        else:  # 后面动作只有滑动
+            return [
+                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED)
+            ]
 
 
 if __name__ == '__main__':

@@ -11,7 +11,7 @@ from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
-Standard = collections.namedtuple("Standard", ["mark","code"])
+Standard = collections.namedtuple("Standard", ["mark", "code"])
 
 Dummy_model = collections.namedtuple("Dummy_model", ["is_busy", "pk", "logger"])
 
@@ -78,13 +78,12 @@ class Handler():
         return response
 
     @method_dispatch
-    def do(self, exec_content, **kwargs) :
+    def do(self, exec_content, **kwargs):
         return self.func(exec_content, **kwargs)
 
     @do.register(str)
-    def _(self,exec_content, **kwargs):
+    def _(self, exec_content, **kwargs):
         return self.str_func(exec_content, **kwargs)
-
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:
@@ -104,7 +103,7 @@ class Handler():
         # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
         if funcname not in self.skip_list:
             for abnormal in self.process_list:
-                if isinstance(abnormal.mark,str)and abnormal.mark in result:
+                if isinstance(abnormal.mark, str) and abnormal.mark in result:
                     getattr(self, abnormal.method)(result)
                     return abnormal.code
             for standard in self.standard_list:
@@ -131,14 +130,16 @@ class ListHandler(Handler):
 
     def __init__(self, *args, **kwargs):
         self.child = kwargs.pop('child')
+        self.continuous = kwargs.get("continuous",False)
         assert self.child is not None, '`child` is a required argument.'
         super(ListHandler, self).__init__(*args, **kwargs)
 
     def execute(self, **kwargs):
         flag = 0
-        for single_cmd in copy.deepcopy(self.exec_content):
+        for index,single_cmd in enumerate(copy.deepcopy(self.exec_content)):
             try:
                 self.child.exec_content = single_cmd
+                kwargs['index'] = index
                 result = self.child.execute(**kwargs)
                 flag = result.get("result", -1) if result.get("result") != 0 else flag
             except NoContent:

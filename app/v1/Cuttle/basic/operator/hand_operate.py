@@ -92,7 +92,7 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def str_func(self, commend):
+    def str_func(self, commend,**kwargs):
         from app.v1.device_common.device_model import Device
         sleep = False
         move = False
@@ -193,7 +193,7 @@ class HandHandler(Handler, DefaultMixin):
 if __name__ == '__main__':
 
     hand_serial_obj = HandSerial(timeout=2)
-    hand_serial_obj.connect(com_id="COM7")
+    hand_serial_obj.connect(com_id="/dev/arm")
     hand_reset_orders = ['G01 X70.0Y-176.0Z8F15000 \r\n', 'G01 Z0F15000 \r\n', "G01 X10Y-120Z8F15000 \r\n"]
     init = [
         "$x \r\n",

@@ -14,6 +14,7 @@ from typing import Dict
 import numpy as np
 
 from app.config.ip import HOST_IP, ADB_TYPE
+from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url
@@ -29,10 +30,7 @@ from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
 
 logger = logging.getLogger(DOOR_LOG_NAME)
-try:
-    from app.config.ip import CORAL_TYPE
-except ImportError:
-    CORAL_TYPE = 1
+
 
 class DoorKeeper(object):
     def __init__(self):
@@ -59,8 +57,8 @@ class DoorKeeper(object):
         return 0
 
     def set_arm_or_camera(self, CORAL_TYPE, device_label):
-        port_list = ['rotate']
-        rotate = True if CORAL_TYPE == 4 else False
+        port_list = HARDWARE_MAPPING_LIST.copy()
+        rotate = True if CORAL_TYPE == 3 else False
         executer = ThreadPoolExecutor()
         try:
             port = list(set(port_list) ^ set(hand_used_list)).pop()

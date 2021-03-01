@@ -30,8 +30,8 @@ macro_dict = {
     adb_ip_prefix: REEF_IP,
     Rotate_horizontal: "G01 X0Y33Z90F7000 \r\n",
     Rotate_vertical: "G01 X0Y33Z0F7000 \r\n",
-    Rotate_switch: "G01 X32Y33Z0F2000 \r\n<move>",
-    Rotate_switchHold: "G01 X32Y33Z0F2000 \r\n<rotateSleep><move>",
+    Rotate_switch: "G01 X34Y33Z0F1500 \r\n<move>",
+    Rotate_switchHold: "G01 X34Y33Z0F1500 \r\n<rotateSleep><move>",
     RotateNormal: "G01 X0Y33Z0F5000 \r\n",
     RotateInit: "G01 X0Y00Z0F5000 \r\n"
 }

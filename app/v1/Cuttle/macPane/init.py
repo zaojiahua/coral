@@ -6,7 +6,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from app.config.setting import BASE_DIR, HOST_IP
+from app.config.setting import BASE_DIR, HOST_IP, CORAL_TYPE, HARDWARE_MAPPING_LIST
 from app.config.url import device_url, device_logout, coordinate_url
 from app.execption.outer.error import APIException
 from app.libs.http_client import request
@@ -18,10 +18,7 @@ from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
 
 key_parameter_list = ["camera", "robot_arm"]
-try:
-    from app.config.ip import CORAL_TYPE
-except ImportError:
-    CORAL_TYPE = 1
+
 
 
 def pane_init():
@@ -80,8 +77,8 @@ def recover_device(executer, logger):
                 executer = ThreadPoolExecutor()
                 # for key in key_parameter_list:
                 #     port = device_dict.get("paneslot").get("paneview").get(key)
-                port_list = ["rotate"]
-                rotate = True if CORAL_TYPE == 4 else False
+                port_list = HARDWARE_MAPPING_LIST.copy()
+                rotate = True if CORAL_TYPE == 3 else False
                 for port in port_list:
                     PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer, rotate=rotate)
                 set_border(device_dict, device_obj)

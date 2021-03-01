@@ -130,13 +130,13 @@ class ListHandler(Handler):
 
     def __init__(self, *args, **kwargs):
         self.child = kwargs.pop('child')
-        self.continuous = kwargs.get("continuous",False)
+        self.continuous = kwargs.get("continuous", False)
         assert self.child is not None, '`child` is a required argument.'
         super(ListHandler, self).__init__(*args, **kwargs)
 
     def execute(self, **kwargs):
         flag = 0
-        for index,single_cmd in enumerate(copy.deepcopy(self.exec_content)):
+        for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
             try:
                 self.child.exec_content = single_cmd
                 kwargs['index'] = index
@@ -144,9 +144,9 @@ class ListHandler(Handler):
                 flag = result.get("result", -1) if result.get("result") != 0 else flag
             except NoContent:
                 continue
-        return_vaule = {"result": 0} if flag == 0 else {"result": flag}
+        return_value = {"result": 0} if flag == 0 else {"result": flag}
         self.after_unit()
-        return return_vaule
+        return return_value
 
     def after_unit(self):
         self.child.after_unit()

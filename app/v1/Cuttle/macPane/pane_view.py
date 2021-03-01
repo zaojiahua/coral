@@ -26,10 +26,7 @@ from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
 logger = logging.getLogger(PANE_LOG_NAME)
 from concurrent.futures._base import TimeoutError
 import copy
-try:
-    from app.config.ip import CORAL_TYPE
-except ImportError:
-    CORAL_TYPE = 1
+from app.config.setting import CORAL_TYPE
 
 # mapping_dict = {0: ADB_SERVER_1, 1: ADB_SERVER_2, 2: ADB_SERVER_3}
 
@@ -90,7 +87,7 @@ class PaneDeleteView(MethodView):
             for ip in data.get("assistance_ip_address"):
                 h.disconnect(ip)
         # 解除路由器IP绑定 start after jsp finished
-        if CORAL_TYPE >= 2:
+        if ADB_TYPE == 0:
             res = unbind_spec_ip(data.get("ip_address"))
             # if res != 0:
             #     raise DeviceBindFail
@@ -159,12 +156,11 @@ class PaneConfigView(MethodView):
             device_object = Device(pk=device_label)
             if rotate is True:
                 function, attribute = (rotate_hand_init, "has_rotate_arm")
-            elif isinstance(port, int):
+            elif port.split("/")[-1].isdigit():
                 function, attribute = (camera_start_3, "has_camera")
             else:
                 function, attribute = (hand_init, "has_arm")
             setattr(device_object, attribute, True)
-            print("after set :",device_object.has_rotate_arm)
             future = executer.submit(function, port, device_object)
             exception = future.exception(timeout=1)
             if "PermissionError" in str(exception):

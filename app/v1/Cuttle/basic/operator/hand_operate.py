@@ -29,7 +29,28 @@ def hand_init(arm_com_id, device_obj):
     return 0
 
 
+def rotate_hand_init(arm_com_id, device_obj):
+    hand_serial_obj = HandSerial(timeout=2)
+    hand_serial_obj.connect(com_id=arm_com_id)
+    hand_serial_obj_dict[device_obj.pk] = hand_serial_obj
+    hand_reset_orders = [
+        "$G \r\n",
+        "$x \r\n",
+        "G92 X0Y0Z0 \r\n",
+        "G90 \r\n",
+        "G01 X0Y35Z0F3000 \r\n"
+    ]
+    for g_orders in hand_reset_orders:
+        hand_serial_obj.send_single_order(g_orders)
+        hand_serial_obj.recv(buffer_size=64)
+    return 0
+
+
 class HandHandler(Handler, DefaultMixin):
+
+    def __init__(self, *args, **kwargs):
+        super(HandHandler, self).__init__(*args, **kwargs)
+        self.ignore_reset = False
 
     def before_execute(self):
         pix_points, opt_type = self.grouping(self.exec_content)
@@ -52,7 +73,7 @@ class HandHandler(Handler, DefaultMixin):
     def long_press(self, start_point, swipe_time=SWIPE_TIME, **kwargs):
         # 长按
         long_click_orders = self.__single_click_order(start_point[0])
-        hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2],wait=True)
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2], wait=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def sliding(self, point, swipe_time=SWIPE_TIME, **kwargs):
@@ -61,14 +82,38 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def reset_hand(self):
-        hand_reset_orders = "G01 X10Y-120Z12F12000 \r\n"
+    def reset_hand(self, hand_reset_orders="G01 X10Y-120Z12F12000 \r\n"):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
         return 0
 
+    def str_func(self, commend):
+        from app.v1.device_common.device_model import Device
+        sleep = False
+        move = False
+        if Device(pk=self._model.pk).has_rotate_arm is False:
+            return -9
+        if '<rotateSleep>' in commend:
+            commend = commend.replace('<rotateSleep>', "")
+            sleep = True
+        if '<move>' in commend:
+            commend = commend.replace('<move>', "")
+            move = True
+        hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
+        if sleep:
+            time.sleep(2)
+        if move:
+            self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")
+        hand_serial_obj_dict.get(self._model.pk).recv()
+        self.ignore_reset = True
+        return 0
+
+    def rotate(self, commend):
+        return self.str_func(commend)
+
     def after_unit(self):
-        self.reset_hand()
+        if self.ignore_reset is False:
+            self.reset_hand()
 
     # TODO 怎样处理如果传入点中有一个或多个计算出的坐标超过操作台范围
     def __list_click_order(self, axis_list):
@@ -118,11 +163,12 @@ class HandHandler(Handler, DefaultMixin):
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
         ]
 
+
 if __name__ == '__main__':
 
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id="COM7")
-    hand_reset_orders = ['G01 X70.0Y-176.0Z8F15000 \r\n', 'G01 Z0F15000 \r\n',"G01 X10Y-120Z8F15000 \r\n"]
+    hand_reset_orders = ['G01 X70.0Y-176.0Z8F15000 \r\n', 'G01 Z0F15000 \r\n', "G01 X10Y-120Z8F15000 \r\n"]
     init = [
         "$x \r\n",
         "$h \r\n",
@@ -138,4 +184,4 @@ if __name__ == '__main__':
             a = time.time()
             hand_serial_obj.send_single_order(g_orders)
             hand_serial_obj.recv()
-            print(time.time()-a)
+            print(time.time() - a)

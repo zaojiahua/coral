@@ -16,9 +16,25 @@ long_time_sleep_tag = "<longTimeSleepTag_"
 content_singal = "<Macro_"
 adb_tool_prefix = "<3adbcTool>"
 adb_ip_prefix = "<3adbcIP>"
+Rotate_horizontal = "<RotateHorizontal>"
+Rotate_vertical = "<RotateVertical>"
+Rotate_switch = "<RotateSwitch>"
+Rotate_switchHold = "<RotateSwitchHold>"
+RotateNormal = "<RotateNormal>"
+RotateInit = "<RotateInit>"
+
 job_editor_logo = "Tmach"
 
 macro_list = []
+macro_dict = {
+    adb_ip_prefix: REEF_IP,
+    Rotate_horizontal: "G01 X0Y33Z90F7000 \r\n",
+    Rotate_vertical: "G01 X0Y33Z0F7000 \r\n",
+    Rotate_switch: "G01 X32Y33Z0F2000 \r\n<move>",
+    Rotate_switchHold: "G01 X32Y33Z0F2000 \r\n<rotateSleep><move>",
+    RotateNormal: "G01 X0Y33Z0F5000 \r\n",
+    RotateInit: "G01 X0Y00Z0F5000 \r\n"
+}
 
 
 class MacroHandler(object):
@@ -53,7 +69,7 @@ class MacroHandler(object):
             try:
                 save_file = res.group(1) + ".log" if res.group(1).split(".") == 1 else res.group(1)
             except AttributeError:
-                print("wait for re:",cmd)
+                print("wait for re:", cmd)
                 raise MaroUnrecognition
         for work_path_macro in [block_output_path, adb_data_path, block_input_path]:
             if work_path_macro in cmd:
@@ -68,10 +84,13 @@ class MacroHandler(object):
             sleep_time = int(cmd.lstrip(long_time_sleep_tag).strip(">"))
             time.sleep(sleep_time)
             cmd = "<4ccmd><sleep>0.1"
+        for key, value in macro_dict.items():
+            if key in cmd:
+                cmd = cmd.replace(key, value)
         if adb_ip_prefix in cmd:
             cmd = cmd.replace(adb_ip_prefix, REEF_IP)
         if adb_tool_prefix in cmd:
-            script = f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}:5555"
+            script = f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}"
             cmd = cmd.replace(adb_tool_prefix, script)
             cmd = self._adb_cmd_prefix + " " + cmd
         return cmd, save_file

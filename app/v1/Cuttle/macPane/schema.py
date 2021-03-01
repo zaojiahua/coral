@@ -4,9 +4,11 @@ from ctypes import cast, POINTER, byref, sizeof, memset, c_ubyte, cdll
 
 import cv2
 import numpy as np
+from PIL import Image
 from flask import Response, jsonify
 from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE, validates_schema
 
+from app.config.ip import ADB_TYPE
 from app.config.setting import PROJECT_SIBLING_DIR
 from app.v1.Cuttle.basic.MvImport.CameraParams_header import MV_Image_Jpeg, MV_SAVE_IMAGE_PARAM_EX
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -28,24 +30,36 @@ class PaneSchema(Schema):
     @post_load
     def make_sure(self, data, **kwargs):
         picture_name = data.get("picture_name")
-        device_ip = data.get("device_ip")
+        # device_ip = data.get("device_ip")
         device_label = data.get("device_label")
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=device_label)
         if not str.endswith(picture_name, (".png", ".jpg")):
             picture_name = picture_name + ".jpg"
         folder_path = os.path.join(PROJECT_SIBLING_DIR, "Pacific", data.get("device_label"), "jobEditor")
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         image_path = os.path.join(folder_path, picture_name)
+        # 禁止adb 有线模式下的editor 流程暂时不启用，有线模式下暂时允许通过有线截图
+        # if ADB_TYPE == 1:
+        #     src = Image.new("RGB", (300, 600), (255, 255, 255))
+        #     src = np.array(src)
+        #     cv2.putText(src, "Please edit on a wireless device", (0, 200), cv2.FONT_HERSHEY_SIMPLEX,
+        #                 0.55, (0, 0, 0), 1, cv2.LINE_AA)
+        #     cv2.imwrite(image_path, src)
+        #     with open(image_path, 'rb') as f:
+        #         image = f.read()
+        #         return Response(image, mimetype="image/jpeg")
         jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
-                       "execCmdList": [f"adb -s {device_ip}:5555 shell screencap -p /sdcard/{picture_name}",
-                                       f"adb -s {device_ip}:5555 pull /sdcard/{picture_name} {image_path}"],
+                       "execCmdList": [
+                           f"adb -s {device_obj.connect_number} shell screencap -p /sdcard/{picture_name}",
+                           f"adb -s {device_obj.connect_number} pull /sdcard/{picture_name} {image_path}"
+                       ],
                        "device_label": device_label})
-        jsdata["ip_address"] = data.get("device_ip")
+        jsdata["ip_address"] = device_obj.connect_number
         try:
-            from app.v1.device_common.device_model import Device
-            snap_shot_result = UnitFactory().create("AdbHandler", jsdata) if not Device(
-                pk=device_label).has_camera else UnitFactory().create(
-                "CameraHandler", jsdata)
+            snap_shot_result = UnitFactory().create("AdbHandler",
+             jsdata) if not device_obj.has_camera else UnitFactory().create("CameraHandler", jsdata)
             if {"result": 0} == snap_shot_result:
                 with open(image_path, 'rb') as f:
                     image = f.read()
@@ -138,8 +152,6 @@ class CoordinateSchema(Schema):
         if data["inside_upper_left_x"] < data["outside_upper_left_x"] or data["outside_under_right_y"] < data[
             "inside_under_right_y"]:
             raise ValidationError("border should bigger than 0")
-
-
 
     @post_load
     def make_sure(self, data, **kwargs):

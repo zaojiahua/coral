@@ -1,5 +1,7 @@
 import json
 import os
+import re
+import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -10,11 +12,16 @@ from app.execption.outer.error import APIException
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.libs.thread_extensions import executor_callback
+from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
 
 key_parameter_list = ["camera", "robot_arm"]
+try:
+    from app.config.ip import CORAL_TYPE
+except ImportError:
+    CORAL_TYPE = 1
 
 
 def pane_init():
@@ -46,7 +53,7 @@ def check_boot_up_reason():
 
 def clean_device(logger, executer):
     # todo change into one api when reef supported
-    param = {"status": "idle", "fields": "id,device_label","cabinet_id":HOST_IP.split(".")[-2]}
+    param = {"status": "idle", "fields": "id,device_label", "cabinet_id": HOST_IP.split(".")[-2]}
     res = request(url=device_url, params=param)
     for device in res.get("devices"):
         executer.submit(send_device_leave_to_reef, device, logger).add_done_callback(executor_callback)
@@ -68,22 +75,37 @@ def recover_device(executer, logger):
         device_obj.update_attr(**device_dict)
         try:
             # 再确保恢复属性后恢复testbox相关机械臂和摄像头状态
-            if device_dict.get("paneslot").get("paneview").get("type") == "test_box":
+            # if device_dict.get("paneslot").get("paneview").get("type") == "test_box":
+            if CORAL_TYPE >= 3:
                 executer = ThreadPoolExecutor()
-                for key in key_parameter_list:
-                    port = device_dict.get("paneslot").get("paneview").get(key)
-                    if port is not None:
-                        PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer)
+                # for key in key_parameter_list:
+                #     port = device_dict.get("paneslot").get("paneview").get(key)
+                port_list = ["rotate"]
+                rotate = True if CORAL_TYPE == 4 else False
+                for port in port_list:
+                    PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer, rotate=rotate)
                 set_border(device_dict, device_obj)
         except (AttributeError, APIException):
             pass
-        # start a loop for each device when recover
+        # start a loop for each device when recover+
+        recover_root(device_obj.device_label, device_obj.connect_number)
         aide_monitor_instance = AideMonitor(device_obj)
         t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(device_dict.get("device_label"))
         t.start()
         if device_obj.ip_address != "0.0.0.0":
             executer.submit(device_obj.start_device_async_loop, aide_monitor_instance)
+
+
+def recover_root(device_label, connect_num):
+    cmd_list = [
+        f"adb  -s {connect_num} root",
+    ]
+    jsdata = {}
+    jsdata["ip_address"] = connect_num
+    jsdata["device_label"] = device_label
+    jsdata["execCmdList"] = cmd_list
+    UnitFactory().create("AdbHandler", jsdata)
 
 
 def set_border(device_dict, device_obj):
@@ -99,6 +121,22 @@ def set_border(device_dict, device_obj):
     #             res.get("outside_under_right_y") - res.get("inside_under_right_y"))) / 2
     # device_obj.x_border = x_border
     # device_obj.y_border = y_border
+
+
+def get_tty_device_number() -> list:
+    sub_proc = subprocess.Popen("ls /dev/", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    restr = sub_proc.communicate()[0].decode("utf-8")
+    tty_device_list = []
+    for i in restr.split('\n'):
+        result = re.search("(ttyUSB\d)", i)
+        if result:
+            tty_device_list.append(result.group())
+            print(result.group())
+            sub_proc = subprocess.Popen(f"chmod 777 /dev/{result.group()}", shell=True, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT)
+            response  = sub_proc.communicate()[0].decode("utf-8")
+            print(response)
+    return tty_device_list
 
 
 def record_feature(feature_list):

@@ -170,10 +170,10 @@ class VideoPicSchema(VideoBaseSchema):
         return self._get_data(data, start_icon_config, "start_icon")
 
 
-class IconTestSchema(Schema):
-    config_area = fields.Method(deserialize="load_config", data_key="configArea", required=False)
-    input_image = fields.Method(deserialize="load_picture", data_key="inputImgFile")
-    config_file = fields.Method(deserialize="load_config", data_key="configFile")
+class OcrTestSchema(Schema):
+    input_image = fields.Method(deserialize="load_picture", data_key="inputImgFile", required=True)
+    config_file = fields.Method(deserialize="load_config", data_key="configFile", required=False)
+    ocr_choice = fields.String(data_key="ocrChoice", required=False)
 
     def load_config(self, value):
         value.save(f"{value.filename}")
@@ -185,6 +185,25 @@ class IconTestSchema(Schema):
     def load_picture(self, value):
         value.save(f"{value.filename}")
         return f"{value.filename}"
+
+    class Meta:
+        unknown = INCLUDE
+
+    @post_load()
+    def explain(self,data, **kwargs):
+        if data.get("config_file") is not None:
+            area = data.get("config_file")
+            areas = [area["area" + str(i)] for i in range(1, len(area.keys())) if
+                     "area" + str(i) in area.keys()]
+            data["areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
+        return data
+
+
+class IconTestSchema(OcrTestSchema):
+    config_area = fields.Method(deserialize="load_config", data_key="configArea", required=False)
+
+    class Meta:
+        unknown = INCLUDE
 
     @post_load()
     def explain(self, data, **kwargs):
@@ -204,3 +223,15 @@ class IconTestSchema(Schema):
 class SimpleSchema(Schema):
     outputPath = fields.String(required=True)
     adbCommand = fields.String(required=True, validate=vertify_has_grep)
+
+
+def has_format(path: str):
+    part_list = path.split(".")
+    if len(part_list) < 2 or part_list[-1].lower() not in ("mp4", "jpg"):
+        raise ValidationError('picture or video should have .mp4 or .jpg')
+
+
+class SimpleVideoPullSchema(Schema):
+    # outputPath = fields.String(required=True)
+    adbCommand = fields.String(required=True)
+    fileName = fields.String(required=True, validate=has_format)

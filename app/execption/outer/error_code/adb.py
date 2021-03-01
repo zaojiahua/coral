@@ -78,3 +78,11 @@ class PinyinTransferFail(APIException):
     error_code = 1010
     code = 400
     description = "un-recognize pinyin"
+
+
+class ArmNorEnough(APIException):
+    """
+    """
+    error_code = 1011
+    code = 400
+    description = "not enough arm"

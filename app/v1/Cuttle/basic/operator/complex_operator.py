@@ -1,11 +1,13 @@
+import datetime
 import subprocess
 import sys
 
-from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParseFail, SwipeAndFindWordsFail
+from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParseFail, SwipeAndFindWordsFail, \
+    CannotFindRecentVideoOrImage
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.common_utli import judge_pic_same
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
-from app.v1.Cuttle.basic.image_schema import SimpleSchema
+from app.v1.Cuttle.basic.image_schema import SimpleSchema, SimpleVideoPullSchema
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.handler import Standard
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
@@ -97,13 +99,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         self._model.logger.debug(f"adb input:{adb_content}")
         adb_content = adb_content.replace("grep", "findstr") if sys.platform.startswith("win") else adb_content.replace(
             "findstr", "grep")
-        sub_proc = subprocess.Popen(adb_content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        restr = sub_proc.communicate()[0]
-        try:
-            execute_result = restr.strip().decode("utf-8")
-        except UnicodeDecodeError:
-            execute_result = restr.strip().decode("gbk")
-            print("cmd to exec in adb's result:", adb_content, "decode error happened")
+        execute_result = self.send_adb_request(adb_content)
         with open(content.get("outputPath"), "w")as f:
             f.write(execute_result)
         self._model.logger.debug(f"adb response:{execute_result}")
@@ -145,6 +141,45 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return ocr_obj.result
         else:
             return 1
+
+    def pull_recent_video_or_picture(self, content):
+        # 需要接受所有格式的文件pull请求
+        from app.v1.device_common.device_model import Device
+        connect_number = Device(pk=self._model.pk).connect_number
+        logger = Device(pk=self._model.pk).logger
+        content = SimpleVideoPullSchema().load(content)
+        adb_content = content.get("adbCommand")
+        file_name_in_server = content.get("fileName")
+        format = file_name_in_server.split(".")[-1]
+        execute_result = self.send_adb_request(adb_content)
+        resource_list = execute_result.split(" ")
+        recent_time = datetime.datetime.now()
+        file_list = [f.strip("\r\n") for f in resource_list if f.endswith(format)]
+        file_list.sort(key=lambda x: x[3:-4])
+        if len(file_list) == 0:
+            raise CannotFindRecentVideoOrImage
+        file_name = file_list[-1].strip().strip('\t')
+        logger.debug(f"recent file: {file_name}")
+        name_format = "VID%Y%m%d%H%M%S.mp4" if format == "mp4" else "IMG%Y%m%d%H%M%S.jpg"
+        name_format_2 = "Record_%Y-%m-%d-%H-%M-%S.mp4" if format == "mp4" else "Screenshot_%Y-%m-%d-%H-%M-%S-%f.jpg"
+        if (recent_time - datetime.datetime.strptime(file_name, name_format) ).seconds > 600:
+            raise CannotFindRecentVideoOrImage
+        response = self.send_adb_request(
+            f"adb -s {connect_number} pull /sdcard/DCIM/Camera/{file_name} {file_name_in_server}")
+        return response
+
+    def add_judgements_standard(self):
+        pass
+
+    def send_adb_request(self, content):
+        sub_proc = subprocess.Popen(content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        restr = sub_proc.communicate()[0]
+        try:
+            execute_result = restr.strip().decode("utf-8")
+        except UnicodeDecodeError:
+            execute_result = restr.strip().decode("gbk")
+            print("cmd to exec in adb's result:", content, "decode error happened")
+        return execute_result
 
     def icon_found_with_direction_no_click(self, content):
         return self.icon_found_with_direction(content, click=False)

@@ -43,7 +43,7 @@ class DefaultMixin(object):
             pix_points = [float(i) for i in (raw_commend.split("swipe")[-1].strip().split(' ')[:4])]
             if abs(pix_points[2] - pix_points[0]) + abs(pix_points[3] - pix_points[1]) < 10:
                 opt_type = "long_press"
-            elif hasattr(self, 'continuous') and self.continuous:
+            elif self.kwargs.get('continuous'):
                 opt_type = 'continuous_swipe'
             else:
                 opt_type = "sliding"

@@ -47,13 +47,21 @@ def rotate_hand_init(arm_com_id, device_obj):
 
 
 class HandHandler(Handler, DefaultMixin):
+    before_match_rules = {
+        "input tap": "_relative_point",
+        "input swipe": "_relative_swipe",
+    }
 
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)
         self.ignore_reset = False
 
     def before_execute(self):
+        for key, value in self.before_match_rules.items():
+            if key in self.exec_content:
+                getattr(self, value)()
         pix_points, opt_type = self.grouping(self.exec_content)
+        print(pix_points, opt_type)
         self.exec_content = self.transform_pix_point(pix_points)
         self.func = getattr(self, opt_type)
         return normal_result
@@ -88,7 +96,9 @@ class HandHandler(Handler, DefaultMixin):
         return 0
 
     def continuous_swipe(self, commend, **kwargs):
+        print(kwargs)
         sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0))
+        print(sliding_order)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
@@ -168,17 +178,18 @@ class HandHandler(Handler, DefaultMixin):
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
         ]
 
-    def _sliding_contious_order(self, start_point, end_point, commond_index):
+    def _sliding_contious_order(self, start_point, end_point, commend_index):
         start_x, start_y = start_point
         end_x, end_y = end_point
         # 连续滑动保证动作无偏差
         from app.v1.Cuttle.basic.setting import last_swipe_end_point
+
+        if start_x - last_swipe_end_point[0] < 20 and start_y - last_swipe_end_point[1] < 20:
+            start_x, start_y = last_swipe_end_point
         last_swipe_end_point[0] = start_x
         last_swipe_end_point[1] = start_y
-        if start_x - last_swipe_end_point[0] < 10 and start_y - last_swipe_end_point[1] < 10:
-            start_x, start_y = last_swipe_end_point
         # 首次动作有移动和下压动作
-        if commond_index == 0:
+        if commend_index == 0:
             return [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),

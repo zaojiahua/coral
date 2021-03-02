@@ -240,38 +240,7 @@ class AdbHandler(Handler, ChineseMixin):
         if self.is_chinese(words):
             return True, self.chinese_support(words)
 
-    def _relative_point(self):
-        regex = re.compile("shell input tap ([\d.]*?) ([\d.]*)")
-        result = re.search(regex, self.exec_content)
-        x = float(result.group(1))
-        y = float(result.group(2))
-        if any((0 < x < 1, 0 < y < 1)):
-            from app.v1.device_common.device_model import Device
-            w = Device(pk=self._model.pk).device_width * x
-            h = Device(pk=self._model.pk).device_height * y
-            self.exec_content = self.exec_content.replace(str(x), str(w))
-            self.exec_content = self.exec_content.replace(str(y), str(h))
-        return normal_result
 
-    def _relative_swipe(self):
-        regex = re.compile("shell input swipe ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*)")
-        result = re.search(regex, self.exec_content)
-        x1 = float(result.group(1))
-        y1 = float(result.group(2))
-        x2 = float(result.group(3))
-        y2 = float(result.group(4))
-        if any((0 < x1 < 1, 0 < y2 < 1, 0 < x2 < 1, 0 < y2 < 1)):
-            from app.v1.device_common.device_model import Device
-            w1 = Device(pk=self._model.pk).device_width * x1
-            h1 = Device(pk=self._model.pk).device_height * y1
-            w2 = Device(pk=self._model.pk).device_width * x2
-            h2 = Device(pk=self._model.pk).device_height * y2
-            self.exec_content = self.exec_content.replace(str(x1), str(w1))
-            self.exec_content = self.exec_content.replace(str(y1), str(h1))
-            self.exec_content = self.exec_content.replace(str(x2), str(w2))
-            self.exec_content = self.exec_content.replace(str(y2), str(h2))
-
-        return normal_result
 
     def _ignore_unsupported_commend(self):
         return True, -9

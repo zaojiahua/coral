@@ -10,6 +10,8 @@ Z_DOWN = -3.5
 Z_UP = 8
 MOVE_SPEED = 10000
 SWIPE_TIME = 1
+
+trapezoid = 0.3
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
 m_location = [31, 52]
 icon_threshold = 25

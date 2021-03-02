@@ -34,7 +34,7 @@ class DefaultMixin(object):
             raise CrossMax
         return opt_coordinate
 
-    def grouping(self, raw_commend) -> (List[int], str):
+    def grouping(self, raw_commend:str) -> (List[int], str):
         raw_commend = self._compatible_sleep(raw_commend)
         if "tap" in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
@@ -45,6 +45,8 @@ class DefaultMixin(object):
                 opt_type = "long_press"
             elif self.kwargs.get('continuous'):
                 opt_type = 'continuous_swipe'
+            elif self.kwargs.get('trapezoid'):
+                opt_type = 'trapezoid_slide'
             else:
                 opt_type = "sliding"
         elif 'G01' in raw_commend:
@@ -55,7 +57,7 @@ class DefaultMixin(object):
             opt_type = "double_click"
         return pix_points, opt_type
 
-    def _compatible_sleep(self, exec_content):
+    def _compatible_sleep(self, exec_content)->  str:
         if "<4ccmd>" in exec_content:
             exec_content = exec_content.replace("<4ccmd>", '')
         if "<sleep>" in exec_content:

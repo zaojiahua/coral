@@ -4,7 +4,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result
+    hand_serial_obj_dict, normal_result, trapezoid
 
 
 def hand_init(arm_com_id, device_obj):
@@ -89,6 +89,11 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
+    def trapezoid_slide(self,point, **kwargs):
+        sliding_order = self.__sliding_order(point[0], point[1],normal=False)
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
+        return hand_serial_obj_dict.get(self._model.pk).recv()
+
     def reset_hand(self, hand_reset_orders="G01 X10Y-120Z12F12000 \r\n", **kwargs):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
@@ -99,7 +104,7 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def str_func(self, commend,**kwargs):
+    def str_func(self, commend, **kwargs):
         from app.v1.device_common.device_model import Device
         sleep = False
         move = False
@@ -161,19 +166,31 @@ class HandHandler(Handler, DefaultMixin):
 
     # TODO 滑动起止点是否超过操作台范围
     @staticmethod
-    def __sliding_order(start_point, end_point):
+    def __sliding_order(start_point, end_point, normal=True):
         # 点击的起始点
         start_x, start_y = start_point
         end_x, end_y = end_point
         # 从下往上   [500,800] -> [500, 200]
-        if (start_x == end_x) and (start_y > end_y):
-            end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
-        return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
-        ]
+        # if (start_x == end_x) and (start_y > end_y):
+        #     end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
+        if normal:
+            return [
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
+            ]
+        else:
+            x1 = start_x - (end_x - start_x) * trapezoid
+            y1 = start_y - (end_y - start_y) * trapezoid
+            x4 = end_x + (end_x - start_x) * trapezoid
+            y4 = end_y + (end_y - start_y) * trapezoid
+            return [
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
+            ]
 
     def _sliding_contious_order(self, start_point, end_point, commend_index):
         start_x, start_y = start_point

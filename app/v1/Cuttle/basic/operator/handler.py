@@ -164,7 +164,6 @@ class ListHandler(Handler):
 
     def __init__(self, *args, **kwargs):
         self.child = kwargs.pop('child')
-        self.continuous = kwargs.get("continuous", False)
         assert self.child is not None, '`child` is a required argument.'
         super(ListHandler, self).__init__(*args, **kwargs)
 

@@ -77,9 +77,9 @@ class PaneDeleteView(MethodView):
             pic_push(device_object, pic_name=LEAVE_PIC_NAME)
         if device_object.has_rotate_arm:
             # todo  clear used list when only one arm for one server
-            from app.v1.Cuttle.basic.setting import hand_used_list
             self._reset_arm(device_object)
-            hand_used_list.clear()
+        from app.v1.Cuttle.basic.setting import hand_used_list
+        hand_used_list.clear()
         # 移除redis中缓存
         device_object.simple_remove()
         if data.get("assistance_ip_address"):

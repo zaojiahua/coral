@@ -61,7 +61,6 @@ class HandHandler(Handler, DefaultMixin):
             if key in self.exec_content:
                 getattr(self, value)()
         pix_points, opt_type = self.grouping(self.exec_content)
-        print(pix_points, opt_type)
         self.exec_content = self.transform_pix_point(pix_points)
         self.func = getattr(self, opt_type)
         return normal_result
@@ -96,9 +95,7 @@ class HandHandler(Handler, DefaultMixin):
         return 0
 
     def continuous_swipe(self, commend, **kwargs):
-        print(kwargs)
         sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0))
-        print(sliding_order)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
@@ -183,8 +180,7 @@ class HandHandler(Handler, DefaultMixin):
         end_x, end_y = end_point
         # 连续滑动保证动作无偏差
         from app.v1.Cuttle.basic.setting import last_swipe_end_point
-
-        if start_x - last_swipe_end_point[0] < 20 and start_y - last_swipe_end_point[1] < 20:
+        if start_x - last_swipe_end_point[0] < 15 and start_y - last_swipe_end_point[1] < 15:
             start_x, start_y = last_swipe_end_point
         last_swipe_end_point[0] = start_x
         last_swipe_end_point[1] = start_y

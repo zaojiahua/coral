@@ -5,18 +5,20 @@ camera_dq_dict = {}
 HAND_MAX_X = 315
 HAND_MAX_Y = 245
 Z_START = 4
+# Z_DOWN = -3.5   tianjing setting
 Z_DOWN = -3.5
 Z_UP = 8
 MOVE_SPEED = 10000
 SWIPE_TIME = 1
-m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标
+# m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
+m_location = [31, 52]
 icon_threshold = 25
 icon_threshold_camera = 10
 icon_rate = 500
 
 adb_disconnect_threshold = 15
 
-last_swipe_end_point = (0,0)
+last_swipe_end_point = [0,0]
 
 color_threshold = 40
 color_rate = 1500

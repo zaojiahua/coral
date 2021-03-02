@@ -13,6 +13,7 @@ from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.basic_views import UnitFactory
+from app.v1.Cuttle.basic.setting import hand_used_list
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
@@ -81,6 +82,7 @@ def recover_device(executer, logger):
                 rotate = True if CORAL_TYPE == 3 else False
                 for port in port_list:
                     PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer, rotate=rotate)
+                    hand_used_list.append(port)
                 set_border(device_dict, device_obj)
         except (AttributeError, APIException):
             pass

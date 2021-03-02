@@ -125,7 +125,7 @@ class Complex_Center(object):
     def cal_realy_xy(self, pic_x, pic_y, input_pic_path):
         from app.v1.device_common.device_model import Device
         device = Device(pk=self.device_label)
-        if device.has_camera or device.has_arm:
+        if device.has_camera and device.has_arm:
             # 摄像头识别到的文字位置，需要根据手机屏幕与摄像头照片分辨率换算回实际手机上像素位置
             src = cv2.imread(input_pic_path)
             pic_h, pic_w = src.shape[:2]

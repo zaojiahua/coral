@@ -61,7 +61,7 @@ class DoorKeeper(object):
         rotate = True if CORAL_TYPE == 3 else False
         executer = ThreadPoolExecutor()
         try:
-            port = list(set(port_list) ^ set(hand_used_list)).pop()
+            port = list(set(port_list) ^ set(hand_used_list))[-1]
             hand_used_list.append(port)
             PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
         except IndexError:
@@ -200,7 +200,7 @@ class DoorKeeper(object):
                     "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.board.platform"),
                     "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
                     "ip_address": self.get_dev_ip_address_internal(
-                        f"-s {s_id}") if ADB_TYPE == 0 else f"adb-serial-random-ip(start with 0)"}
+                        f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0'}
         ret_dict["device_label"] = (old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
         self._check_device_already_in_cabinet(ret_dict["device_label"])
 

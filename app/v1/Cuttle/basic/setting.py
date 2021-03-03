@@ -4,14 +4,14 @@ camera_dq_dict = {}
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
 HAND_MAX_Y = 245
-Z_START = 4
+Z_START = 0
 # Z_DOWN = -3.5   tianjing setting
-Z_DOWN = -3.5
-Z_UP = 8
+Z_DOWN = -19
+Z_UP = -1
 MOVE_SPEED = 10000
 SWIPE_TIME = 1
 
-trapezoid = 0.3
+trapezoid = 0.6
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
 m_location = [31, 52]
 icon_threshold = 25

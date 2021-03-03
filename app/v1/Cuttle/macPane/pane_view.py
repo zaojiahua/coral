@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from flask import request, jsonify, Response
 from flask.views import MethodView
+from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS
@@ -95,9 +96,12 @@ class PaneDeleteView(MethodView):
 
 
     def _reset_arm(self,device_object):
-        hand_serial_obj = hand_serial_obj_dict[device_object.pk]
-        hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
-        hand_serial_obj.recv(buffer_size=64)
+        try:
+            hand_serial_obj = hand_serial_obj_dict[device_object.pk]
+            hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
+            hand_serial_obj.recv(buffer_size=64)
+        except SerialException as e:
+            return
 
 class PaneAssisDeleteView(MethodView):
     def post(self):

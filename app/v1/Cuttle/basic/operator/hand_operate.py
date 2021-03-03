@@ -91,10 +91,11 @@ class HandHandler(Handler, DefaultMixin):
 
     def trapezoid_slide(self,point, **kwargs):
         sliding_order = self.__sliding_order(point[0], point[1],normal=False)
+        print(sliding_order)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def reset_hand(self, hand_reset_orders="G01 X10Y-120Z12F12000 \r\n", **kwargs):
+    def reset_hand(self, hand_reset_orders="G01 X10Y-120Z-1F12000 \r\n", **kwargs):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
         return 0
@@ -185,11 +186,12 @@ class HandHandler(Handler, DefaultMixin):
             y1 = start_y - (end_y - start_y) * trapezoid
             x4 = end_x + (end_x - start_x) * trapezoid
             y4 = end_y + (end_y - start_y) * trapezoid
+
             return [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y,Z_DOWN+2, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED*1.5),
             ]
 
     def _sliding_contious_order(self, start_point, end_point, commend_index):

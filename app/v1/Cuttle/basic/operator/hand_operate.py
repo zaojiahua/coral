@@ -52,6 +52,7 @@ class HandHandler(Handler, DefaultMixin):
         "input swipe": "_relative_swipe",
     }
 
+
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)
         self.ignore_reset = False
@@ -91,7 +92,6 @@ class HandHandler(Handler, DefaultMixin):
 
     def trapezoid_slide(self,point, **kwargs):
         sliding_order = self.__sliding_order(point[0], point[1],normal=False)
-        print(sliding_order)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
@@ -109,17 +109,23 @@ class HandHandler(Handler, DefaultMixin):
         from app.v1.device_common.device_model import Device
         sleep = False
         move = False
+        sleep_time = 0
         if Device(pk=self._model.pk).has_rotate_arm is False:
             return -9
         if '<rotateSleep>' in commend:
             commend = commend.replace('<rotateSleep>', "")
             sleep = True
+            sleep_time = 2
+        if '<rotateLongSleep>' in commend:
+            commend = commend.replace('<rotateLongSleep>', "")
+            sleep = True
+            sleep_time = 4
         if '<move>' in commend:
             commend = commend.replace('<move>', "")
             move = True
         hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
         if sleep:
-            time.sleep(2)
+            time.sleep(sleep_time)
         if move:
             self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")
         hand_serial_obj_dict.get(self._model.pk).recv()

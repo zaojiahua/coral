@@ -173,6 +173,7 @@ class ListHandler(Handler):
             try:
                 self.child.exec_content = single_cmd
                 kwargs['index'] = index
+                kwargs['length'] = len(self.exec_content)
                 result = self.child.execute(**kwargs)
                 flag = result.get("result", -1) if result.get("result") != 0 else flag
             except NoContent:

@@ -5,9 +5,12 @@ import gevent.monkey
 
 gevent.monkey.patch_all()
 
-if os.path.exists("./app/config/ip.py") and os.path.exists('/app/source/ip.py'):
+if os.path.exists("./app/config/ip.py"):
     os.remove('./app/config/ip.py')
-    shutil.copyfile('/app/source/ip.py', './app/config/ip.py')
+shutil.copyfile('/app/source/ip.py', './app/config/ip.py')
+
+if not os.path.exists("./app/config/secure.py"):
+    shutil.copyfile('/app/source/secure.py', './app/config/secure.py')
 
 from server_init import server_init
 

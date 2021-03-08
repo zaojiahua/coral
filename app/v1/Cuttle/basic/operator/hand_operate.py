@@ -101,7 +101,7 @@ class HandHandler(Handler, DefaultMixin):
         return 0
 
     def continuous_swipe(self, commend, **kwargs):
-        sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0))
+        sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0),kwargs.get('length', 0))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
@@ -200,7 +200,7 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED*1.5),
             ]
 
-    def _sliding_contious_order(self, start_point, end_point, commend_index):
+    def _sliding_contious_order(self, start_point, end_point, commend_index,commend_length):
         start_x, start_y = start_point
         end_x, end_y = end_point
         # 连续滑动保证动作无偏差
@@ -216,10 +216,16 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED)
             ]
-        else:  # 后面动作只有滑动
+        elif commend_index + 1 != commend_length:  # 后面动作只有滑动
             return [
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED)
             ]
+        else:
+            return [
+                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_START,MOVE_SPEED)
+            ]
+
 
 
 if __name__ == '__main__':

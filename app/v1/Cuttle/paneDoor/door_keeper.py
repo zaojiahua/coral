@@ -109,8 +109,10 @@ class DoorKeeper(object):
         if ip == "":
             raise DeviceNotInUsb
         from app.v1.device_common.device_model import Device
-        res = request(method="PATCH", url=device_url + str(Device(pk=device_label).id) + "/",
+        device_obj = Device(pk=device_label)
+        res = request(method="PATCH", url=device_url + str(device_obj.id) + "/",
                       json={"ip_address": ip})
+        device_obj.ip_address = ip
         logger.info(f"response from reef: {res}")
         return self.open_wifi_service(f"-s {s_id}")
 

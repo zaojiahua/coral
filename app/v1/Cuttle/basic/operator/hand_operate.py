@@ -1,3 +1,4 @@
+import re
 import time
 
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
@@ -107,24 +108,20 @@ class HandHandler(Handler, DefaultMixin):
 
     def str_func(self, commend, **kwargs):
         from app.v1.device_common.device_model import Device
-        sleep = False
         move = False
         sleep_time = 0
         if Device(pk=self._model.pk).has_rotate_arm is False:
             return -9
         if '<rotateSleep>' in commend:
             commend = commend.replace('<rotateSleep>', "")
-            sleep = True
-            sleep_time = 2
-        if '<rotateLongSleep>' in commend:
-            commend = commend.replace('<rotateLongSleep>', "")
-            sleep = True
-            sleep_time = 4
+            res = re.search("<rotateSleep>(.*?)$", commend)
+            sleep_time = float(res.group(1))
+            commend = commend.replace("<sleep>" + str(sleep_time), "").strip()
         if '<move>' in commend:
             commend = commend.replace('<move>', "")
             move = True
         hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
-        if sleep:
+        if sleep_time > 0 :
             time.sleep(sleep_time)
         if move:
             self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")

@@ -31,7 +31,7 @@ macro_dict = {
     Rotate_horizontal: "G01 X0Y33Z90F7000 \r\n",
     Rotate_vertical: "G01 X0Y33Z0F7000 \r\n",
     Rotate_switch: "G01 X34Y33Z0F1500 \r\n<move>",
-    Rotate_switchHold: "G01 X34Y33Z0F1500 \r\n<rotateSleep><move>",
+    Rotate_switchHold: f"G01 X34Y33Z0F1500 \r\n<move><rotateSleep>{second}",
     RotateNormal: "G01 X0Y33Z0F5000 \r\n",
     RotateInit: "G01 X0Y00Z0F5000 \r\n"
 }
@@ -86,6 +86,9 @@ class MacroHandler(object):
             cmd = "<4ccmd><sleep>0.1"
         for key, value in macro_dict.items():
             if key in cmd:
+                if Rotate_switchHold in cmd:
+                    res = re.search(f"{Rotate_switchHold}(.*?)$", cmd)
+                    second = res.group(1)
                 cmd = cmd.replace(key, value)
         if adb_ip_prefix in cmd:
             cmd = cmd.replace(adb_ip_prefix, REEF_IP)

@@ -1,4 +1,5 @@
 import logging
+import platform
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -155,7 +156,7 @@ class PaneConfigView(MethodView):
 
     @staticmethod
     def hardware_init(port, device_label, executer, rotate=False):
-        port = f'/dev/{port}'
+        port = f'/dev/{port}' if platform.system() == 'Linux' else port
         try:
             device_object = Device(pk=device_label)
             if rotate is True:
@@ -166,7 +167,7 @@ class PaneConfigView(MethodView):
                 function, attribute = (hand_init, "has_arm")
             setattr(device_object, attribute, True)
             future = executer.submit(function, port, device_object)
-            exception = future.exception(timeout=1)
+            exception = future.exception(timeout=2)
             if "PermissionError" in str(exception):
                 raise ArmReInit
             elif "FileNotFoundError" in str(exception):
@@ -174,6 +175,7 @@ class PaneConfigView(MethodView):
             elif "tolist" in str(exception):
                 raise NoCamera
         except TimeoutError:
+            print('TimeoutError')
             return 0
 
     def delete(self):

@@ -43,7 +43,7 @@ def rotate_hand_init(arm_com_id, device_obj):
     ]
     for g_orders in hand_reset_orders:
         hand_serial_obj.send_single_order(g_orders)
-        hand_serial_obj.recv(buffer_size=64)
+        response = hand_serial_obj.recv(buffer_size=64)
     return 0
 
 
@@ -113,16 +113,16 @@ class HandHandler(Handler, DefaultMixin):
         if Device(pk=self._model.pk).has_rotate_arm is False:
             return -9
         if '<rotateSleep>' in commend:
-            commend = commend.replace('<rotateSleep>', "")
             res = re.search("<rotateSleep>(.*?)$", commend)
-            sleep_time = float(res.group(1))
-            commend = commend.replace("<sleep>" + str(sleep_time), "").strip()
+            sleep_time = res.group(1)
+            commend = commend.replace("<rotateSleep>" + sleep_time, "")
         if '<move>' in commend:
             commend = commend.replace('<move>', "")
             move = True
         hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
-        if sleep_time > 0 :
-            time.sleep(sleep_time)
+        # hand_serial_obj_dict.get(self._model.pk).recv()
+        if float(sleep_time) > 0 :
+            time.sleep(float(sleep_time)+1.0)
         if move:
             self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")
         hand_serial_obj_dict.get(self._model.pk).recv()
@@ -228,7 +228,7 @@ class HandHandler(Handler, DefaultMixin):
 if __name__ == '__main__':
 
     hand_serial_obj = HandSerial(timeout=2)
-    hand_serial_obj.connect(com_id="/dev/arm")
+    hand_serial_obj.connect(com_id="COM8")
     hand_reset_orders = ['G01 X70.0Y-176.0Z8F15000 \r\n', 'G01 Z0F15000 \r\n', "G01 X10Y-120Z8F15000 \r\n"]
     init = [
         "$x \r\n",
@@ -246,3 +246,5 @@ if __name__ == '__main__':
             hand_serial_obj.send_single_order(g_orders)
             hand_serial_obj.recv()
             print(time.time() - a)
+
+        # SerialTimeoutException

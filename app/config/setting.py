@@ -60,4 +60,7 @@ try:
     CORAL_TYPE = CORAL_TYPE
 except  NameError:
     CORAL_TYPE = 1
-HARDWARE_MAPPING_LIST = ['rotate'] if CORAL_TYPE == 3 else ['arm']
+if platform.system() == 'Linux':
+    HARDWARE_MAPPING_LIST = ['rotate'] if CORAL_TYPE == 3 else ['arm']
+else:
+    HARDWARE_MAPPING_LIST = ['COM8']

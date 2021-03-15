@@ -40,6 +40,6 @@ class DeviceViewModel:
 
         self.device_name = device.device_name
         self.ip_address = device.ip_address
-        self.cabinet_id = HOST_IP.split(".")[-2]
+        self.cabinet_id = HOST_IP.split(".")[-1]
         self.id = device.id
         self.tempport = device.temp_port_list.smembers()

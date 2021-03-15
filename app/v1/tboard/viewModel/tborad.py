@@ -69,7 +69,7 @@ class TBoardViewModel(object):
         #     request(method="PUT", url=tboard_id_url.format(self.tboard_id),
         #             json={
         #                 "end_time": time.strftime('%Y_%m_%d_%H_%M_%S'),
-        #                 "cabinet_dict": json.dumps({HOST_IP.split(".")[-2]: 0})
+        #                 "cabinet_dict": json.dumps({HOST_IP.split(".")[-1]: 0})
         #             })
         #
         # self.logger.debug(f"prepare job resource finished --> for tboard{self.tboard_id}")

@@ -135,7 +135,7 @@ class AdbHandler(Handler, ChineseMixin):
         try:
             json_data = {
                 "device": Device(pk=self._model.pk).id,
-                "cabinet": HOST_IP.split(".")[-2],
+                "cabinet": HOST_IP.split(".")[-1],
                 "record_datetime": datetime.now(),
                 "battery_level": battery_level,
                 "charging": charging
@@ -214,7 +214,7 @@ class AdbHandler(Handler, ChineseMixin):
         from app.libs.http_client import request
         json_data = {
             "device": Device(pk=self._model.pk).id,
-            "cabinet": HOST_IP.split(".")[-2],
+            "cabinet": HOST_IP.split(".")[-1],
             "record_datetime": datetime.now(),
             "battery_level": int(battery_level),
             "charging": literal_eval(ac_power.capitalize()) or literal_eval(usb_power.capitalize())

@@ -5,7 +5,7 @@ from app.libs.http_client import request
 
 def cabinet_register():
     try:
-        cabinet_id = HOST_IP.split(".")[-2]
+        cabinet_id = HOST_IP.split(".")[-1]
 
         jsdata = {"cabinet_name": f"I'M {cabinet_id}#",
                   "ip_address": HOST_IP}

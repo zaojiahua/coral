@@ -51,7 +51,7 @@ def check_boot_up_reason():
 
 def clean_device(logger, executer):
     # todo change into one api when reef supported
-    param = {"status": "idle", "fields": "id,device_label", "cabinet_id": HOST_IP.split(".")[-2]}
+    param = {"status": "idle", "fields": "id,device_label", "cabinet_id": HOST_IP.split(".")[-1]}
     res = request(url=device_url, params=param)
     for device in res.get("devices"):
         executer.submit(send_device_leave_to_reef, device, logger).add_done_callback(executor_callback)
@@ -65,7 +65,7 @@ def send_device_leave_to_reef(device, logger):
 
 def recover_device(executer, logger):
     param = {"status__in": "ReefList[idle{%,%}busy]",
-             "cabinet_id": HOST_IP.split(".")[-2],
+             "cabinet_id": HOST_IP.split(".")[-1],
              "fields": "id,auto_test,device_name,device_width,cpu_id,device_height,ip_address,tempport,tempport.port,powerport,powerport.port,device_label,android_version,android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name,phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer,phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name,rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera,paneslot.paneview.id,paneslot.paneview.robot_arm"}
     res = request(url=device_url, params=param)
     for device_dict in res.get("devices"):

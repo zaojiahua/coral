@@ -71,8 +71,10 @@ class Handler():
         try:
             result = self.do(self.exec_content, **kwargs)
         except ValidationError as e:
-            print(f"error message:{e.messages}")
-            return {"result": self._error_dict[list(e.messages.keys())[0]]}
+            try:
+                return {"result": self._error_dict[list(e.messages.keys())[0]]}
+            except KeyError:
+                return {"result": -10000}
         response = {"result": self.after_execute(result, self.func.__name__)}
         if self.extra_result:
             response.update(self.extra_result)

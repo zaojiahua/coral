@@ -5,7 +5,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid
+    hand_serial_obj_dict, normal_result, trapezoid, wait_bias
 
 
 def hand_init(arm_com_id, device_obj):
@@ -122,7 +122,7 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
         # hand_serial_obj_dict.get(self._model.pk).recv()
         if float(sleep_time) > 0 :
-            time.sleep(float(sleep_time)+1.0)
+            time.sleep(float(sleep_time)+wait_bias)
         if move:
             self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")
         hand_serial_obj_dict.get(self._model.pk).recv()

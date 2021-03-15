@@ -17,7 +17,7 @@ m_location = [31, 52]
 icon_threshold = 25
 icon_threshold_camera = 10
 icon_rate = 500
-
+wait_bias = 1.1  # 从发给旋转机械臂-到触碰到开关键的时间补偿
 adb_disconnect_threshold = 15
 
 last_swipe_end_point = [0,0]

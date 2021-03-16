@@ -10,12 +10,14 @@ from ctypes import *
 from app.config.setting import CORAL_TYPE
 from .CameraParams_const import *
 
-if CORAL_TYPE == 4:
+if CORAL_TYPE in [4,5]:
     if sys.platform.startswith("win"):
         try:
             MvCamCtrldll = WinDLL("MvCameraControl.dll")
         except OSError:
             pass
+    else:
+        MvCamCtrldll = ctypes.cdll.LoadLibrary("/opt/MVS/lib" + "/64/libMvCameraControl.so")
 
 # 用于回调函数传入相机实例
 class _MV_PY_OBJECT_(Structure):

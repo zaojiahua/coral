@@ -10,7 +10,7 @@ Z_DOWN = -19
 Z_UP = -1
 MOVE_SPEED = 10000
 SWIPE_TIME = 1
-
+# 梯形滑动连带的比例
 trapezoid = 0.6
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
 m_location = [31, 52]
@@ -24,15 +24,17 @@ last_swipe_end_point = [0,0]
 
 color_threshold = 40
 color_rate = 1500
-
+g_bExit = False
 BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量
 
 Continues_Number = 1  # 连续多张判断准则，适用于性能测试
 camera_w = 1280  # 摄像头拍摄分辨率，需要根据具体摄像头设置
 camera_h = 720
 
+#中文键盘忽略屏幕上半比例内文字
 chinese_ingore = 0.55
 
+# 屏幕右侧开关占比
 right_switch_percent = 0.87
 
 CamObjList = []

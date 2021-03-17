@@ -61,9 +61,9 @@ class DoorKeeper(object):
         rotate = True if CORAL_TYPE == 3 else False
         executer = ThreadPoolExecutor()
         try:
-            port = list(set(port_list) ^ set(hand_used_list))[-1]
-            hand_used_list.append(port)
-            PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
+            for port in list(set(port_list) ^ set(hand_used_list)):
+                hand_used_list.append(port)
+                PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
         except IndexError:
             raise ArmNorEnough
 

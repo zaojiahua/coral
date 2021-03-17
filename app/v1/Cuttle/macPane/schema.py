@@ -1,18 +1,13 @@
 import os
 import re
-from ctypes import cast, POINTER, byref, sizeof, memset, c_ubyte, cdll
 
 import cv2
-import numpy as np
-from PIL import Image
 from flask import Response, jsonify
 from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE, validates_schema
 
-from app.config.ip import ADB_TYPE
 from app.config.setting import PROJECT_SIBLING_DIR
-from app.v1.Cuttle.basic.MvImport.CameraParams_header import MV_Image_Jpeg, MV_SAVE_IMAGE_PARAM_EX
 from app.v1.Cuttle.basic.basic_views import UnitFactory
-from app.v1.Cuttle.basic.operator.camera_operator import camera_init_HK
+from app.v1.Cuttle.basic.setting import camera_dq_dict
 from app.v1.device_common.device_model import Device
 
 
@@ -73,7 +68,7 @@ class PaneSchema(Schema):
 
 class OriginalPicSchema(Schema):
     # device_label = fields.String(required=True)
-    camera_id = fields.Int(required=True)
+    device_label = fields.String(required=True)
 
     class Meta:
         unknown = INCLUDE
@@ -81,58 +76,20 @@ class OriginalPicSchema(Schema):
     @post_load
     def make_sure(self, data, **kwargs):
         path = "original.png"
-        self.get_snap_shot(data.get("camera_id"), path)
+        self.get_snap_shot(data.get("device_label"), path)
         f = open(path, "rb")
         image = f.read()
         return Response(image, mimetype="image/jpeg")
 
-    def get_snap_shot(self, camera_id, path):
-        # cap = cv2.VideoCapture(camera_id)
-        # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
-        # cap.set(cv2.CAP_PROP_FPS, 20)
-        # cap.set(3, camera_w)
-        # cap.set(4, camera_h)
-        # ret, frame = cap.read()
-        # if frame is None:
-        #     cap.release()
-        #     raise NoCamera
-        # cap.release()
-        from app.v1.Cuttle.basic.setting import CamObjList
-        data_buf, nPayloadSize, stFrameInfo = camera_init_HK(5)
-        cam_obj = CamObjList.pop()
-        for i in range(3):
-            ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 1000)
-            if ret == 0:
-                stParam = MV_SAVE_IMAGE_PARAM_EX()
-                m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 2048
-                m_pBufForSaveImage = (c_ubyte * m_nBufSizeForSaveImage)()
-                memset(byref(stParam), 0, sizeof(stParam))
-                stParam.enImageType = MV_Image_Jpeg
-                stParam.enPixelType = stFrameInfo.enPixelType
-                stParam.nWidth = stFrameInfo.nWidth
-                stParam.nHeight = stFrameInfo.nHeight
-                stParam.nDataLen = stFrameInfo.nFrameLen
-                stParam.pData = cast(byref(data_buf), POINTER(c_ubyte))
-                stParam.pImageBuffer = cast(byref(m_pBufForSaveImage), POINTER(c_ubyte))
-                stParam.nBufferSize = m_nBufSizeForSaveImage
-                stParam.nJpgQuality = 80
-                cam_obj.MV_CC_SaveImageEx2(stParam)
-                # cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
-                image = np.asarray(m_pBufForSaveImage, dtype="uint8")
-                src = cv2.imdecode(image, 1)
-                break
-            else:
-                continue
+    def get_snap_shot(self, device_label,path):
+        src = camera_dq_dict.get(device_label)[-1]
+        image = cv2.imdecode(src, 1)
         try:
             os.remove(path)
-            cv2.imwrite(path, src)
-            return 0
         except FileNotFoundError:
-            cv2.imwrite(path, src)
-            return 0
-        finally:
-            cam_obj.MV_CC_CloseDevice()
-
+            pass
+        cv2.imwrite(path, image)
+        return 0
 
 class CoordinateSchema(Schema):
     device_label = fields.String(required=True)
@@ -156,6 +113,7 @@ class CoordinateSchema(Schema):
 
     @post_load
     def make_sure(self, data, **kwargs):
+        print(data)
         device_obj = Device(pk=data.get("device_label"))
         device_obj.update_device_border(data)
         return jsonify({"status": "success"}), 200

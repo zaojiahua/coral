@@ -1,19 +1,21 @@
 import collections
 import re
 import time
+import random
 
 import cv2
 import numpy as np
 
 from app.execption.outer.error_code.camera import NoSrc, NoCamera, CameraInitFail
-from app.v1.Cuttle.basic.MvImport.CameraParams_const import MV_USB_DEVICE, MV_GIGE_DEVICE
-from app.v1.Cuttle.basic.MvImport.CameraParams_header import MV_CC_DEVICE_INFO_LIST, MVCC_INTVALUE, \
-    MV_FRAME_OUT_INFO_EX, MV_CC_DEVICE_INFO, MV_SAVE_IMAGE_PARAM_EX, MV_Image_Jpeg
-from app.v1.Cuttle.basic.MvImport.GrabImage import g_bExit
-from app.v1.Cuttle.basic.MvImport.MvCameraControl_class import MvCamera
+# from app.v1.Cuttle.basic.MvImport.windows.CameraParams_const import MV_USB_DEVICE, MV_GIGE_DEVICE
+# from app.v1.Cuttle.basic.MvImport.windows.CameraParams_header import MV_CC_DEVICE_INFO_LIST, MVCC_INTVALUE, \
+#     MV_FRAME_OUT_INFO_EX, MV_CC_DEVICE_INFO, MV_SAVE_IMAGE_PARAM_EX, MV_Image_Jpeg
+# from app.v1.Cuttle.basic.MvImport.GrabImage import g_bExit
+# from app.v1.Cuttle.basic.MvImport.windows.MvCameraControl_class import MvCamera
+from app.v1.Cuttle.basic.MvImport.HK_import import *
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
-from app.v1.Cuttle.basic.setting import camera_dq_dict, CamObjList, normal_result
+from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result
 
 # from ctypes import cast, POINTER, byref, sizeof, memset, c_ubyte,
 from ctypes import *
@@ -23,6 +25,17 @@ FpsMax = 80
 CameraMax = 1600
 ImageNumberFile = "__number.txt"
 
+
+# if CORAL_TYPE in [4,5]:
+#     if sys.platform.startswith("win"):
+#         try:
+#             MvCamCtrldll = WinDLL("MvCameraControl.dll")
+#             print(MvCamCtrldll)
+#         except OSError as f:
+#             print(repr(f))
+#             pass
+#     else:
+#         MvCamCtrldll = ctypes.cdll.LoadLibrary("/opt/MVS/lib" + "/64/libMvCameraControl.so")
 # 使用redis 缓存摄像头照片，便于跨进程使用，但是一定要json序列化，消耗时间,(已经弃用)
 # def camera_start(camera_id, device_object):
 #     cap = cv2.VideoCapture(int(camera_id))
@@ -63,16 +76,21 @@ def camera_start_2(camera_id, device_object):
 
 def camera_start_3(camera_id, device_object):
     # HK摄像头
-    response = camera_init_HK(3)
+    print("start init camera......")
+    g_bExit = True
+    response = camera_init_HK(1)
     camera_start_HK(*response, device_object)
+
+
+from app.v1.Cuttle.basic.setting import CamObjList
 
 
 def camera_init_HK(start_mode):
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
-
     check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
     CamObj = MvCamera()
+    # index 0--->第一个设备
     stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
     check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
     check_result(CamObj.MV_CC_OpenDevice, start_mode, 0)
@@ -111,11 +129,16 @@ def camera_start_HK(data_buf, nPayloadSize, stFrameInfo, device_object):
             stParam.pData = cast(byref(data_buf), POINTER(c_ubyte))
             stParam.pImageBuffer = cast(byref(m_pBufForSaveImage), POINTER(c_ubyte))
             stParam.nBufferSize = m_nBufSizeForSaveImage
-            stParam.nJpgQuality = 70
+            stParam.nJpgQuality = 80
             cam_obj.MV_CC_SaveImageEx2(stParam)
-            #cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
+            # 下面这行注释
+            # cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
             image = np.asarray(m_pBufForSaveImage, dtype="uint8")
+            # print(np.all(image == 0))
+            # src = cv2.imdecode(image, cv2.IMREAD_COLOR)
+            # cv2.imwrite(f"{random.randint(1,100)}.jpg",src)
             dq.append(image)
+            print("record one pic。。。")
         else:
             continue
         if g_bExit == True:
@@ -165,8 +188,8 @@ class CameraHandler(Handler):
 
     def get_video(self, *args):
         time_sleep = args[0]
-        max_num = CameraMax / FpsMax
-        pic_count = float(time_sleep) * FpsMax if float(time_sleep) < max_num else CameraMax
+        max_save_time = CameraMax / FpsMax
+        pic_count = float(time_sleep) * FpsMax if float(time_sleep) < max_save_time else CameraMax
         self.video_src = deque()
         camera_dq_dict.get(self._model.pk).clear()
         # 留出0.5s余量，保证取够图片

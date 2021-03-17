@@ -54,6 +54,7 @@ class Device(models.Model):
     y1 = models.CharField()
     x2 = models.CharField()
     y2 = models.CharField()
+    # 输入键盘的左上点和右下点
     kx1 = models.IntegerField()
     kx2 = models.IntegerField()
     ky1 = models.IntegerField()
@@ -215,6 +216,7 @@ class Device(models.Model):
         y_real = 25.4 * self.device_height / float(self.y_dpi)
         self.x_border = str(round(x_border_camera_pixel * (x_real / x_camera_pixel), 2))
         self.y_border = str(round(y_border_camera_pixel * (y_real / y_camera_pixel), 2))
+        print("border from camera。。。",self.x_border,self.y_border)
         self.x1 = str(int(data.get("inside_upper_left_x")))
         self.y1 = str(int(data.get("inside_under_right_y")))
         self.x2 = str(int(data.get("inside_under_right_x")))

@@ -117,7 +117,7 @@ class OriginalPicSchema(Schema):
                 stParam.nBufferSize = m_nBufSizeForSaveImage
                 stParam.nJpgQuality = 80
                 cam_obj.MV_CC_SaveImageEx2(stParam)
-                cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
+                # cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
                 image = np.asarray(m_pBufForSaveImage, dtype="uint8")
                 src = cv2.imdecode(image, 1)
                 break
@@ -128,7 +128,8 @@ class OriginalPicSchema(Schema):
             cv2.imwrite(path, src)
             return 0
         except FileNotFoundError:
-            pass
+            cv2.imwrite(path, src)
+            return 0
         finally:
             cam_obj.MV_CC_CloseDevice()
 

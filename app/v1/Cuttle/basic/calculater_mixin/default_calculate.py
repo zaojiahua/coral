@@ -12,7 +12,6 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location
 class DefaultMixin(object):
     # 主要负责机械臂相关方法和位置的转换计算
 
-
     def calculate(self, pix_point):
         # pix_point： 像素坐标
         # return： 实际机械臂移动坐标
@@ -35,7 +34,7 @@ class DefaultMixin(object):
             raise CrossMax
         return opt_coordinate
 
-    def grouping(self, raw_commend) -> (List[int], str):
+    def grouping(self, raw_commend:str) -> (List[int], str):
         raw_commend = self._compatible_sleep(raw_commend)
         if "tap" in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
@@ -44,6 +43,10 @@ class DefaultMixin(object):
             pix_points = [float(i) for i in (raw_commend.split("swipe")[-1].strip().split(' ')[:4])]
             if abs(pix_points[2] - pix_points[0]) + abs(pix_points[3] - pix_points[1]) < 10:
                 opt_type = "long_press"
+            elif self.kwargs.get('continuous'):
+                opt_type = 'continuous_swipe'
+            elif self.kwargs.get('trapezoid'):
+                opt_type = 'trapezoid_slide'
             else:
                 opt_type = "sliding"
         elif 'G01' in raw_commend:
@@ -54,7 +57,7 @@ class DefaultMixin(object):
             opt_type = "double_click"
         return pix_points, opt_type
 
-    def _compatible_sleep(self, exec_content):
+    def _compatible_sleep(self, exec_content)->  str:
         if "<4ccmd>" in exec_content:
             exec_content = exec_content.replace("<4ccmd>", '')
         if "<sleep>" in exec_content:
@@ -67,7 +70,7 @@ class DefaultMixin(object):
         return exec_content
 
     def transform_pix_point(self, k):
-        if isinstance(k,str):
+        if isinstance(k, str):
             # 旋转机械臂
             return k
         if len(k) != 2 and len(k) != 4:

@@ -86,6 +86,9 @@ class ImageRealtimeSchema(ImageBasicSchema):
 class ImageColorSchema(ImageBasicSchema):
     color = fields.String(required=True, data_key="color")
 
+class ImageMainColorSchema(ImageColorSchema):
+    percent = fields.String(required=True, data_key="percent")
+
 
 class ImageColorRelativePositionSchema(ImageSchema):
     requiredWords = fields.String(required=True, data_key="requiredWords")

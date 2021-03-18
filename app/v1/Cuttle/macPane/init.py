@@ -6,22 +6,20 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from app.config.setting import BASE_DIR, HOST_IP
+from app.config.setting import BASE_DIR, HOST_IP, CORAL_TYPE, HARDWARE_MAPPING_LIST
 from app.config.url import device_url, device_logout, coordinate_url
 from app.execption.outer.error import APIException
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.basic_views import UnitFactory
+from app.v1.Cuttle.basic.setting import hand_used_list
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
 
 key_parameter_list = ["camera", "robot_arm"]
-try:
-    from app.config.ip import CORAL_TYPE
-except ImportError:
-    CORAL_TYPE = 1
+
 
 
 def pane_init():
@@ -68,7 +66,7 @@ def send_device_leave_to_reef(device, logger):
 def recover_device(executer, logger):
     param = {"status__in": "ReefList[idle{%,%}busy]",
              "cabinet_id": HOST_IP.split(".")[-2],
-             "fields": "id,auto_test,device_name,device_width,cpu_id,device_height,ip_address,tempport,tempport.port,powerport,powerport.port,device_label,android_version,android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name,phone_model.cpu_name,phone_model.manufacturer,phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name,rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera,paneslot.paneview.id,paneslot.paneview.robot_arm"}
+             "fields": "id,auto_test,device_name,device_width,cpu_id,device_height,ip_address,tempport,tempport.port,powerport,powerport.port,device_label,android_version,android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name,phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer,phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name,rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera,paneslot.paneview.id,paneslot.paneview.robot_arm"}
     res = request(url=device_url, params=param)
     for device_dict in res.get("devices"):
         device_obj = Device(pk=device_dict.get("device_label"))
@@ -80,10 +78,11 @@ def recover_device(executer, logger):
                 executer = ThreadPoolExecutor()
                 # for key in key_parameter_list:
                 #     port = device_dict.get("paneslot").get("paneview").get(key)
-                port_list = ["rotate"]
-                rotate = True if CORAL_TYPE == 4 else False
+                port_list = HARDWARE_MAPPING_LIST.copy()
+                rotate = True if CORAL_TYPE == 3 else False
                 for port in port_list:
                     PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer, rotate=rotate)
+                    hand_used_list.append(port)
                 set_border(device_dict, device_obj)
         except (AttributeError, APIException):
             pass
@@ -114,6 +113,8 @@ def set_border(device_dict, device_obj):
         "phone_model": device_dict.get("phone_model").get("id")
     }
     res = request(url=coordinate_url, params=params)
+    if len(res) <1:
+        return
     device_obj.update_device_border(res[0])
     # y_border = (res.get("inside_upper_left_x") - res.get("outside_upper_left_x") + (
     #         res.get("outside_under_right_x") - res.get("inside_under_right_x"))) / 2

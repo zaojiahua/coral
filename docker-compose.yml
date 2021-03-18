@@ -14,6 +14,7 @@ services:
       - /TMach_source/source:/app/source
       - /TMach_source/Pacific:/app/Pacific
       - /dev/bus/usb:/dev/bus/usb
+      - /dev:/dev
       - /TMach_source/coral-log:/app/coral-log/
     networks:
       tmach_net:

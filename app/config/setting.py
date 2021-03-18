@@ -51,3 +51,16 @@ BATTERY_CHECK_INTERVAL = 420
 
 
 DEVICE_BRIGHTNESS = 227
+
+# # try:
+# #     from app.config.ip import CORAL_TYPE
+# # except ImportError:
+#     CORAL_TYPE = 1
+try:
+    CORAL_TYPE = CORAL_TYPE
+except  NameError:
+    CORAL_TYPE = 1
+if platform.system() == 'Linux':
+    HARDWARE_MAPPING_LIST = ['rotate'] if CORAL_TYPE == 3 else ['arm']
+else:
+    HARDWARE_MAPPING_LIST = ['COM8']

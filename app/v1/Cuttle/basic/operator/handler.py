@@ -1,6 +1,7 @@
 import abc
 import collections
 import copy
+import re
 import time
 
 from marshmallow import ValidationError
@@ -11,7 +12,7 @@ from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
-Standard = collections.namedtuple("Standard", ["mark","code"])
+Standard = collections.namedtuple("Standard", ["mark", "code"])
 
 Dummy_model = collections.namedtuple("Dummy_model", ["is_busy", "pk", "logger"])
 
@@ -70,21 +71,22 @@ class Handler():
         try:
             result = self.do(self.exec_content, **kwargs)
         except ValidationError as e:
-            print(f"error message:{e.messages}")
-            return {"result": self._error_dict[list(e.messages.keys())[0]]}
+            try:
+                return {"result": self._error_dict[list(e.messages.keys())[0]]}
+            except KeyError:
+                return {"result": -10000}
         response = {"result": self.after_execute(result, self.func.__name__)}
         if self.extra_result:
             response.update(self.extra_result)
         return response
 
     @method_dispatch
-    def do(self, exec_content, **kwargs) :
+    def do(self, exec_content, **kwargs):
         return self.func(exec_content, **kwargs)
 
     @do.register(str)
-    def _(self,exec_content, **kwargs):
+    def _(self, exec_content, **kwargs):
         return self.str_func(exec_content, **kwargs)
-
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:
@@ -104,7 +106,7 @@ class Handler():
         # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
         if funcname not in self.skip_list:
             for abnormal in self.process_list:
-                if isinstance(abnormal.mark,str)and abnormal.mark in result:
+                if isinstance(abnormal.mark, str) and abnormal.mark in result:
                     getattr(self, abnormal.method)(result)
                     return abnormal.code
             for standard in self.standard_list:
@@ -126,6 +128,39 @@ class Handler():
         # 真实执行函数，需要在继承类中指定，adb中返回str，其他返回int
         pass
 
+    def _relative_point(self):
+        regex = re.compile("shell input tap ([\d.]*?) ([\d.]*)")
+        result = re.search(regex, self.exec_content)
+        x = float(result.group(1))
+        y = float(result.group(2))
+        if any((0 < x < 1, 0 < y < 1)):
+            from app.v1.device_common.device_model import Device
+            w = Device(pk=self._model.pk).device_width * x
+            h = Device(pk=self._model.pk).device_height * y
+            self.exec_content = self.exec_content.replace(str(x), str(w))
+            self.exec_content = self.exec_content.replace(str(y), str(h))
+        return normal_result
+
+    def _relative_swipe(self):
+        regex = re.compile("shell input swipe ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*)")
+        result = re.search(regex, self.exec_content)
+        x1 = float(result.group(1))
+        y1 = float(result.group(2))
+        x2 = float(result.group(3))
+        y2 = float(result.group(4))
+        if any((0 < x1 < 1, 0 < y2 < 1, 0 < x2 < 1, 0 < y2 < 1)):
+            from app.v1.device_common.device_model import Device
+            w1 = Device(pk=self._model.pk).device_width * x1
+            h1 = Device(pk=self._model.pk).device_height * y1
+            w2 = Device(pk=self._model.pk).device_width * x2
+            h2 = Device(pk=self._model.pk).device_height * y2
+            self.exec_content = self.exec_content.replace(str(x1), str(w1))
+            self.exec_content = self.exec_content.replace(str(y1), str(h1))
+            self.exec_content = self.exec_content.replace(str(x2), str(w2))
+            self.exec_content = self.exec_content.replace(str(y2), str(h2))
+
+        return normal_result
+
 
 class ListHandler(Handler):
 
@@ -136,16 +171,18 @@ class ListHandler(Handler):
 
     def execute(self, **kwargs):
         flag = 0
-        for single_cmd in copy.deepcopy(self.exec_content):
+        for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
             try:
                 self.child.exec_content = single_cmd
+                kwargs['index'] = index
+                kwargs['length'] = len(self.exec_content)
                 result = self.child.execute(**kwargs)
                 flag = result.get("result", -1) if result.get("result") != 0 else flag
             except NoContent:
                 continue
-        return_vaule = {"result": 0} if flag == 0 else {"result": flag}
+        return_value = {"result": 0} if flag == 0 else {"result": flag}
         self.after_unit()
-        return return_vaule
+        return return_value
 
     def after_unit(self):
         self.child.after_unit()

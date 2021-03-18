@@ -1,10 +1,11 @@
+import re
 import time
 
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result
+    hand_serial_obj_dict, normal_result, trapezoid, wait_bias
 
 
 def hand_init(arm_com_id, device_obj):
@@ -42,17 +43,25 @@ def rotate_hand_init(arm_com_id, device_obj):
     ]
     for g_orders in hand_reset_orders:
         hand_serial_obj.send_single_order(g_orders)
-        hand_serial_obj.recv(buffer_size=64)
+        response = hand_serial_obj.recv(buffer_size=64)
     return 0
 
 
 class HandHandler(Handler, DefaultMixin):
+    before_match_rules = {
+        "input tap": "_relative_point",
+        "input swipe": "_relative_swipe",
+    }
+
 
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)
         self.ignore_reset = False
 
     def before_execute(self):
+        for key, value in self.before_match_rules.items():
+            if key in self.exec_content:
+                getattr(self, value)()
         pix_points, opt_type = self.grouping(self.exec_content)
         self.exec_content = self.transform_pix_point(pix_points)
         self.func = getattr(self, opt_type)
@@ -82,26 +91,38 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def reset_hand(self, hand_reset_orders="G01 X10Y-120Z12F12000 \r\n"):
+    def trapezoid_slide(self,point, **kwargs):
+        sliding_order = self.__sliding_order(point[0], point[1],normal=False)
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
+        return hand_serial_obj_dict.get(self._model.pk).recv()
+
+    def reset_hand(self, hand_reset_orders="G01 X10Y-120Z-1F12000 \r\n", **kwargs):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
         return 0
 
-    def str_func(self, commend):
+    def continuous_swipe(self, commend, **kwargs):
+        sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0),kwargs.get('length', 0))
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
+        return hand_serial_obj_dict.get(self._model.pk).recv()
+
+    def str_func(self, commend, **kwargs):
         from app.v1.device_common.device_model import Device
-        sleep = False
         move = False
+        sleep_time = 0
         if Device(pk=self._model.pk).has_rotate_arm is False:
             return -9
         if '<rotateSleep>' in commend:
-            commend = commend.replace('<rotateSleep>', "")
-            sleep = True
+            res = re.search("<rotateSleep>(.*?)$", commend)
+            sleep_time = res.group(1)
+            commend = commend.replace("<rotateSleep>" + sleep_time, "")
         if '<move>' in commend:
             commend = commend.replace('<move>', "")
             move = True
         hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
-        if sleep:
-            time.sleep(2)
+        # hand_serial_obj_dict.get(self._model.pk).recv()
+        if float(sleep_time) > 0 :
+            time.sleep(float(sleep_time)+wait_bias)
         if move:
             self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")
         hand_serial_obj_dict.get(self._model.pk).recv()
@@ -149,25 +170,65 @@ class HandHandler(Handler, DefaultMixin):
 
     # TODO 滑动起止点是否超过操作台范围
     @staticmethod
-    def __sliding_order(start_point, end_point):
+    def __sliding_order(start_point, end_point, normal=True):
         # 点击的起始点
         start_x, start_y = start_point
         end_x, end_y = end_point
         # 从下往上   [500,800] -> [500, 200]
-        if (start_x == end_x) and (start_y > end_y):
-            end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
-        return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
-        ]
+        # if (start_x == end_x) and (start_y > end_y):
+        #     end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
+        if normal:
+            return [
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
+            ]
+        else:
+            x1 = start_x - (end_x - start_x) * trapezoid
+            y1 = start_y - (end_y - start_y) * trapezoid
+            x4 = end_x + (end_x - start_x) * trapezoid
+            y4 = end_y + (end_y - start_y) * trapezoid
+
+            return [
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y,Z_DOWN+2, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED*1.5),
+            ]
+
+    def _sliding_contious_order(self, start_point, end_point, commend_index,commend_length):
+        start_x, start_y = start_point
+        end_x, end_y = end_point
+        # 连续滑动保证动作无偏差
+        from app.v1.Cuttle.basic.setting import last_swipe_end_point
+        if start_x - last_swipe_end_point[0] < 15 and start_y - last_swipe_end_point[1] < 15:
+            start_x, start_y = last_swipe_end_point
+        last_swipe_end_point[0] = start_x
+        last_swipe_end_point[1] = start_y
+        # 首次动作有移动和下压动作
+        if commend_index == 0:
+            return [
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED)
+            ]
+        elif commend_index + 1 != commend_length:  # 后面动作只有滑动
+            return [
+                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED)
+            ]
+        else:
+            return [
+                'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_START,MOVE_SPEED)
+            ]
+
 
 
 if __name__ == '__main__':
 
     hand_serial_obj = HandSerial(timeout=2)
-    hand_serial_obj.connect(com_id="COM7")
+    hand_serial_obj.connect(com_id="COM8")
     hand_reset_orders = ['G01 X70.0Y-176.0Z8F15000 \r\n', 'G01 Z0F15000 \r\n', "G01 X10Y-120Z8F15000 \r\n"]
     init = [
         "$x \r\n",
@@ -185,3 +246,5 @@ if __name__ == '__main__':
             hand_serial_obj.send_single_order(g_orders)
             hand_serial_obj.recv()
             print(time.time() - a)
+
+        # SerialTimeoutException

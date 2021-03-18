@@ -14,6 +14,7 @@ from typing import Dict
 import numpy as np
 
 from app.config.ip import HOST_IP, ADB_TYPE
+from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url
@@ -29,10 +30,7 @@ from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
 
 logger = logging.getLogger(DOOR_LOG_NAME)
-try:
-    from app.config.ip import CORAL_TYPE
-except ImportError:
-    CORAL_TYPE = 1
+
 
 class DoorKeeper(object):
     def __init__(self):
@@ -59,11 +57,11 @@ class DoorKeeper(object):
         return 0
 
     def set_arm_or_camera(self, CORAL_TYPE, device_label):
-        port_list = ['rotate']
-        rotate = True if CORAL_TYPE == 4 else False
+        port_list = HARDWARE_MAPPING_LIST.copy()
+        rotate = True if CORAL_TYPE == 3 else False
         executer = ThreadPoolExecutor()
         try:
-            port = list(set(port_list) ^ set(hand_used_list)).pop()
+            port = list(set(port_list) ^ set(hand_used_list))[-1]
             hand_used_list.append(port)
             PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
         except IndexError:
@@ -111,8 +109,10 @@ class DoorKeeper(object):
         if ip == "":
             raise DeviceNotInUsb
         from app.v1.device_common.device_model import Device
-        res = request(method="PATCH", url=device_url + str(Device(pk=device_label).id) + "/",
+        device_obj = Device(pk=device_label)
+        res = request(method="PATCH", url=device_url + str(device_obj.id) + "/",
                       json={"ip_address": ip})
+        device_obj.ip_address = ip
         logger.info(f"response from reef: {res}")
         return self.open_wifi_service(f"-s {s_id}")
 
@@ -202,7 +202,7 @@ class DoorKeeper(object):
                     "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.board.platform"),
                     "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
                     "ip_address": self.get_dev_ip_address_internal(
-                        f"-s {s_id}") if ADB_TYPE == 0 else f"adb-serial-random-ip(start with 0)"}
+                        f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0'}
         ret_dict["device_label"] = (old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
         self._check_device_already_in_cabinet(ret_dict["device_label"])
 
@@ -303,6 +303,7 @@ class DoorKeeper(object):
             for i in range(3):
                 self.adb_cmd_obj.run_cmd(f"adb {num} shell setprop persist.adb.tcp.port 5555")
                 if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} shell getprop persist.adb.tcp.port", "5555"):
+                    self.adb_cmd_obj.run_cmd(f"adb {num} tcpip 5555")
                     return 0
             return -1
         else:

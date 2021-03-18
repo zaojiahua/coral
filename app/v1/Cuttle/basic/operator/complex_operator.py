@@ -118,10 +118,10 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         device_height = Device(pk=self._model.pk).device_height
         center_x = int(device_width / 2)
         center_y = int(device_height / 2)
-        mapping_dict = {"left": (max((center_x - 400), 0), center_y),
-                        "right": (min((center_x + 400), device_width), center_y),
-                        "down": (center_x, (min((center_y + 450), device_height))),
-                        "up": (center_x, (max((center_y - 450), 0)))}
+        mapping_dict = {"left": ((device_width * 0.9), center_y, (device_width * 0.1), center_y),
+                        "right": ((device_width * 0.1), center_y, (device_width * 0.9), center_y),
+                        "down": (center_x, (device_height * 0.1), center_x, (device_height * 0.9)),
+                        "up": (center_x, (device_height * 0.9), center_x, (device_height * 0.1))}
         for i in range(15):
             with Complex_Center(**content, **self.kwargs) as ocr_obj:
                 try:
@@ -133,9 +133,9 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     if click:
                         ocr_obj.point()
                 except OcrParseFail:
-                    ocr_obj.cx = center_x
-                    ocr_obj.cy = center_y
-                    x_end, y_end = mapping_dict.get(content.get("direction"), (900, 700))
+                    x_start, y_start, x_end, y_end = mapping_dict.get(content.get("direction"), (500, 500, 900, 700))
+                    ocr_obj.cx = x_start
+                    ocr_obj.cy = y_start
                     ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=500)
                     continue
             return ocr_obj.result
@@ -162,7 +162,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         logger.debug(f"recent file: {file_name}")
         name_format = "VID%Y%m%d%H%M%S.mp4" if format == "mp4" else "IMG%Y%m%d%H%M%S.jpg"
         name_format_2 = "Record_%Y-%m-%d-%H-%M-%S.mp4" if format == "mp4" else "Screenshot_%Y-%m-%d-%H-%M-%S-%f.jpg"
-        if (recent_time - datetime.datetime.strptime(file_name, name_format) ).seconds > 600:
+        if (recent_time - datetime.datetime.strptime(file_name, name_format)).seconds > 600:
             raise CannotFindRecentVideoOrImage
         response = self.send_adb_request(
             f"adb -s {connect_number} pull /sdcard/DCIM/Camera/{file_name} {file_name_in_server}")

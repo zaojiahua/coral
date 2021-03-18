@@ -56,5 +56,9 @@
   {
     "error_code": -2000,
     "description": "can not find required words when use color judgment by words shift"
+  },
+    {
+    "error_code": -10000,
+    "description": "用例中unit key缺失"
   }
 ]

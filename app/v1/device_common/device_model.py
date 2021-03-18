@@ -170,8 +170,9 @@ class Device(models.Model):
         self._set_char("cpu_name", kwargs, "phone_model", "cpu_name")
         self._set_char("x_dpi", kwargs, "phone_model", "x_dpi")
         self._set_char("y_dpi", kwargs, "phone_model", "y_dpi")
-        # self._set_char("x_border", kwargs, "phone_model", "x_border")
-        # self._set_char("y_border", kwargs, "phone_model", "y_border")
+
+        self._set_char("x_border", kwargs, "phone_model", "x_border")
+        self._set_char("y_border", kwargs, "phone_model", "y_border")
 
         kwargs["manufacturer"] = kwargs.pop("phone_model").get("manufacturer") if kwargs.get("phone_model") else ""
         self.manufacturer = kwargs.pop("manufacturer").get("manufacturer_name", "") if kwargs.get(

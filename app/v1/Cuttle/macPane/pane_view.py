@@ -1,10 +1,12 @@
 import logging
+import platform
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
 from flask import request, jsonify, Response
 from flask.views import MethodView
+from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS
@@ -26,10 +28,7 @@ from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
 logger = logging.getLogger(PANE_LOG_NAME)
 from concurrent.futures._base import TimeoutError
 import copy
-try:
-    from app.config.ip import CORAL_TYPE
-except ImportError:
-    CORAL_TYPE = 1
+from app.config.setting import CORAL_TYPE
 
 # mapping_dict = {0: ADB_SERVER_1, 1: ADB_SERVER_2, 2: ADB_SERVER_3}
 
@@ -80,9 +79,9 @@ class PaneDeleteView(MethodView):
             pic_push(device_object, pic_name=LEAVE_PIC_NAME)
         if device_object.has_rotate_arm:
             # todo  clear used list when only one arm for one server
-            from app.v1.Cuttle.basic.setting import hand_used_list
             self._reset_arm(device_object)
-            hand_used_list.clear()
+        from app.v1.Cuttle.basic.setting import hand_used_list
+        hand_used_list.clear()
         # 移除redis中缓存
         device_object.simple_remove()
         if data.get("assistance_ip_address"):
@@ -90,7 +89,7 @@ class PaneDeleteView(MethodView):
             for ip in data.get("assistance_ip_address"):
                 h.disconnect(ip)
         # 解除路由器IP绑定 start after jsp finished
-        if CORAL_TYPE >= 2:
+        if ADB_TYPE == 0:
             res = unbind_spec_ip(data.get("ip_address"))
             # if res != 0:
             #     raise DeviceBindFail
@@ -98,9 +97,12 @@ class PaneDeleteView(MethodView):
 
 
     def _reset_arm(self,device_object):
-        hand_serial_obj = hand_serial_obj_dict[device_object.pk]
-        hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
-        hand_serial_obj.recv(buffer_size=64)
+        try:
+            hand_serial_obj = hand_serial_obj_dict[device_object.pk]
+            hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
+            hand_serial_obj.recv(buffer_size=64)
+        except SerialException as e:
+            return
 
 class PaneAssisDeleteView(MethodView):
     def post(self):
@@ -154,19 +156,18 @@ class PaneConfigView(MethodView):
 
     @staticmethod
     def hardware_init(port, device_label, executer, rotate=False):
-        port = f'/dev/{port}'
+        port = f'/dev/{port}' if platform.system() == 'Linux' else port
         try:
             device_object = Device(pk=device_label)
             if rotate is True:
                 function, attribute = (rotate_hand_init, "has_rotate_arm")
-            elif isinstance(port, int):
+            elif port.split("/")[-1].isdigit():
                 function, attribute = (camera_start_3, "has_camera")
             else:
                 function, attribute = (hand_init, "has_arm")
             setattr(device_object, attribute, True)
-            print("after set :",device_object.has_rotate_arm)
             future = executer.submit(function, port, device_object)
-            exception = future.exception(timeout=1)
+            exception = future.exception(timeout=2)
             if "PermissionError" in str(exception):
                 raise ArmReInit
             elif "FileNotFoundError" in str(exception):
@@ -174,6 +175,7 @@ class PaneConfigView(MethodView):
             elif "tolist" in str(exception):
                 raise NoCamera
         except TimeoutError:
+            print('TimeoutError')
             return 0
 
     def delete(self):

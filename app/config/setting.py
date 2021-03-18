@@ -68,4 +68,4 @@ if platform.system() == 'Linux':
     else:
         HARDWARE_MAPPING_LIST = ['arm','1']
 else:
-    HARDWARE_MAPPING_LIST = ['COM8','1']
+    HARDWARE_MAPPING_LIST = ['COM9','1']

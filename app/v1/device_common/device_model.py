@@ -204,19 +204,21 @@ class Device(models.Model):
         # usb：图片左上 == 手机的左下 == 机械臂的左下
         # 海康： 图片左上== 手机右上  == 机械臂右上
         # 海康用1280*720  手机1920*1080
-        y_border_camera_pixel = (float(data.get("inside_upper_left_x")) - float(data.get("outside_upper_left_x"))) * (
-                self.device_height / camera_w)
-        x_border_camera_pixel = (float(data.get("outside_under_right_y")) - float(data.get("inside_under_right_y"))) * (
-                self.device_width / camera_h)
-        x_camera_pixel = float(data.get("inside_under_right_y")) - float(data.get("inside_upper_left_y"))
-        y_camera_pixel = float(data.get("inside_under_right_x")) - float(data.get("inside_upper_left_x"))
-        if y_border_camera_pixel < 0 or x_border_camera_pixel < 0:
-            return -1
-        x_real = 25.4 * self.device_width / float(self.x_dpi)
-        y_real = 25.4 * self.device_height / float(self.y_dpi)
-        self.x_border = str(round(x_border_camera_pixel * (x_real / x_camera_pixel), 2))
-        self.y_border = str(round(y_border_camera_pixel * (y_real / y_camera_pixel), 2))
-        print("border from camera。。。",self.x_border,self.y_border)
+        # y_border_camera_pixel = (float(data.get("inside_upper_left_x")) - float(data.get("outside_upper_left_x"))) * (
+        #         self.device_height / camera_w)
+        # x_border_camera_pixel = (float(data.get("outside_under_right_y")) - float(data.get("inside_under_right_y"))) * (
+        #         self.device_width / camera_h)
+        # print(y_border_camera_pixel,x_border_camera_pixel)
+        # x_camera_pixel = float(data.get("inside_under_right_y")) - float(data.get("inside_upper_left_y"))
+        # y_camera_pixel = float(data.get("inside_under_right_x")) - float(data.get("inside_upper_left_x"))
+        # if y_border_camera_pixel < 0 or x_border_camera_pixel < 0:
+        #     return -1
+        # x_real = 25.4 * self.device_width / float(self.x_dpi)
+        # y_real = 25.4 * self.device_height / float(self.y_dpi)
+        # print("x_real,y_real:",x_real,y_real)
+        # self.x_border = str(round(x_border_camera_pixel * (x_real / x_camera_pixel), 2))
+        # self.y_border = str(round(y_border_camera_pixel * (y_real / y_camera_pixel), 2))
+        # print("border from camera。。。",self.x_border,self.y_border)
         self.x1 = str(int(data.get("inside_upper_left_x")))
         self.y1 = str(int(data.get("inside_under_right_y")))
         self.x2 = str(int(data.get("inside_under_right_x")))

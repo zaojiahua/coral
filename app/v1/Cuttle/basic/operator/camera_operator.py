@@ -138,7 +138,7 @@ def camera_start_HK(data_buf, nPayloadSize, stFrameInfo, device_object):
             # src = cv2.imdecode(image, cv2.IMREAD_COLOR)
             # cv2.imwrite(f"{random.randint(1,100)}.jpg",src)
             dq.append(image)
-            print("record one pic。。。")
+            # print("record one pic。。。")
         else:
             continue
         if g_bExit == True:
@@ -182,7 +182,7 @@ class CameraHandler(Handler):
             time.sleep(0.1)
             src = camera_dq_dict.get(self._model.pk)[-1]
             src = cv2.imdecode(src, 1)
-        self.src = self.get_roi(src)
+        self.src = self.get_roi(self._model.pk,src)
         cv2.imwrite("roi.png", self.src)
         return 0
 
@@ -199,7 +199,7 @@ class CameraHandler(Handler):
         print("总图片数：", pic_count, "现有：", len(camera_dq_dict.get(self._model.pk)))
         temp_list = [camera_dq_dict.get(self._model.pk).popleft() for i in range(int(pic_count))]
         for i in temp_list:
-            self.video_src.append(self.get_roi(cv2.imdecode(i, 1)))
+            self.video_src.append(self.get_roi(self._model.pk,cv2.imdecode(i, 1)))
         print("copy&decode&wrap  pic time:", time.time() - a)
         return 0
 
@@ -226,7 +226,8 @@ class CameraHandler(Handler):
     def ignore(self, *args):
         return 0
 
-    def get_roi(self, src):
+    @staticmethod
+    def get_roi(device_label,src):
         # 截取出手机屏幕位置（要求不能转90度以上）
         try:
             # gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
@@ -245,7 +246,7 @@ class CameraHandler(Handler):
             # print("point:", point)
             # # todo  use these code when coor finished
             from app.v1.device_common.device_model import Device
-            dev_obj = Device(self._model.pk)
+            dev_obj = Device(device_label)
             point = np.float32([[float(dev_obj.x1), float(dev_obj.y2)], [float(dev_obj.x1), float(dev_obj.y1)],
                                 [float(dev_obj.x2), float(dev_obj.y1)], [float(dev_obj.x2), float(dev_obj.y2)]])
             weight = np.hypot(np.array(point[0][0] - point[1][0]), np.array(point[0][1] - point[1][1]))

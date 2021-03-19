@@ -173,7 +173,7 @@ class CameraHandler(Handler):
                 return res.group(1) if res.group() else "", function
         return "", "ignore"
 
-    def snap_shot(self, *args):
+    def snap_shot(self, *args,**kwargs):
         time.sleep(0.5)
         try:
             src = camera_dq_dict.get(self._model.pk)[-1]
@@ -186,7 +186,7 @@ class CameraHandler(Handler):
         cv2.imwrite("roi.png", self.src)
         return 0
 
-    def get_video(self, *args):
+    def get_video(self, *args,**kwargs):
         time_sleep = args[0]
         max_save_time = CameraMax / FpsMax
         pic_count = float(time_sleep) * FpsMax if float(time_sleep) < max_save_time else CameraMax
@@ -203,7 +203,7 @@ class CameraHandler(Handler):
         print("copy&decode&wrap  pic time:", time.time() - a)
         return 0
 
-    def move(self, *args):
+    def move(self, *args,**kwargs):
         if hasattr(self, "src"):
             cv2.imwrite(args[0], self.src)
             delattr(self, "src")
@@ -223,7 +223,7 @@ class CameraHandler(Handler):
         else:
             raise NoSrc
 
-    def ignore(self, *args):
+    def ignore(self, *arg,**kwargs):
         return 0
 
     @staticmethod

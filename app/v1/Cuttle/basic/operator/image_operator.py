@@ -118,7 +118,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
             start_number = self.find_point(data, self.match_words, "start", 0, target=False)
             end_number = self.search_end(data, start_number, self.match_words)
             print("单位时间:", time_persent, "end number:", end_number, "start number:", start_number)
-            self.extra_result = {"time": round((end_number - start_number) * time_persent + BIAS, 2)}
+            self.extra_result = {"time": round((end_number - start_number) * time_persent - BIAS, 2)}
             print("总用时: ", time.time() - b)
             return 0
         except VideoKeyPointNotFound:
@@ -135,7 +135,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         start_number = self.find_point(data, self.match_icon, "start", 0, target=False)
         end_number = self.search_end(data, start_number, self.match_icon)
         print("总用时: ", time.time() - b)
-        self.extra_result = {"time": round((end_number - start_number) * time_persent + BIAS, 2)}
+        self.extra_result = {"time": round((end_number - start_number) * time_persent - BIAS, 2)}
         return 0
 
     def search_end(self, data, start_number, function):

@@ -6,14 +6,14 @@ HAND_MAX_X = 315
 HAND_MAX_Y = 245
 Z_START = 0
 # Z_DOWN = -3.5   tianjing setting
-Z_DOWN = -19
+Z_DOWN = -29
 Z_UP = -1
-MOVE_SPEED = 10000
+MOVE_SPEED = 15000
 SWIPE_TIME = 1
 # 梯形滑动连带的比例
 trapezoid = 0.6
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
-m_location = [31, 52]
+m_location = [39, 13]
 icon_threshold = 25
 icon_threshold_camera = 10
 icon_rate = 500
@@ -25,7 +25,8 @@ last_swipe_end_point = [0,0]
 color_threshold = 40
 color_rate = 1500
 g_bExit = False
-BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量
+# BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量
+BIAS = 0.437  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量
 
 Continues_Number = 1  # 连续多张判断准则，适用于性能测试
 camera_w = 1280  # 摄像头拍摄分辨率，需要根据具体摄像头设置

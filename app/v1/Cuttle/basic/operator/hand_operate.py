@@ -5,7 +5,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid, wait_bias
+    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default
 
 
 def hand_init(arm_com_id, device_obj):
@@ -39,7 +39,7 @@ def rotate_hand_init(arm_com_id, device_obj):
         "$x \r\n",
         "G92 X0Y0Z0 \r\n",
         "G90 \r\n",
-        "G01 X0Y35Z0F3000 \r\n"
+        arm_default
     ]
     for g_orders in hand_reset_orders:
         hand_serial_obj.send_single_order(g_orders)

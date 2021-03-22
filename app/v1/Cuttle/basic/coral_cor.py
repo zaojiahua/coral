@@ -31,7 +31,8 @@ class Complex_Center(object):
         self.result = 0
         from app.v1.device_common.device_model import Device
         device = Device(pk=device_label)
-        self.mode = 0 if (device.has_arm is False and device.has_camera is False) else 1
+        self.mode = 0 if (kwargs.get("assist_device_serial_number") is not None or (
+                    device.has_arm is False and device.has_camera is False)) else 1
         self.logger = setup_logger(f'coral-ocr', f'coral-ocr.log')
         self.kwargs = kwargs
         self.crop_offset = [0, 0, device.device_width, device.device_height]

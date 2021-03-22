@@ -107,6 +107,15 @@ class Unit(BaseModel):
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult")
 
+    #  发到此处的同一个unit，根据情况不同，一共有6种可能:
+    #  主机unit   ADB执行unit      1主机有线执行
+    #                             2主机无线执行
+    #            机械臂执行unit     3机械臂执行
+    #            摄像头执行unit     4摄像头执行
+
+    #  僚机unit   ADB执行unit       5僚机有线执行
+    #                             6僚机无线执行
+
     def process_unit(self, logger, handler: MacroHandler, **kwargs):
         assist_device_ident = get_assist_device_ident(self.device_label,
                                                       self.assistDevice) if self.assistDevice else None
@@ -134,14 +143,16 @@ class Unit(BaseModel):
                 cmd_dict["execCmdList"] = repalced_cmd_list
 
                 sending_data = {"device_label": self.device_label, "ip_address": handler.ip_address, **cmd_dict}
-
-                from app.v1.device_common.device_model import Device
-                if Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1:
-                    target = PROCESSER_LIST[1]
-                elif Device(pk=self.device_label).has_camera and cmd_dict.get("have_second_choice", 0) == 2:
-                    target = PROCESSER_LIST[2]
-                elif Device(pk=self.device_label).has_rotate_arm and cmd_dict.get("have_second_choice", 0) == 3:
-                    target = PROCESSER_LIST[1]
+                if assist_device_ident is None:
+                    from app.v1.device_common.device_model import Device
+                    if Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1:
+                        target = PROCESSER_LIST[1]
+                    elif Device(pk=self.device_label).has_camera and cmd_dict.get("have_second_choice", 0) == 2:
+                        target = PROCESSER_LIST[2]
+                    elif Device(pk=self.device_label).has_rotate_arm and cmd_dict.get("have_second_choice", 0) == 3:
+                        target = PROCESSER_LIST[1]
+                    else:
+                        target = PROCESSER_LIST[0]
                 else:
                     target = PROCESSER_LIST[0]
 
@@ -173,7 +184,6 @@ class Unit(BaseModel):
             logger.debug(f"unit finished result:{self.detail}")
             self.copy_save_file(save_list, handler)
 
-
             # def _replace(item_iter,saving_container):
             #     save_list = []
             #     for item in item_iter:
@@ -191,7 +201,6 @@ class Unit(BaseModel):
             #             else:
             #                 saving_container.append(replaced_cmd)
             #     return save_list,saving_container
-
 
         return _inner_func()
 

@@ -40,3 +40,12 @@ djob 执行到success 节点: job_assessment_value 设置成  0
 
 除此之外,eblock 抛出的异常会直接导致djob执行结果中断,并会 fake_rds.
 
+
+
+
+## job flow 支持
+
+结果unit的结果怎么存储。
+
+性能用例的结果怎么计算（是否要有多个job flow）。
+

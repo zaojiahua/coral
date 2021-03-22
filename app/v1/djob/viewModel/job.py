@@ -1,16 +1,11 @@
 import copy
 import json
-import logging
 import os
 import re
 from functools import lru_cache
 
-from app.config.log import JOB_DOWNLOAD
-from app.config.url import job_url_filter
-from app.execption.outer.error_code.djob import JobExecBodyException
-from app.libs.http_client import request, request_file
+from app.execption.outer.error_code.djob import JobExecBodyException, JobFlowNotFound
 from app.libs.jsonutil import read_json_file
-from app.libs.log import setup_logger
 from app.v1.djob.config.setting import START_TYPE, UI_JSON_FILE_NAME, JOB_FILE_PREFIX, NORMAL_TYPE
 from app.v1.djob.model.job import Job
 from app.v1.djob.viewModel.jobFormatTransferNewLinkNode import JobFormatTransform
@@ -58,48 +53,29 @@ from app.v1.djob.viewModel.jobFormatTransferNewLinkNode import JobFormatTransfor
 """
 
 
-# redis不存在 本地没有 status设置成1 ,下拉资源
-# redis中存在 status 不为空 , get(job_path) == 1 表明正在更新，轮询等待，get(job_path) == 2 表明已经存在，获取资源
-# status = redis_client.set(job_path, "1", nx=True)
 @lru_cache(maxsize=128)
-def get_job_exec_body(tboard_path, job_label):
-    job_path = os.path.join(tboard_path, job_label) + os.sep
-    ui_json_file_path = os.path.join(job_path, UI_JSON_FILE_NAME)
+def get_job_exec_body(tboard_path, job_label, flow_id):
+    job_flow_path = os.path.join(tboard_path, job_label, str(flow_id)) + os.sep
+    ui_json_file_path = os.path.join(job_flow_path, UI_JSON_FILE_NAME)
 
-    if not os.path.exists(job_path):
-        logging.getLogger(JOB_DOWNLOAD).error(f"the job {job_label} not download in tboard")
-        os.makedirs(job_path)
-        upload_job_res_file(job_path, job_label)
+    if not os.path.exists(job_flow_path):
+        raise JobFlowNotFound(description=f"job (job_label:{job_label}  flow_id {flow_id}) is not found")
     exec_json = JobFormatTransform(read_json_file(ui_json_file_path)).jobDataFormat()
-    return macro_repalce(exec_json, job_path)
+    return macro_repalce(exec_json, job_flow_path)
 
 
-def macro_repalce(exec_json_dict, job_path):
-    res = json.dumps(exec_json_dict).replace(JOB_FILE_PREFIX, job_path)
+def macro_repalce(exec_json_dict, job_flow_path):
+    res = json.dumps(exec_json_dict).replace(JOB_FILE_PREFIX, job_flow_path)
     regex = re.compile(r'\\(?![/u"])')
     return json.loads(regex.sub(r"\\\\", res))
 
 
-def upload_job_res_file(job_path, job_label):
-    # 会抛异常 job 会捕获并返回result
-    job_content = request(method="GET", url=job_url_filter.format(
-        f"?fields=ui_json_file,job_res_file,job_res_file.name,job_res_file.file&job_label={job_label}"),
-                          filter_unique_key=True)
-    ui_file_content = request_file(job_content["ui_json_file"])
-    with open(os.path.join(job_path, UI_JSON_FILE_NAME), "wb") as code:
-        code.write(ui_file_content.content)
-
-    for job_res_file in job_content["job_res_file"]:
-        file_content = request_file(job_res_file["file"])
-        with open(os.path.join(job_path, job_res_file["name"]), "wb") as code:
-            code.write(file_content.content)
-
-
 class JobViewModel:
-    def __init__(self, job_label, tboard_path, **kwargs):
+    def __init__(self, job_label, tboard_path, flow_id, **kwargs):
         self.assist_device_serial_number = kwargs.get("assist_device_serial_number")
         self.job_label = job_label
         self.tboard_path = tboard_path
+        self.flow_id = flow_id
         self.start_name = START_TYPE
         self.node_dict = None
         self.link_dict = None
@@ -109,7 +85,7 @@ class JobViewModel:
         return Job(**self.__dict__)
 
     def init(self):
-        exec_job_body = get_job_exec_body(self.tboard_path, self.job_label)
+        exec_job_body = get_job_exec_body(self.tboard_path, self.job_label, self.flow_id)
 
         if exec_job_body.get("jobNodesDict", None) is None or exec_job_body.get("jobLinksDict", None) is None:
             raise JobExecBodyException(description=f"not this job {self.job_label}")

@@ -63,10 +63,13 @@ class Eblock(BaseModel):
         self.logger.info(f"Eblock start--- for device :{self.device_id}")
         for units in self.all_unit_list:
             if self.stop_flag is True:
-                self.logger.info(f"ready to stop eblock for device {self.device_id}")
-                raise EblockEarlyStop()
+                break
             units.process_unit_list(self.logger, self.handler)
-        self.logger.debug(f"unit list finished, result:{self.json()['all_unit_list']}")
+        if self.stop_flag is True:
+            self.logger.info(f"ready to stop eblock for device {self.device_id}")
+            raise EblockEarlyStop()
+        else:
+            self.logger.debug(f"unit list finished, result:{self.json()['all_unit_list']}")
 
     def stop(self):
         self.stop_flag = True

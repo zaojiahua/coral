@@ -105,7 +105,7 @@ class Unit(BaseModel):
     ocrChoice = models.IntegerField()
     unit_list_index = models.IntegerField()
 
-    load = ("detail", "key", "execModName", "jobUnitName")
+    load = ("detail", "key", "execModName", "jobUnitName", "finalResult")
 
     def process_unit(self, logger, handler: MacroHandler, **kwargs):
         assist_device_ident = get_assist_device_ident(self.device_label,
@@ -134,16 +134,17 @@ class Unit(BaseModel):
                 cmd_dict["execCmdList"] = repalced_cmd_list
 
                 sending_data = {"device_label": self.device_label, "ip_address": handler.ip_address, **cmd_dict}
-
-                from app.v1.device_common.device_model import Device
-                if Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1:
-                    target = PROCESSER_LIST[1]
-                elif Device(pk=self.device_label).has_camera and cmd_dict.get("have_second_choice", 0) == 2:
-                    target = PROCESSER_LIST[2]
-                elif Device(pk=self.device_label).has_rotate_arm and cmd_dict.get("have_second_choice", 0) == 3:
-                    target = PROCESSER_LIST[1]
-                else:
-                    target = PROCESSER_LIST[0]
+                if assist_device_ident is None:
+                    from app.v1.device_common.device_model import Device
+                    if Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1:
+                        target = PROCESSER_LIST[1]
+                    elif Device(pk=self.device_label).has_camera and cmd_dict.get("have_second_choice", 0) == 2:
+                        target = PROCESSER_LIST[2]
+                    elif Device(pk=self.device_label).has_rotate_arm and cmd_dict.get("have_second_choice", 0) == 3:
+                        target = PROCESSER_LIST[1]
+                    else:
+                        target = PROCESSER_LIST[0]
+                else: target = PROCESSER_LIST[0]
 
             else:
                 for key, value in cmd_dict.items():

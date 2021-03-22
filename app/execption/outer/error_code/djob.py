@@ -72,3 +72,22 @@ class JobExecUnknownException(APIException):
     code = 400
     error_code = 4007
     description = 'Job exec unknown exception'
+
+
+class JobFlowNotFound(APIException):
+    """
+    任务执行的罗辑流程图缺失
+    """
+    code = 400
+    error_code = 4008
+    description = 'job flow not found'
+
+
+class InnerJobNotAssociated(APIException):
+    """
+    inner job 虽然在流程图里有指明，但是并未真正关联。
+    执行时没有inner job，执行失败。建议打开job重新保存。
+    """
+    code = 400
+    error_code = 4009
+    description = 'inner job not associated'

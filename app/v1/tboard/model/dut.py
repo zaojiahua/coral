@@ -5,7 +5,7 @@ from astra import models
 
 from app.config.setting import TBOARD_LOG_NAME
 from app.execption.outer.error import APIException
-from app.libs.extension.field import OwnerBooleanHash, OwnerList
+from app.libs.extension.field import OwnerBooleanHash, OwnerList, DictField
 from app.libs.extension.model import BaseModel
 from app.v1.djob.views.insert_djob import insert_djob_inner
 from app.v1.djob.views.remove_djob import remove_djob_inner
@@ -21,6 +21,7 @@ class Dut(BaseModel):
     """
     stop_flag = OwnerBooleanHash()
     job_label_list = OwnerList()
+    job_msg = DictField()
     repeat_time: int = models.IntegerField()
     djob_pk = models.CharField()
     current_job_index: int = models.IntegerField()
@@ -107,6 +108,8 @@ class Dut(BaseModel):
         json_data = {
             "device_label": self.device_label,
             "job_label": self.current_job_label,
+            "flow_execute_mode": self.job_msg[self.current_job_label]["flow_execute_mode"],
+            "job_flows": self.job_msg[self.current_job_label]["job_flows"],
             "source": "tboard",
             "tboard_id": self.parent.pk,
             "tboard_path": self.parent.tboard_path

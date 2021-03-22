@@ -8,7 +8,7 @@ from app.v1.djob.model.device import DjobDevice
 
 
 class DeviceViewModel:
-    def __init__(self, device_label, **kwargs):
+    def __init__(self, device_label, flow_id, **kwargs):
         self.device_label = device_label
 
         self.device_name = None
@@ -18,8 +18,8 @@ class DeviceViewModel:
         self.tempport = None
         self.base_path = BASE_PATH.format(device_label=device_label, timestamp=time.time())
 
-        self.rds_data_path = os.path.join(self.base_path, RDS_DATA_PATH_NAME) + os.sep
-        self.djob_work_path = os.path.join(self.base_path, DJOB_WORK_PATH_NAME) + os.sep
+        self.rds_data_path = os.path.join(self.base_path, str(flow_id), RDS_DATA_PATH_NAME) + os.sep
+        self.djob_work_path = os.path.join(self.base_path, str(flow_id), DJOB_WORK_PATH_NAME) + os.sep
 
     def to_model(self):
         makedirs_new_folder(self.rds_data_path)

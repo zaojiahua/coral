@@ -5,7 +5,6 @@ from functools import wraps, partial, singledispatch
 
 from app.config.log import REQUEST_LOG_TIME_STATISTICS
 from app.v1.Cuttle.basic.setting import handler_config
-from types import MethodType, FunctionType
 
 
 def async_timeout(timeout=20):
@@ -89,11 +88,7 @@ def method_dispatch(func):
 
     @wraps(func)
     def wrapper(*args, **kw):
-        if isinstance(func, MethodType):
-            return dispatcher.dispatch(args[1].__class__)(*args, **kw)
-        else:
-            return dispatcher.dispatch(args[0].__class__)(*args, **kw)
-
+        return dispatcher.dispatch(args[1].__class__)(*args, **kw)
     wrapper.register = dispatcher.register
     return wrapper
 

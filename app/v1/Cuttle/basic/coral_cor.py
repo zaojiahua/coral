@@ -31,7 +31,8 @@ class Complex_Center(object):
         self.result = 0
         from app.v1.device_common.device_model import Device
         device = Device(pk=device_label)
-        self.mode = 0 if (device.has_arm is False and device.has_camera is False) else 1
+        self.mode = 0 if (kwargs.get("assist_device_serial_number") is not None or (
+                    device.has_arm is False and device.has_camera is False)) else 1
         self.logger = setup_logger(f'coral-ocr', f'coral-ocr.log')
         self.kwargs = kwargs
         self.crop_offset = [0, 0, device.device_width, device.device_height]
@@ -185,6 +186,8 @@ class Complex_Center(object):
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>0.5")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
+        if kwargs.get("ignore_arm_reset") == True:
+            request_body.update({"ignore_arm_reset": True})
         self.logger.info(
             f"in coral cor ready to point{min(self.cx + self.x_shift, 0)},{min(self.cy + self.y_shift, 0)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])

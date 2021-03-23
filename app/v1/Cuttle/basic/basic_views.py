@@ -14,44 +14,16 @@ from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 
 
-# ------入口函数，使用with表达式生明对应handler和device，并显式调用execute方法-----
+# 每一个相同的底层unit都有6种情况：
 
-#
-# # 机械臂入口函数
-# def mechanical_arm(input_data):
-#     # 机械臂 放置多台设备后，此处换成pane id
-#     hand_device = HandDevice(pk=input_data.get("device_label"))
-#     with HandHandler(model=hand_device, many=isinstance(input_data['execCmdList'], list), **input_data) as h:
-#         return h.execute()
-#
-#
-# # adb入口函数
-# def adb_exec(input_data):
-#     device = AdbDevice(pk=input_data.get("device_label"))
-#     with AdbHandler(model=device, many=isinstance(input_data['execCmdList'], list), **input_data) as h:
-#         return h.execute()
-#
-#
-# # 摄像头入口函数
-# def camera_exec(input_data):
-#     model = Dummy_model(False, input_data.get("device_label"), setup_logger(f'camera', 'camera.log'))
-#     handler = CameraHandler(model=model, many=isinstance(input_data['execCmdList'], list), **input_data)
-#     return handler.execute()
-#
-#
-# # 图像分析入口函数
-# def image_exec(input_data):
-#     device_label = input_data.get("device_label")
-#     model = Dummy_model(False, device_label, setup_logger(f'imageTool-{device_label}', f'imageTool-{device_label}.log'))
-#     image_handler = ImageHandler(model=model, **input_data)
-#     return image_handler.execute()
-#
-#
-# # 复合unit入口函数
-# def complex_unit(input_data):
-#     model = Dummy_model(False, input_data.get("device_label"), setup_logger(f'complex', 'complex.log'))
-#     complex_handler = ComplexHandler(model=model, **input_data)
-#     return complex_handler.execute()
+#  主机unit -->  ADB执行unit             1主机有线执行
+#                                      2主机无线执行
+#               机械臂执行unit           3机械臂执行
+#               摄像头执行unit           4摄像头执行
+
+#  僚机unit -->  ADB执行unit            5僚机有线执行
+#                                      6僚机无线执行
+# 另外主僚机的每个复合型unit 也可以再下分这6种情况.
 
 
 class UnitFactory(object):

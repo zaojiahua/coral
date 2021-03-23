@@ -144,7 +144,8 @@ class Unit(BaseModel):
                         target = PROCESSER_LIST[1]
                     else:
                         target = PROCESSER_LIST[0]
-                else: target = PROCESSER_LIST[0]
+                else:
+                    target = PROCESSER_LIST[0]
 
             else:
                 for key, value in cmd_dict.items():
@@ -174,7 +175,6 @@ class Unit(BaseModel):
             logger.debug(f"unit finished result:{self.detail}")
             self.copy_save_file(save_list, handler)
 
-
             # def _replace(item_iter,saving_container):
             #     save_list = []
             #     for item in item_iter:
@@ -192,7 +192,6 @@ class Unit(BaseModel):
             #             else:
             #                 saving_container.append(replaced_cmd)
             #     return save_list,saving_container
-
 
         return _inner_func()
 

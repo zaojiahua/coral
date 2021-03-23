@@ -145,7 +145,8 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     def pull_recent_video_or_picture(self, content):
         # 需要接受所有格式的文件pull请求
         from app.v1.device_common.device_model import Device
-        connect_number = Device(pk=self._model.pk).connect_number
+        connect_number = Device(pk=self._model.pk).connect_number if self.kwargs.get(
+            "assist_device_serial_number") is None else self.kwargs.get("assist_device_serial_number")
         logger = Device(pk=self._model.pk).logger
         content = SimpleVideoPullSchema().load(content)
         adb_content = content.get("adbCommand")

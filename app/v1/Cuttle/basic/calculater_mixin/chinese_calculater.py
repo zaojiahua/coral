@@ -7,7 +7,6 @@ from app.v1.Cuttle.basic.coral_cor import Complex_Center
 class ChineseMixin(object):
     # 主要负责adb输入中文的转换，思路为转换为拼音--换为9宫格坐标--依次点击并找到目标词
 
-
     # 九宫格位置
     keyboard_mapping_dict = {
         "abc": (3 / 6, 1 / 6),
@@ -29,7 +28,7 @@ class ChineseMixin(object):
                 return True
         return False
 
-    def pinyin_2_coordinate(self, pinyin, device_obj,coor_tuple_list):
+    def pinyin_2_coordinate(self, pinyin, device_obj, coor_tuple_list):
         x = device_obj.kx2 - device_obj.kx1
         y = device_obj.ky2 - device_obj.ky1
         for letter in pinyin:
@@ -47,14 +46,14 @@ class ChineseMixin(object):
         from app.v1.device_common.device_model import Device
         coor_tuple_list = []
         for pinyin_word in pinyin:
-            coor_tuple_list = self.pinyin_2_coordinate(pinyin_word, Device(pk=self._model.pk),coor_tuple_list)
-        ocr_choice = {"ocr-server":1}
+            coor_tuple_list = self.pinyin_2_coordinate(pinyin_word, Device(pk=self._model.pk), coor_tuple_list)
+        ocr_choice = {"ocr-server": 1}
         ocr_choice.update(self.kwargs)
         with Complex_Center(**ocr_choice, requiredWords=words) as ocr_obj:
             # 先依次敲击9宫格键盘，输入内容
             for coor_tuple in coor_tuple_list:
                 ocr_obj.set_xy(*coor_tuple)
-                ocr_obj.point(ignore_sleep=True)
+                ocr_obj.point(ignore_sleep=True, ignore_arm_reset=True)
             # 再通过ocr的方式截图-识别-找到需要输入的词并点击
             ocr_obj.snap_shot()
             ocr_obj.picture_crop()

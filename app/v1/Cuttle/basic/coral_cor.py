@@ -186,6 +186,8 @@ class Complex_Center(object):
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>0.5")
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
+        if kwargs.get("ignore_arm_reset") == True:
+            request_body.update({"ignore_arm_reset": True})
         self.logger.info(
             f"in coral cor ready to point{min(self.cx + self.x_shift, 0)},{min(self.cy + self.y_shift, 0)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])

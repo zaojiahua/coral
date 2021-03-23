@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 from app.config.ip import OCR_IP
+from app.config.setting import CORAL_TYPE
 from app.config.url import coral_ocr_url
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin, separate_point_pixel
@@ -19,7 +20,8 @@ class TestMixin(object):
     def test_icon_exist(self, exec_content, clear=True):
         data = IconTestSchema().load(exec_content)
         feature_point_length, _, _ = self.test_icon(data, clear)
-        require_feature_number = int(icon_threshold - (1 - data.get('threshold', 0.99)) * icon_rate)
+        threshold = icon_threshold if CORAL_TYPE < 5 else icon_threshold_camera
+        require_feature_number = int(threshold - (1 - data.get('threshold', 0.99)) * icon_rate)
         message = 'please lower the value of threshold' if len(
             feature_point_length) < require_feature_number else 'success'
         return {"sample": len(feature_point_length),

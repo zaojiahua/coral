@@ -45,6 +45,7 @@ class PaneSchema(Schema):
         #     with open(image_path, 'rb') as f:
         #         image = f.read()
         #         return Response(image, mimetype="image/jpeg")
+
         if device_obj.has_camera :
             from app.v1.Cuttle.basic.operator.camera_operator import CameraHandler
             src = camera_dq_dict.get(device_label)[-1]
@@ -58,9 +59,7 @@ class PaneSchema(Schema):
                                f"adb -s {device_obj.connect_number} pull /sdcard/{picture_name} {image_path}"
                            ],
                            "device_label": device_label})
-            jsdata["ip_address"] = device_obj.connect_number
-            snap_shot_result = UnitFactory().create("AdbHandler",
-             jsdata) if not device_obj.has_camera else UnitFactory().create("CameraHandler", jsdata)
+            snap_shot_result = UnitFactory().create("AdbHandler",jsdata)
             if {"result": 0} != snap_shot_result:
                 return jsonify({"status": snap_shot_result}), 400
         try:

@@ -19,6 +19,7 @@ icon_threshold_camera = 10
 icon_rate = 500
 wait_bias = 1.1  # 从发给旋转机械臂-到触碰到开关键的时间补偿
 adb_disconnect_threshold = 15
+arm_default = "G01 X0Y33Z0F5000 \r\n"
 
 last_swipe_end_point = [0,0]
 

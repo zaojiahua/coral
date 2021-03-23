@@ -4,6 +4,7 @@ import time
 
 from app.config.ip import REEF_IP
 from app.execption.outer.error_code.eblock import EblockCannotFindFile, MaroUnrecognition
+from app.v1.Cuttle.basic.setting import arm_default
 
 adb_data_path = "<adbOutPath>"
 block_index = "<blockIndex>"
@@ -33,7 +34,7 @@ macro_dict = {
     Rotate_vertical: "G01 X0Y33Z0F7000 \r\n",
     Rotate_switch: "G01 X34Y33Z0F1500 \r\n<move>",
     Rotate_switchHold: "G01 X34Y33Z0F1500 \r\n<move><rotateSleep>",
-    RotateNormal: "G01 X0Y33Z0F5000 \r\n",
+    RotateNormal: arm_default,
     RotateInit: "G01 X0Y00Z0F5000 \r\n",
     RotateUp: "G01 X0Y123Z0F3000 \r\n"
 }

@@ -22,7 +22,7 @@ class HandSerial:
         if kwargs.get("wait"):
             for g_order in g_orders:
                 self.ser.write(g_order.encode())
-            time.sleep(1)
+            time.sleep(2)
             self.ser.write(deviate_order.encode())
             return 0
         elif kwargs.get("ignore_reset"):

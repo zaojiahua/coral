@@ -11,7 +11,7 @@ from app.execption.outer.error_code.imgtool import OcrRetryTooManyTimes, OcrPars
 from app.libs.functools import handler_switcher
 from app.libs.http_client import request
 from app.libs.log import setup_logger
-from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec
+from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec, get_file_name
 from app.v1.Cuttle.basic.setting import chinese_ingore
 
 
@@ -46,8 +46,11 @@ class Complex_Center(object):
                 self.logger.warning(f"ocr service retry over 3 times")
                 return False
             elif exc_type == OcrParseFail or exc_type == NotFindIcon:
-                self.logger.warning(f"can not find required words or feature:{self._searching_word} in ocr result")
+                self.logger.warning(f"can not find required words {self._searching_word} in ocr result")
                 self.result = 1
+                return True
+            elif exc_type == NotFindIcon:
+                self.logger.warning(f"can not find required icon  in ocr result")
                 return True
             elif exc_type == AttributeError:
                 self.logger.warning(f"find attribute error {exc_val} ")
@@ -83,7 +86,7 @@ class Complex_Center(object):
                 self.logger.info(f"get ocr result {response.get('result')}")
                 if self._searching_word or parse_function.__name__ != self.default_parse_response.__name__:
                     pic_x, pic_y = parse_function(response.get("result"))
-                    self.cal_realy_xy(pic_x, pic_y, pic_path)
+                    self.cal_realy_xy(pic_x, pic_y, self.default_pic_path)
                     self.result = 0
                     break
                 else:
@@ -110,7 +113,7 @@ class Complex_Center(object):
                 for word, coor_tuple in identify_words_list:
                     if self._searching_word in word:
                         pic_x, pic_y = coor_tuple
-                        self.cal_realy_xy(pic_x, pic_y, pic_path)
+                        self.cal_realy_xy(pic_x, pic_y, self.default_pic_path)
                         return
                 else:
                     raise OcrParseFail
@@ -127,14 +130,22 @@ class Complex_Center(object):
         from app.v1.device_common.device_model import Device
         device = Device(pk=self.device_label)
         if device.has_camera and device.has_arm:
-            # 摄像头识别到的文字位置，需要根据手机屏幕与摄像头照片分辨率换算回实际手机上像素位置
+            # 摄像头识别到的文字位置，需要根据手机屏幕与摄像头照片分辨率换算回实际手机上像素位置，带选区的识别需要在具体方法再做选区内坐标到完整图坐标的变换
+            if self.crop_offset != [0, 0, device.device_width, device.device_height]:
+                # 带有摄像头的中文输入，需要先恢复到整张图上的位置
+                pic_x = int(pic_x + int(self.crop_offset[0]))
+                pic_y = int(pic_y + int(self.crop_offset[1]))
             src = cv2.imread(input_pic_path)
+            # cv2.imwrite("test.png",src)
             pic_h, pic_w = src.shape[:2]
             device_width = device.device_width
             device_height = device.device_height
+            # print(pic_y,pic_x,device_height,pic_h,pic_w)
             self.cx = int(pic_x * (device_width / pic_w))
             self.cy = int(pic_y * (device_height / pic_h))
+            print("cx ,cy:",self.cx,self.cy,pic_x,pic_y)
         elif self.crop_offset != [0, 0, device.device_width, device.device_height]:
+            # 截图内裁剪
             self.cx = int(pic_x + int(self.crop_offset[0]))
             self.cy = int(pic_y + int(self.crop_offset[1]))
         else:
@@ -160,12 +171,16 @@ class Complex_Center(object):
             "device_label": self.device_label,
             "work_path": os.path.dirname(self.default_pic_path)
         }
+        src = cv2.imread(info_body["inputImgFile"])
+        cv2.imwrite(f'test-{random.randint(1,100)}.png',src)
         from app.v1.Cuttle.basic.basic_views import UnitFactory
         response = UnitFactory().create("ImageHandler", request_dict)
+
         if response.get("result") != 0:
+            self.result = response.get("result")
             raise NotFindIcon
         point_x, point_y = response["point_x"], response["point_y"]
-        self.cal_realy_xy(point_x, point_y, info_body["inputImgFile"])
+        self.cal_realy_xy(point_x, point_y, self.default_pic_path)
 
     def _ocr_request(self, **kwargs):
         pic_path = kwargs.get("pic_path")
@@ -189,7 +204,7 @@ class Complex_Center(object):
         if kwargs.get("ignore_arm_reset") == True:
             request_body.update({"ignore_arm_reset": True})
         self.logger.info(
-            f"in coral cor ready to point{min(self.cx + self.x_shift, 0)},{min(self.cy + self.y_shift, 0)}")
+            f"in coral cor ready to point{max(self.cx + self.x_shift, 0)},{max(self.cy + self.y_shift, 0)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
 
     @handler_switcher
@@ -249,6 +264,8 @@ class Complex_Center(object):
         src = cv2.imread(self.default_pic_path)
         h, w = src.shape[:2]
         self.crop_offset = [0, int(h * chinese_ingore), w, h]
-        cv2.imwrite(self.default_pic_path,
+        if self._pic_path is None:
+            self._pic_path = get_file_name(self.default_pic_path) + '-wordCrop.png'
+        cv2.imwrite(self._pic_path,
                     src[self.crop_offset[1]:self.crop_offset[3], self.crop_offset[0]:self.crop_offset[2]])
         return 0

@@ -70,6 +70,7 @@ class HandHandler(Handler, DefaultMixin):
         # 单击，支持连续单击，例如：拨号
         click_orders = self.__list_click_order(axis_list)
         ignore_reset = self.kwargs.get("ignore_arm_reset")
+        self.ignore_reset = ignore_reset
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders, ignore_reset=ignore_reset)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 

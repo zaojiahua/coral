@@ -7,6 +7,7 @@ import numpy as np
 from marshmallow import ValidationError
 from scipy.cluster.vq import *
 
+from app.config.setting import CORAL_TYPE
 from app.execption.outer.error_code.imgtool import IconTooWeek
 
 
@@ -53,23 +54,15 @@ class FeatureCompareMixin:
             return 0
         return 1
 
-    def identify_icon_point(self, input_img, icon_img, mode=0, height=None, width=None):
+    def identify_icon_point(self, input_img, icon_img, height=None, width=None):
         l = self.shape_identify(input_img, icon_img)
         if len(l) < 4:
             self._model.logger.error(f"Too few feature points：{len(l)}")
-            raise IconTooWeek
+            return 2010
         self._model.logger.info(f" icon feature number:{len(l)}")
         code, centroids = FeatureCompareMixin.kmeans_clustering(l, 4)  # five centroids
         max_centro = Counter(code).most_common(1)[0][0]
-        sp = input_img.shape
-        result_x = 0
-        result_y = 0
-        if mode == 0:  # mode=0，为截屏
-            result = centroids[max_centro]
-            result_x, result_y = separate_point_pixel(result)
-        elif mode == 1:  # mode=1，为摄像头摄入
-            result_x, result_y = relative2absolute(centroids[max_centro], sp, height, width)
-        return result_x, result_y
+        return centroids[max_centro]
 
     def image_size_help(self, image_1, image_2):
         shape_1 = image_1.shape

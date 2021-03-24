@@ -63,7 +63,11 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
 
         result = self.identify_icon_point(self._crop_image(data.get("input_im"), [1, 1, 1, 1]),
                                           self._crop_image(data.get("refer_im"), data.get("areas")[0]))
-        point_x, point_y = result
+        if isinstance(result,int):
+            return result
+        point_x = result[0]
+        point_y = result[1]
+        self._model.logger.debug(f"icon position in picture:{point_x},{point_y}")
         if data.get("output_path"):
             self._write_down(data.get("output_path"), f"{round(point_x, 2)} {round(point_y, 2)}")
         # extra_result 的结果会最终合并到unit的结果中去

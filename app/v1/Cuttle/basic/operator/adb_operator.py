@@ -79,6 +79,7 @@ class AdbHandler(Handler, ChineseMixin):
         if ADB_TYPE == 1:
             self.str_func(adb_cmd_prefix + "kill-server" )
             self.str_func(adb_cmd_prefix + "start-server" )
+            self._model.is_connected = True
             return 0
         if self.kwargs.get("assist_device_serial_number"):
             device_ip = self.kwargs.get("assist_device_serial_number")

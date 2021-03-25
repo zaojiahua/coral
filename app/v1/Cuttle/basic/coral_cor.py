@@ -171,8 +171,6 @@ class Complex_Center(object):
             "device_label": self.device_label,
             "work_path": os.path.dirname(self.default_pic_path)
         }
-        src = cv2.imread(info_body["inputImgFile"])
-        cv2.imwrite(f'test-{random.randint(1,100)}.png',src)
         from app.v1.Cuttle.basic.basic_views import UnitFactory
         response = UnitFactory().create("ImageHandler", request_dict)
 

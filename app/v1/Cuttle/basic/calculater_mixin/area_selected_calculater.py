@@ -27,7 +27,9 @@ class AreaSelectedMixin(object):
         data = self._validate(info_body, ImageOriginalSchema)
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
-            h, w = cv2.imread(ocr_obj.default_pic_path).shape[:2]
+            from app.v1.device_common.device_model import Device
+            dev_obj = Device(pk=self._model.pk)
+            h, w = dev_obj.device_height,dev_obj.device_width
             x0, y0 = int(data.get("areas")[0][0] * w), int(data.get("areas")[0][1] * h)
             crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("areas")[0])
             self.image = ocr_obj.default_pic_path
@@ -44,7 +46,9 @@ class AreaSelectedMixin(object):
         data = self._validate(info_body, ImageAreaWithoutInputSchema)
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
-            h, w = cv2.imread(ocr_obj.default_pic_path).shape[:2]
+            from app.v1.device_common.device_model import Device
+            dev_obj = Device(pk=self._model.pk)
+            h, w = dev_obj.device_height,dev_obj.device_width
             x0, y0 = int(data.get("crop_areas")[0][0] * w), int(data.get("crop_areas")[0][1] * h)
             input_crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("crop_areas")[0])
             self.image = ocr_obj.default_pic_path

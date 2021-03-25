@@ -2,6 +2,8 @@ import time
 
 import serial
 
+from app.config.setting import CORAL_TYPE
+
 
 class HandSerial:
 
@@ -25,7 +27,7 @@ class HandSerial:
             time.sleep(1)
             self.ser.write(deviate_order.encode())
             return 0
-        elif kwargs.get("ignore_reset"):
+        elif kwargs.get("ignore_reset") or CORAL_TYPE < 5:
             for g_order in g_orders:
                 self.ser.write(g_order.encode())
             return 0

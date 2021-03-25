@@ -163,7 +163,7 @@ class CameraHandler(Handler):
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
         self.exec_content, opt_type = self.grouping(self.exec_content)
-        self.func = getattr(self, opt_type)
+        self.str_func = getattr(self, opt_type)
         return normal_result
 
     def grouping(self, content):
@@ -174,7 +174,7 @@ class CameraHandler(Handler):
         return "", "ignore"
 
     def snap_shot(self, *args,**kwargs):
-        time.sleep(0.5)
+        time.sleep(3)
         try:
             src = camera_dq_dict.get(self._model.pk)[-1]
             src = cv2.imdecode(src, 1)
@@ -183,7 +183,6 @@ class CameraHandler(Handler):
             src = camera_dq_dict.get(self._model.pk)[-1]
             src = cv2.imdecode(src, 1)
         self.src = self.get_roi(self._model.pk,src)
-        cv2.imwrite("roi.png", self.src)
         return 0
 
     def get_video(self, *args,**kwargs):

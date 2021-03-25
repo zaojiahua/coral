@@ -1,6 +1,7 @@
 import re
 import time
 
+from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
@@ -71,8 +72,13 @@ class HandHandler(Handler, DefaultMixin):
         click_orders = self.__list_click_order(axis_list)
         ignore_reset = self.kwargs.get("ignore_arm_reset")
         self.ignore_reset = ignore_reset
-        hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders, ignore_reset=ignore_reset)
-        return hand_serial_obj_dict.get(self._model.pk).recv()
+        # length = len(click_orders)
+        # if ignore_reset is not True and CORAL_TYPE == 5:
+        #     length +=  1
+        result = hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders, ignore_reset=ignore_reset)
+        # for i in range(length):
+        result = hand_serial_obj_dict.get(self._model.pk).recv()
+        return result
 
     def double_click(self, double_axis, **kwargs):
         # 双击，在同一个点快速点击两次
@@ -135,7 +141,7 @@ class HandHandler(Handler, DefaultMixin):
         return self.str_func(commend)
 
     def after_unit(self):
-        if self.ignore_reset is False:
+        if self.ignore_reset is False and CORAL_TYPE ==5:
             self.reset_hand()
 
     # TODO 怎样处理如果传入点中有一个或多个计算出的坐标超过操作台范围

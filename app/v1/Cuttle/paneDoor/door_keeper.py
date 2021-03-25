@@ -330,7 +330,7 @@ class DoorKeeper(object):
         if device_name == "":
             device_name = self.get_default_name()
         dev_data_dict["device_name"] = device_name  # add device name before post to pane
-        dev_data_dict["cabinet"] = HOST_IP.split(".")[-2]
+        dev_data_dict["cabinet"] = HOST_IP.split(".")[-1]
         # -----add none for adjustment---
         dev_data_dict["instance_port"] = None  # add device name before post to pane
         logger.debug(f"send device create request to reef {dev_data_dict}")

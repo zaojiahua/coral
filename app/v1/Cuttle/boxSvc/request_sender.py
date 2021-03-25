@@ -36,7 +36,7 @@ def _send_order_by_http():
 
 
 def check_from_reef() -> List:
-    response = request(url=box_url, params={"cabinet": HOST_IP.split(".")[-2]})
+    response = request(url=box_url, params={"cabinet": HOST_IP.split(".")[-1]})
     return response.get("woodenbox")
 
 

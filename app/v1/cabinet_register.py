@@ -8,13 +8,15 @@ def cabinet_register():
         cabinet_id = HOST_IP.split(".")[-1]
 
         jsdata = {"cabinet_name": f"I'M {cabinet_id}#",
-                  "ip_address": HOST_IP}
+                  "ip_address": HOST_IP,
+                  "is_delete": False}
     except:
         cabinet_id = REEF_IP.split(".")[-2]
         jsdata = {"cabinet_name": "default_name"}
     finally:
         res = request(method="POST", json=jsdata, url=cabinet_url + cabinet_id + "/")
         print("---------cabinet register finished-----------")
+
 
 if __name__ == '__main__':
     cabinet_register()

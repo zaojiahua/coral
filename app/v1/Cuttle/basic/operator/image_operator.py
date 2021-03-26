@@ -7,7 +7,8 @@ import cv2
 import imageio
 import numpy as np
 
-from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNotFound, RecordWordsFindNoWords
+from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNotFound, RecordWordsFindNoWords, \
+    IconTooWeek
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.calculater_mixin.color_calculate import ColorMixin
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin
@@ -60,11 +61,11 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def identify_icon(self, exec_content, is_write_file=True) -> int:
         # surf特征找图标方法 （返回类型特殊）
         data = self._validate(exec_content, ImageSchema)
-
-        result = self.identify_icon_point(self._crop_image(data.get("input_im"), [1, 1, 1, 1]),
+        try:
+            result = self.identify_icon_point(self._crop_image(data.get("input_im"), [1, 1, 1, 1]),
                                           self._crop_image(data.get("refer_im"), data.get("areas")[0]))
-        if isinstance(result,int):
-            return result
+        except IconTooWeek:
+            return IconTooWeek.error_code
         point_x = result[0]
         point_y = result[1]
         self._model.logger.debug(f"icon position in picture:{point_x},{point_y}")
@@ -78,7 +79,10 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         # 判断所选择区域内有指定图标
         data = self._validate(exec_content, ImageSchema)
         feature_refer = self._crop_image(data.get("refer_im"), data.get("areas")[0])
-        feature_point_list = self.shape_identify(cv2.imread(data.get("input_im")), feature_refer)
+        try:
+            feature_point_list = self.shape_identify(cv2.imread(data.get("input_im")), feature_refer)
+        except IconTooWeek:
+            return IconTooWeek.error_code
         from app.v1.device_common.device_model import Device
         threshold = icon_threshold if Device(pk=self._model.pk).has_camera == False else icon_threshold_camera
         self._model.logger.info(

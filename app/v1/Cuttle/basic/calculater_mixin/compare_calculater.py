@@ -58,7 +58,8 @@ class FeatureCompareMixin:
         l = self.shape_identify(input_img, icon_img)
         if len(l) < 4:
             self._model.logger.error(f"Too few feature points：{len(l)}")
-            return 2010
+            raise IconTooWeek
+            # return 2010
         self._model.logger.info(f" icon feature number:{len(l)}")
         code, centroids = FeatureCompareMixin.kmeans_clustering(l, 4)  # five centroids
         max_centro = Counter(code).most_common(1)[0][0]

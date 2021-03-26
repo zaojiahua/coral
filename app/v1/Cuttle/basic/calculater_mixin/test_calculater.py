@@ -8,6 +8,8 @@ import numpy as np
 from app.config.ip import OCR_IP
 from app.config.setting import CORAL_TYPE
 from app.config.url import coral_ocr_url
+from app.execption.outer.error import APIException
+from app.execption.outer.error_code.imgtool import IconTooWeek
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin, separate_point_pixel
 from app.v1.Cuttle.basic.image_schema import IconTestSchema, OcrTestSchema
@@ -19,9 +21,12 @@ from PIL import Image, ImageDraw, ImageFont
 class TestMixin(object):
     def test_icon_exist(self, exec_content, clear=True):
         data = IconTestSchema().load(exec_content)
-        feature_point_length, _, _ = self.test_icon(data, clear)
         threshold = icon_threshold if CORAL_TYPE < 5 else icon_threshold_camera
         require_feature_number = int(threshold - (1 - data.get('threshold', 0.99)) * icon_rate)
+        try:
+            feature_point_length, _, _ = self.test_icon(data, clear)
+        except APIException:
+            return {"sample": 0,"required": require_feature_number,'message': 'icon too week'}
         message = 'please lower the value of threshold' if len(
             feature_point_length) < require_feature_number else 'success'
         return {"sample": len(feature_point_length),
@@ -38,7 +43,10 @@ class TestMixin(object):
 
     def test_icon_position(self, exec_content):
         data = IconTestSchema().load(exec_content)
-        response, icon_path, image_crop_path = self.test_icon(data, clear=False)
+        try:
+            response, icon_path, image_crop_path = self.test_icon(data, clear=False)
+        except APIException:
+            return {"error": APIException.description}
         if len(response) < 4:
             return {"error": 'sample point not enough'}
         code, centroids = FeatureCompareMixin.kmeans_clustering(response, 4)  # five centroids

@@ -356,12 +356,13 @@ class DJobFlow(BaseModel):
         :param kwargs:
         :return:
         """
+        flow_id = kwargs.pop("flow_id", self.flow_id)
         if self.device is None:  # device prepare error 导致device 未初始化
             return
         if self.source == DJOB:
             file_rename_from_path(self.device.rds_data_path, f"inner_{self.inner_job_index}")
 
-        file_rename_from_path(self.device.rds_data_path, f"flow_{self.flow_id}")
+        file_rename_from_path(self.device.rds_data_path, f"flow_{flow_id}")
 
         for file_name in os.listdir(self.device.rds_data_path):
             file_path = os.path.join(self.device.rds_data_path, file_name)
@@ -394,7 +395,7 @@ class DJobFlow(BaseModel):
                     log.close()
 
         for djob_instance in self.inner_job_list:
-            djob_instance.push_log_and_pic(base_data, job_assessment_value, **kwargs)
+            djob_instance.push_log_and_pic(base_data, job_assessment_value, flow_id=flow_id)
 
     def stop_flow(self):
         self.stop_flag = True

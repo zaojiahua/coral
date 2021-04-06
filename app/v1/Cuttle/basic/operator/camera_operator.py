@@ -13,13 +13,14 @@ from app.execption.outer.error_code.camera import NoSrc, NoCamera, CameraInitFai
 # from app.v1.Cuttle.basic.MvImport.GrabImage import g_bExit
 # from app.v1.Cuttle.basic.MvImport.windows.MvCameraControl_class import MvCamera
 from app.v1.Cuttle.basic.MvImport.HK_import import *
+from app.v1.Cuttle.basic.MvImport.windows.MvErrorDefine_const import MV_OK
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
-from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result
+from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, g_bExit, camera_params
 
 # from ctypes import cast, POINTER, byref, sizeof, memset, c_ubyte,
 from ctypes import *
-
+from redis_init import redis_client
 MoveToPress = 9
 FpsMax = 80
 CameraMax = 1600
@@ -74,18 +75,20 @@ def camera_start_2(camera_id, device_object):
     cv2.destroyAllWindows()
 
 
-def camera_start_3(camera_id, device_object):
+def camera_start_3(camera_id, device_object,**kwargs):
     # HK摄像头
     print("start init camera......")
-    g_bExit = True
-    response = camera_init_HK(1)
+    redis_client.set("g_bExit","0")
+    response = camera_init_HK(**kwargs)
+    print('half done')
     camera_start_HK(*response, device_object)
+
 
 
 from app.v1.Cuttle.basic.setting import CamObjList
 
 
-def camera_init_HK(start_mode):
+def camera_init_HK(**kwargs):
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
     check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
@@ -93,7 +96,13 @@ def camera_init_HK(start_mode):
     # index 0--->第一个设备
     stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
     check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
-    check_result(CamObj.MV_CC_OpenDevice, start_mode, 0)
+
+    check_result(CamObj.MV_CC_OpenDevice, 1, 0)
+    for key in camera_params[::-1]:
+        check_result(CamObj.MV_CC_SetIntValue,key[0],key[1])
+    for key in camera_params:
+        if kwargs.get(key[0]) is not None:
+            check_result(CamObj.MV_CC_SetIntValue,key[0], kwargs.get(key[0]))
     response = check_result(CamObj.MV_CC_StartGrabbing)
 
     stParam = MVCC_INTVALUE()
@@ -103,20 +112,26 @@ def camera_init_HK(start_mode):
     nPayloadSize = stParam.nCurValue
     data_buf = (c_ubyte * nPayloadSize)()
     stFrameInfo = MV_FRAME_OUT_INFO_EX()
-    memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
     CamObjList.append(CamObj)
+
+
+    memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
     return data_buf, nPayloadSize, stFrameInfo
+
+
 
 
 def camera_start_HK(data_buf, nPayloadSize, stFrameInfo, device_object):
     dq = deque(maxlen=CameraMax)
     camera_dq_dict[device_object.pk] = dq
     cam_obj = CamObjList[-1]
+
     while (device_object.has_camera):
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
         if ret == 0:
             stParam = MV_SAVE_IMAGE_PARAM_EX()
             m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 2048
+            # print(stFrameInfo.nWidth,stFrameInfo.nHeight,stFrameInfo.nOffsetY)
             m_pBufForSaveImage = (c_ubyte * m_nBufSizeForSaveImage)()
             # set xxsize in stparam to 0
             memset(byref(stParam), 0, sizeof(stParam))
@@ -131,23 +146,27 @@ def camera_start_HK(data_buf, nPayloadSize, stFrameInfo, device_object):
             stParam.nBufferSize = m_nBufSizeForSaveImage
             stParam.nJpgQuality = 80
             cam_obj.MV_CC_SaveImageEx2(stParam)
-            # 下面这行注释
             # cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
             image = np.asarray(m_pBufForSaveImage, dtype="uint8")
             # print(np.all(image == 0))
             # src = cv2.imdecode(image, cv2.IMREAD_COLOR)
             # cv2.imwrite(f"{random.randint(1,100)}.jpg",src)
             dq.append(image)
-            # print("record one pic。。。")
         else:
             continue
-        if g_bExit == True:
+
+        if redis_client.get("g_bExit") == "1":
+            print("in stop process")
+            cam_obj.MV_CC_StopGrabbing()
+            cam_obj.MV_CC_CloseDevice()
+            cam_obj.MV_CC_DestroyHandle()
             break
 
 
 def check_result(func, *args):
     return_value = func(*args)
     if return_value != 0:
+        print(args)
         raise CameraInitFail
 
 

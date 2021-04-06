@@ -24,6 +24,7 @@ from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
 from app.v1.tboard.views.get_dut_progress import get_dut_progress_inner
 from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
+from redis_init import redis_client
 
 logger = logging.getLogger(PANE_LOG_NAME)
 from concurrent.futures._base import TimeoutError
@@ -81,8 +82,7 @@ class PaneDeleteView(MethodView):
             # todo  clear used list when only one arm for one server
             self._reset_arm(device_object)
         if device_object.has_camera:
-            from app.v1.Cuttle.basic.setting import g_bExit
-            g_bExit = True
+            redis_client.set("g_bExit", "1")
         from app.v1.Cuttle.basic.setting import hand_used_list
         hand_used_list.clear()
         # 移除redis中缓存

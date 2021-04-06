@@ -1,5 +1,7 @@
 import os
 import re
+import time
+from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
 from flask import Response, jsonify
@@ -7,8 +9,10 @@ from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE, val
 
 from app.config.setting import PROJECT_SIBLING_DIR
 from app.v1.Cuttle.basic.basic_views import UnitFactory
+from app.v1.Cuttle.basic.operator.camera_operator import camera_start_3
 from app.v1.Cuttle.basic.setting import camera_dq_dict
 from app.v1.device_common.device_model import Device
+from redis_init import redis_client
 
 
 def validate_ip(ip):
@@ -46,11 +50,11 @@ class PaneSchema(Schema):
         #         image = f.read()
         #         return Response(image, mimetype="image/jpeg")
 
-        if device_obj.has_camera :
+        if device_obj.has_camera:
             from app.v1.Cuttle.basic.operator.camera_operator import CameraHandler
             src = camera_dq_dict.get(device_label)[-1]
             image = cv2.imdecode(src, 1)
-            src = CameraHandler.get_roi(device_label,image)
+            src = CameraHandler.get_roi(device_label, image)
             cv2.imwrite(image_path, src)
         else:
             jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
@@ -59,7 +63,7 @@ class PaneSchema(Schema):
                                f"adb -s {device_obj.connect_number} pull /sdcard/{picture_name} {image_path}"
                            ],
                            "device_label": device_label})
-            snap_shot_result = UnitFactory().create("AdbHandler",jsdata)
+            snap_shot_result = UnitFactory().create("AdbHandler", jsdata)
             if {"result": 0} != snap_shot_result:
                 return jsonify({"status": snap_shot_result}), 400
         try:
@@ -83,12 +87,18 @@ class OriginalPicSchema(Schema):
     @post_load
     def make_sure(self, data, **kwargs):
         path = "original.png"
+        device_obj = Device(pk=data.get("device_label"))
+        redis_client.set("g_bExit", "1")
+        time.sleep(0.5)
+        executer = ThreadPoolExecutor()
+        executer.submit(camera_start_3, 1, device_obj)
+        time.sleep(0.5)
         self.get_snap_shot(data.get("device_label"), path)
         f = open(path, "rb")
         image = f.read()
         return Response(image, mimetype="image/jpeg")
 
-    def get_snap_shot(self, device_label,path):
+    def get_snap_shot(self, device_label, path):
         src = camera_dq_dict.get(device_label)[-1]
         image = cv2.imdecode(src, 1)
         try:
@@ -98,16 +108,17 @@ class OriginalPicSchema(Schema):
         cv2.imwrite(path, image)
         return 0
 
+
 class CoordinateSchema(Schema):
     device_label = fields.String(required=True)
-    inside_upper_left_x = fields.Float(required=True)
-    inside_upper_left_y = fields.Float(required=True)
-    outside_upper_left_x = fields.Float(required=True)
-    outside_upper_left_y = fields.Float(required=True)
-    inside_under_right_x = fields.Float(required=True)
-    inside_under_right_y = fields.Float(required=True)
-    outside_under_right_y = fields.Float(required=True)
-    outside_under_right_x = fields.Float(required=True)
+    inside_upper_left_x = fields.Int(required=True)
+    inside_upper_left_y = fields.Int(required=True)
+    outside_upper_left_x = fields.Int(required=True)
+    outside_upper_left_y = fields.Int(required=True)
+    inside_under_right_x = fields.Int(required=True)
+    inside_under_right_y = fields.Int(required=True)
+    outside_under_right_y = fields.Int(required=True)
+    outside_under_right_x = fields.Int(required=True)
 
     class Meta:
         unknown = INCLUDE
@@ -122,5 +133,13 @@ class CoordinateSchema(Schema):
     def make_sure(self, data, **kwargs):
         print(data)
         device_obj = Device(pk=data.get("device_label"))
-        device_obj.update_device_border(data)
+        redis_client.set("g_bExit", "1")
+        time.sleep(1)
+        executer = ThreadPoolExecutor()
+        executer.submit(camera_start_3, 1, device_obj,
+                       OffsetX=data.get("inside_upper_left_x")//16 *16,
+                       OffsetY=data.get("inside_upper_left_y")//2 *2 + 200,
+                       Width=(data.get("inside_under_right_x") - data.get("inside_upper_left_x"))//16 *16,
+                       Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y"))//2 *2)
+        # device_obj.update_device_border(data)
         return jsonify({"status": "success"}), 200

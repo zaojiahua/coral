@@ -1,6 +1,7 @@
 hand_serial_obj_dict = {}
 hand_used_list = []
 camera_dq_dict = {}
+camera_params = [("Width",1280),("Height",720),("OffsetY",200),("OffsetX",0)]
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
 HAND_MAX_Y = 245

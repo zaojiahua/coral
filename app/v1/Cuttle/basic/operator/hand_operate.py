@@ -9,7 +9,7 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_ST
     hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default
 
 
-def hand_init(arm_com_id, device_obj):
+def hand_init(arm_com_id, device_obj,**kwargs):
     """
     1. 解锁机械臂，并将机械臂移动至Home位置
     2. 设置坐标模式为绝对值模式
@@ -31,7 +31,7 @@ def hand_init(arm_com_id, device_obj):
     return 0
 
 
-def rotate_hand_init(arm_com_id, device_obj):
+def rotate_hand_init(arm_com_id, device_obj,**kwargs):
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[device_obj.pk] = hand_serial_obj

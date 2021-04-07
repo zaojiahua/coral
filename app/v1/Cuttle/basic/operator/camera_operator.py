@@ -78,10 +78,12 @@ def camera_start_2(camera_id, device_object):
 def camera_start_3(camera_id, device_object,**kwargs):
     # HK摄像头
     print("start init camera......")
+    dq = deque(maxlen=CameraMax)
+    camera_dq_dict[device_object.pk] = dq
     redis_client.set("g_bExit","0")
     response = camera_init_HK(**kwargs)
     print('half done')
-    camera_start_HK(*response, device_object)
+    camera_start_HK(dq,*response, device_object)
 
 
 
@@ -89,6 +91,7 @@ from app.v1.Cuttle.basic.setting import CamObjList
 
 
 def camera_init_HK(**kwargs):
+
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
     check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
@@ -97,13 +100,14 @@ def camera_init_HK(**kwargs):
     stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
     check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
 
-    check_result(CamObj.MV_CC_OpenDevice, 1, 0)
-    for key in camera_params[::-1]:
-        check_result(CamObj.MV_CC_SetIntValue,key[0],key[1])
+    check_result(CamObj.MV_CC_OpenDevice, 6, 0)
+    if kwargs.get("init") is None:
+        for key in camera_params[::-1]:
+            check_result(CamObj.MV_CC_SetIntValue,key[0],key[1])
     for key in camera_params:
         if kwargs.get(key[0]) is not None:
             check_result(CamObj.MV_CC_SetIntValue,key[0], kwargs.get(key[0]))
-    response = check_result(CamObj.MV_CC_StartGrabbing)
+    check_result(CamObj.MV_CC_StartGrabbing)
 
     stParam = MVCC_INTVALUE()
     memset(byref(stParam), 0, sizeof(MVCC_INTVALUE))
@@ -121,11 +125,8 @@ def camera_init_HK(**kwargs):
 
 
 
-def camera_start_HK(data_buf, nPayloadSize, stFrameInfo, device_object):
-    dq = deque(maxlen=CameraMax)
-    camera_dq_dict[device_object.pk] = dq
+def camera_start_HK(dq,data_buf, nPayloadSize, stFrameInfo, device_object):
     cam_obj = CamObjList[-1]
-
     while (device_object.has_camera):
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
         if ret == 0:
@@ -154,7 +155,6 @@ def camera_start_HK(data_buf, nPayloadSize, stFrameInfo, device_object):
             dq.append(image)
         else:
             continue
-
         if redis_client.get("g_bExit") == "1":
             print("in stop process")
             cam_obj.MV_CC_StopGrabbing()

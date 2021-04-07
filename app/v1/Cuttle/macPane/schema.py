@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import numpy as np
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
@@ -10,7 +11,7 @@ from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE, val
 from app.config.setting import PROJECT_SIBLING_DIR
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start_3
-from app.v1.Cuttle.basic.setting import camera_dq_dict
+
 from app.v1.device_common.device_model import Device
 from redis_init import redis_client
 
@@ -52,10 +53,12 @@ class PaneSchema(Schema):
 
         if device_obj.has_camera:
             from app.v1.Cuttle.basic.operator.camera_operator import CameraHandler
+            from app.v1.Cuttle.basic.setting import camera_dq_dict
             src = camera_dq_dict.get(device_label)[-1]
             image = cv2.imdecode(src, 1)
-            src = CameraHandler.get_roi(device_label, image)
-            cv2.imwrite(image_path, src)
+            image = np.rot90(image,3)
+            # src = CameraHandler.get_roi(device_label, image)
+            cv2.imwrite(image_path, image)
         else:
             jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
                            "execCmdList": [
@@ -74,7 +77,8 @@ class PaneSchema(Schema):
         except Exception as e:
             print(repr(e))
         finally:
-            os.remove(image_path)
+            print("in remove process")
+            # os.remove(image_path)
 
 
 class OriginalPicSchema(Schema):
@@ -89,7 +93,6 @@ class OriginalPicSchema(Schema):
         path = "original.png"
         device_obj = Device(pk=data.get("device_label"))
         redis_client.set("g_bExit", "1")
-        time.sleep(0.5)
         executer = ThreadPoolExecutor()
         executer.submit(camera_start_3, 1, device_obj)
         time.sleep(0.5)
@@ -99,6 +102,7 @@ class OriginalPicSchema(Schema):
         return Response(image, mimetype="image/jpeg")
 
     def get_snap_shot(self, device_label, path):
+        from app.v1.Cuttle.basic.setting import camera_dq_dict
         src = camera_dq_dict.get(device_label)[-1]
         image = cv2.imdecode(src, 1)
         try:

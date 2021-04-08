@@ -287,15 +287,14 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     #   辅助函数
     def _validate(self, exec_content, schema):
         data = schema().load(exec_content)
-        self.video = data.get("video_file")
-        from app.v1.device_common.device_model import Device
-        name = ""
-        if Device(pk=self._model.pk).has_camera and self.video is not None:
-            with open(get_file_name(self.video) + ImageNumberFile) as f:
-                total_number = f.read()
-            name = get_file_name(self.video) + f"__{int(total_number) - 1}.png"
-        self.image = data.get("input_im", name)
-
+        # self.video = data.get("video_file")
+        # from app.v1.device_common.device_model import Device
+        # name = ""
+        # if Device(pk=self._model.pk).has_camera and self.video is not None:
+        #     with open(get_file_name(self.video) + ImageNumberFile) as f:
+        #         total_number = f.read()
+        #     name = get_file_name(self.video) + f"__{int(total_number) - 1}.png"
+        self.image = data.get("input_im", "")
         return data
 
     @staticmethod

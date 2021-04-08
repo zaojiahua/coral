@@ -22,8 +22,8 @@ from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, g_bExit, 
 from ctypes import *
 from redis_init import redis_client
 MoveToPress = 9
-FpsMax = 80
-CameraMax = 1600
+FpsMax = 120
+CameraMax = 2400
 ImageNumberFile = "__number.txt"
 
 

@@ -238,3 +238,24 @@ class SimpleVideoPullSchema(Schema):
     # outputPath = fields.String(required=True)
     adbCommand = fields.String(required=True)
     fileName = fields.String(required=True, validate=has_format)
+
+
+class PerformanceSchema(Schema):
+    icon_config = fields.String(required=True, data_key="iconConfig", validate=vertify_exist)
+    config = fields.String(required=True, data_key="config", validate=vertify_exist)
+    refer_im = fields.String(required=True, data_key="referImgFile", validate=(vertify_exist, verify_image))
+
+    @post_load()
+    def explain(self, data, **kwargs):
+        with open(data.get('config'), "r") as json_file:
+            json_data = json.load(json_file)
+            areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
+                     "area" + str(i) in json_data.keys()]
+        data["areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
+        with open(data.get('icon_config'), "r") as json_file_icon:
+            json_data_icon = json.load(json_file_icon)
+            icon_areas = [json_data_icon["area" + str(i)] for i in range(1, len(json_data_icon.keys())) if
+                     "area" + str(i) in json_data_icon.keys()]
+            icon_threshold = float(json_data_icon.get("threshold", 0.99))
+        data["icon_areas"] = icon_areas if icon_areas is not [] else [[1, 1, 1, 1]]
+        data["threshold"] = icon_threshold

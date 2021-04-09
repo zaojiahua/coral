@@ -128,7 +128,7 @@ def camera_init_HK(**kwargs):
 def camera_start_HK(dq,data_buf, nPayloadSize, stFrameInfo, device_object):
     cam_obj = CamObjList[-1]
     while (device_object.has_camera):
-        ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
+        ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 3)
         if ret == 0:
             stParam = MV_SAVE_IMAGE_PARAM_EX()
             m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 2048
@@ -193,15 +193,16 @@ class CameraHandler(Handler):
         return "", "ignore"
 
     def snap_shot(self, *args,**kwargs):
-        time.sleep(3)
-        try:
-            src = camera_dq_dict.get(self._model.pk)[-1]
-            src = cv2.imdecode(src, 1)
-        except IndexError:
-            time.sleep(0.1)
-            src = camera_dq_dict.get(self._model.pk)[-1]
-            src = cv2.imdecode(src, 1)
-        self.src = self.get_roi(self._model.pk,src)
+        time.sleep(0.5)
+        for i in range(5):
+            try:
+                src = camera_dq_dict.get(self._model.pk)[-1]
+                src = cv2.imdecode(src, 1)
+                src = np.rot90(src, 3)
+            except IndexError:
+                time.sleep(0.02)
+                continue
+        self.src = src
         return 0
 
     def get_video(self, *args,**kwargs):

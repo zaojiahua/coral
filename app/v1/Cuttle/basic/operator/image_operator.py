@@ -12,6 +12,7 @@ from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNo
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.calculater_mixin.color_calculate import ColorMixin
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin
+from app.v1.Cuttle.basic.calculater_mixin.perforamnce_calculater import PerformanceMinix
 from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
 from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
 from app.v1.Cuttle.basic.common_utli import get_file_name, threshold_set
@@ -26,7 +27,7 @@ from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_thre
 VideoSearchPosition = 0.5
 
 
-class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin, ColorMixin, TestMixin):
+class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin, ColorMixin, PerformanceMinix,TestMixin):
     _error_dict = {
         "configFile": -22,
         "inputImgFile": -23,
@@ -37,7 +38,10 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         "position": -28,
         "color": -29,
         "inputImgFile2":-30,
-        "percent": -31
+        "percent": -31,
+        "config":-32,
+        "iconConfig":-33,
+
     }
     # mark 为int 因为img func 返回int
     process_list = [Abnormal(mark=1, method="clear", code=1),

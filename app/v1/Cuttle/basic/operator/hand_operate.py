@@ -22,7 +22,7 @@ def hand_init(arm_com_id, device_obj,**kwargs):
     hand_reset_orders = [
         "$x \r\n",
         "$h \r\n",
-        "G92 X0Y0Z0 \r\n",
+        f"G92 X0Y0Z{Z_UP} \r\n",
         "G90 \r\n"
     ]
     for g_orders in hand_reset_orders:
@@ -38,7 +38,7 @@ def rotate_hand_init(arm_com_id, device_obj,**kwargs):
     hand_reset_orders = [
         "$G \r\n",
         "$x \r\n",
-        "G92 X0Y0Z0 \r\n",
+        "G92 X0Y0Z0F15000 \r\n",
         "G90 \r\n",
         arm_default
     ]
@@ -76,39 +76,46 @@ class HandHandler(Handler, DefaultMixin):
         # if ignore_reset is not True and CORAL_TYPE == 5:
         #     length +=  1
         result = hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders, ignore_reset=ignore_reset)
-        # for i in range(length):
         result = hand_serial_obj_dict.get(self._model.pk).recv()
+        # if ignore_reset != True:
+        #     time.sleep(2)
         return result
 
     def double_click(self, double_axis, **kwargs):
         # 双击，在同一个点快速点击两次
         double_click_orders = self.__double_click_order(double_axis)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(double_click_orders)
+        time.sleep(2)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def long_press(self, start_point, swipe_time=SWIPE_TIME, **kwargs):
         # 长按
         long_click_orders = self.__single_click_order(start_point[0])
         hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2], wait=True)
+        time.sleep(2)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def sliding(self, point, swipe_time=SWIPE_TIME, **kwargs):
         # TODO 控制滑动时间,增加移动速度的换算
         sliding_order = self.__sliding_order(point[0], point[1])
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
+        time.sleep(2)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def trapezoid_slide(self, point, **kwargs):
         sliding_order = self.__sliding_order(point[0], point[1], normal=False)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
+        time.sleep(2)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def reset_hand(self, hand_reset_orders="G01 X10Y-120Z-1F12000 \r\n", **kwargs):
+    def reset_hand(self, hand_reset_orders=f"G01 X10Y-120Z{Z_UP}F12000 \r\n", **kwargs):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
+        time.sleep(2)
         return 0
 
     def continuous_swipe(self, commend, **kwargs):
+        # 执行完不做等待
         sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0),
                                                      kwargs.get('length', 0))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
@@ -132,7 +139,7 @@ class HandHandler(Handler, DefaultMixin):
         if float(sleep_time) > 0:
             time.sleep(float(sleep_time) + wait_bias)
         if move:
-            self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")
+            self.reset_hand(hand_reset_orders="G01 X0Y35ZF3000 \r\n")
         hand_serial_obj_dict.get(self._model.pk).recv()
         self.ignore_reset = True
         return 0
@@ -245,13 +252,15 @@ if __name__ == '__main__':
     ]
     for g_orders in init:
         hand_serial_obj.send_single_order(g_orders)
-        hand_serial_obj.recv(buffer_size=64)
+        result = hand_serial_obj.recv(buffer_size=64)
 
-    for i in range(5):
+    # hand_serial_obj.timeout =1
+    # hand_serial_obj.connect(com_id="COM9")
+    for i in range(10):
         for g_orders in hand_reset_orders:
             a = time.time()
             hand_serial_obj.send_single_order(g_orders)
-            hand_serial_obj.recv()
+            response = hand_serial_obj.recv(buffer_size=2)
             print(time.time() - a)
 
         # SerialTimeoutException

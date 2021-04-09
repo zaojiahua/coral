@@ -259,3 +259,4 @@ class PerformanceSchema(Schema):
             icon_threshold = float(json_data_icon.get("threshold", 0.99))
         data["icon_areas"] = icon_areas if icon_areas is not [] else [[1, 1, 1, 1]]
         data["threshold"] = icon_threshold
+        return data

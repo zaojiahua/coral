@@ -3,6 +3,7 @@ import time
 import serial
 
 from app.config.setting import CORAL_TYPE
+from app.v1.Cuttle.basic.setting import Z_UP
 
 
 class HandSerial:
@@ -20,7 +21,7 @@ class HandSerial:
         return self.ser.write(g_order.encode())
 
     def send_list_order(self, g_orders, **kwargs):
-        deviate_order = "G01 X10Y-120Z-1F15000 \r\n"
+        deviate_order = f"G01 X10Y-120Z{Z_UP}F15000 \r\n"
         if kwargs.get("wait"):
             for g_order in g_orders:
                 self.ser.write(g_order.encode())

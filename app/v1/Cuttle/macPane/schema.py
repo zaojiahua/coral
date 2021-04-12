@@ -93,9 +93,11 @@ class OriginalPicSchema(Schema):
         path = "original.png"
         device_obj = Device(pk=data.get("device_label"))
         redis_client.set("g_bExit", "1")
+        # 两个sleep 经验看要保证再1s以上，保证相机实际开启并得到第一张图片
+        time.sleep(1.5)
         executer = ThreadPoolExecutor()
         executer.submit(camera_start_3, 1, device_obj)
-        time.sleep(0.5)
+        time.sleep(1.5)
         self.get_snap_shot(data.get("device_label"), path)
         f = open(path, "rb")
         image = f.read()
@@ -135,7 +137,6 @@ class CoordinateSchema(Schema):
 
     @post_load
     def make_sure(self, data, **kwargs):
-        print(data)
         device_obj = Device(pk=data.get("device_label"))
         redis_client.set("g_bExit", "1")
         time.sleep(1)

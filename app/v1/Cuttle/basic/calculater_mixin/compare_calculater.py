@@ -1,5 +1,6 @@
 import logging
 import random
+import time
 from collections import Counter
 
 import cv2
@@ -121,7 +122,8 @@ class FeatureCompareMixin:
         :param inputImg: 图片
         :return: 关键点，描述子
         """
-        surf = cv2.xfeatures2d.SURF_create(hessianThreshold=50,nOctaves=4,nOctaveLayers=3, extended=True,upright=True)  # 初始化surf特征
+        surf = cv2.xfeatures2d.SURF_create(hessianThreshold=50, nOctaves=4, nOctaveLayers=3, extended=True,
+                                           upright=True)  # 初始化surf特征
         kp, des = surf.detectAndCompute(input_img, None)  # 提取关键点和描述符
         if des is None:
             raise IconTooWeek

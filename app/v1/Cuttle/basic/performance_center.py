@@ -6,6 +6,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 import cv2
 import numpy as np
 
+from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoKeyPointNotFound
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax, FpsMax
 from app.v1.Cuttle.basic.setting import wait_bias, BIAS
@@ -19,7 +20,7 @@ class PerformanceCenter(object):
             cls.instance = super().__new__(cls)
         return cls.instance
 
-    def __init__(self, device_id, icon, scope, threshold, work_path, dq, **kwargs):
+    def __init__(self, device_id, icon, scope, threshold, work_path: str, dq, **kwargs):
         self.device_id = device_id
         self.result = 0
         self.back_up_dq = dq
@@ -28,10 +29,14 @@ class PerformanceCenter(object):
         self.threshold = threshold
         self.move_flag = True
         self.loop_flag = True
+        work_path = "\\".join(os.path.dirname(work_path).split("\\")[:-1]) + "\\performance\\"
+        if not os.path.exists(work_path):
+            os.makedirs(work_path)
         self.work_path = work_path
         self.kwargs = kwargs
 
     def start_loop(self, judge_function):
+        a = time.time()
         executer = ThreadPoolExecutor()
         self.move_src_task = executer.submit(self.move_src_to_backup)
         number = 0
@@ -39,40 +44,40 @@ class PerformanceCenter(object):
         # 等异步线程时间
         time.sleep(0.5)
         while self.loop_flag:
-            b = time.time()
             number, picture = self.picture_prepare(number)
-            print("cal time used 1:", time.time() - b)
             if judge_function(picture, self.judge_icon, self.threshold, disappear=True) == True:
-                self.bias = True if self.kwargs.get("bais") == True else False
+                self.bias = True if self.kwargs.get("bias") == True else False
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 break
-
-            print("cal time used 2:",time.time()-b)
-            if number >= CameraMax/2:
+            if number >= CameraMax / 2:
                 self.move_flag = False
                 self.back_up_dq.clear()
                 raise VideoKeyPointNotFound
+        print("start loop time", time.time() - a)
         return 0
 
     def end_loop(self, judge_function):
-        number = self.start_number  + 1
-        print("end loop start... now number:",number)
+        number = self.start_number + 1
+        b = time.time()
+        print("end loop start... now number:", number)
         while self.loop_flag:
             number, picture = self.picture_prepare(number)
             if judge_function(picture, self.judge_icon, self.threshold) == True:
-                print(f"find end point number: {number}")
+                print(f"find end point number: {number}", self.bias)
                 self.end_number = number - 1
-                self.start_number = self.start_number + BIAS if self.bias ==True else self.start_number
+                self.start_number = self.start_number + BIAS if self.bias == True else self.start_number
                 self.result = {"start": self.start_number, "end": self.end_number,
-                               "time": round((self.end_number - self.start_number) * 1 / FpsMax, 4)}
+                               "time": round((self.end_number - self.start_number) * 1 / FpsMax, 4),
+                               "time_per_unit": round(1 / FpsMax, 4),
+                               "picture_root_url": HOST_IP+":5000"+self.work_path}
                 self.move_flag = False
-                # self.back_up_dq.clear()
                 break
-            if number >= CameraMax/2:
+            if number >= CameraMax / 2:
                 self.move_flag = False
                 self.back_up_dq.clear()
                 raise VideoKeyPointNotFound
+        print("end loop time", time.time() - b)
         return 0
 
     def picture_prepare(self, number):

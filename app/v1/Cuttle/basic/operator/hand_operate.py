@@ -6,7 +6,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default
+    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position
 
 
 def hand_init(arm_com_id, device_obj,**kwargs):
@@ -77,8 +77,8 @@ class HandHandler(Handler, DefaultMixin):
         #     length +=  1
         result = hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders, ignore_reset=ignore_reset)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        # if ignore_reset != True:
-        #     time.sleep(2)
+        if ignore_reset != True:
+            time.sleep(2)
         return result
 
     def double_click(self, double_axis, **kwargs):
@@ -108,7 +108,7 @@ class HandHandler(Handler, DefaultMixin):
         time.sleep(2)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def reset_hand(self, hand_reset_orders=f"G01 X10Y-120Z{Z_UP}F12000 \r\n", **kwargs):
+    def reset_hand(self, hand_reset_orders=arm_wait_position, **kwargs):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(2)
@@ -243,7 +243,7 @@ if __name__ == '__main__':
 
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id="COM9")
-    hand_reset_orders = ['G01 X70.0Y-176.0Z8F15000 \r\n', 'G01 Z0F15000 \r\n', "G01 X10Y-120Z8F15000 \r\n"]
+    hand_reset_orders = ['G01 X20Y-95.0Z0F15000 \r\n']
     init = [
         "$x \r\n",
         "$h \r\n",

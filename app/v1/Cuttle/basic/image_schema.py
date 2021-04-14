@@ -241,8 +241,8 @@ class SimpleVideoPullSchema(Schema):
 
 
 class PerformanceSchema(Schema):
-    icon_config = fields.String(required=True, data_key="iconConfig", validate=vertify_exist)
-    config = fields.String(required=True, data_key="config", validate=vertify_exist)
+    icon_config = fields.String(required=True, data_key="configFile", validate=vertify_exist)
+    config = fields.String(required=True, data_key="configArea", validate=vertify_exist)
     refer_im = fields.String(required=True, data_key="referImgFile", validate=(vertify_exist, verify_image))
 
     @post_load()

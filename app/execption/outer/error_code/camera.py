@@ -42,3 +42,9 @@ class CameraInitFail(APIException):
     error_code = 5005
     code = 400
     description = "HK camera init fail"
+
+
+class PerformancePicNotFound(APIException):
+    error_code = 5006
+    code = 400
+    description = "performance picture path not found "

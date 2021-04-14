@@ -40,6 +40,12 @@ class DJob(BaseModel):
 
     job_assessment_value = models.CharField()  # 记录rds结果
     job_duration = OwnerFloatField()  # 记录性能测试用例性能数据（运行时间）
+    start_point = models.IntegerField()  # 记录性能测试起点
+    end_point = models.IntegerField()  # 记录性能测试终点
+    picture_count = models.IntegerField()  # 记录性能测试记录的总图片
+    url_prefix = models.CharField()  # 记录性能测试存图的url前缀
+    time_per_unit = OwnerFloatField()  # 记录性能测试存图单位时间
+    rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,11 +79,12 @@ class DJob(BaseModel):
             self.postprocess()
 
     def analysis_result(self):
+
         self.job_assessment_value = self.djob_flow_list[-1].job_assessment_value
         for djob_flow in self.djob_flow_list.lrange(-1, 0):
-            if djob_flow.job_duration != float(0):
-                self.job_duration = djob_flow.job_duration
-                break
+            for key in self.rds_info_list:
+                if getattr(djob_flow, key):
+                    setattr(self, key, getattr(djob_flow, key))
 
     def postprocess(self):
         """
@@ -117,8 +124,9 @@ class DJob(BaseModel):
         for djob_flow in self.djob_flow_list:
             rds_result.append(djob_flow.rds.json() if djob_flow.rds else {})
         # 性能测试用例的测试时间的数据的保存
-        if self.job_duration != float(0):
-            json_data["job_duration"] = self.job_duration
+        for key in self.rds_info_list:
+            if getattr(self, key):
+                json_data[key] = getattr(self,key)
         if len(rds_result) != 0:
             json_data["rds_dict"] = json.dumps(rds_result)  # type  str
         from app.v1.device_common.device_model import Device

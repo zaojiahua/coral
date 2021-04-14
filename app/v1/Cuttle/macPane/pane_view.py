@@ -11,7 +11,7 @@ from serial import SerialException
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS
 from app.execption.outer.error_code.adb import DeviceBindFail
-from app.execption.outer.error_code.camera import ArmReInit, NoCamera, NoArm, RemoveBeforeAdd
+from app.execption.outer.error_code.camera import ArmReInit, NoCamera, NoArm, RemoveBeforeAdd, PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
@@ -44,7 +44,7 @@ def pic_push(device_object, pic_name="success.png"):
         "ip_address": device_object.ip_address,
         "device_label": device_object.device_label,
         "execCmdList": [
-                        "adb -s " + device_object.ip_address + f":5555 shell am start -a android.intent.action.VIEW -d http://{pic_ip}:5000/static/{pic_name}"]
+            "adb -s " + device_object.ip_address + f":5555 shell am start -a android.intent.action.VIEW -d http://{pic_ip}:5000/static/{pic_name}"]
 
     }
     if pic_name == LEAVE_PIC_NAME:
@@ -98,14 +98,14 @@ class PaneDeleteView(MethodView):
             #     raise DeviceBindFail
         return jsonify({"status": "success"}), 200
 
-
-    def _reset_arm(self,device_object):
+    def _reset_arm(self, device_object):
         try:
             hand_serial_obj = hand_serial_obj_dict[device_object.pk]
             hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
             hand_serial_obj.recv(buffer_size=64)
         except SerialException as e:
             return
+
 
 class PaneAssisDeleteView(MethodView):
     def post(self):
@@ -132,8 +132,18 @@ class PaneOriginalView(MethodView):
         return schema.load(request.args)
 
 
-class PaneConfigView(MethodView):
+class PerformancePictureView(MethodView):
+    def get(self):
+        path = request.args.get("path")
+        try:
+            f = open(path, "rb")
+            image = f.read()
+        except FileNotFoundError:
+            return PerformancePicNotFound
+        return Response(image, mimetype="image/jpeg")
 
+
+class PaneConfigView(MethodView):
 
     def post(self):
         data = request.get_json()
@@ -169,7 +179,7 @@ class PaneConfigView(MethodView):
             else:
                 function, attribute = (hand_init, "has_arm")
             setattr(device_object, attribute, True)
-            future = executer.submit(function, port, device_object,init=True)
+            future = executer.submit(function, port, device_object, init=True)
             exception = future.exception(timeout=2)
             if "PermissionError" in str(exception):
                 raise ArmReInit

@@ -3,7 +3,11 @@ import time
 from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
 
+import cv2
+import numpy as np
+
 from app.libs.thread_extensions import executor_callback
+from app.v1.Cuttle.basic.common_utli import judge_pic_same
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
@@ -32,6 +36,15 @@ class PerformanceMinix(object):
         self.extra_result = performance.result
         return 0
 
+
+    def end_point_with_changed(self, exec_content):
+        performance = self.test_performance(exec_content)
+        performance.end_loop(self._picture_changed)
+        time.sleep(0.5)  # 等待后续30张图片save完成
+        self.extra_result = performance.result
+        return 0
+
+
     def test_performance(self, exec_content, has_bias=False):
         data = self._validate(exec_content, PerformanceSchema)
         icon = self._crop_image(data.get("refer_im"), data.get("icon_areas")[0])
@@ -41,8 +54,6 @@ class PerformanceMinix(object):
 
     def test_performance_with_point(self, exec_content):
         body = exec_content.copy()
-        body["configArea"] = body.pop('config')
-        body["configFile"] = body.pop("iconConfig")
         body["functionName"] = "smart_icon_point_crop"
         request_dict = {
             "execCmdDict": body,
@@ -70,6 +81,20 @@ class PerformanceMinix(object):
         if disappear is True:
             response = bool(1 - response)
         return response
+
+    def _picture_changed(self, last_pic, next_pic, threshold, changed=True):
+        src_1 = cv2.imread(last_pic)
+        src_2 = cv2.imread(next_pic)
+        difference = np.absolute(np.subtract(src_1, src_2))
+        result = np.count_nonzero(difference < 15)
+        result2 = np.count_nonzero(245 < difference)
+        standard = src_1.shape[0] * src_1.shape[1] * src_2.shape[2]
+        match_ratio = ((result + result2) / standard)
+        print("match_ratio:",match_ratio)
+        final_result = match_ratio > threshold - 0.01
+        if changed is True:
+            final_result = bool(1 - final_result)
+        return final_result
 
     def _pic_changed(self, picture, next_picture):
         pass

@@ -44,7 +44,7 @@ class PerformanceCenter(object):
         # 等异步线程时间
         time.sleep(0.5)
         while self.loop_flag:
-            number, picture = self.picture_prepare(number)
+            number, picture, next_picture = self.picture_prepare(number)
             if judge_function(picture, self.judge_icon, self.threshold, disappear=True) == True:
                 self.bias = True if self.kwargs.get("bias") == True else False
                 self.start_number = number - 1
@@ -61,16 +61,19 @@ class PerformanceCenter(object):
         number = self.start_number + 1
         b = time.time()
         print("end loop start... now number:", number)
+        print(judge_function.__name__,type(judge_function.__name__))
         while self.loop_flag:
-            number, picture = self.picture_prepare(number)
-            if judge_function(picture, self.judge_icon, self.threshold) == True:
+            number, picture, next_picture = self.picture_prepare(number)
+            pic2 = self.judge_icon if judge_function.__name__ == "_icon_find" else next_picture
+            if judge_function(picture, pic2, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 self.end_number = number - 1
                 self.start_number = self.start_number + BIAS if self.bias == True else self.start_number
-                self.result = {"start": self.start_number, "end": self.end_number,
-                               "time": round((self.end_number - self.start_number) * 1 / FpsMax, 4),
+                self.result = {"start_point": self.start_number, "end_point": self.end_number,
+                               "job_duration": round((self.end_number - self.start_number) * 1 / FpsMax, 4),
                                "time_per_unit": round(1 / FpsMax, 4),
-                               "picture_root_url": HOST_IP+":5000"+self.work_path}
+                               "picture_count": self.end_number + 29,
+                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.move_flag = False
                 break
             if number >= CameraMax / 2:
@@ -84,6 +87,7 @@ class PerformanceCenter(object):
         for i in range(3):
             try:
                 picture = self.back_up_dq.popleft()
+                pic_next = self.back_up_dq[0]
                 break
             except IndexError:
                 time.sleep(0.02)
@@ -93,7 +97,7 @@ class PerformanceCenter(object):
         area = [int(i) if i > 0 else 0 for i in
                 [self.scope[0] * w, self.scope[1] * h, self.scope[2] * w, self.scope[3] * h]]
         picture = picture[area[1]:area[3], area[0]:area[2]]
-        return number, picture
+        return number, picture, pic_next
 
     def move_src_to_backup(self):
         # 把dq内图片放置到备用dq中去，此方法在起始点判定时异步开始执行，到终止点判定结束退出

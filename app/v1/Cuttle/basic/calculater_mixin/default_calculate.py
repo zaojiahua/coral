@@ -6,11 +6,13 @@ import time
 
 from app.execption.outer.error_code.hands import CrossMax, CoordinateWrongFormat
 from app.execption.outer.error_code.adb import NoContent
-from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location
+from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location, MOVE_SPEED
 
 
 class DefaultMixin(object):
     # 主要负责机械臂相关方法和位置的转换计算
+
+
 
     def calculate(self, pix_point):
         # pix_point： 像素坐标
@@ -34,13 +36,20 @@ class DefaultMixin(object):
             raise CrossMax
         return opt_coordinate
 
-    def grouping(self, raw_commend:str) -> (List[int], str):
+    def grouping(self, raw_commend: str) -> (List[int], str):
+        speed = MOVE_SPEED
         raw_commend = self._compatible_sleep(raw_commend)
+        pix_points = ""
         if "tap" in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
             opt_type = "click"
         elif "swipe" in raw_commend:
-            pix_points = [float(i) for i in (raw_commend.split("swipe")[-1].strip().split(' ')[:4])]
+            position_args_list = raw_commend.split("swipe")[-1].strip().split(' ')
+            try:
+                speed = int(position_args_list[4])
+            except (IndexError, TypeError):
+                pass
+            pix_points = [float(i) for i in position_args_list[:4]]
             if abs(pix_points[2] - pix_points[0]) + abs(pix_points[3] - pix_points[1]) < 10:
                 opt_type = "long_press"
             elif self.kwargs.get('continuous'):
@@ -49,15 +58,23 @@ class DefaultMixin(object):
                 opt_type = 'trapezoid_slide'
             else:
                 opt_type = "sliding"
+        elif "input keyevent 4" in raw_commend:
+            opt_type = "back"
+        elif "input keyevent 3" in raw_commend:
+            opt_type = "home"
+        elif "input keyevent 82" in raw_commend:
+            opt_type = "menu"
+        elif "press power" in raw_commend:
+            opt_type = "press_power"
         elif 'G01' in raw_commend:
             pix_points = raw_commend
             opt_type = 'rotate'
         else:
             pix_points = [int(i) for i in raw_commend.strip().split(' ')]
             opt_type = "double_click"
-        return pix_points, opt_type
+        return pix_points, opt_type, speed
 
-    def _compatible_sleep(self, exec_content)->  str:
+    def _compatible_sleep(self, exec_content) -> str:
         if "<4ccmd>" in exec_content:
             exec_content = exec_content.replace("<4ccmd>", '')
         if "<sleep>" in exec_content:

@@ -86,6 +86,7 @@ class ImageRealtimeSchema(ImageBasicSchema):
 class ImageColorSchema(ImageBasicSchema):
     color = fields.String(required=True, data_key="color")
 
+
 class ImageMainColorSchema(ImageColorSchema):
     percent = fields.String(required=True, data_key="percent")
 
@@ -193,7 +194,7 @@ class OcrTestSchema(Schema):
         unknown = INCLUDE
 
     @post_load()
-    def explain(self,data, **kwargs):
+    def explain(self, data, **kwargs):
         if data.get("config_file") is not None:
             area = data.get("config_file")
             areas = [area["area" + str(i)] for i in range(1, len(area.keys())) if
@@ -240,10 +241,11 @@ class SimpleVideoPullSchema(Schema):
     fileName = fields.String(required=True, validate=has_format)
 
 
-class PerformanceSchema(Schema):
-    icon_config = fields.String(required=True, data_key="configFile", validate=vertify_exist)
+class PerformanceSchemaCompare(Schema):
     config = fields.String(required=True, data_key="configArea", validate=vertify_exist)
-    refer_im = fields.String(required=True, data_key="referImgFile", validate=(vertify_exist, verify_image))
+
+    class Meta:
+        unknown = INCLUDE
 
     @post_load()
     def explain(self, data, **kwargs):
@@ -251,11 +253,23 @@ class PerformanceSchema(Schema):
             json_data = json.load(json_file)
             areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
                      "area" + str(i) in json_data.keys()]
+            threshold = float(json_data.get("threshold", 0.99))
         data["areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
+        data["threshold"] = threshold
+        return data
+
+
+class PerformanceSchema(PerformanceSchemaCompare):
+    icon_config = fields.String(required=True, data_key="configFile", validate=vertify_exist)
+    refer_im = fields.String(required=True, data_key="referImgFile", validate=(vertify_exist, verify_image))
+
+    @post_load()
+    def explain(self, data, **kwargs):
+        data = super().explain(data, **kwargs)
         with open(data.get('icon_config'), "r") as json_file_icon:
             json_data_icon = json.load(json_file_icon)
             icon_areas = [json_data_icon["area" + str(i)] for i in range(1, len(json_data_icon.keys())) if
-                     "area" + str(i) in json_data_icon.keys()]
+                          "area" + str(i) in json_data_icon.keys()]
             icon_threshold = float(json_data_icon.get("threshold", 0.99))
         data["icon_areas"] = icon_areas if icon_areas is not [] else [[1, 1, 1, 1]]
         data["threshold"] = icon_threshold

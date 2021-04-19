@@ -9,7 +9,7 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_ST
     hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position
 
 
-def hand_init(arm_com_id, device_obj,**kwargs):
+def hand_init(arm_com_id, device_obj, **kwargs):
     """
     1. 解锁机械臂，并将机械臂移动至Home位置
     2. 设置坐标模式为绝对值模式
@@ -32,7 +32,7 @@ def hand_init(arm_com_id, device_obj,**kwargs):
     return 0
 
 
-def rotate_hand_init(arm_com_id, device_obj,**kwargs):
+def rotate_hand_init(arm_com_id, device_obj, **kwargs):
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[device_obj.pk] = hand_serial_obj
@@ -63,7 +63,7 @@ class HandHandler(Handler, DefaultMixin):
         for key, value in self.before_match_rules.items():
             if key in self.exec_content:
                 getattr(self, value)()
-        pix_points, opt_type = self.grouping(self.exec_content)
+        pix_points, opt_type, self.speed = self.grouping(self.exec_content)
         self.exec_content = self.transform_pix_point(pix_points)
         self.func = getattr(self, opt_type)
         return normal_result
@@ -98,15 +98,16 @@ class HandHandler(Handler, DefaultMixin):
 
     def sliding(self, point, swipe_time=SWIPE_TIME, **kwargs):
         # TODO 控制滑动时间,增加移动速度的换算
-        sliding_order = self.__sliding_order(point[0], point[1])
+        sliding_order = self.__sliding_order(point[0], point[1], self.speed)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         time.sleep(2)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def trapezoid_slide(self, point, **kwargs):
-        sliding_order = self.__sliding_order(point[0], point[1], normal=False)
+        # time.sleep(0.2) # 确保性能测试照片拍到滑动起始点
+        sliding_order = self.__sliding_order(point[0], point[1], self.speed, normal=False)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
-        time.sleep(2)
+        time.sleep(3) # 确保动作执行完成
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def reset_hand(self, hand_reset_orders=arm_wait_position, **kwargs):
@@ -121,6 +122,10 @@ class HandHandler(Handler, DefaultMixin):
                                                      kwargs.get('length', 0))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
+
+    def back(self,_):
+        # 按back键
+        pass
 
     def str_func(self, commend, **kwargs):
         from app.v1.device_common.device_model import Device
@@ -149,7 +154,7 @@ class HandHandler(Handler, DefaultMixin):
         return self.str_func(commend)
 
     def after_unit(self):
-        if self.ignore_reset is False and CORAL_TYPE ==5:
+        if self.ignore_reset is False and CORAL_TYPE == 5:
             self.reset_hand()
 
     # TODO 怎样处理如果传入点中有一个或多个计算出的坐标超过操作台范围
@@ -168,8 +173,8 @@ class HandHandler(Handler, DefaultMixin):
         return [
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
             # 'G01 Z%dF%d \r\n' % (Z_DOWN, MOVE_SPEED),
-            # 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
-            'G01 Z%dF%d \r\n' % (Z_UP, MOVE_SPEED)
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
+            # 'G01 Z%dF%d \r\n' % (Z_UP, MOVE_SPEED)
         ]
 
     @staticmethod
@@ -187,7 +192,7 @@ class HandHandler(Handler, DefaultMixin):
 
     # TODO 滑动起止点是否超过操作台范围
     @staticmethod
-    def __sliding_order(start_point, end_point, normal=True,speed=MOVE_SPEED):
+    def __sliding_order(start_point, end_point, speed=MOVE_SPEED, normal=True):
         # 点击的起始点
         start_x, start_y = start_point
         end_x, end_y = end_point
@@ -196,10 +201,10 @@ class HandHandler(Handler, DefaultMixin):
         #     end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
         if normal:
             return [
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, speed),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, speed),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN-1, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, speed),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, speed),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
             ]
         else:
             x1 = start_x - (end_x - start_x) * trapezoid
@@ -208,10 +213,10 @@ class HandHandler(Handler, DefaultMixin):
             y4 = end_y + (end_y - start_y) * trapezoid
 
             return [
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, speed),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, speed),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_DOWN + 2, speed),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, speed),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN-2, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_DOWN , speed),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
             ]
 
     def _sliding_contious_order(self, start_point, end_point, commend_index, commend_length):

@@ -38,9 +38,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         "position": -28,
         "color": -29,
         "inputImgFile2":-30,
-        "percent": -31,
-        "config":-32,
-        "iconConfig":-33,
+        "percent": -31
 
     }
     # mark 为int 因为img func 返回int

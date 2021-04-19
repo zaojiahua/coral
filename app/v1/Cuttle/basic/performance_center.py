@@ -20,11 +20,14 @@ class PerformanceCenter(object):
             cls.instance = super().__new__(cls)
         return cls.instance
 
-    def __init__(self, device_id, icon, scope, threshold, work_path: str, dq, **kwargs):
+    def __init__(self, device_id, icon_area, refer_im_path, scope, threshold, work_path: str, dq, **kwargs):
         self.device_id = device_id
         self.result = 0
         self.back_up_dq = dq
-        self.judge_icon = icon
+        # 使用黑色区域时，icon_scope为icon实际出现在snap图中的位置，使用icon surf时icon_scope为编辑时出现在refer图中的位置
+        # 使用选区变化/不变时 icon_scope 为None
+        self.icon_scope = icon_area[0] if isinstance(icon_area, list) else None
+        self.judge_icon = self.get_icon(refer_im_path)
         self.scope = scope
         self.threshold = threshold
         self.move_flag = True
@@ -35,33 +38,44 @@ class PerformanceCenter(object):
         self.work_path = work_path
         self.kwargs = kwargs
 
+    def get_icon(self, refer_im_path):
+        # 在使用黑色区域计算时，self.icon_scope为实际出现在snap图中的位置，此方法无意义
+        # 在使用icon surf计算时，self.icon_scope为编辑时出现在refer图中的位置，此方拿到的是icon标准图
+        if not all((refer_im_path, self.icon_scope)):
+            return None
+        picture = cv2.imread(refer_im_path)
+        h, w = picture.shape[:2]
+        area = [int(i) if i > 0 else 0 for i in
+                [self.icon_scope[0] * w, self.icon_scope[1] * h, self.icon_scope[2] * w, self.icon_scope[3] * h]]
+        return picture[area[1]:area[3], area[0]:area[2]]
+
     def start_loop(self, judge_function):
-        a = time.time()
+        self.back_up_dq.clear()
         executer = ThreadPoolExecutor()
+        # 异步开始记录照片
         self.move_src_task = executer.submit(self.move_src_to_backup)
         number = 0
         self.start_number = 0
         # 等异步线程时间
-        time.sleep(0.5)
+        time.sleep(0.3)
         while self.loop_flag:
-            number, picture, next_picture = self.picture_prepare(number)
-            if judge_function(picture, self.judge_icon, self.threshold, disappear=True) == True:
+            use_icon_scope = True if judge_function.__name__ == "_black_field" else False
+            number, picture, next_picture = self.picture_prepare(number, use_icon_scope=use_icon_scope)
+            if judge_function(picture, self.judge_icon, self.threshold) == True:
                 self.bias = True if self.kwargs.get("bias") == True else False
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 break
-            if number >= CameraMax / 2:
+            if number >= CameraMax / 3:
                 self.move_flag = False
                 self.back_up_dq.clear()
                 raise VideoKeyPointNotFound
-        print("start loop time", time.time() - a)
         return 0
 
     def end_loop(self, judge_function):
         number = self.start_number + 1
         b = time.time()
         print("end loop start... now number:", number)
-        print(judge_function.__name__,type(judge_function.__name__))
         while self.loop_flag:
             number, picture, next_picture = self.picture_prepare(number)
             pic2 = self.judge_icon if judge_function.__name__ == "_icon_find" else next_picture
@@ -76,14 +90,16 @@ class PerformanceCenter(object):
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.move_flag = False
                 break
-            if number >= CameraMax / 2:
+            if number >= CameraMax / 3:
                 self.move_flag = False
                 self.back_up_dq.clear()
                 raise VideoKeyPointNotFound
         print("end loop time", time.time() - b)
         return 0
 
-    def picture_prepare(self, number):
+    def picture_prepare(self, number, use_icon_scope=False):
+        # use_icon_scope为true时裁剪snap图中真实icon出现的位置
+        # use_icon_scope为false时裁剪snap图中refer中标记的configArea选区大致范围
         for i in range(3):
             try:
                 picture = self.back_up_dq.popleft()
@@ -94,9 +110,11 @@ class PerformanceCenter(object):
         cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture)
         number += 1
         h, w = picture.shape[:2]
-        area = [int(i) if i > 0 else 0 for i in
-                [self.scope[0] * w, self.scope[1] * h, self.scope[2] * w, self.scope[3] * h]]
+        scope = self.scope if use_icon_scope is False else self.icon_scope
+        area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
+            if 0 < all(i < 1 for i in scope) else [int(i) for i in scope]
         picture = picture[area[1]:area[3], area[0]:area[2]]
+        pic_next = pic_next[area[1]:area[3], area[0]:area[2]]
         return number, picture, pic_next
 
     def move_src_to_backup(self):

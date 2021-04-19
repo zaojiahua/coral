@@ -32,7 +32,7 @@ class Complex_Center(object):
         from app.v1.device_common.device_model import Device
         device = Device(pk=device_label)
         self.mode = 0 if (kwargs.get("assist_device_serial_number") is not None or (
-                    device.has_arm is False and device.has_camera is False)) else 1
+                device.has_arm is False and device.has_camera is False)) else 1
         self.logger = setup_logger(f'coral-ocr', f'coral-ocr.log')
         self.kwargs = kwargs
         self.crop_offset = [0, 0, device.device_width, device.device_height]
@@ -143,7 +143,7 @@ class Complex_Center(object):
             # print(pic_y,pic_x,device_height,pic_h,pic_w)
             self.cx = int(pic_x * (device_width / pic_w))
             self.cy = int(pic_y * (device_height / pic_h))
-            print("cx ,cy:",self.cx,self.cy,pic_x,pic_y)
+            print("cx ,cy:", self.cx, self.cy, pic_x, pic_y)
         elif self.crop_offset != [0, 0, device.device_width, device.device_height]:
             # 截图内裁剪
             self.cx = int(pic_x + int(self.crop_offset[0]))
@@ -163,7 +163,7 @@ class Complex_Center(object):
     def change_x(self, value):
         self.cx = value
 
-    def get_result_by_feature(self, info_body):
+    def get_result_by_feature(self, info_body,cal_real_xy=True):
         info_body["inputImgFile"] = self.default_pic_path if self._pic_path == None else self._pic_path
         info_body["functionName"] = "identify_icon"
         request_dict = {
@@ -178,7 +178,10 @@ class Complex_Center(object):
             self.result = response.get("result")
             raise NotFindIcon
         point_x, point_y = response["point_x"], response["point_y"]
-        self.cal_realy_xy(point_x, point_y, self.default_pic_path)
+        if cal_real_xy:
+            self.cal_realy_xy(point_x, point_y, self.default_pic_path)
+        else:
+            self.cx,self.cy = point_x, point_y
 
     def _ocr_request(self, **kwargs):
         pic_path = kwargs.get("pic_path")
@@ -267,3 +270,5 @@ class Complex_Center(object):
         cv2.imwrite(self._pic_path,
                     src[self.crop_offset[1]:self.crop_offset[3], self.crop_offset[0]:self.crop_offset[2]])
         return 0
+
+

@@ -139,7 +139,7 @@ class PerformancePictureView(MethodView):
             f = open(path, "rb")
             image = f.read()
         except FileNotFoundError:
-            return PerformancePicNotFound
+            raise PerformancePicNotFound
         return Response(image, mimetype="image/jpeg")
 
 

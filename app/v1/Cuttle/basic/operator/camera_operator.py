@@ -82,7 +82,6 @@ def camera_start_3(camera_id, device_object,**kwargs):
     camera_dq_dict[device_object.pk] = dq
     redis_client.set("g_bExit","0")
     response = camera_init_HK(**kwargs)
-    print('half done')
     camera_start_HK(dq,*response, device_object)
 
 
@@ -166,7 +165,6 @@ def camera_start_HK(dq,data_buf, nPayloadSize, stFrameInfo, device_object):
 def check_result(func, *args):
     return_value = func(*args)
     if return_value != 0:
-        print(args)
         raise CameraInitFail
 
 
@@ -200,7 +198,7 @@ class CameraHandler(Handler):
                 src = cv2.imdecode(src, 1)
                 src = np.rot90(src, 3)
             except IndexError:
-                time.sleep(0.02)
+                time.sleep(0.03)
                 continue
         self.src = src
         return 0

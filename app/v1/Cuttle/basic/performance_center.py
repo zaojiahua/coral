@@ -62,7 +62,7 @@ class PerformanceCenter(object):
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False
             number, picture, next_picture = self.picture_prepare(number, use_icon_scope=use_icon_scope)
             if judge_function(picture, self.judge_icon, self.threshold) == True:
-                self.bias = True if self.kwargs.get("bias") == True else False
+                self.bias = self.kwargs.get("bias") if self.kwargs.get("bias") else 0
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 break
@@ -82,9 +82,9 @@ class PerformanceCenter(object):
             if judge_function(picture, pic2, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 self.end_number = number - 1
-                self.start_number = self.start_number + BIAS if self.bias == True else self.start_number
+                self.start_number = self.start_number + self.bias
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
-                               "job_duration": round((self.end_number - self.start_number) * 1 / FpsMax, 4),
+                               "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 4), 0),
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": self.end_number + 29,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
@@ -93,6 +93,7 @@ class PerformanceCenter(object):
             if number >= CameraMax / 3:
                 self.move_flag = False
                 self.back_up_dq.clear()
+                self.tguard_picture_path = os.path.join(self.work_path, f"{number-1}.jpg")
                 raise VideoKeyPointNotFound
         print("end loop time", time.time() - b)
         return 0

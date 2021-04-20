@@ -82,7 +82,8 @@ class PinyinTransferFail(APIException):
 
 class ArmNorEnough(APIException):
     """
+    一个机柜同时只能存在一个可用设备，需要先注销已有设备，再进行注册
     """
     error_code = 1011
     code = 400
-    description = "not enough arm"
+    description = "  Not enough arm! You need to logout one device first"

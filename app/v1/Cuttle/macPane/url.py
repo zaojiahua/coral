@@ -42,5 +42,6 @@ pane.add_url_rule('/original_picture/', view_func=PaneOriginalView.as_view('orig
 # 获取性能测试图片
 pane.add_url_rule('/performance_picture/', view_func=PerformancePictureView.as_view('performance_picture'))
 # pane.add_url_rule('/device_arm_camera/', view_func=PaneConfigView.as_view('device_in_slot'))
+# 框选手机屏幕边框后，会收到前端的设置border的请求
 pane.add_url_rule('/device_border/', view_func=PaneBorderView.as_view('device_border'))
 pane.add_url_rule('/file_push/', view_func=FilePushView.as_view('file_push'))

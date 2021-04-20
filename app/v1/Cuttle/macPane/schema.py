@@ -97,7 +97,7 @@ class OriginalPicSchema(Schema):
         time.sleep(1.5)
         executer = ThreadPoolExecutor()
         executer.submit(camera_start_3, 1, device_obj)
-        time.sleep(1.5)
+        time.sleep(2)
         self.get_snap_shot(data.get("device_label"), path)
         f = open(path, "rb")
         image = f.read()
@@ -142,9 +142,9 @@ class CoordinateSchema(Schema):
         time.sleep(1)
         executer = ThreadPoolExecutor()
         executer.submit(camera_start_3, 1, device_obj,
-                       OffsetX=data.get("inside_upper_left_x")//16 *16,
-                       OffsetY=data.get("inside_upper_left_y")//2 *2 + 200,
-                       Width=(data.get("inside_under_right_x") - data.get("inside_upper_left_x"))//16 *16,
-                       Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y"))//2 *2)
+                       OffsetX=data.get("inside_upper_left_x")//16 * 16,
+                       OffsetY=data.get("inside_upper_left_y")//2 * 2 + 200,
+                       Width=(data.get("inside_under_right_x") - data.get("inside_upper_left_x"))//16 * 16,
+                       Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y"))//2 * 2)
         # device_obj.update_device_border(data)
         return jsonify({"status": "success"}), 200

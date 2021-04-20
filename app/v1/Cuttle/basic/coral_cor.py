@@ -1,6 +1,7 @@
 import os
 import random
 import shutil
+import traceback
 
 import cv2
 
@@ -53,6 +54,7 @@ class Complex_Center(object):
                 self.logger.warning(f"can not find required icon  in ocr result")
                 return True
             elif exc_type == AttributeError:
+                traceback.print_exc()
                 self.logger.warning(f"find attribute error {exc_val} ")
                 self.result = OcrWorkPathNotFound.error_code
                 return True

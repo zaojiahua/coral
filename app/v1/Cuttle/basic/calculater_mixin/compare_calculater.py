@@ -14,7 +14,6 @@ from app.execption.outer.error_code.imgtool import IconTooWeek
 
 class FeatureCompareMixin:
     # 之前的代码，合并到一个混入内继续兼容
-
     def hist(self, refer_im, input_im, threshold):
         refer_im_hist = self.get_img_hist(refer_im)
         input_im_hist = self.get_img_hist(input_im)
@@ -101,18 +100,14 @@ class FeatureCompareMixin:
         search_params = dict(checks=50)
 
         flann = cv2.FlannBasedMatcher(index_params, search_params)  # 初始化flann匹配,为descriptor建立索引树
-        matches = flann.knnMatch(np.asarray(des1, np.float32), np.asarray(des2, np.float32),
-                                 k=2)  # k值为2，对des1和des2进行knn匹配
-
+        matches = flann.knnMatch(np.asarray(des1, np.float32), np.asarray(des2, np.float32),k=2)  # k值为2，对des1和des2进行knn匹配
         # 准备一个空mask存储goodmatches
         matches_mask = [[0, 0] for i in range(len(matches))]
         good_match = []  # 匹配结果
-
         for i, (m, n) in enumerate(matches):
             if m.distance < thresh * n.distance:
                 matches_mask[i] = [i, 0]
                 good_match.append(m)
-
         return good_match
 
     @staticmethod

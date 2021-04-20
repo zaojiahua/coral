@@ -65,7 +65,7 @@ class VideoKeyPointNotFound(APIException):
     """
     error_code = 2008
     code = 400
-    description = "can not key point in video"
+    description = "can not find key point in video"
 
 
 class OcrShiftWrongFormat(APIException):

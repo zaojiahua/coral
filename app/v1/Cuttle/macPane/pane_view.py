@@ -2,6 +2,7 @@ import logging
 import platform
 import subprocess
 import sys
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 from flask import request, jsonify, Response
@@ -10,8 +11,7 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS
-from app.execption.outer.error_code.adb import DeviceBindFail
-from app.execption.outer.error_code.camera import ArmReInit, NoCamera, NoArm, RemoveBeforeAdd, PerformancePicNotFound
+from app.execption.outer.error_code.camera import ArmReInit, NoCamera, RemoveBeforeAdd, PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
@@ -29,7 +29,6 @@ from redis_init import redis_client
 logger = logging.getLogger(PANE_LOG_NAME)
 from concurrent.futures._base import TimeoutError
 import copy
-from app.config.setting import CORAL_TYPE
 
 # mapping_dict = {0: ADB_SERVER_1, 1: ADB_SERVER_2, 2: ADB_SERVER_3}
 
@@ -81,6 +80,9 @@ class PaneDeleteView(MethodView):
         if device_object.has_rotate_arm:
             # todo  clear used list when only one arm for one server
             self._reset_arm(device_object)
+        if device_object.has_arm:
+            hand_serial_obj = hand_serial_obj_dict[device_object.pk]
+            hand_serial_obj.close()
         if device_object.has_camera:
             redis_client.set("g_bExit", "1")
         from app.v1.Cuttle.basic.setting import hand_used_list
@@ -103,6 +105,7 @@ class PaneDeleteView(MethodView):
             hand_serial_obj = hand_serial_obj_dict[device_object.pk]
             hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
             hand_serial_obj.recv(buffer_size=64)
+            hand_serial_obj.close()
         except SerialException as e:
             return
 
@@ -181,7 +184,9 @@ class PaneConfigView(MethodView):
             setattr(device_object, attribute, True)
             future = executer.submit(function, port, device_object, init=True)
             exception = future.exception(timeout=2)
+            print(str(exception))
             if "PermissionError" in str(exception):
+                traceback.print_exc()
                 raise ArmReInit
             elif "FileNotFoundError" in str(exception):
                 return 0

@@ -25,6 +25,9 @@ from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 #                                      6僚机无线执行
 # 另外主僚机的每个复合型unit 也可以再下分这6种情况.
 
+# 坐标的换算有下面多种情况
+# 相对坐标/绝对坐标  摄像头下像素坐标/截图中像素坐标/机械臂下物理坐标    裁剪图中坐标/实际图中坐标
+
 
 class UnitFactory(object):
     model_dict = {
@@ -57,12 +60,12 @@ class TestIconClass(MethodView):
 
 class TestIconPositionClass(MethodView):
     def post(self):
-        try:
+        # try:
             image_handler = ImageHandler(model=Dummy_model, many=False)
             response = image_handler.test_icon_position(request.files)
             return jsonify(response), 200
-        except Exception as e:
-            return jsonify({"status": repr(e)}), 400
+        # except Exception as e:
+        #     return jsonify({"status": repr(e)}), 400
 
 
 class TestOcrClass(MethodView):

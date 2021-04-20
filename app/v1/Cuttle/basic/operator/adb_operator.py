@@ -7,7 +7,7 @@ from ast import literal_eval
 from datetime import datetime
 
 from app.config.ip import HOST_IP, ADB_TYPE
-from app.config.setting import PROJECT_SIBLING_DIR
+from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE
 from app.config.url import battery_url
 from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
@@ -76,31 +76,34 @@ class AdbHandler(Handler, ChineseMixin):
         return execute_result
 
     def reconnect(self, *args):
-        if ADB_TYPE == 1:
-            # 有线模式下无论主僚机都做kill&start处理
-            self.str_func(adb_cmd_prefix + "kill-server" )
-            self.str_func(adb_cmd_prefix + "start-server" )
+        if CORAL_TYPE <5 :
+            if ADB_TYPE == 1 :
+                # 有线模式下无论主僚机都做kill&start处理
+                self.str_func(adb_cmd_prefix + "kill-server" )
+                self.str_func(adb_cmd_prefix + "start-server" )
+                self._model.is_connected = True
+                self._model.disconnect_times += 1
+                return 0
+            if self.kwargs.get("assist_device_serial_number"):
+                #无线模式下主僚机分别取对应的ip进行重连
+                device_ip = self.kwargs.get("assist_device_serial_number")
+            else:
+                from app.v1.device_common.device_model import Device
+                device_ip = Device(pk=self._model.pk).ip_address
+            if len(device_ip) < 2:
+                return -1
+            self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
+            self.str_func(adb_cmd_prefix + "-s " + device_ip + " tcpip 5555")
+            self.str_func(adb_cmd_prefix + "connect " + device_ip)
+            self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
+            self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
             self._model.is_connected = True
             self._model.disconnect_times += 1
+            if self._model.disconnect_times >= adb_disconnect_threshold:
+                pass  # todo send reef to set device disconnect
             return 0
-        if self.kwargs.get("assist_device_serial_number"):
-            #无线模式下主僚机分别取对应的ip进行重连
-            device_ip = self.kwargs.get("assist_device_serial_number")
         else:
-            from app.v1.device_common.device_model import Device
-            device_ip = Device(pk=self._model.pk).ip_address
-        if len(device_ip) < 2:
-            return -1
-        self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
-        self.str_func(adb_cmd_prefix + "-s " + device_ip + " tcpip 5555")
-        self.str_func(adb_cmd_prefix + "connect " + device_ip)
-        self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
-        self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
-        self._model.is_connected = True
-        self._model.disconnect_times += 1
-        if self._model.disconnect_times >= adb_disconnect_threshold:
-            pass  # todo send reef to set device disconnect
-        return 0
+            return 0
 
     def disconnect(self, ip=None):
         if ADB_TYPE == 1:

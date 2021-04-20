@@ -27,3 +27,12 @@ class CoordinateWrongFormat(APIException):
     error_code = 3002
     code = 400
     description = 'coordinate not in correct format '
+
+class KeyPositionUsedBeforesSet(APIException):
+    """
+    在未设置关键点（返回，菜单，主页，电源，音量）在摄像头位置的情况下，使用到机械臂去点击关键点
+    """
+    error_code = 3003
+    code = 400
+    description = 'key point used before used '
+

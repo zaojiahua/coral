@@ -137,8 +137,8 @@ class CoordinateSchema(Schema):
     desktop_y = fields.Int(required=True)
     menu_x = fields.Int(required=True)
     menu_y = fields.Int(required=True)
-    outside_under_right_y = fields.Int(required=True)
-    outside_under_right_x = fields.Int(required=True)
+    # outside_under_right_y = fields.Int(required=True)
+    # outside_under_right_x = fields.Int(required=True)
 
     class Meta:
         unknown = INCLUDE

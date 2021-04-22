@@ -60,12 +60,19 @@ class DefaultMixin(object):
                 opt_type = "sliding"
         elif "input keyevent 4" in raw_commend:
             opt_type = "back"
+            pix_points = 0
         elif "input keyevent 3" in raw_commend:
             opt_type = "home"
+            pix_points = 0
         elif "input keyevent 82" in raw_commend:
             opt_type = "menu"
+            pix_points = 0
+        elif "long press menu" in raw_commend:
+            opt_type = "long_press_menu"
+            pix_points = 0
         elif "press power" in raw_commend:
             opt_type = "press_power"
+            pix_points = 0
         elif 'G01' in raw_commend:
             pix_points = raw_commend
             opt_type = 'rotate'
@@ -87,7 +94,7 @@ class DefaultMixin(object):
         return exec_content
 
     def transform_pix_point(self, k):
-        if isinstance(k, str):
+        if isinstance(k, str) or  isinstance(k, int):
             # 旋转机械臂
             return k
         if len(k) != 2 and len(k) != 4:

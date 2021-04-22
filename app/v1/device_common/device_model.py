@@ -230,10 +230,11 @@ class Device(models.Model):
         #
         def cam_pix_to_scr(x, y, width):
             # 把摄像头下的坐标值，先转换成屏幕截图下的对应坐标值
-            s_x = int((data.get("inside_under_right_y")-y) * (self.device_height / width))
+            s_x = int((data.get("inside_under_right_y") - y) * (self.device_height / width))
             s_y = int((x - data.get("inside_upper_left_x")) * (self.device_height / width))
             return s_x, s_y
-        width = (data.get("inside_under_right_x") - data.get("inside_upper_left_x")) // 16 * 16
+
+        width = int(data.get("inside_under_right_x") - data.get("inside_upper_left_x"))
         self.back_x, self.back_y = cam_pix_to_scr(data.get("return_x"), data.get("return_y"), width)
         self.menu_x, self.menu_y = cam_pix_to_scr(data.get("menu_x"), data.get("menu_y"), width)
         self.home_x, self.home_y = cam_pix_to_scr(data.get("desktop_x"), data.get("desktop_y"), width)

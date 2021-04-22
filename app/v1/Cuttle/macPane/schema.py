@@ -126,8 +126,6 @@ class CoordinateSchema(Schema):
     device_label = fields.String(required=True)
     inside_upper_left_x = fields.Int(required=True)
     inside_upper_left_y = fields.Int(required=True)
-    # outside_upper_left_x = fields.Int(required=True)
-    # outside_upper_left_y = fields.Int(required=True)
     inside_under_right_x = fields.Int(required=True)
     inside_under_right_y = fields.Int(required=True)
 
@@ -137,17 +135,10 @@ class CoordinateSchema(Schema):
     desktop_y = fields.Int(required=True)
     menu_x = fields.Int(required=True)
     menu_y = fields.Int(required=True)
-    # outside_under_right_y = fields.Int(required=True)
-    # outside_under_right_x = fields.Int(required=True)
 
     class Meta:
         unknown = INCLUDE
 
-    # @validates_schema
-    # def validate_numbers(self, data, **kwargs):
-    #     if data["inside_upper_left_x"] < data["outside_upper_left_x"] or data["outside_under_right_y"] < \
-    #             data["inside_under_right_y"]:
-    #         raise ValidationError("border should bigger than 0")
 
     @post_load
     def make_sure(self, data, **kwargs):
@@ -155,22 +146,21 @@ class CoordinateSchema(Schema):
         device_obj = Device(pk=data.get("device_label"))
         redis_client.set("g_bExit", "1")
         time.sleep(1.5)
-        width = (data.get("inside_under_right_x") - data.get("inside_upper_left_x")) // 16 * 16
-        def cam_pix_to_scr(x, y, width):
-            # 把摄像头下的坐标值，先转换成屏幕截图下的对应坐标值
-            device_obj = Device(pk=data.get("device_label"))
-            s_x = int((data.get("inside_under_right_y")-y) * (device_obj.device_height / width))
-            s_y = int((x - data.get("inside_upper_left_x")) * (device_obj.device_height / width))
-            return s_x, s_y
-        device_obj.back_x, device_obj.back_y = cam_pix_to_scr(data.get("return_x"), data.get("return_y"), width)
-        device_obj.menu_x, device_obj.menu_y = cam_pix_to_scr(data.get("menu_x"), data.get("menu_y"), width)
-        device_obj.home_x, device_obj.home_y = cam_pix_to_scr(data.get("desktop_x"), data.get("desktop_y"), width)
+        # def cam_pix_to_scr(x, y, width):
+        #     # 把摄像头下的坐标值，先转换成屏幕截图下的对应坐标值
+        #     device_obj = Device(pk=data.get("device_label"))
+        #     s_x = int((data.get("inside_under_right_y")-y) * (device_obj.device_height / width))
+        #     s_y = int((x - data.get("inside_upper_left_x")) * (device_obj.device_height / width))
+        #     return s_x, s_y
+        # device_obj.back_x, device_obj.back_y = cam_pix_to_scr(data.get("return_x"), data.get("return_y"), width)
+        # device_obj.menu_x, device_obj.menu_y = cam_pix_to_scr(data.get("menu_x"), data.get("menu_y"), width)
+        # device_obj.home_x, device_obj.home_y = cam_pix_to_scr(data.get("desktop_x"), data.get("desktop_y"), width)
+        device_obj.update_device_border(data)
         executer = ThreadPoolExecutor()
         executer.submit(camera_start_3, 1, device_obj,
                         OffsetX=data.get("inside_upper_left_x") // 16 * 16,
                         OffsetY=data.get("inside_upper_left_y") // 2 * 2 + 200,
-                        Width=width,
+                        Width=(data.get("inside_under_right_x") - data.get("inside_upper_left_x")) // 16 * 16,
                         Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y")) // 2 * 2)
-        # device_obj.update_device_border(data)
         return jsonify({"status": "success"}), 200
 

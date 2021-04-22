@@ -21,11 +21,11 @@ from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, g_bExit, 
 # from ctypes import cast, POINTER, byref, sizeof, memset, c_ubyte,
 from ctypes import *
 from redis_init import redis_client
+
 MoveToPress = 9
 FpsMax = 120
 CameraMax = 2400
 ImageNumberFile = "__number.txt"
-
 
 # if CORAL_TYPE in [4,5]:
 #     if sys.platform.startswith("win"):
@@ -75,22 +75,19 @@ def camera_start_2(camera_id, device_object):
     cv2.destroyAllWindows()
 
 
-def camera_start_3(camera_id, device_object,**kwargs):
+def camera_start_3(camera_id, device_object, **kwargs):
     # HK摄像头
-    print("start init camera......")
     dq = deque(maxlen=CameraMax)
     camera_dq_dict[device_object.pk] = dq
-    redis_client.set("g_bExit","0")
+    redis_client.set("g_bExit", "0")
     response = camera_init_HK(**kwargs)
-    camera_start_HK(dq,*response, device_object)
-
+    camera_start_HK(dq, *response, device_object)
 
 
 from app.v1.Cuttle.basic.setting import CamObjList
 
 
 def camera_init_HK(**kwargs):
-
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
     check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
@@ -102,10 +99,10 @@ def camera_init_HK(**kwargs):
     check_result(CamObj.MV_CC_OpenDevice, 6, 0)
     if kwargs.get("init") is None:
         for key in camera_params[::-1]:
-            check_result(CamObj.MV_CC_SetIntValue,key[0],key[1])
+            check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
     for key in camera_params:
         if kwargs.get(key[0]) is not None:
-            check_result(CamObj.MV_CC_SetIntValue,key[0], kwargs.get(key[0]))
+            check_result(CamObj.MV_CC_SetIntValue, key[0], kwargs.get(key[0]))
     check_result(CamObj.MV_CC_StartGrabbing)
 
     stParam = MVCC_INTVALUE()
@@ -117,14 +114,11 @@ def camera_init_HK(**kwargs):
     stFrameInfo = MV_FRAME_OUT_INFO_EX()
     CamObjList.append(CamObj)
 
-
     memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
     return data_buf, nPayloadSize, stFrameInfo
 
 
-
-
-def camera_start_HK(dq,data_buf, nPayloadSize, stFrameInfo, device_object):
+def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
     cam_obj = CamObjList[-1]
     while (device_object.has_camera):
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 3)
@@ -155,10 +149,10 @@ def camera_start_HK(dq,data_buf, nPayloadSize, stFrameInfo, device_object):
         else:
             continue
         if redis_client.get("g_bExit") == "1":
-            print("in stop process")
             cam_obj.MV_CC_StopGrabbing()
             cam_obj.MV_CC_CloseDevice()
             cam_obj.MV_CC_DestroyHandle()
+            print("stop camera finished..")
             break
 
 
@@ -190,7 +184,7 @@ class CameraHandler(Handler):
                 return res.group(1) if res.group() else "", function
         return "", "ignore"
 
-    def snap_shot(self, *args,**kwargs):
+    def snap_shot(self, *args, **kwargs):
         time.sleep(0.5)
         for i in range(5):
             try:
@@ -203,7 +197,7 @@ class CameraHandler(Handler):
         self.src = src
         return 0
 
-    def get_video(self, *args,**kwargs):
+    def get_video(self, *args, **kwargs):
         time_sleep = args[0]
         max_save_time = CameraMax / FpsMax
         pic_count = float(time_sleep) * FpsMax if float(time_sleep) < max_save_time else CameraMax
@@ -216,11 +210,11 @@ class CameraHandler(Handler):
         print("总图片数：", pic_count, "现有：", len(camera_dq_dict.get(self._model.pk)))
         temp_list = [camera_dq_dict.get(self._model.pk).popleft() for i in range(int(pic_count))]
         for i in temp_list:
-            self.video_src.append(self.get_roi(self._model.pk,cv2.imdecode(i, 1)))
+            self.video_src.append(self.get_roi(self._model.pk, cv2.imdecode(i, 1)))
         print("copy&decode&wrap  pic time:", time.time() - a)
         return 0
 
-    def move(self, *args,**kwargs):
+    def move(self, *args, **kwargs):
         if hasattr(self, "src"):
             cv2.imwrite(args[0], self.src)
             delattr(self, "src")
@@ -240,11 +234,11 @@ class CameraHandler(Handler):
         else:
             raise NoSrc
 
-    def ignore(self, *arg,**kwargs):
+    def ignore(self, *arg, **kwargs):
         return 0
 
     @staticmethod
-    def get_roi(device_label,src):
+    def get_roi(device_label, src):
         # 截取出手机屏幕位置（要求不能转90度以上）
         try:
             # gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
@@ -279,7 +273,9 @@ class CameraHandler(Handler):
         except IndexError as e:
             return np.zeros((1280, 720))
 
+
 if __name__ == '__main__':
     import collections
+
     FakeDevice = collections.namedtuple("fakeDevice", ["pk", "has_camera"])
-    camera_start_3(1,FakeDevice(0,True))
+    camera_start_3(1, FakeDevice(0, True))

@@ -15,6 +15,7 @@ SWIPE_TIME = 1
 trapezoid = 0.8
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
 m_location = [38, 13]
+wait_time = 1
 icon_threshold = 30
 icon_threshold_camera = 15
 icon_rate = 500

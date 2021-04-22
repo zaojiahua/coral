@@ -9,7 +9,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position
+    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -81,28 +81,28 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders, ignore_reset=ignore_reset)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         if ignore_reset != True:
-            time.sleep(2)
+            time.sleep(wait_time)
         return result
 
     def double_click(self, double_axis, **kwargs):
         # 双击，在同一个点快速点击两次
         double_click_orders = self.__double_click_order(double_axis)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(double_click_orders)
-        time.sleep(2)
+        time.sleep(wait_time)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def long_press(self, start_point, swipe_time=SWIPE_TIME, **kwargs):
         # 长按
         long_click_orders = self.__single_click_order(start_point[0])
         hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2], wait=True)
-        time.sleep(2)
+        time.sleep(wait_time)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def sliding(self, point, swipe_time=SWIPE_TIME, **kwargs):
         # TODO 控制滑动时间,增加移动速度的换算
         sliding_order = self.__sliding_order(point[0], point[1], self.speed)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
-        time.sleep(2)
+        time.sleep(wait_time)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def trapezoid_slide(self, point, **kwargs):
@@ -115,7 +115,7 @@ class HandHandler(Handler, DefaultMixin):
     def reset_hand(self, hand_reset_orders=arm_wait_position, **kwargs):
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(2)
+        time.sleep(wait_time)
         return 0
 
     def continuous_swipe(self, commend, **kwargs):
@@ -128,39 +128,49 @@ class HandHandler(Handler, DefaultMixin):
     def back(self, _, **kwargs):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order((device_obj.back_x, device_obj.back_y))
+        click_orders = self.__single_click_order(self.calculate((device_obj.back_x, device_obj.back_y)))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
+        time.sleep(wait_time)
         return result
 
     def double_back(self, _, **kwargs):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__double_click_order((device_obj.back_x, device_obj.back_y))
+        click_orders = self.__double_click_order(self.calculate((device_obj.back_x, device_obj.back_y)))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(2)
+        time.sleep(wait_time)
         return result
 
-    def home(self):
+    def home(self, _, **kwargs):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order((device_obj.home_x, device_obj.home_y))
+        click_orders = self.__single_click_order(self.calculate((device_obj.home_x, device_obj.home_y)))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(2)
+        time.sleep(wait_time)
         return result
 
-    def menu(self):
+    def menu(self, _, **kwargs):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order((device_obj.menu_x, device_obj.menu_y))
+        click_orders = self.__single_click_order(self.calculate((device_obj.menu_x, device_obj.menu_y)))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(2)
+        time.sleep(wait_time)
         return result
 
-    def power(self):
+    def long_press_menu(self, _, **kwargs):
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=self._model.pk)
+        click_orders = self.__single_click_order(self.calculate((device_obj.menu_x, device_obj.menu_y)))
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders[:2], wait=True)
+        result = hand_serial_obj_dict.get(self._model.pk).recv()
+        time.sleep(wait_time)
+        return result
+
+    def power(self, _, **kwargs):
         pass
 
     def _find_key_point(self, name):
@@ -236,8 +246,6 @@ class HandHandler(Handler, DefaultMixin):
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
             # 'G01 Z%dF%d \r\n' % (Z_UP, MOVE_SPEED)
         ]
-
-
 
     @staticmethod
     def __double_click_order(axis):

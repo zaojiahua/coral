@@ -258,6 +258,9 @@ class PerformanceSchemaCompare(Schema):
         data["threshold"] = threshold
         return data
 
+class PerformanceSchemaFps(PerformanceSchemaCompare):
+    fps = fields.Int(required=True)
+
 
 class PerformanceSchema(PerformanceSchemaCompare):
     icon_config = fields.String(required=True, data_key="configFile", validate=vertify_exist)

@@ -1,6 +1,5 @@
 import os
 import time
-from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
@@ -9,8 +8,6 @@ import numpy as np
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoKeyPointNotFound
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax, FpsMax
-from app.v1.Cuttle.basic.setting import wait_bias, BIAS
-from redis_init import redis_client
 
 
 class PerformanceCenter(object):
@@ -60,8 +57,9 @@ class PerformanceCenter(object):
         time.sleep(0.3)
         while self.loop_flag:
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False
-            number, picture, next_picture = self.picture_prepare(number, use_icon_scope=use_icon_scope)
-            if judge_function(picture, self.judge_icon, self.threshold) == True:
+            number, picture, next_picture, _ = self.picture_prepare(number, use_icon_scope=use_icon_scope)
+            pic2 = self.judge_icon if judge_function.__name__ in ("_icon_find", "_black_field") else next_picture
+            if judge_function(picture, pic2, self.threshold) == True:
                 self.bias = self.kwargs.get("bias") if self.kwargs.get("bias") else 0
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
@@ -77,7 +75,7 @@ class PerformanceCenter(object):
         b = time.time()
         print("end loop start... now number:", number)
         while self.loop_flag:
-            number, picture, next_picture = self.picture_prepare(number)
+            number, picture, next_picture, _ = self.picture_prepare(number)
             pic2 = self.judge_icon if judge_function.__name__ == "_icon_find" else next_picture
             if judge_function(picture, pic2, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
@@ -93,9 +91,28 @@ class PerformanceCenter(object):
             if number >= CameraMax / 3:
                 self.move_flag = False
                 self.back_up_dq.clear()
-                self.tguard_picture_path = os.path.join(self.work_path, f"{number-1}.jpg")
+                self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 raise VideoKeyPointNotFound
         print("end loop time", time.time() - b)
+        return 0
+
+    def test_fps_lost(self, judge_function):
+        number = self.start_number + 1
+        for i in range(200):
+            number, picture, next_picture, next_next_picture = self.picture_prepare(number)
+            pic2 = next_picture if self.kwargs.get("fps") >= 120 else next_next_picture
+            if judge_function(picture, pic2, self.threshold) == False:
+                print(f"find end point number: {number}", self.bias)
+                self.result = {"fps_lost": True, "lost_number": number}
+                self.move_flag = False
+                break
+            if number >= CameraMax / 3:
+                self.move_flag = False
+                self.back_up_dq.clear()
+                self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
+                raise VideoKeyPointNotFound
+        else:
+            self.result = {"fps_lost": False}
         return 0
 
     def picture_prepare(self, number, use_icon_scope=False):
@@ -105,6 +122,7 @@ class PerformanceCenter(object):
             try:
                 picture = self.back_up_dq.popleft()
                 pic_next = self.back_up_dq[0]
+                pic_next_next = self.back_up_dq[1]
                 break
             except IndexError:
                 time.sleep(0.02)
@@ -113,10 +131,11 @@ class PerformanceCenter(object):
         h, w = picture.shape[:2]
         scope = self.scope if use_icon_scope is False else self.icon_scope
         area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
-            if 0 < all(i < 1 for i in scope) else [int(i) for i in scope]
+            if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
         picture = picture[area[1]:area[3], area[0]:area[2]]
         pic_next = pic_next[area[1]:area[3], area[0]:area[2]]
-        return number, picture, pic_next
+        pic_next_next = pic_next_next[area[1]:area[3], area[0]:area[2]]
+        return number, picture, pic_next, pic_next_next
 
     def move_src_to_backup(self):
         # 把dq内图片放置到备用dq中去，此方法在起始点判定时异步开始执行，到终止点判定结束退出

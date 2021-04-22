@@ -1,5 +1,6 @@
 import os
 import re
+import threading
 import time
 import numpy as np
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -20,6 +21,9 @@ def validate_ip(ip):
     IP_REGEX = re.compile(r'((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}')
     if not IP_REGEX.match(ip):
         raise ValidationError('ip address must have correct format')
+
+
+lock = threading.Lock()
 
 
 class PaneSchema(Schema):
@@ -56,7 +60,7 @@ class PaneSchema(Schema):
             from app.v1.Cuttle.basic.setting import camera_dq_dict
             src = camera_dq_dict.get(device_label)[-1]
             image = cv2.imdecode(src, 1)
-            image = np.rot90(image,3)
+            image = np.rot90(image, 3)
             # src = CameraHandler.get_roi(device_label, image)
             cv2.imwrite(image_path, image)
         else:
@@ -77,8 +81,7 @@ class PaneSchema(Schema):
         except Exception as e:
             print(repr(e))
         finally:
-            print("in remove process")
-            # os.remove(image_path)
+            os.remove(image_path)
 
 
 class OriginalPicSchema(Schema):
@@ -90,17 +93,21 @@ class OriginalPicSchema(Schema):
 
     @post_load
     def make_sure(self, data, **kwargs):
+        lock.acquire(timeout=10)
+        print("1.get lock ")
         path = "original.png"
         device_obj = Device(pk=data.get("device_label"))
+        print("2.set  g_bExit to 1... ")
         redis_client.set("g_bExit", "1")
-        # 两个sleep 经验看要保证再1s以上，保证相机实际开启并得到第一张图片
-        time.sleep(1.5)
+        # 两个sleep 经验看要保证再1.5s以上，保证相机实际开启并得到第一张图片
+        time.sleep(2)
         executer = ThreadPoolExecutor()
         executer.submit(camera_start_3, 1, device_obj)
-        time.sleep(2)
+        time.sleep(2.5)
         self.get_snap_shot(data.get("device_label"), path)
         f = open(path, "rb")
         image = f.read()
+        lock.release()
         return Response(image, mimetype="image/jpeg")
 
     def get_snap_shot(self, device_label, path):
@@ -119,32 +126,51 @@ class CoordinateSchema(Schema):
     device_label = fields.String(required=True)
     inside_upper_left_x = fields.Int(required=True)
     inside_upper_left_y = fields.Int(required=True)
-    outside_upper_left_x = fields.Int(required=True)
-    outside_upper_left_y = fields.Int(required=True)
+    # outside_upper_left_x = fields.Int(required=True)
+    # outside_upper_left_y = fields.Int(required=True)
     inside_under_right_x = fields.Int(required=True)
     inside_under_right_y = fields.Int(required=True)
+
+    return_x = fields.Int(required=True)
+    return_y = fields.Int(required=True)
+    desktop_x = fields.Int(required=True)
+    desktop_y = fields.Int(required=True)
+    menu_x = fields.Int(required=True)
+    menu_y = fields.Int(required=True)
     outside_under_right_y = fields.Int(required=True)
     outside_under_right_x = fields.Int(required=True)
 
     class Meta:
         unknown = INCLUDE
 
-    @validates_schema
-    def validate_numbers(self, data, **kwargs):
-        if data["inside_upper_left_x"] < data["outside_upper_left_x"] or data["outside_under_right_y"] < data[
-            "inside_under_right_y"]:
-            raise ValidationError("border should bigger than 0")
+    # @validates_schema
+    # def validate_numbers(self, data, **kwargs):
+    #     if data["inside_upper_left_x"] < data["outside_upper_left_x"] or data["outside_under_right_y"] < \
+    #             data["inside_under_right_y"]:
+    #         raise ValidationError("border should bigger than 0")
 
     @post_load
     def make_sure(self, data, **kwargs):
+
         device_obj = Device(pk=data.get("device_label"))
         redis_client.set("g_bExit", "1")
-        time.sleep(1)
+        time.sleep(1.5)
+        width = (data.get("inside_under_right_x") - data.get("inside_upper_left_x")) // 16 * 16
+        def cam_pix_to_scr(x, y, width):
+            # 把摄像头下的坐标值，先转换成屏幕截图下的对应坐标值
+            device_obj = Device(pk=data.get("device_label"))
+            s_x = int((data.get("inside_under_right_y")-y) * (device_obj.device_height / width))
+            s_y = int((x - data.get("inside_upper_left_x")) * (device_obj.device_height / width))
+            return s_x, s_y
+        device_obj.back_x, device_obj.back_y = cam_pix_to_scr(data.get("return_x"), data.get("return_y"), width)
+        device_obj.menu_x, device_obj.menu_y = cam_pix_to_scr(data.get("menu_x"), data.get("menu_y"), width)
+        device_obj.home_x, device_obj.home_y = cam_pix_to_scr(data.get("desktop_x"), data.get("desktop_y"), width)
         executer = ThreadPoolExecutor()
         executer.submit(camera_start_3, 1, device_obj,
-                       OffsetX=data.get("inside_upper_left_x")//16 * 16,
-                       OffsetY=data.get("inside_upper_left_y")//2 * 2 + 200,
-                       Width=(data.get("inside_under_right_x") - data.get("inside_upper_left_x"))//16 * 16,
-                       Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y"))//2 * 2)
+                        OffsetX=data.get("inside_upper_left_x") // 16 * 16,
+                        OffsetY=data.get("inside_upper_left_y") // 2 * 2 + 200,
+                        Width=width,
+                        Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y")) // 2 * 2)
         # device_obj.update_device_border(data)
         return jsonify({"status": "success"}), 200
+

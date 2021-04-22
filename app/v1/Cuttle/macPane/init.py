@@ -108,6 +108,7 @@ def recover_root(device_label, connect_num):
 
 
 def set_border(device_dict, device_obj):
+    # 没放进paneview时候，这个request会向上抛attribute error，
     params = {
         "pane_view": device_dict.get("paneslot").get("paneview").get("id"),
         "phone_model": device_dict.get("phone_model").get("id")

@@ -10,7 +10,7 @@ from app.execption.outer.error import APIException
 from app.execption.outer.error_code.imgtool import IconTooWeek
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
-from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare
+from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
 from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS
@@ -67,7 +67,7 @@ class PerformanceMinix(object):
             data = self._validate(exec_content, PerformanceSchema)
             performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                             data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq, bias=False)
+                                            self.kwargs.get("work_path"), self.dq)
             performance.end_loop(self._icon_find)
             time.sleep(0.5)  # 等待后续30张图片save完成
             self.extra_result = performance.result
@@ -81,7 +81,7 @@ class PerformanceMinix(object):
             data = self._validate(exec_content, PerformanceSchemaCompare)
             performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                             data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq, bias=False)
+                                            self.kwargs.get("work_path"), self.dq)
             performance.end_loop(self._picture_changed)
             time.sleep(0.5)  # 等待后续30张图片save完成
             performance.result["end_point"] += 1
@@ -93,11 +93,26 @@ class PerformanceMinix(object):
             self.image = performance.tguard_picture_path
             return 1
 
-    # def test_performance(self, exec_content, has_bias=False, schema=PerformanceSchemaCompare):
-    #     data = self._validate(exec_content, schema)
-    #     return PerformanceCenter(self._model.pk, data.get("icon_areas")[0], data.get("refer_im"),
-    #                              data.get("areas"), data.get("threshold", 0.99),
-    #                              self.kwargs.get("work_path"), self.dq, bias=has_bias)
+    def start_point_with_fps_lost(self, exec_content):
+        data = self._validate(exec_content, PerformanceSchemaCompare)
+        performance = PerformanceCenter(self._model.pk, None, None,
+                                        data.get("areas")[0], data.get("threshold", 0.99),
+                                        self.kwargs.get("work_path"), self.dq)
+        return performance.start_loop(self._picture_changed)
+
+    def end_point_with_fps_lost(self, exec_content):
+        try:
+            data = self._validate(exec_content, PerformanceSchemaFps)
+            performance = PerformanceCenter(self._model.pk, None, None,
+                                            data.get("areas")[0], data.get("threshold", 0.99),
+                                            self.kwargs.get("work_path"), self.dq, fps=data.get("fps"))
+            performance.test_fps_lost(self._picture_changed)
+            self.extra_result = performance.result
+            result = 0 if performance.result.get("fps_lost") == False else 1
+            return result
+        except APIException as e:
+            self.image = performance.tguard_picture_path
+            return 1
 
     def test_performance_with_point(self, exec_content):
         body = exec_content.copy()

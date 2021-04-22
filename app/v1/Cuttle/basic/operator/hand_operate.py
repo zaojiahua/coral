@@ -2,6 +2,9 @@ import re
 import time
 
 from app.config.setting import CORAL_TYPE
+from app.config.url import device_url, phone_model_url
+from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet
+from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
@@ -60,9 +63,11 @@ class HandHandler(Handler, DefaultMixin):
         self.ignore_reset = False
 
     def before_execute(self):
+        # 先转换相对坐标到绝对坐标
         for key, value in self.before_match_rules.items():
             if key in self.exec_content:
                 getattr(self, value)()
+        # 根据adb指令中的关键词dispatch到对应机械臂方法,pix_points为adb模式下的截图中的像素坐标
         pix_points, opt_type, self.speed = self.grouping(self.exec_content)
         self.exec_content = self.transform_pix_point(pix_points)
         self.func = getattr(self, opt_type)
@@ -73,10 +78,7 @@ class HandHandler(Handler, DefaultMixin):
         click_orders = self.__list_click_order(axis_list)
         ignore_reset = self.kwargs.get("ignore_arm_reset")
         self.ignore_reset = ignore_reset
-        # length = len(click_orders)
-        # if ignore_reset is not True and CORAL_TYPE == 5:
-        #     length +=  1
-        result = hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders, ignore_reset=ignore_reset)
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders, ignore_reset=ignore_reset)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         if ignore_reset != True:
             time.sleep(2)
@@ -107,7 +109,7 @@ class HandHandler(Handler, DefaultMixin):
         # time.sleep(0.2) # 确保性能测试照片拍到滑动起始点
         sliding_order = self.__sliding_order(point[0], point[1], self.speed, normal=False)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
-        time.sleep(3) # 确保动作执行完成
+        time.sleep(3)  # 确保动作执行完成
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def reset_hand(self, hand_reset_orders=arm_wait_position, **kwargs):
@@ -123,9 +125,53 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def back(self,_):
-        # 按back键
+    def back(self, _, **kwargs):
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=self._model.pk)
+        click_orders = self.__single_click_order((device_obj.back_x, device_obj.back_y))
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
+        result = hand_serial_obj_dict.get(self._model.pk).recv()
+        return result
+
+    def double_back(self, _, **kwargs):
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=self._model.pk)
+        click_orders = self.__double_click_order((device_obj.back_x, device_obj.back_y))
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
+        result = hand_serial_obj_dict.get(self._model.pk).recv()
+        time.sleep(2)
+        return result
+
+    def home(self):
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=self._model.pk)
+        click_orders = self.__single_click_order((device_obj.home_x, device_obj.home_y))
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
+        result = hand_serial_obj_dict.get(self._model.pk).recv()
+        time.sleep(2)
+        return result
+
+    def menu(self):
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=self._model.pk)
+        click_orders = self.__single_click_order((device_obj.menu_x, device_obj.menu_y))
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
+        result = hand_serial_obj_dict.get(self._model.pk).recv()
+        time.sleep(2)
+        return result
+
+    def power(self):
         pass
+
+    def _find_key_point(self, name):
+        from app.v1.device_common.device_model import Device
+        response = request(url=phone_model_url, params={"phone_model_name": Device(pk=self._model.pk).phone_model_name,
+                                                        "fields": name}
+                           , filter_unique_key=True)
+        position = response.get(name)
+        if not position:
+            raise KeyPositionUsedBeforesSet
+        return position
 
     def str_func(self, commend, **kwargs):
         from app.v1.device_common.device_model import Device
@@ -171,6 +217,7 @@ class HandHandler(Handler, DefaultMixin):
         if axis_x > HAND_MAX_X or axis_y > HAND_MAX_Y:
             return {"error:Invalid Pix_Point"}
         return [
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN + 5, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
             # 'G01 Z%dF%d \r\n' % (Z_DOWN, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
@@ -178,16 +225,31 @@ class HandHandler(Handler, DefaultMixin):
         ]
 
     @staticmethod
+    def _press_button_order(axis):
+        axis_x, axis_y = axis
+        if axis_x > HAND_MAX_X or axis_y > HAND_MAX_Y:
+            return {"error:Invalid Pix_Point"}
+        return [
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN + 5, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
+            # 'G01 Z%dF%d \r\n' % (Z_DOWN, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
+            # 'G01 Z%dF%d \r\n' % (Z_UP, MOVE_SPEED)
+        ]
+
+
+
+    @staticmethod
     def __double_click_order(axis):
         axis_x, axis_y = axis
         if axis_x > HAND_MAX_X or axis_y > HAND_MAX_X:
             return {"error:Invalid axis_Point"}
         return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_START, MOVE_SPEED),
-            'G01 Z%dF%d \r\n' % (Z_DOWN, MOVE_SPEED),
-            'G01 Z%dF%d \r\n' % (Z_UP, MOVE_SPEED),
-            'G01 Z%dF%d \r\n' % (Z_DOWN, MOVE_SPEED),
-            'G01 Z%dF%d \r\n' % (Z_UP, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
+
         ]
 
     # TODO 滑动起止点是否超过操作台范围
@@ -202,7 +264,7 @@ class HandHandler(Handler, DefaultMixin):
         if normal:
             return [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN-1, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN - 1, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, speed),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
             ]
@@ -214,8 +276,8 @@ class HandHandler(Handler, DefaultMixin):
 
             return [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN-2, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_DOWN , speed),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_DOWN + 1, speed),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
             ]
 

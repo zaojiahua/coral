@@ -18,4 +18,5 @@ class DjobDevice(BaseModel):
 
     def save(self, action, attr=None, value=None):
         if action == "pre_remove":
-            deal_dir_file(self.base_path)
+            pass
+            # deal_dir_file(self.base_path)

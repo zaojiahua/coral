@@ -54,6 +54,13 @@ class Device(models.Model):
     y1 = models.CharField()
     x2 = models.CharField()
     y2 = models.CharField()
+    # 摄像头下多个按键的位置,储存的是屏幕截图中的坐标（paneview设置&重启服务恢复设备时，需要读取数据库中存的摄像头的下坐标值，并换算回截图中的坐标值）
+    back_x = models.IntegerField()
+    back_y = models.IntegerField()
+    home_x = models.IntegerField()
+    home_y = models.IntegerField()
+    menu_x = models.IntegerField()
+    menu_y = models.IntegerField()
     # 输入键盘的左上点和右下点
     kx1 = models.IntegerField()
     kx2 = models.IntegerField()
@@ -219,6 +226,18 @@ class Device(models.Model):
         # self.x_border = str(round(x_border_camera_pixel * (x_real / x_camera_pixel), 2))
         # self.y_border = str(round(y_border_camera_pixel * (y_real / y_camera_pixel), 2))
         # print("border from camera。。。",self.x_border,self.y_border)
+
+        #
+        def cam_pix_to_scr(x, y, width):
+            # 把摄像头下的坐标值，先转换成屏幕截图下的对应坐标值
+            s_x = int((data.get("inside_under_right_y")-y) * (self.device_height / width))
+            s_y = int((x - data.get("inside_upper_left_x")) * (self.device_height / width))
+            return s_x, s_y
+        width = (data.get("inside_under_right_x") - data.get("inside_upper_left_x")) // 16 * 16
+        self.back_x, self.back_y = cam_pix_to_scr(data.get("return_x"), data.get("return_y"), width)
+        self.menu_x, self.menu_y = cam_pix_to_scr(data.get("menu_x"), data.get("menu_y"), width)
+        self.home_x, self.home_y = cam_pix_to_scr(data.get("desktop_x"), data.get("desktop_y"), width)
+        # 下面是之前的代码  好像没用了.....
         self.x1 = str(int(data.get("inside_upper_left_x")))
         self.y1 = str(int(data.get("inside_under_right_y")))
         self.x2 = str(int(data.get("inside_under_right_x")))

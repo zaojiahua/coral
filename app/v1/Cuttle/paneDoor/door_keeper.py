@@ -52,7 +52,8 @@ class DoorKeeper(object):
             self.is_device_rootable(num=f"-s {s_id}")
         if CORAL_TYPE > 2:
             self.set_arm_or_camera(CORAL_TYPE, dev_info_dict["device_label"])
-        self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"), dev_info_dict)  # now report dev_info_dict to reef directly
+        self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"),
+                                   dev_info_dict)  # now report dev_info_dict to reef directly
         logger.info(f"set device success")
         return 0
 
@@ -60,10 +61,17 @@ class DoorKeeper(object):
         port_list = HARDWARE_MAPPING_LIST.copy()
         rotate = True if CORAL_TYPE == 3 else False
         executer = ThreadPoolExecutor()
+        # if CORAL_TYPE >= 5:
+        #     for port in port_list:
+        #         PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
         try:
-            for port in list(set(port_list) ^ set(hand_used_list)):
-                hand_used_list.append(port)
+            available_port_list = list(set(port_list) ^ set(hand_used_list))
+            print("available port list :", available_port_list)
+            if len(available_port_list) == 0:
+                raise ArmNorEnough
+            for port in available_port_list:
                 PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
+                hand_used_list.append(port)
         except IndexError:
             raise ArmNorEnough
 
@@ -85,14 +93,16 @@ class DoorKeeper(object):
 
     def authorize_device_manually(self, **kwargs):
         length = np.hypot(kwargs.get("device_height"), kwargs.get("device_width"))
-        kwargs["x_dpi"] = kwargs["y_dpi"] = length / float(kwargs.pop("screen_size"))
+        kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
         kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + "-" + kwargs.get("device_name", "DefaultName")
+        kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + "-" + self.get_default_name()
         kwargs["manufacturer"] = kwargs["android_version"] = kwargs["rom_version"] = kwargs["cpu_name"] = kwargs[
             "cpu_id"] = "Manual_device"
         kwargs["ip_address"] = "0.0.0.0"
         kwargs["auto_test"] = False
         kwargs["device_type"] = "test_box"
+        if CORAL_TYPE > 2:
+            self.set_arm_or_camera(CORAL_TYPE, kwargs["device_label"])
         self.send_dev_info_to_reef(kwargs.pop("device_name"), kwargs, with_monitor=False)
         return 0
 
@@ -132,7 +142,7 @@ class DoorKeeper(object):
         s_id_list = self.get_device_connect_id(multi=True)
         for index, num in enumerate(s_id_list):
             try:
-                dev_info_dict = self.get_device_info(num,{})
+                dev_info_dict = self.get_device_info(num, {})
                 device_name_with_number = device_name + str(index + 1)
                 self.send_dev_info_to_reef(device_name_with_number, dev_info_dict)
                 self.show_device_name(str(index + 1), num=f"-s {num}")
@@ -151,7 +161,7 @@ class DoorKeeper(object):
         self.adb_cmd_obj.run_cmd_to_get_result(
             f"adb {num} shell am start -a android.intent.action.VIEW -d http://{HOST_IP}:5000/static/{index}.png")
 
-    def get_device_info(self, s_id,device_info_fict):
+    def get_device_info(self, s_id, device_info_fict):
         screen_size = self.get_screen_size_internal(f"-s {s_id}")
         ret_dict = {
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
@@ -199,7 +209,8 @@ class DoorKeeper(object):
         old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
         productName = phone_model if len(phone_model) != 0 else old_phone_model
         ret_dict = {"phone_model_name": productName,
-                    "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.board.platform"),
+                    "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(
+                        f"adb -s {s_id} shell getprop ro.board.platform"),
                     "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
                     "ip_address": self.get_dev_ip_address_internal(
                         f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0'}
@@ -288,7 +299,7 @@ class DoorKeeper(object):
     def is_device_rootable(self, num="-d"):
         # "adbd is already running as root" or "restarting adbd as root" or "error: device not found" or cannot run root in production mode
         root_response = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} root", 3)
-        if "already running" in root_response :
+        if "already running" in root_response:
             return True
         elif "restarting adbd" in root_response:
             time.sleep(2)
@@ -340,12 +351,13 @@ class DoorKeeper(object):
         dev_data_dict["id"] = res.get("id") if res.get("id") else 0
         device_object = Device(pk=dev_data_dict["device_label"])
         device_object.update_attr(**dev_data_dict, avoid_push=True)
+        print(device_object.data)
         aide_monitor_instance = AideMonitor(device_object)
         t = threading.Thread(target=device_object.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(dev_data_dict["device_label"])
         t.start()
-        if with_monitor:
-            ThreadPoolExecutor(max_workers=100).submit(device_object.start_device_async_loop, aide_monitor_instance)
+        # if with_monitor:
+        #     ThreadPoolExecutor(max_workers=100).submit(device_object.start_device_async_loop, aide_monitor_instance)
 
     def get_default_name(self):
         real_date = datetime.now().strftime("%m_%d")

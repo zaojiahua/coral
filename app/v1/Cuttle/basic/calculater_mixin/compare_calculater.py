@@ -1,14 +1,10 @@
 import logging
-import random
-import time
 from collections import Counter
 
 import cv2
 import numpy as np
-from marshmallow import ValidationError
 from scipy.cluster.vq import *
 
-from app.config.setting import CORAL_TYPE
 from app.execption.outer.error_code.imgtool import IconTooWeek
 
 
@@ -61,7 +57,7 @@ class FeatureCompareMixin:
             raise IconTooWeek
             # return 2010
         self._model.logger.info(f" icon feature number:{len(l)}")
-        code, centroids = FeatureCompareMixin.kmeans_clustering(l, 4)  # five centroids
+        code, centroids = FeatureCompareMixin.kmeans_clustering(l, 4)
         max_centro = Counter(code).most_common(1)[0][0]
         return centroids[max_centro]
 
@@ -100,7 +96,8 @@ class FeatureCompareMixin:
         search_params = dict(checks=50)
 
         flann = cv2.FlannBasedMatcher(index_params, search_params)  # 初始化flann匹配,为descriptor建立索引树
-        matches = flann.knnMatch(np.asarray(des1, np.float32), np.asarray(des2, np.float32),k=2)  # k值为2，对des1和des2进行knn匹配
+        matches = flann.knnMatch(np.asarray(des1, np.float32), np.asarray(des2, np.float32),
+                                 k=2)  # k值为2，对des1和des2进行knn匹配
         # 准备一个空mask存储goodmatches
         matches_mask = [[0, 0] for i in range(len(matches))]
         good_match = []  # 匹配结果
@@ -132,7 +129,7 @@ class FeatureCompareMixin:
         :param k:阈值
         :return:长度和中心点
         """
-        centroids, variance = kmeans(obs, k)  # variance方差
+        centroids, variance = kmeans2(obs, k)  # variance方差
         code, distance = vq(obs, centroids)  # 矢量量化函数进行归类
 
         return code, centroids

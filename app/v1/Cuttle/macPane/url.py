@@ -1,6 +1,7 @@
 from flask import Blueprint
 
-from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView
+from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
+    AutoPaneBorderView
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, PaneConfigView, \
     PaneBorderView
 
@@ -44,4 +45,6 @@ pane.add_url_rule('/performance_picture/', view_func=PerformancePictureView.as_v
 # pane.add_url_rule('/device_arm_camera/', view_func=PaneConfigView.as_view('device_in_slot'))
 # 框选手机屏幕边框后，会收到前端的设置border的请求
 pane.add_url_rule('/device_border/', view_func=PaneBorderView.as_view('device_border'))
+# 自动获取边框的接口
+pane.add_url_rule('/get_roi/', view_func=AutoPaneBorderView.as_view('get_roi'))
 pane.add_url_rule('/file_push/', view_func=FilePushView.as_view('file_push'))

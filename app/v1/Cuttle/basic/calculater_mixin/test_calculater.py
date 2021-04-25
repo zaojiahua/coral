@@ -1,21 +1,20 @@
 import base64
 import os
+from collections import Counter
 from io import BytesIO
 
 import cv2
 import numpy as np
+from PIL import Image, ImageDraw
 
 from app.config.ip import OCR_IP
 from app.config.setting import CORAL_TYPE
 from app.config.url import coral_ocr_url
 from app.execption.outer.error import APIException
-from app.execption.outer.error_code.imgtool import IconTooWeek
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin, separate_point_pixel
 from app.v1.Cuttle.basic.image_schema import IconTestSchema, OcrTestSchema
 from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_threshold, icon_rate
-from collections import Counter
-from PIL import Image, ImageDraw, ImageFont
 
 
 class TestMixin(object):
@@ -53,10 +52,13 @@ class TestMixin(object):
             return {"error": e.description}
         if len(response) < 4:
             return {"error": 'sample point not enough'}
+        # k = len(response)//10
+        # print("k:",k)
         code, centroids = FeatureCompareMixin.kmeans_clustering(response, 4)  # five centroids
-        max_centro = Counter(code).most_common(1)[0][0]
+        max_centro = Counter(code).most_common(2)[0][0]
+        key_number_1 = Counter(code).most_common(2)[0][1]
+        key_number_2 = Counter(code).most_common(2)[1][1]
         result = centroids[max_centro]
-        print("测试结果：坐标", result)
         result_x, result_y = separate_point_pixel(result)
         img = Image.open(image_crop_path).convert("RGB")
         img_draw = ImageDraw.Draw(img)
@@ -75,7 +77,9 @@ class TestMixin(object):
         self.remove_if_exist(icon_path, data.get("input_image"), image_crop_path)
         return {
             "img_detected": 'data:image/jpeg;base64,' + base64.b64encode(byte_data).decode('utf8'),
-            'icon': 'data:image/jpeg;base64,' + base64.b64encode(icon_byte_data).decode('utf8')
+            'icon': 'data:image/jpeg;base64,' + base64.b64encode(icon_byte_data).decode('utf8'),
+            'key_point_one': key_number_1,
+            'key_point_two': key_number_2,
         }
 
     def test_ocr_result(self, exec_content):

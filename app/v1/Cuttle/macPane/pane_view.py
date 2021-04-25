@@ -5,6 +5,9 @@ import sys
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 
+import cv2
+import numpy as np
+from PIL import Image
 from flask import request, jsonify, Response
 from flask.views import MethodView
 from serial import SerialException
@@ -211,6 +214,34 @@ class PaneBorderView(MethodView):
     def post(self):
         schema = CoordinateSchema()
         return schema.load(request.get_json())
+
+class AutoPaneBorderView(MethodView):
+    def post(self):
+        image = Image.open(request.files.get("rawImage"))  #720*1280*3
+        src = np.array(image)
+        kernel = np.uint8(np.ones((3, 3)))
+        src = cv2.erode(src, kernel,iterations=2)
+        src = cv2.dilate(src, kernel,iterations=2)
+        gray = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY)
+        ret, binary = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
+        cv2.imwrite("bin.jpg",binary)
+        image, contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        box_list = []
+        for contour in contours:
+            rect = cv2.minAreaRect(contour[:, 0, :])
+            box = cv2.boxPoints(rect)
+            area = int(rect[1][1]) * int(rect[1][0])
+            if area <= 5000:
+                continue
+            box_list.append((box, area))
+        box_list.sort(key=lambda x: x[1], reverse=True)
+        point = box_list[0][0].tolist()
+        point.sort()
+        return jsonify({"upper_left_x": int(point[0][0]),
+                        "upper_left_y": int(point[0][1]),
+                        "under_right_x":int(point[3][0]),
+                        "under_right_y": int(point[3][1]),
+                        }), 200
 
 
 class FilePushView(MethodView):

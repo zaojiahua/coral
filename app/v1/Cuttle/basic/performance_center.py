@@ -1,4 +1,5 @@
 import os
+import platform
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
@@ -8,6 +9,8 @@ import numpy as np
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoKeyPointNotFound
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax, FpsMax
+
+sp = '/' if platform.system() == 'Linux' else '\\'
 
 
 class PerformanceCenter(object):
@@ -29,7 +32,7 @@ class PerformanceCenter(object):
         self.threshold = threshold
         self.move_flag = True
         self.loop_flag = True
-        work_path = "\\".join(os.path.dirname(work_path).split("\\")[:-1]) + "\\performance\\"
+        work_path = "\\".join(os.path.dirname(work_path).split(sp)[:-1]) + "\\performance\\"
         if not os.path.exists(work_path):
             os.makedirs(work_path)
         self.work_path = work_path
@@ -126,7 +129,8 @@ class PerformanceCenter(object):
                 break
             except IndexError:
                 time.sleep(0.02)
-        cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture)
+        save_pic = cv2.resize(picture, dsize=(0, 0), fx=0.5, fy=0.5)
+        cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), save_pic)
         number += 1
         h, w = picture.shape[:2]
         scope = self.scope if use_icon_scope is False else self.icon_scope

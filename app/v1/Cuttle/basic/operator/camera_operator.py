@@ -1,30 +1,21 @@
 import collections
 import re
 import time
-import random
+from ctypes import *
 
 import cv2
 import numpy as np
 
 from app.execption.outer.error_code.camera import NoSrc, NoCamera, CameraInitFail
-# from app.v1.Cuttle.basic.MvImport.windows.CameraParams_const import MV_USB_DEVICE, MV_GIGE_DEVICE
-# from app.v1.Cuttle.basic.MvImport.windows.CameraParams_header import MV_CC_DEVICE_INFO_LIST, MVCC_INTVALUE, \
-#     MV_FRAME_OUT_INFO_EX, MV_CC_DEVICE_INFO, MV_SAVE_IMAGE_PARAM_EX, MV_Image_Jpeg
-# from app.v1.Cuttle.basic.MvImport.GrabImage import g_bExit
-# from app.v1.Cuttle.basic.MvImport.windows.MvCameraControl_class import MvCamera
 from app.v1.Cuttle.basic.MvImport.HK_import import *
-from app.v1.Cuttle.basic.MvImport.windows.MvErrorDefine_const import MV_OK
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
-from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, g_bExit, camera_params
-
-# from ctypes import cast, POINTER, byref, sizeof, memset, c_ubyte,
-from ctypes import *
+from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, camera_params
 from redis_init import redis_client
 
 MoveToPress = 9
 FpsMax = 120
-CameraMax = 2400
+CameraMax = 1200
 ImageNumberFile = "__number.txt"
 
 # if CORAL_TYPE in [4,5]:

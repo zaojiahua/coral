@@ -215,16 +215,18 @@ class PaneBorderView(MethodView):
         schema = CoordinateSchema()
         return schema.load(request.get_json())
 
+
 class AutoPaneBorderView(MethodView):
     def post(self):
-        image = Image.open(request.files.get("rawImage"))  #720*1280*3
+        if not request.files.get("rawImage"):
+            return jsonify({"fail": "can not get raw image"}), 400
+        image = Image.open(request.files.get("rawImage"))  # 720*1280*3
         src = np.array(image)
         kernel = np.uint8(np.ones((3, 3)))
-        src = cv2.erode(src, kernel,iterations=2)
-        src = cv2.dilate(src, kernel,iterations=2)
+        src = cv2.erode(src, kernel, iterations=2)
+        src = cv2.dilate(src, kernel, iterations=2)
         gray = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY)
         ret, binary = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
-        cv2.imwrite("bin.jpg",binary)
         image, contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         box_list = []
         for contour in contours:
@@ -239,7 +241,7 @@ class AutoPaneBorderView(MethodView):
         point.sort()
         return jsonify({"upper_left_x": int(point[0][0]),
                         "upper_left_y": int(point[0][1]),
-                        "under_right_x":int(point[3][0]),
+                        "under_right_x": int(point[3][0]),
                         "under_right_y": int(point[3][1]),
                         }), 200
 

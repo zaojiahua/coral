@@ -32,7 +32,7 @@ class PerformanceCenter(object):
         self.threshold = threshold
         self.move_flag = True
         self.loop_flag = True
-        work_path = sp.join(os.path.dirname(work_path).split(sp)[:-1]) + "/performance"
+        work_path = os.path.join(sp.join(os.path.dirname(work_path).split(sp)[:-1]), "performance") +sp
         if not os.path.exists(work_path):
             os.makedirs(work_path)
         self.work_path = work_path

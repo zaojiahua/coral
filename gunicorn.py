@@ -24,7 +24,7 @@ if not os.path.exists('log'):
 debug = False
 loglevel = 'debug'
 timeout = 600
-bind = '0.0.0.0:5000'
+bind = '0.0.0.0:8088'
 pidfile = 'log/gunicorn.pid'
 logfile = 'log/debug.log'
 errorlog = 'log/error.log'

@@ -21,7 +21,7 @@ RUN pip3 install --upgrade pip \
 RUN apt-get install -y android-tools-adb && apt-get install -y usbutils && apt-get install -y vim
 RUN apt-get install -y kmod
 RUN bash setup.sh
-RUN cp /opt/MVS/lib/64/. /lib/
+RUN cp -r /opt/MVS/lib/64/. /lib/
 
 #RUN export LD_LIBRARY_PATH=./app/coral/lib:$LD_LIBRARY_PATH
 

@@ -8,6 +8,7 @@ from flask.views import MethodView
 from app.config.setting import TOTAL_LOG_NAME
 from app.libs.ospathutil import makedirs_new_folder, deal_dir_file
 from app.v1.djob.viewModel.device import DeviceViewModel
+from app.v1.djob.viewModel.job import macro_repalce
 from app.v1.eblock.model.eblock import Eblock
 from app.v1.eblock.model.macro_replace import MacroHandler
 from app.v1.eblock.model.unit import Unit
@@ -34,11 +35,14 @@ class UnitView(MethodView):
 
     def post(self):
         from app.v1.device_common.device_model import Device
-
         data = json.loads(request.form["data"])
-        validate_data = UnitSchema().load_or_parameter_exception(data)
-        device_vm = DeviceViewModel(device_label=validate_data["device_label"],
+
+        device_vm = DeviceViewModel(device_label=data["device_label"],
                                     flow_id=0)
+
+        data = macro_repalce(data, device_vm.djob_work_path)
+
+        validate_data = UnitSchema().load_or_parameter_exception(data)
 
         makedirs_new_folder(device_vm.rds_data_path)
         makedirs_new_folder(device_vm.djob_work_path)

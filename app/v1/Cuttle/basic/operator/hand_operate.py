@@ -56,6 +56,7 @@ class HandHandler(Handler, DefaultMixin):
     before_match_rules = {
         "input tap": "_relative_point",
         "input swipe": "_relative_swipe",
+        "double_point": "_relative_double_point",
     }
 
     def __init__(self, *args, **kwargs):

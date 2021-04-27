@@ -20,6 +20,7 @@ class PerformanceMinix(object):
     dq = deque(maxlen=CameraMax)
 
     def start_point_with_icon(self, exec_content):
+        # 方法名字尚未变更，此为滑动坚持起点的方法
         data = self._validate(exec_content, PerformanceSchema)
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
@@ -56,6 +57,8 @@ class PerformanceMinix(object):
             exec_task = executer.submit(self.delay_exec, ocr_obj.point).add_done_callback(executor_callback)
             # 兼容其他多选区的格式，增加一层
             data["icon_areas"] = [icon_real_position_camera]
+            if self.kwargs.get("test_running"):  # 对试运行的unit只进行点击，不计算时间。
+                return 0
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),

@@ -77,7 +77,7 @@ class DefaultMixin(object):
             pix_points = raw_commend
             opt_type = 'rotate'
         else:
-            pix_points = [int(i) for i in raw_commend.strip().split(' ')]
+            pix_points = [float(i) for i in raw_commend.split("double_point")[-1].strip().split(" ")]
             opt_type = "double_click"
         return pix_points, opt_type, speed
 

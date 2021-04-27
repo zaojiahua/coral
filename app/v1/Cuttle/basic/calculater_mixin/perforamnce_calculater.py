@@ -154,7 +154,7 @@ class PerformanceMinix(object):
         result2 = np.count_nonzero(245 < difference)
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
-        final_result = match_ratio > threshold - 0.05
+        final_result = match_ratio > threshold - 0.03
         if changed is True:
             final_result = bool(1 - final_result)
         return final_result

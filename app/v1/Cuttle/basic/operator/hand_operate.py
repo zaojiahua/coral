@@ -273,7 +273,7 @@ class HandHandler(Handler, DefaultMixin):
         #     end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
         if normal:
             return [
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN+5, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN - 1, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, speed),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),

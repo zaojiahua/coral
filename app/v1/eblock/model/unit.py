@@ -94,7 +94,7 @@ class Unit(BaseModel):
     """
     key = models.CharField()  # unit 的唯一标识会重因此不可写入到pk中
     timeout = models.IntegerField()  # unit 的唯一标识会重因此不可写入到pk中
-    detail = DictField()
+    detail = DictField()  # 用于存储结果
     jobUnitName = models.CharField()
     execCmdDict = DictField()
     execModName = models.CharField()  # 类型
@@ -134,6 +134,9 @@ class Unit(BaseModel):
                 cmd_dict["execCmdList"] = repalced_cmd_list
 
                 sending_data = {"device_label": self.device_label, "ip_address": handler.ip_address, **cmd_dict}
+                if kwargs.pop("test_running", False):
+                    sending_data["test_running"] = True
+
                 if assist_device_ident is None:
                     from app.v1.device_common.device_model import Device
                     if Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1:

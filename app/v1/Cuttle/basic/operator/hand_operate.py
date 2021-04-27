@@ -87,7 +87,7 @@ class HandHandler(Handler, DefaultMixin):
 
     def double_click(self, double_axis, **kwargs):
         # 双击，在同一个点快速点击两次
-        double_click_orders = self.__double_click_order(double_axis)
+        double_click_orders = self.__double_click_order(double_axis[0])
         hand_serial_obj_dict.get(self._model.pk).send_list_order(double_click_orders)
         time.sleep(wait_time)
         return hand_serial_obj_dict.get(self._model.pk).recv()
@@ -254,6 +254,7 @@ class HandHandler(Handler, DefaultMixin):
         if axis_x > HAND_MAX_X or axis_y > HAND_MAX_X:
             return {"error:Invalid axis_Point"}
         return [
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN+5, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),

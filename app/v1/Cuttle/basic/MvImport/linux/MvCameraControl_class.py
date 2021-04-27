@@ -9,7 +9,7 @@ from ctypes import *
 from .CameraParams_const import *
 
 
-MvCamCtrldll = ctypes.cdll.LoadLibrary(os.getenv('MVCAM_COMMON_RUNENV') + "/64/libMvCameraControl.so")
+MvCamCtrldll = ctypes.cdll.LoadLibrary("/opt/MVS/lib" + "/64/libMvCameraControl.so")
 
 # 用于回调函数传入相机实例
 class _MV_PY_OBJECT_(Structure):

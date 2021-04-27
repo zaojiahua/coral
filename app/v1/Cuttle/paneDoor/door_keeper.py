@@ -52,7 +52,8 @@ class DoorKeeper(object):
             self.is_device_rootable(num=f"-s {s_id}")
         if CORAL_TYPE > 2:
             self.set_arm_or_camera(CORAL_TYPE, dev_info_dict["device_label"])
-        self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"), dev_info_dict)  # now report dev_info_dict to reef directly
+        self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"),
+                                   dev_info_dict)  # now report dev_info_dict to reef directly
         logger.info(f"set device success")
         return 0
 
@@ -132,7 +133,7 @@ class DoorKeeper(object):
         s_id_list = self.get_device_connect_id(multi=True)
         for index, num in enumerate(s_id_list):
             try:
-                dev_info_dict = self.get_device_info(num,{})
+                dev_info_dict = self.get_device_info(num, {})
                 device_name_with_number = device_name + str(index + 1)
                 self.send_dev_info_to_reef(device_name_with_number, dev_info_dict)
                 self.show_device_name(str(index + 1), num=f"-s {num}")
@@ -151,7 +152,7 @@ class DoorKeeper(object):
         self.adb_cmd_obj.run_cmd_to_get_result(
             f"adb {num} shell am start -a android.intent.action.VIEW -d http://{HOST_IP}:5000/static/{index}.png")
 
-    def get_device_info(self, s_id,device_info_fict):
+    def get_device_info(self, s_id, device_info_fict):
         screen_size = self.get_screen_size_internal(f"-s {s_id}")
         ret_dict = {
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
@@ -199,7 +200,8 @@ class DoorKeeper(object):
         old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
         productName = phone_model if len(phone_model) != 0 else old_phone_model
         ret_dict = {"phone_model_name": productName,
-                    "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.board.platform"),
+                    "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(
+                        f"adb -s {s_id} shell getprop ro.board.platform"),
                     "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
                     "ip_address": self.get_dev_ip_address_internal(
                         f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0'}
@@ -223,19 +225,30 @@ class DoorKeeper(object):
 
     def get_assis_device(self):
         s_id = self.get_device_connect_id(multi=False)
-        cpu_id = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno")
-        check_params = {"fields": "is_active", "serial_number": cpu_id}
+        phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.oppo.market.name")
+        old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
+        productName = phone_model if len(phone_model) != 0 else old_phone_model
+        ret_dict = {"phone_model_name": productName,
+                    "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0',
+                    "device_label": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
+                    "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
+                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize()
+                    }
+        check_params = {"fields": "is_active", "serial_number": ret_dict["device_label"]}
         response = request(url=device_assis_url, params=check_params)
         try:
             if not response.get("subsidiarydevice")[0].get("is_active") == False:
                 raise DeviceAlreadyInCabinet
         except IndexError:
             pass
-        device_info_dict = {
-            "serial_number": cpu_id,
-            "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}")
-        }
-        return device_info_dict
+        phone_model_info_dict, status = self.is_new_phone_model(productName)
+        if not status:
+            ret_dict.update(phone_model_info_dict)
+        else:
+            ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
+        logger.info(f"[get device info] device info dict :{ret_dict}")
+        self.is_device_rootable(num=f"-s {s_id}")
+        return ret_dict
 
     def set_assis_device(self, **kwargs):
         # {
@@ -259,7 +272,7 @@ class DoorKeeper(object):
     def is_new_phone_model(self, phone_model) -> (Dict, bool):
         params = {
             "phone_model_name": phone_model,
-            "fields": "id,phone_model_name,x_border,y_border,x_dpi,y_dpi"
+            "fields": "phone_model_name,x_border,y_border,x_dpi,y_dpi"
         }
         try:
             response = request(url=phone_model_url, params=params, filter_unique_key=True)
@@ -288,7 +301,7 @@ class DoorKeeper(object):
     def is_device_rootable(self, num="-d"):
         # "adbd is already running as root" or "restarting adbd as root" or "error: device not found" or cannot run root in production mode
         root_response = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} root", 3)
-        if "already running" in root_response :
+        if "already running" in root_response:
             return True
         elif "restarting adbd" in root_response:
             time.sleep(2)

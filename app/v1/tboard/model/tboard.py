@@ -57,8 +57,10 @@ class TBoard(BaseModel):
             for dut in self.dut_list.smembers():
                 dut.start_dut()
         except Exception as e:
+            print(job_msg_name)
             logger.error(e)
             logger.exception(e)
+            self.send_tborad_finish()
 
     def send_tborad_finish(self):
         # 在多线程模式下，当前线程执行send_tborad_finish 会将tboard_id删除，tboard_id default 为0

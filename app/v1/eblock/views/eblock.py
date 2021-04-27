@@ -1,10 +1,21 @@
+import json
+import logging
+import os
+
 from flask import request
 from flask.views import MethodView
 
+from app.config.setting import TOTAL_LOG_NAME
+from app.libs.ospathutil import makedirs_new_folder, deal_dir_file
+from app.v1.djob.viewModel.device import DeviceViewModel
 from app.v1.eblock.model.eblock import Eblock
-from app.v1.eblock.validators.tboardSchema import EblockSchema
+from app.v1.eblock.model.macro_replace import MacroHandler
+from app.v1.eblock.model.unit import Unit
+from app.v1.eblock.validators.tboardSchema import EblockSchema, UnitSchema
 
 eblock_schema = EblockSchema()
+
+logger = logging.getLogger(TOTAL_LOG_NAME)
 
 
 class EblockView(MethodView):
@@ -17,6 +28,40 @@ class EblockView(MethodView):
     def delete(self, id):
         stop_eblock(id)
         return "Succeed to stop eblock", 204
+
+
+class UnitView(MethodView):
+
+    def post(self):
+        from app.v1.device_common.device_model import Device
+
+        data = json.loads(request.form["data"])
+        validate_data = UnitSchema().load_or_parameter_exception(data)
+        device_vm = DeviceViewModel(device_label=validate_data["device_label"],
+                                    flow_id=0)
+
+        makedirs_new_folder(device_vm.rds_data_path)
+        makedirs_new_folder(device_vm.djob_work_path)
+        device_vm._get_device_msg()
+
+        handler = MacroHandler(
+            work_path=device_vm.djob_work_path,
+            rds_path=device_vm.rds_data_path,
+            ip_address=Device(pk=validate_data["device_label"]).connect_number,
+            block_index=0)
+
+        fs = request.files.getlist('file')
+
+        for f in fs:
+            f.save(os.path.join(device_vm.djob_work_path, f.filename))
+
+        unit = Unit(unit_list_index=1, **validate_data)
+        try:
+            unit.process_unit(logger, handler, test_running=True)
+        finally:
+            deal_dir_file(device_vm.base_path)
+
+        return unit.detail, 200
 
 
 # --------------------------For Internal calls-------------------------------

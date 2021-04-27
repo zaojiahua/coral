@@ -234,19 +234,30 @@ class DoorKeeper(object):
 
     def get_assis_device(self):
         s_id = self.get_device_connect_id(multi=False)
-        cpu_id = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno")
-        check_params = {"fields": "is_active", "serial_number": cpu_id}
+        phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.oppo.market.name")
+        old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
+        productName = phone_model if len(phone_model) != 0 else old_phone_model
+        ret_dict = {"phone_model_name": productName,
+                    "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0',
+                    "device_label": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
+                    "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
+                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize()
+                    }
+        check_params = {"fields": "is_active", "serial_number": ret_dict["device_label"]}
         response = request(url=device_assis_url, params=check_params)
         try:
             if not response.get("subsidiarydevice")[0].get("is_active") == False:
                 raise DeviceAlreadyInCabinet
         except IndexError:
             pass
-        device_info_dict = {
-            "serial_number": cpu_id,
-            "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}")
-        }
-        return device_info_dict
+        phone_model_info_dict, status = self.is_new_phone_model(productName)
+        if not status:
+            ret_dict.update(phone_model_info_dict)
+        else:
+            ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
+        logger.info(f"[get device info] device info dict :{ret_dict}")
+        self.is_device_rootable(num=f"-s {s_id}")
+        return ret_dict
 
     def set_assis_device(self, **kwargs):
         # {
@@ -270,7 +281,7 @@ class DoorKeeper(object):
     def is_new_phone_model(self, phone_model) -> (Dict, bool):
         params = {
             "phone_model_name": phone_model,
-            "fields": "id,phone_model_name,x_border,y_border,x_dpi,y_dpi"
+            "fields": "phone_model_name,x_border,y_border,x_dpi,y_dpi"
         }
         try:
             response = request(url=phone_model_url, params=params, filter_unique_key=True)

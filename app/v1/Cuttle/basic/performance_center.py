@@ -129,8 +129,8 @@ class PerformanceCenter(object):
                 break
             except IndexError:
                 time.sleep(0.02)
-        save_pic = cv2.resize(picture, dsize=(0, 0), fx=0.5, fy=0.5)
-        cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), save_pic)
+        # save_pic = cv2.resize(picture, dsize=(0, 0), fx=0.5, fy=0.5)
+        cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture)
         number += 1
         h, w = picture.shape[:2]
         scope = self.scope if use_icon_scope is False else self.icon_scope

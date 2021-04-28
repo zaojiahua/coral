@@ -76,16 +76,16 @@ class AdbHandler(Handler, ChineseMixin):
         return execute_result
 
     def reconnect(self, *args):
-        if CORAL_TYPE <5 :
-            if ADB_TYPE == 1 :
+        if CORAL_TYPE < 5:
+            if ADB_TYPE == 1:
                 # 有线模式下无论主僚机都做kill&start处理
-                self.str_func(adb_cmd_prefix + "kill-server" )
-                self.str_func(adb_cmd_prefix + "start-server" )
+                self.str_func(adb_cmd_prefix + "kill-server")
+                self.str_func(adb_cmd_prefix + "start-server")
                 self._model.is_connected = True
                 self._model.disconnect_times += 1
                 return 0
             if self.kwargs.get("assist_device_serial_number"):
-                #无线模式下主僚机分别取对应的ip进行重连
+                # 无线模式下主僚机分别取对应的ip进行重连
                 device_ip = self.kwargs.get("assist_device_serial_number")
             else:
                 from app.v1.device_common.device_model import Device
@@ -248,8 +248,6 @@ class AdbHandler(Handler, ChineseMixin):
         words = result.group(1)
         if self.is_chinese(words):
             return True, self.chinese_support(words)
-
-
 
     def _ignore_unsupported_commend(self):
         return True, -9

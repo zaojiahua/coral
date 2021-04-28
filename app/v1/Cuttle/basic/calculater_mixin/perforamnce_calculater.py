@@ -65,6 +65,25 @@ class PerformanceMinix(object):
                                         self.kwargs.get("work_path"), self.dq, bias=BIAS)
         return performance.start_loop(self._black_field)
 
+    def start_point_with_point_fixed(self, exec_content):
+        data = self._validate(exec_content, PerformanceSchemaCompare)
+        x1, y1, x2, y2 = data.get("areas")[0]
+        x = int((x1 + x2) / 2)
+        y = int((y1 + y2) / 2)
+        request_body = {
+            "device_label": self._model.pk,
+            "execCmdList": [f"shell input tap {x} {y}"]
+        }
+        request_body.update({"ignore_arm_reset": True})
+        from app.v1.Cuttle.basic.basic_views import UnitFactory
+        executer = ThreadPoolExecutor()
+        executer.submit(self.delay_exec, UnitFactory().create, "HandHandler", request_body).add_done_callback(
+            executor_callback)
+        performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
+                                        data.get("areas")[0], data.get("threshold", 0.99),
+                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
+        return performance.start_loop(self._black_field)
+
     def end_point_with_icon(self, exec_content):
         try:
             data = self._validate(exec_content, PerformanceSchema)
@@ -159,6 +178,6 @@ class PerformanceMinix(object):
             final_result = bool(1 - final_result)
         return final_result
 
-    def delay_exec(self, function, **kwargs):
+    def delay_exec(self, function, *args, **kwargs):
         time.sleep(kwargs.get("sleep", 0.5))
-        return function(**kwargs)
+        return function(*args, **kwargs)

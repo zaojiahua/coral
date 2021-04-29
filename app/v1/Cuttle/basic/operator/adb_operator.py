@@ -248,6 +248,8 @@ class AdbHandler(Handler, ChineseMixin):
         words = result.group(1)
         if self.is_chinese(words):
             return True, self.chinese_support(words)
+        else:
+            return False, None
 
     def _ignore_unsupported_commend(self):
         return True, -9

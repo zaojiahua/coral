@@ -56,9 +56,8 @@ class PaneSchema(Schema):
         #         return Response(image, mimetype="image/jpeg")
 
         if device_obj.has_camera:
-            from app.v1.Cuttle.basic.operator.camera_operator import CameraHandler
             from app.v1.Cuttle.basic.setting import camera_dq_dict
-            src = camera_dq_dict.get(device_label)[-1]
+            src = camera_dq_dict.get(device_label).pop()
             image = cv2.imdecode(src, 1)
             image = np.rot90(image, 3)
             # src = CameraHandler.get_roi(device_label, image)

@@ -27,7 +27,8 @@ from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_thre
 VideoSearchPosition = 0.5
 
 
-class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin, ColorMixin, PerformanceMinix,TestMixin):
+class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin, ColorMixin, PerformanceMinix,
+                   TestMixin):
     _error_dict = {
         "configFile": -22,
         "inputImgFile": -23,
@@ -37,7 +38,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         "fileName": -27,
         "position": -28,
         "color": -29,
-        "inputImgFile2":-30,
+        "inputImgFile2": -30,
         "percent": -31
 
     }
@@ -45,9 +46,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     process_list = [Abnormal(mark=1, method="clear", code=1),
                     Abnormal(mark=2, method="clear", code=0)]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.skip_list.extend(AreaSelectedMixin.skip_list)
+    skip_list = ["realtime_picture_compare", "end_point_with_fps_lost"]
 
     def img_compare_func3(self, exec_content, **kwargs) -> int:
         # 均值方差对比方法
@@ -65,7 +64,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         data = self._validate(exec_content, ImageSchema)
         try:
             result = self.identify_icon_point(self._crop_image(data.get("input_im"), [1, 1, 1, 1]),
-                                          self._crop_image(data.get("refer_im"), data.get("areas")[0]))
+                                              self._crop_image(data.get("refer_im"), data.get("areas")[0]))
         except IconTooWeek:
             return IconTooWeek.error_code
         point_x = result[0]

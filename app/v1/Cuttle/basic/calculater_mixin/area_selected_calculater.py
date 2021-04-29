@@ -9,7 +9,6 @@ from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, i
 
 class AreaSelectedMixin(object):
     # 主要负责增加图像选区相关方法
-    skip_list = ["realtime_picture_compare"]
 
     def has_icon_area_selected(self, exec_content) -> int:
         # 判断所选择区域内有指定图标

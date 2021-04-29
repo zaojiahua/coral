@@ -15,7 +15,7 @@ from redis_init import redis_client
 
 MoveToPress = 9
 FpsMax = 120
-CameraMax = 1200
+CameraMax = 600
 ImageNumberFile = "__number.txt"
 
 # if CORAL_TYPE in [4,5]:

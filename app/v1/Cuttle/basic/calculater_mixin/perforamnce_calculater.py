@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from app.execption.outer.error import APIException
-from app.execption.outer.error_code.imgtool import IconTooWeek
+from app.execption.outer.error_code.imgtool import IconTooWeek, NotFindIcon
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
@@ -45,7 +45,10 @@ class PerformanceMinix(object):
             ocr_obj._pic_path = self._crop_image_and_save(ocr_obj.default_pic_path, data["areas"][0])
             self.image = ocr_obj.default_pic_path
             # 此处得到的是裁剪后icon在图中的绝对坐标
-            ocr_obj.get_result_by_feature(content, cal_real_xy=False)
+            try:
+                ocr_obj.get_result_by_feature(content, cal_real_xy=False)
+            except NotFindIcon:
+                return 1
             # 摄像头下,完整图的,实际坐标区域,中心点加减范围
             icon_real_position_camera = [ocr_obj.cx + camera_x0 - 30, ocr_obj.cy + camera_y0 - 30,
                                          ocr_obj.cx + camera_x0 + 30, ocr_obj.cy + camera_y0 + 30]
@@ -68,18 +71,18 @@ class PerformanceMinix(object):
     def start_point_with_point_fixed(self, exec_content):
         data = self._validate(exec_content, PerformanceSchemaCompare)
         x1, y1, x2, y2 = data.get("areas")[0]
-        x = int((x1 + x2) / 2)
-        y = int((y1 + y2) / 2)
+        x = (x1 + x2) / 2
+        y = (y1 + y2) / 2
         request_body = {
             "device_label": self._model.pk,
             "execCmdList": [f"shell input tap {x} {y}"]
         }
-        request_body.update({"ignore_arm_reset": True})
+        # request_body.update({"ignore_arm_reset": True})
         from app.v1.Cuttle.basic.basic_views import UnitFactory
         executer = ThreadPoolExecutor()
         executer.submit(self.delay_exec, UnitFactory().create, "HandHandler", request_body).add_done_callback(
             executor_callback)
-        performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
+        performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"), self.dq, bias=BIAS)
         return performance.start_loop(self._black_field)
@@ -131,6 +134,7 @@ class PerformanceMinix(object):
             performance.test_fps_lost(self._picture_changed)
             self.extra_result = performance.result
             result = 0 if performance.result.get("fps_lost") == False else 1
+            self.image = performance.tguard_picture_path
             return result
         except APIException as e:
             self.image = performance.tguard_picture_path
@@ -149,10 +153,11 @@ class PerformanceMinix(object):
         return response
 
     def _black_field(self, picture, _, threshold):
-        result = np.count_nonzero(picture < 40)
+        cv2.imwrite("black_field_test.jpg",picture)
+        result = np.count_nonzero(picture < 50)
         standard = picture.shape[0] * picture.shape[1] * picture.shape[2]
         match_ratio = result / standard
-        return match_ratio > threshold - 0.2
+        return match_ratio > threshold - 0.01
 
     def _icon_find(self, picture, icon, threshold, disappear=False):
         try:
@@ -160,8 +165,8 @@ class PerformanceMinix(object):
         except IconTooWeek:
             return False
         threshold = int((1 - threshold) * icon_rate)
-        # self._model.logger.info(
-        #     f"feature point number:{len(feature_point_list)},threshold:{icon_threshold_camera - threshold}")
+        self._model.logger.info(
+            f"feature point number:{len(feature_point_list)},threshold:{icon_threshold_camera - threshold}")
         response = True if len(feature_point_list) >= (icon_threshold_camera - threshold) else False
         if disappear is True:
             response = bool(1 - response)
@@ -169,11 +174,11 @@ class PerformanceMinix(object):
 
     def _picture_changed(self, last_pic, next_pic, threshold, changed=True):
         difference = np.absolute(np.subtract(last_pic, next_pic))
-        result = np.count_nonzero(difference < 15)
-        result2 = np.count_nonzero(245 < difference)
+        result = np.count_nonzero(difference < 25)
+        result2 = np.count_nonzero(230 < difference)
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
-        final_result = match_ratio > threshold - 0.03
+        final_result = match_ratio > threshold - 0.04
         if changed is True:
             final_result = bool(1 - final_result)
         return final_result

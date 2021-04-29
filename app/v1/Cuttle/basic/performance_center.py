@@ -32,7 +32,7 @@ class PerformanceCenter(object):
         self.threshold = threshold
         self.move_flag = True
         self.loop_flag = True
-        work_path = os.path.join(sp.join(os.path.dirname(work_path).split(sp)[:-1]), "performance") +sp
+        work_path = os.path.join(sp.join(os.path.dirname(work_path).split(sp)[:-1]), "performance") + sp
         if not os.path.exists(work_path):
             os.makedirs(work_path)
         self.work_path = work_path
@@ -67,7 +67,7 @@ class PerformanceCenter(object):
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 break
-            if number >= CameraMax / 3:
+            if number >= CameraMax / 2:
                 self.move_flag = False
                 self.back_up_dq.clear()
                 raise VideoKeyPointNotFound
@@ -91,7 +91,7 @@ class PerformanceCenter(object):
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.move_flag = False
                 break
-            if number >= CameraMax / 3:
+            if number >= CameraMax / 2:
                 self.move_flag = False
                 self.back_up_dq.clear()
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
@@ -105,17 +105,33 @@ class PerformanceCenter(object):
             number, picture, next_picture, next_next_picture = self.picture_prepare(number)
             pic2 = next_picture if self.kwargs.get("fps") >= 120 else next_next_picture
             if judge_function(picture, pic2, self.threshold) == False:
-                print(f"find end point number: {number}", self.bias)
+                # print(f"find end point number: {number}", "bias:", self.bias)
                 self.result = {"fps_lost": True, "lost_number": number}
-                self.move_flag = False
-                break
+                self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
+                if hasattr(self, "candidate") and number - self.candidate >= 10:
+                    self.result = {"fps_lost": False}
+                    self.end_number = number - 1
+                    self.move_flag = False
+                    break
+                elif hasattr(self, "candidate"):
+                    continue
+                else:
+                    self.candidate = number
+                    continue
+            else:
+                if hasattr(self, "candidate"):
+                    self.result = {"fps_lost": True, "lost_number": self.candidate}
+                    self.end_number = number - 1
+                    self.move_flag = False
+                    break
             if number >= CameraMax / 3:
                 self.move_flag = False
                 self.back_up_dq.clear()
-                self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 raise VideoKeyPointNotFound
         else:
             self.result = {"fps_lost": False}
+            self.end_number = number - 1
+            self.move_flag = False
         return 0
 
     def picture_prepare(self, number, use_icon_scope=False):

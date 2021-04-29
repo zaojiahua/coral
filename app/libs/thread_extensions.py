@@ -11,7 +11,6 @@ def executor_callback(worker):
     :param worker:
     :return:
     """
-    print(worker.result)
     worker_exception = worker.exception()
     if worker_exception:
         logger.exception("Worker return exception: {}".format(worker_exception))

@@ -20,7 +20,7 @@ class PerformanceMinix(object):
     dq = deque(maxlen=CameraMax)
 
     def start_point_with_icon(self, exec_content):
-        # 方法名字尚未变更，此为滑动坚持起点的方法
+        # 方法名字尚未变更，此为滑动检测起点的方法
         data = self._validate(exec_content, PerformanceSchema)
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),

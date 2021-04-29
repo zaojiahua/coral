@@ -26,6 +26,7 @@ class PerformanceCenter(object):
         self.back_up_dq = dq
         # 使用黑色区域时，icon_scope为icon实际出现在snap图中的位置，使用icon surf时icon_scope为编辑时出现在refer图中的位置
         # 使用选区变化/不变时 icon_scope 为None
+        # icon 和scope 这里都是相对的坐标
         self.icon_scope = icon_area[0] if isinstance(icon_area, list) else None
         self.judge_icon = self.get_icon(refer_im_path)
         self.scope = scope
@@ -66,6 +67,8 @@ class PerformanceCenter(object):
                 self.bias = self.kwargs.get("bias") if self.kwargs.get("bias") else 0
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
+                if judge_function.__name__ == "_black_field":
+                    self.bias = self.bias + (self.scope[0] // 0.3)
                 break
             if number >= CameraMax / 2:
                 self.move_flag = False

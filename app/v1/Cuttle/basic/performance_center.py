@@ -68,7 +68,7 @@ class PerformanceCenter(object):
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 if judge_function.__name__ == "_black_field":
-                    self.bias = self.bias + (self.scope[0] // 0.3)
+                    self.bias = self.bias + int((self.icon_scope[0]+self.icon_scope[2] )// 0.4)
                 break
             if number >= CameraMax / 2:
                 self.move_flag = False
@@ -86,7 +86,7 @@ class PerformanceCenter(object):
             if judge_function(picture, pic2, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 self.end_number = number - 1
-                self.start_number = self.start_number + self.bias
+                self.start_number = int(self.start_number + self.bias)
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 4), 0),
                                "time_per_unit": round(1 / FpsMax, 4),

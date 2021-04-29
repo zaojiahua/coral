@@ -110,8 +110,8 @@ class PerformanceMinix(object):
             performance.end_loop(self._picture_changed)
             time.sleep(0.5)  # 等待后续30张图片save完成
             # performance.result["end_point"] += 1
-            performance.result["job_duration"] = performance.result["job_duration"] + performance.result[
-                "time_per_unit"]
+            # performance.result["job_duration"] = performance.result["job_duration"] + performance.result[
+            #     "time_per_unit"]
             self.extra_result = performance.result
             return 0
         except APIException as e:
@@ -153,7 +153,6 @@ class PerformanceMinix(object):
         return response
 
     def _black_field(self, picture, _, threshold):
-        cv2.imwrite("black_field_test.jpg",picture)
         result = np.count_nonzero(picture < 50)
         standard = picture.shape[0] * picture.shape[1] * picture.shape[2]
         match_ratio = result / standard

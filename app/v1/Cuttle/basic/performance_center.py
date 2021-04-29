@@ -100,13 +100,15 @@ class PerformanceCenter(object):
         return 0
 
     def test_fps_lost(self, judge_function):
+        if hasattr(self, "candidate"):
+            delattr(self, "candidate")
         number = self.start_number + 1
         for i in range(200):
             number, picture, next_picture, next_next_picture = self.picture_prepare(number)
             pic2 = next_picture if self.kwargs.get("fps") >= 120 else next_next_picture
             if judge_function(picture, pic2, self.threshold) == False:
                 # print(f"find end point number: {number}", "bias:", self.bias)
-                self.result = {"fps_lost": True, "lost_number": number}
+                # self.result = {"fps_lost": True, "lost_number": number}
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 if hasattr(self, "candidate") and number - self.candidate >= 10:
                     self.result = {"fps_lost": False}
@@ -178,6 +180,7 @@ class PerformanceCenter(object):
         for i in range(30):
             try:
                 src = self.back_up_dq.popleft()
+                print(os.path.join(self.work_path, f"{number}.jpg"))
                 cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), src)
                 number += 1
             except IndexError as e:

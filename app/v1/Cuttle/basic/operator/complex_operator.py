@@ -120,8 +120,8 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         center_y = int(device_height / 2)
         mapping_dict = {"left": ((device_width * 0.9), center_y, (device_width * 0.1), center_y),
                         "right": ((device_width * 0.1), center_y, (device_width * 0.9), center_y),
-                        "down": (center_x, (device_height * 0.1), center_x, (device_height * 0.9)),
-                        "up": (center_x, (device_height * 0.9), center_x, (device_height * 0.1))}
+                        "down": (center_x, (device_height * 0.3), center_x, (device_height * 0.7)),
+                        "up": (center_x, (device_height * 0.7), center_x, (device_height * 0.3))}
         for i in range(15):
             with Complex_Center(**content, **self.kwargs) as ocr_obj:
                 try:

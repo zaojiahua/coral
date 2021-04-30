@@ -136,7 +136,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     x_start, y_start, x_end, y_end = mapping_dict.get(content.get("direction"), (500, 500, 900, 700))
                     ocr_obj.cx = x_start
                     ocr_obj.cy = y_start
-                    ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=2000)
+                    ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=1000)
                     continue
             return ocr_obj.result
         else:

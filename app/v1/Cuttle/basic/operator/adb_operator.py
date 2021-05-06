@@ -251,5 +251,8 @@ class AdbHandler(Handler, ChineseMixin):
         else:
             return False, None
 
+
+
+
     def _ignore_unsupported_commend(self):
         return True, -9

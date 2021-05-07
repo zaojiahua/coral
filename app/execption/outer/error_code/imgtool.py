@@ -59,13 +59,13 @@ class NotFindIcon(APIException):
     description = "can not find icon"
 
 
-class VideoKeyPointNotFound(APIException):
+class VideoStartPointNotFound(APIException):
     """
-    视频处理过程中，没有发现预定帧
+    性能分析过程中，没有找到起始标志点
     """
     error_code = 2008
     code = 400
-    description = "can not find key point in video"
+    description = "can not find start point in video"
 
 
 class OcrShiftWrongFormat(APIException):
@@ -117,10 +117,19 @@ class CannotFindRecentVideoOrImage(APIException):
     code = 400
     description = "can not find recent video or Imgae in 300s"
 
-class WrongEndOrStartPoint(APIException):
+class WrongEndPoint(APIException):
     """
+    性能测试中，终止点识别错误，提前误识别出结果
     """
-    error_code = 2008
+    error_code = 2016
     code = 400
-    description = "find wrong end point ore start point"
+    description = "find wrong end point in performance"
+
+class VideoEndPointNotFound(APIException):
+    """
+    性能测试中，没有发现结束帧
+    """
+    error_code = 2017
+    code = 400
+    description = "can not find end point in video"
 

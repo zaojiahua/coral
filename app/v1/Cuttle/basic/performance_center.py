@@ -7,7 +7,8 @@ import cv2
 import numpy as np
 
 from app.config.ip import HOST_IP
-from app.execption.outer.error_code.imgtool import VideoKeyPointNotFound, WrongEndOrStartPoint
+from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
+    VideoEndPointNotFound
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax, FpsMax
 
 sp = '/' if platform.system() == 'Linux' else '\\'
@@ -68,36 +69,30 @@ class PerformanceCenter(object):
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 if judge_function.__name__ == "_black_field":
-                    self.bias = self.bias + int((self.icon_scope[0]+self.icon_scope[2] )// 0.4)
+                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // 0.4)
                 break
             if number >= CameraMax / 2:
                 self.move_flag = False
                 self.back_up_dq.clear()
-                raise VideoKeyPointNotFound
+                raise VideoStartPointNotFound
         return 0
 
     def end_loop(self, judge_function):
-        # AttributeError: 'PerformanceCenter'
-        # object
-        # has
-        # no
-        # attribute
-        # 'start_number'
+        if not hasattr(self, "start_number"):
+            raise VideoStartPointNotFound
         number = self.start_number + 1
         b = time.time()
         print("end loop start... now number:", number)
         while self.loop_flag:
+            for i in self.bias:
+                # 对bias补偿的帧数，先只保存对应图片，不做结果判断
+                number, picture, next_picture, _ = self.picture_prepare(number)
             number, picture, next_picture, _ = self.picture_prepare(number)
             pic2 = self.judge_icon if judge_function.__name__ == "_icon_find" else next_picture
             if judge_function(picture, pic2, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 self.end_number = number - 1
                 self.start_number = int(self.start_number + self.bias)
-                if self.end_number < self.start_number:
-                    self.move_flag = False
-                    self.back_up_dq.clear()
-                    self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                    raise WrongEndOrStartPoint
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
                                "time_per_unit": round(1 / FpsMax, 4),
@@ -106,10 +101,15 @@ class PerformanceCenter(object):
                 self.move_flag = False
                 break
             if number >= CameraMax / 2:
+                self.result = {"start_point": self.start_number, "end_point": number,
+                               "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
+                               "time_per_unit": round(1 / FpsMax, 4),
+                               "picture_count": number,
+                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.move_flag = False
                 self.back_up_dq.clear()
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                raise VideoKeyPointNotFound
+                raise VideoEndPointNotFound
         print("end loop time", time.time() - b)
         return 0
 
@@ -143,7 +143,7 @@ class PerformanceCenter(object):
             if number >= CameraMax / 3:
                 self.move_flag = False
                 self.back_up_dq.clear()
-                raise VideoKeyPointNotFound
+                raise VideoEndPointNotFound
         else:
             self.result = {"fps_lost": False}
             self.end_number = number - 1

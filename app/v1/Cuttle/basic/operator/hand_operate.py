@@ -103,7 +103,7 @@ class HandHandler(Handler, DefaultMixin):
         # TODO 控制滑动时间,增加移动速度的换算
         sliding_order = self.__sliding_order(point[0], point[1], self.speed)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
-        time.sleep(wait_time)
+        # time.sleep(wait_time)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def trapezoid_slide(self, point, **kwargs):

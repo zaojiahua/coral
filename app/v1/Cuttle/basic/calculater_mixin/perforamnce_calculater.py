@@ -59,7 +59,8 @@ class PerformanceMinix(object):
             # 异步延迟执行点击操作，确保另外一个线程的照片可以涵盖到这个操作
             exec_task = executer.submit(self.delay_exec, ocr_obj.point).add_done_callback(executor_callback)
             # 兼容其他多选区的格式，增加一层
-            data["icon_areas"] = [icon_real_position_camera]
+            data["icon_areas"] = [[icon_real_position_camera[0]/w,icon_real_position_camera[1]/h,
+                                  icon_real_position_camera[2]/w,icon_real_position_camera[3]/h]]
             if self.kwargs.get("test_running"):  # 对试运行的unit只进行点击，不计算时间。
                 return 0
         # 创建performance对象，

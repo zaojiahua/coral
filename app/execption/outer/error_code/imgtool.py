@@ -117,3 +117,10 @@ class CannotFindRecentVideoOrImage(APIException):
     code = 400
     description = "can not find recent video or Imgae in 300s"
 
+class WrongEndOrStartPoint(APIException):
+    """
+    """
+    error_code = 2008
+    code = 400
+    description = "find wrong end point ore start point"
+

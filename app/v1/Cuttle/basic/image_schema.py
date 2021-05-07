@@ -273,6 +273,7 @@ class PerformanceSchema(PerformanceSchemaCompare):
         data = super().explain(data, **kwargs)
         with open(data.get('icon_config'), "r") as json_file_icon:
             json_data_icon = json.load(json_file_icon)
+            print(json_data_icon)
             icon_areas = [json_data_icon["area" + str(i)] for i in range(1, len(json_data_icon.keys())) if
                           "area" + str(i) in json_data_icon.keys()]
             icon_threshold = float(json_data_icon.get("threshold", 0.99))

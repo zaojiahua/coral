@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from app.config.ip import HOST_IP
-from app.execption.outer.error_code.imgtool import VideoKeyPointNotFound
+from app.execption.outer.error_code.imgtool import VideoKeyPointNotFound, WrongEndOrStartPoint
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax, FpsMax
 
 sp = '/' if platform.system() == 'Linux' else '\\'
@@ -77,6 +77,12 @@ class PerformanceCenter(object):
         return 0
 
     def end_loop(self, judge_function):
+        # AttributeError: 'PerformanceCenter'
+        # object
+        # has
+        # no
+        # attribute
+        # 'start_number'
         number = self.start_number + 1
         b = time.time()
         print("end loop start... now number:", number)
@@ -87,8 +93,13 @@ class PerformanceCenter(object):
                 print(f"find end point number: {number}", self.bias)
                 self.end_number = number - 1
                 self.start_number = int(self.start_number + self.bias)
+                if self.end_number < self.start_number:
+                    self.move_flag = False
+                    self.back_up_dq.clear()
+                    self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
+                    raise WrongEndOrStartPoint
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
-                               "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 4), 0),
+                               "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": self.end_number + 29,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
@@ -183,7 +194,6 @@ class PerformanceCenter(object):
         for i in range(30):
             try:
                 src = self.back_up_dq.popleft()
-                print(os.path.join(self.work_path, f"{number}.jpg"))
                 cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), src)
                 number += 1
             except IndexError as e:

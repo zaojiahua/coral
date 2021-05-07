@@ -1,13 +1,12 @@
 import os
 import random
 import time
-import traceback
 
 import cv2
 import imageio
 import numpy as np
 
-from app.execption.outer.error_code.imgtool import OcrParseFail, VideoKeyPointNotFound, RecordWordsFindNoWords, \
+from app.execption.outer.error_code.imgtool import OcrParseFail, RecordWordsFindNoWords, \
     IconTooWeek
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.calculater_mixin.color_calculate import ColorMixin
@@ -17,12 +16,10 @@ from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
 from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
 from app.v1.Cuttle.basic.common_utli import get_file_name, threshold_set
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
-from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, VideoWordsSchema, \
-    VideoPicSchema, ImageOutPutSchema
-from app.v1.Cuttle.basic.operator.camera_operator import ImageNumberFile, FpsMax, CameraMax
+from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, VideoPicSchema
+from app.v1.Cuttle.basic.operator.camera_operator import ImageNumberFile, FpsMax
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
-from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate, BIAS, \
-    Continues_Number
+from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate, BIAS
 
 VideoSearchPosition = 0.5
 
@@ -117,116 +114,116 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
                     return 1
         return 0
 
-    def time_calculate_by_word(self, exec_content):
-        # 计算得到起始点到终止点所用时间
-        try:
-            b = time.time()
-            data = self._validate(exec_content, VideoWordsSchema)
-            time_persent = self.camera_or_adb()
-            start_number = self.find_point(data, self.match_words, "start", 0, target=False)
-            end_number = self.search_end(data, start_number, self.match_words)
-            print("单位时间:", time_persent, "end number:", end_number, "start number:", start_number)
-            self.extra_result = {"time": round((end_number - start_number) * time_persent - BIAS, 2)}
-            print("总用时: ", time.time() - b)
-            return 0
-        except VideoKeyPointNotFound:
-            return 1
+    # def time_calculate_by_word(self, exec_content):
+    #     # 计算得到起始点到终止点所用时间
+    #     try:
+    #         b = time.time()
+    #         data = self._validate(exec_content, VideoWordsSchema)
+    #         time_persent = self.camera_or_adb()
+    #         start_number = self.find_point(data, self.match_words, "start", 0, target=False)
+    #         end_number = self.search_end(data, start_number, self.match_words)
+    #         print("单位时间:", time_persent, "end number:", end_number, "start number:", start_number)
+    #         self.extra_result = {"time": round((end_number - start_number) * time_persent - BIAS, 2)}
+    #         print("总用时: ", time.time() - b)
+    #         return 0
+    #     except VideoKeyPointNotFound:
+    #         return 1
+    #
+    # def camera_or_adb(self):
+    #     fps = self.video_to_pic(self.video) if os.path.exists(self.video) else FpsMax
+    #     return 1 / fps
+    #
+    # def time_calculate_by_pic(self, exec_content):
+    #     b = time.time()
+    #     data = self._validate(exec_content, VideoPicSchema)
+    #     time_persent = self.camera_or_adb()
+    #     start_number = self.find_point(data, self.match_icon, "start", 0, target=False)
+    #     end_number = self.search_end(data, start_number, self.match_icon)
+    #     print("总用时: ", time.time() - b)
+    #     self.extra_result = {"time": round((end_number - start_number) * time_persent - BIAS, 2)}
+    #     return 0
+    #
+    # def search_end(self, data, start_number, function):
+    #     # 先读取总图片(帧)数
+    #     with open(get_file_name(self.video) + ImageNumberFile) as f:
+    #         total_number = f.read()
+    #     search_position = int(float(total_number) * VideoSearchPosition)
+    #     search_position = start_number + 1 if search_position <= start_number else search_position
+    #     number = self.find_point(data, function, "end", search_position)
+    #     # 分情况搜索
+    #     if number == search_position:
+    #         # 需要向前搜索,查找不匹配帧,搜索范围0.5倍总帧数至已搜寻到的起点帧
+    #         number = self.find_point(data, function, "end", search_position - 1, reverse=True, target=False,
+    #                                  end_position=start_number)
+    #         return number + 1  # 结束帧取向前搜索不一样的后一帧
+    #     elif number > search_position:
+    #         # 找到位置
+    #         return number
 
-    def camera_or_adb(self):
-        fps = self.video_to_pic(self.video) if os.path.exists(self.video) else FpsMax
-        return 1 / fps
+    # def find_point(self, data, compare_function, point="start", start_point=0, reverse=False, target=True,
+    #                end_position=0):
+    #     """
+    #     关键帧寻找的核心函数，通过传入的比对函数通过不同方法找寻具体关键帧。
+    #     :param data: 经过验证的数据
+    #     :param point: start/end 标明使用起始/终止特征
+    #     :param compare_function  用来具体比对的函数，比对成功returnTrue，看下一张returnFalse (match_words,match_icon)
+    #     :param start_point:搜寻的起始点
+    #     :param reverse:是否反向
+    #     :param target:寻找第一个匹配点/不匹配点
+    #     :param end_position: 寻找的终点
+    #     :return:图片number
+    #     """
+    #     print("start position:", start_point)
+    #     iter = range(start_point, CameraMax) if not reverse else range(start_point, end_position, -1)
+    #     mark = 0
+    #     try:
+    #         icon = self._crop_image(data.get(f"{point}_image"), data.get(f"{point}_icon_areas", " ")[0])
+    #         if icon is not None:
+    #             cv2.imwrite(os.path.join(self.kwargs.get("work_path"), f"{point}-icon.png"), icon)
+    #         for i in iter:
+    #             input = self._crop_image(get_file_name(self.video) + f"__{i}.png",
+    #                                      data.get(f"{point}_areas")[0])
+    #             path = os.path.join(self.kwargs.get("work_path"), f"crop-{i}.png")
+    #             cv2.imwrite(path, input)
+    #             result = compare_function(data, path, point, icon, target)
+    #             if result is True:
+    #                 print("find one point ones:", i)
+    #                 # 连续两张/多张均匹配成功才确认。待ocr质量提升后可以去掉此环节。
+    #                 real = i - Continues_Number if not reverse else i + Continues_Number
+    #                 if real == mark:
+    #                     return real
+    #                 mark = i
+    #                 continue
+    #             else:
+    #                 continue
+    #         else:
+    #             raise VideoKeyPointNotFound  # 没找到 任务失败
+    #     except AttributeError as e:
+    #         print("in find_point function", repr(e))
+    #         traceback.print_exc()
+    #         raise VideoKeyPointNotFound
 
-    def time_calculate_by_pic(self, exec_content):
-        b = time.time()
-        data = self._validate(exec_content, VideoPicSchema)
-        time_persent = self.camera_or_adb()
-        start_number = self.find_point(data, self.match_icon, "start", 0, target=False)
-        end_number = self.search_end(data, start_number, self.match_icon)
-        print("总用时: ", time.time() - b)
-        self.extra_result = {"time": round((end_number - start_number) * time_persent - BIAS, 2)}
-        return 0
-
-    def search_end(self, data, start_number, function):
-        # 先读取总图片(帧)数
-        with open(get_file_name(self.video) + ImageNumberFile) as f:
-            total_number = f.read()
-        search_position = int(float(total_number) * VideoSearchPosition)
-        search_position = start_number + 1 if search_position <= start_number else search_position
-        number = self.find_point(data, function, "end", search_position)
-        # 分情况搜索
-        if number == search_position:
-            # 需要向前搜索,查找不匹配帧,搜索范围0.5倍总帧数至已搜寻到的起点帧
-            number = self.find_point(data, function, "end", search_position - 1, reverse=True, target=False,
-                                     end_position=start_number)
-            return number + 1  # 结束帧取向前搜索不一样的后一帧
-        elif number > search_position:
-            # 找到位置
-            return number
-
-    def find_point(self, data, compare_function, point="start", start_point=0, reverse=False, target=True,
-                   end_position=0):
-        """
-        关键帧寻找的核心函数，通过传入的比对函数通过不同方法找寻具体关键帧。
-        :param data: 经过验证的数据
-        :param point: start/end 标明使用起始/终止特征
-        :param compare_function  用来具体比对的函数，比对成功returnTrue，看下一张returnFalse (match_words,match_icon)
-        :param start_point:搜寻的起始点
-        :param reverse:是否反向
-        :param target:寻找第一个匹配点/不匹配点
-        :param end_position: 寻找的终点
-        :return:图片number
-        """
-        print("start position:", start_point)
-        iter = range(start_point, CameraMax) if not reverse else range(start_point, end_position, -1)
-        mark = 0
-        try:
-            icon = self._crop_image(data.get(f"{point}_image"), data.get(f"{point}_icon_areas", " ")[0])
-            if icon is not None:
-                cv2.imwrite(os.path.join(self.kwargs.get("work_path"), f"{point}-icon.png"), icon)
-            for i in iter:
-                input = self._crop_image(get_file_name(self.video) + f"__{i}.png",
-                                         data.get(f"{point}_areas")[0])
-                path = os.path.join(self.kwargs.get("work_path"), f"crop-{i}.png")
-                cv2.imwrite(path, input)
-                result = compare_function(data, path, point, icon, target)
-                if result is True:
-                    print("find one point ones:", i)
-                    # 连续两张/多张均匹配成功才确认。待ocr质量提升后可以去掉此环节。
-                    real = i - Continues_Number if not reverse else i + Continues_Number
-                    if real == mark:
-                        return real
-                    mark = i
-                    continue
-                else:
-                    continue
-            else:
-                raise VideoKeyPointNotFound  # 没找到 任务失败
-        except AttributeError as e:
-            print("in find_point function", repr(e))
-            traceback.print_exc()
-            raise VideoKeyPointNotFound
-
-    def match_words(self, data, input_path, point, refer=None, target=True):
-        # 通过文字匹配单幅图片，return True说明匹配到，False 需要看下一张照片
-        with Complex_Center(inputImgFile=input_path, **self.kwargs) as ocr_obj:
-            response = ocr_obj.get_result()
-        identify_words_list = [item.get("text").strip().strip('",.\n') for item in response]
-        response = self.words_judegment(data.get(f"{point}_words"), identify_words_list)
-        if target is False:
-            response = bool(1 - response)
-        return response
-
-    def match_icon(self, data, input_path, point, refer, target=True):
-        feature_point_list = self.shape_identify(cv2.imread(input_path), refer)
-        from app.v1.device_common.device_model import Device
-        threshold_level = icon_threshold if Device(pk=self._model.pk).has_camera == False else icon_threshold_camera
-        threshold = int((1 - data.get(f"{point}_threshold", 0.99)) * icon_rate)
-        self._model.logger.info(
-            f"feature point number:{len(feature_point_list)},threshold:{threshold_level - threshold}")
-        response = True if len(feature_point_list) >= (threshold_level - threshold) else False
-        if target is False:
-            response = bool(1 - response)
-        return response
+    # def match_words(self, data, input_path, point, refer=None, target=True):
+    #     # 通过文字匹配单幅图片，return True说明匹配到，False 需要看下一张照片
+    #     with Complex_Center(inputImgFile=input_path, **self.kwargs) as ocr_obj:
+    #         response = ocr_obj.get_result()
+    #     identify_words_list = [item.get("text").strip().strip('",.\n') for item in response]
+    #     response = self.words_judegment(data.get(f"{point}_words"), identify_words_list)
+    #     if target is False:
+    #         response = bool(1 - response)
+    #     return response
+    #
+    # def match_icon(self, data, input_path, point, refer, target=True):
+    #     feature_point_list = self.shape_identify(cv2.imread(input_path), refer)
+    #     from app.v1.device_common.device_model import Device
+    #     threshold_level = icon_threshold if Device(pk=self._model.pk).has_camera == False else icon_threshold_camera
+    #     threshold = int((1 - data.get(f"{point}_threshold", 0.99)) * icon_rate)
+    #     self._model.logger.info(
+    #         f"feature point number:{len(feature_point_list)},threshold:{threshold_level - threshold}")
+    #     response = True if len(feature_point_list) >= (threshold_level - threshold) else False
+    #     if target is False:
+    #         response = bool(1 - response)
+    #     return response
 
     def words_judegment(self, words: str, identify_words_list: list):
         if "^" in words:

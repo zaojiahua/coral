@@ -83,10 +83,10 @@ class PerformanceCenter(object):
         number = self.start_number + 1
         b = time.time()
         print("end loop start... now number:", number)
+        for i in range(self.bias):
+            # 对bias补偿的帧数，先只保存对应图片，不做结果判断
+            number, picture, next_picture, _ = self.picture_prepare(number)
         while self.loop_flag:
-            for i in self.bias:
-                # 对bias补偿的帧数，先只保存对应图片，不做结果判断
-                number, picture, next_picture, _ = self.picture_prepare(number)
             number, picture, next_picture, _ = self.picture_prepare(number)
             pic2 = self.judge_icon if judge_function.__name__ == "_icon_find" else next_picture
             if judge_function(picture, pic2, self.threshold) == True:
@@ -102,7 +102,7 @@ class PerformanceCenter(object):
                 break
             if number >= CameraMax / 2:
                 self.result = {"start_point": self.start_number, "end_point": number,
-                               "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
+                               "job_duration": max(round((number - self.start_number) * 1 / FpsMax, 3), 0),
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": number,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}

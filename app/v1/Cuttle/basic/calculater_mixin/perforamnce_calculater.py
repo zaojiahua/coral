@@ -177,11 +177,12 @@ class PerformanceMinix(object):
 
     def _picture_changed(self, last_pic, next_pic, threshold, changed=True):
         difference = np.absolute(np.subtract(last_pic, next_pic))
-        result = np.count_nonzero(difference < 35)
-        result2 = np.count_nonzero(220 < difference)
+        result = np.count_nonzero(difference < 20)
+        result2 = np.count_nonzero(235 < difference)
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
         final_result = match_ratio > threshold - 0.01
+        print(match_ratio)
         if changed is True:
             final_result = bool(1 - final_result)
         return final_result

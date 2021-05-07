@@ -108,7 +108,6 @@ class HandHandler(Handler, DefaultMixin):
 
     def trapezoid_slide(self, point, **kwargs):
         # time.sleep(0.2) # 确保性能测试照片拍到滑动起始点
-        print("in trapezoid slide")
         sliding_order = self.__sliding_order(point[0], point[1], self.speed, normal=False)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         time.sleep(3)  # 确保动作执行完成
@@ -284,8 +283,6 @@ class HandHandler(Handler, DefaultMixin):
             y1 = start_y - (end_y - start_y) * trapezoid
             x4 = end_x + (end_x - start_x) * trapezoid
             y4 = end_y + (end_y - start_y) * trapezoid
-            print(x1, y1,start_x,start_y)
-            print(end_x,end_y,x4,y4)
             return [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN-1, MOVE_SPEED),

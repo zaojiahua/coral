@@ -28,7 +28,7 @@ RotateNormal = "<RotateNormal>"
 RotateInit = "<RotateInit>"
 RotateUp = '<RotateUp>'
 Resource = "<Res_"
-Phone = "<Pho_"
+Phone = "<Sim_"
 
 job_editor_logo = "Tmach"
 
@@ -73,12 +73,16 @@ class MacroHandler(object):
                 cmd = re.sub("<Macro_.*?>", position.strip(), cmd)
         if Resource in cmd:
             # <Re_appname_type>
-            res = re.search("<Res_(.*?)>", cmd)
+            res = re.search("<Acc_(.*?)>", cmd)
             resource = res.group(1)
             if resource.split("_") < 2:
                 raise EblockResourceMacroWrongFormat
             app_name = resource.split("_")[0]
             type = resource.split("_")[1]
+            # 兼容用户输入简便，与数据库定义
+            available_type = {"id": "name", "username": "username", "code": "password"}
+            if type.lower() not in available_type.keys():
+                raise EblockResourceMacroWrongFormat
             device_id = kwargs.get("device_id", None)
             try:
                 response = request(url=account_url, params={"app_name": app_name,
@@ -86,10 +90,10 @@ class MacroHandler(object):
                                                             "fields": "name,username,password"}, filter_unique_key=True)
             except RequestException:
                 raise DeviceNeedResource
-            content = response.get(type)
-            re.sub("<Macro_.*?>", content, cmd)
+            content = response.get(available_type.get(type.lower()))
+            re.sub("<Acc_.*?>", content, cmd)
         if Phone in cmd:
-            res = re.search("<Pho_(.*?)>", cmd)
+            res = re.search("<Sim_(.*?)>", cmd)
             sim_number = res.group(1)
             device_id = kwargs.get("device_id", None)
             try:
@@ -99,7 +103,7 @@ class MacroHandler(object):
             except RequestException:
                 raise DeviceNeedResource
             phone_number = response.get("phone_number")
-            re.sub("<Macro_.*?>", phone_number, cmd)
+            re.sub("<Sim_.*?>", phone_number, cmd)
         if copy_singal in cmd:
             res = re.search("<blkOutPath>(.*?)<copy2rdsDatPath>", cmd)
             cmd = cmd.replace("<copy2rdsDatPath>", "")

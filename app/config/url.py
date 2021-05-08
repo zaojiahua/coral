@@ -27,6 +27,8 @@ user_url = "/api/v1/cedar/reefuser/"
 # ==================================device=======================================
 
 device_url = "/api/v1/cedar/device/"
+simcard_url = "/api/v1/cedar/simcard/"
+account_url = "/api/v1/cedar/account/"
 device_filter_url = "/api/v1/cedar/device/?{}"
 device_power_url = "/api/v1/cedar/device_power/"
 device_temper_url = "/api/v1/cedar/device_temperature/"

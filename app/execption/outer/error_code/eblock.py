@@ -30,3 +30,13 @@ class MaroUnrecognition(APIException):
     error_code = 7004
     code = 400
     description = 'find unknow Maro'
+
+class EblockResourceMacroWrongFormat(APIException):
+    error_code = 7005
+    code = 400
+    description = 'eblock find wrong type of resource macro'
+
+class DeviceNeedResource(APIException):
+    error_code = 7006
+    code = 400
+    description = 'use resource before assign to device or input wrong'

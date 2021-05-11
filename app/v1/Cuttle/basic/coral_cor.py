@@ -165,7 +165,7 @@ class Complex_Center(object):
     def change_x(self, value):
         self.cx = value
 
-    def get_result_by_feature(self, info_body,cal_real_xy=True):
+    def get_result_by_feature(self, info_body, cal_real_xy=True):
         info_body["inputImgFile"] = self.default_pic_path if self._pic_path == None else self._pic_path
         info_body["functionName"] = "identify_icon"
         request_dict = {
@@ -183,26 +183,28 @@ class Complex_Center(object):
         if cal_real_xy:
             self.cal_realy_xy(point_x, point_y, self.default_pic_path)
         else:
-            self.cx,self.cy = point_x, point_y
+            self.cx, self.cy = point_x, point_y
 
-    def get_result_by_template_match(self,info_body):
+    def get_result_by_template_match(self, info_body, cal_real_xy=True):
         target = cv2.imread(self._pic_path)
-
         template = cv2.imread(info_body.get("referImgFile"))
         with open(info_body.get('configFile'), "r") as json_file_icon:
             json_data_icon = json.load(json_file_icon)
             icon_areas = json_data_icon["area1"]
         h, w = template.shape[:2]
-        area = [int(i) if i > 0 else 0 for i in [icon_areas[0] * w, icon_areas[1] * h, icon_areas[2] * w, icon_areas[3] * h]]
+        area = [int(i) if i > 0 else 0 for i in
+                [icon_areas[0] * w, icon_areas[1] * h, icon_areas[2] * w, icon_areas[3] * h]]
         template = template[area[1]:area[3], area[0]:area[2]]
+        th, tw = template.shape[:2]
         result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
-
         cv2.normalize(result, result, 0, 1, cv2.NORM_MINMAX, -1)
-
-        min_val, max_val, min_loc, min_loc = cv2.minMaxLoc(result)
-        print(min_val,max_val)
-        print(min_loc,min_loc)
-
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        point_x = min_loc[0] + 1 / 2 * tw
+        point_y = min_loc[1] + 1 / 2 * th
+        if cal_real_xy:
+            self.cal_realy_xy(point_x, point_y, self.default_pic_path)
+        else:
+            self.cx, self.cy = point_x, point_y
 
     def _ocr_request(self, **kwargs):
         pic_path = kwargs.get("pic_path")
@@ -291,5 +293,3 @@ class Complex_Center(object):
         cv2.imwrite(self._pic_path,
                     src[self.crop_offset[1]:self.crop_offset[3], self.crop_offset[0]:self.crop_offset[2]])
         return 0
-
-

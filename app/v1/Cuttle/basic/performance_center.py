@@ -9,7 +9,7 @@ import numpy as np
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound
-from app.v1.Cuttle.basic.operator.camera_operator import CameraMax, FpsMax
+from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 
@@ -59,7 +59,8 @@ class PerformanceCenter(object):
         number = 0
         self.start_number = 0
         # 等异步线程时间
-        time.sleep(0.3)
+        time.sleep(0.5)
+        print("scope:", self.scope, "icon -scope", self.icon_scope)
         while self.loop_flag:
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False
             number, picture, next_picture, _ = self.picture_prepare(number, use_icon_scope=use_icon_scope)
@@ -69,7 +70,7 @@ class PerformanceCenter(object):
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 if judge_function.__name__ == "_black_field":
-                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // 0.4)
+                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // 0.25)
                 break
             if number >= CameraMax / 2:
                 self.move_flag = False
@@ -124,8 +125,9 @@ class PerformanceCenter(object):
                 # print(f"find end point number: {number}", "bias:", self.bias)
                 # self.result = {"fps_lost": True, "lost_number": number}
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                if hasattr(self, "candidate") and number - self.candidate >= 10:
-                    self.result = {"fps_lost": False}
+                if hasattr(self, "candidate") and number - self.candidate >= 3:
+                    self.result = {"fps_lost": False,
+                                   "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                     self.end_number = number - 1
                     self.move_flag = False
                     break
@@ -136,7 +138,8 @@ class PerformanceCenter(object):
                     continue
             else:
                 if hasattr(self, "candidate"):
-                    self.result = {"fps_lost": True, "lost_number": self.candidate}
+                    self.result = {"fps_lost": True, "lost_number": self.candidate,
+                                   "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                     self.end_number = number - 1
                     self.move_flag = False
                     break

@@ -10,12 +10,10 @@ from app.execption.outer.error_code.camera import NoSrc, NoCamera, CameraInitFai
 from app.v1.Cuttle.basic.MvImport.HK_import import *
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
-from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, camera_params
+from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, camera_params, FpsMax, CameraMax
 from redis_init import redis_client
 
 MoveToPress = 9
-FpsMax = 120
-CameraMax = 600
 ImageNumberFile = "__number.txt"
 
 # if CORAL_TYPE in [4,5]:

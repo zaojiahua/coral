@@ -45,6 +45,14 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.point()
         return ocr_obj.result
 
+    def smart_icon_point_template(self, content) -> int:
+        with Complex_Center(**self.kwargs) as ocr_obj:
+            ocr_obj.snap_shot()
+            self.image = ocr_obj.default_pic_path
+            ocr_obj.get_result_by_template_match(content)
+            ocr_obj.point()
+        return ocr_obj.result
+
     def smart_ocr_long_press(self, content) -> int:
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()

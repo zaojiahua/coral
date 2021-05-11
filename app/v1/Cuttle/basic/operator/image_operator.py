@@ -1,9 +1,7 @@
 import os
 import random
-import time
 
 import cv2
-import imageio
 import numpy as np
 
 from app.execption.outer.error_code.imgtool import OcrParseFail, RecordWordsFindNoWords, \
@@ -14,12 +12,11 @@ from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompa
 from app.v1.Cuttle.basic.calculater_mixin.perforamnce_calculater import PerformanceMinix
 from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
 from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
-from app.v1.Cuttle.basic.common_utli import get_file_name, threshold_set
+from app.v1.Cuttle.basic.common_utli import threshold_set
 from app.v1.Cuttle.basic.coral_cor import Complex_Center
-from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, VideoPicSchema
-from app.v1.Cuttle.basic.operator.camera_operator import ImageNumberFile, FpsMax
+from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
-from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate, BIAS
+from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate
 
 VideoSearchPosition = 0.5
 
@@ -66,6 +63,24 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
             return IconTooWeek.error_code
         point_x = result[0]
         point_y = result[1]
+        self._model.logger.debug(f"icon position in picture:{point_x},{point_y}")
+        if data.get("output_path"):
+            self._write_down(data.get("output_path"), f"{round(point_x, 2)} {round(point_y, 2)}")
+        # extra_result 的结果会最终合并到unit的结果中去
+        self.extra_result = {"point_x": float(point_x), "point_y": float(point_y)}
+        return 0
+
+    def identify_icon_template(self, exec_content):
+        data = self._validate(exec_content, ImageSchema)
+
+        template = self._crop_image(data.get("refer_im"), data.get("areas")[0])
+        target = cv2.imread(data.get("input_im"))
+        th, tw = template.shape[:2]
+        result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
+        cv2.normalize(result, result, 0, 1, cv2.NORM_MINMAX, -1)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        point_x = min_loc[0] + 1 / 2 * tw
+        point_y = min_loc[1] + 1 / 2 * th
         self._model.logger.debug(f"icon position in picture:{point_x},{point_y}")
         if data.get("output_path"):
             self._write_down(data.get("output_path"), f"{round(point_x, 2)} {round(point_y, 2)}")
@@ -239,28 +254,28 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
                     return False
             return True
 
-    def video_to_pic(self, video_file):
-        start = time.time()
-        reader = imageio.get_reader(video_file)
-        fps = reader.get_meta_data()['fps']
-        drop = int(fps / FpsMax) if fps / 2 > FpsMax else 1
-        num = 0
-        try:
-            for index in range(0, 10000, drop):
-                im = reader.get_data(index)
-                img = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-                new_name = get_file_name(self.video) + f"__{num}.png"
-                cv2.imwrite(new_name, img)
-                num += 1
-        except IndexError:
-            # 最后一张图放入类属性，用于T-Guard 排除干扰
-            self.image = new_name
-            pass
-        with open(get_file_name(self.video) + ImageNumberFile, "w") as f:
-            f.write(str(num - 1))
-        print("fps:", int(fps / drop))
-        print("拆分视频用时：", time.time() - start)
-        return int(fps / drop)
+    # def video_to_pic(self, video_file):
+    #     start = time.time()
+    #     reader = imageio.get_reader(video_file)
+    #     fps = reader.get_meta_data()['fps']
+    #     drop = int(fps / FpsMax) if fps / 2 > FpsMax else 1
+    #     num = 0
+    #     try:
+    #         for index in range(0, 10000, drop):
+    #             im = reader.get_data(index)
+    #             img = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+    #             new_name = get_file_name(self.video) + f"__{num}.png"
+    #             cv2.imwrite(new_name, img)
+    #             num += 1
+    #     except IndexError:
+    #         # 最后一张图放入类属性，用于T-Guard 排除干扰
+    #         self.image = new_name
+    #         pass
+    #     with open(get_file_name(self.video) + ImageNumberFile, "w") as f:
+    #         f.write(str(num - 1))
+    #     print("fps:", int(fps / drop))
+    #     print("拆分视频用时：", time.time() - start)
+    #     return int(fps / drop)
 
     def words_prepare(self, exec_content, key):
         data = self._validate(exec_content, schema=ImageBasicSchema)

@@ -83,7 +83,7 @@ class MacroHandler(object):
             available_type = {"id": "name", "username": "username", "code": "password"}
             if type.lower() not in available_type.keys():
                 raise EblockResourceMacroWrongFormat
-            device_id = kwargs.get("device_id", None)
+            device_id = kwargs.get("device_label", None)
             try:
                 response = request(url=account_url, params={"app_name": app_name,
                                                             "device__device_label": device_id,
@@ -91,11 +91,11 @@ class MacroHandler(object):
             except RequestException:
                 raise DeviceNeedResource
             content = response.get(available_type.get(type.lower()))
-            re.sub("<Acc_.*?>", content, cmd)
+            cmd = re.sub("<Acc_.*?>", content, cmd)
         if Phone in cmd:
             res = re.search("<Sim_(.*?)>", cmd)
             sim_number = res.group(1)
-            device_id = kwargs.get("device_id", None)
+            device_id = kwargs.get("device_label", None)
             try:
                 response = request(url=simcard_url, params={"device__device_label": device_id, "order": sim_number,
                                                             "fields": "phone_number"},
@@ -103,7 +103,7 @@ class MacroHandler(object):
             except RequestException:
                 raise DeviceNeedResource
             phone_number = response.get("phone_number")
-            re.sub("<Sim_.*?>", phone_number, cmd)
+            cmd = re.sub("<Sim_.*?>", phone_number, cmd)
         if copy_singal in cmd:
             res = re.search("<blkOutPath>(.*?)<copy2rdsDatPath>", cmd)
             cmd = cmd.replace("<copy2rdsDatPath>", "")

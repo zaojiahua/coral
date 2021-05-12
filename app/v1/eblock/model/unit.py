@@ -122,7 +122,9 @@ class Unit(BaseModel):
                 repalced_cmd_list = []
                 for cmd in cmd_list:
                     try:
-                        replaced_cmd, save_file = handler.replace(cmd, assist_device_ident=assist_device_ident)
+                        replaced_cmd, save_file = handler.replace(cmd,
+                                                                  assist_device_ident=assist_device_ident,
+                                                                  device_label= self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
                         return
@@ -154,7 +156,8 @@ class Unit(BaseModel):
                 for key, value in cmd_dict.items():
                     try:
                         out_string, save_file = handler.replace(value.get("content"),
-                                                                assist_device_ident=assist_device_ident)
+                                                                assist_device_ident=assist_device_ident,
+                                                                device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
                         return

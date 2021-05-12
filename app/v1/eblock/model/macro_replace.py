@@ -3,6 +3,11 @@ import re
 import time
 
 from app.config.ip import REEF_IP
+from app.config.url import simcard_url, account_url
+from app.execption.outer.error_code.eblock import EblockCannotFindFile, MaroUnrecognition, \
+    EblockResourceMacroWrongFormat, DeviceNeedResource
+from app.execption.outer.error_code.total import RequestException
+from app.libs.http_client import request
 from app.execption.outer.error_code.eblock import EblockCannotFindFile, MaroUnrecognition
 from app.v1.Cuttle.basic.setting import arm_default
 
@@ -24,6 +29,8 @@ Rotate_switchHold = "<RotateSwitchHold>"
 RotateNormal = "<RotateNormal>"
 RotateInit = "<RotateInit>"
 RotateUp = '<RotateUp>'
+Resource = "<Acc_"
+Phone = "<Sim_"
 
 job_editor_logo = "Tmach"
 
@@ -52,6 +59,7 @@ class MacroHandler(object):
 
     def replace(self, cmd, **kwargs):
         assist_device_ident = kwargs.pop("assist_device_ident", None)
+        device_id = kwargs.get("device_label", None)
         save_file = ""
         if job_editor_logo in cmd:
             for i in re.findall("Tmach(.*?) ", cmd):
@@ -66,6 +74,40 @@ class MacroHandler(object):
             with open(position_path, "r") as f:
                 position = f.read()
                 cmd = re.sub("<Macro_.*?>", position.strip(), cmd)
+        if Resource in cmd:
+            # <Re_appname_type>
+            res = re.search("<Acc_(.*?)>", cmd)
+            resource = res.group(1)
+            if len(resource.split("_")) < 2:
+                raise EblockResourceMacroWrongFormat
+            app_name = resource.split("_")[0]
+            type = resource.split("_")[1]
+            # 兼容用户输入简便，与数据库定义
+            available_type = {"id": "name", "username": "username", "code": "password"}
+            if type.lower() not in available_type.keys():
+                raise EblockResourceMacroWrongFormat
+
+            d_params = {"subsidiary_device__serial_number": assist_device_ident} if assist_device_ident else {
+                "device__device_label": device_id}
+            d_params.update({"app_name": app_name, "fields": "name,username,password"})
+            try:
+                response = request(url=account_url, params=d_params, filter_unique_key=True)
+            except RequestException:
+                raise DeviceNeedResource
+            content = response.get(available_type.get(type.lower()))
+            cmd = re.sub("<Acc_.*?>", content, cmd)
+        if Phone in cmd:
+            res = re.search("<Sim_(.*?)>", cmd)
+            sim_number = res.group(1)
+            d_params = {"subsidiary_device__serial_number": assist_device_ident} if assist_device_ident else {
+                "device__device_label": device_id}
+            d_params.update({"order": sim_number, "fields": "phone_number"})
+            try:
+                response = request(url=simcard_url, params=d_params, filter_unique_key=True)
+            except RequestException:
+                raise DeviceNeedResource
+            phone_number = response.get("phone_number")
+            cmd = re.sub("<Sim_.*?>", phone_number, cmd)
         if copy_singal in cmd:
             res = re.search("<blkOutPath>(.*?)<copy2rdsDatPath>", cmd)
             cmd = cmd.replace("<copy2rdsDatPath>", "")
@@ -92,7 +134,7 @@ class MacroHandler(object):
                 if Rotate_switchHold == cmd:
                     res = re.search(f"{Rotate_switchHold}(.*?)$", cmd)
                     second = res.group(1)
-                    value = value+str(second)
+                    value = value + str(second)
                 cmd = cmd.replace(key, value)
                 break
         if adb_ip_prefix in cmd:

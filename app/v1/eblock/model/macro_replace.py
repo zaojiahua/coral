@@ -27,7 +27,7 @@ Rotate_switchHold = "<RotateSwitchHold>"
 RotateNormal = "<RotateNormal>"
 RotateInit = "<RotateInit>"
 RotateUp = '<RotateUp>'
-Resource = "<Res_"
+Resource = "<Acc_"
 Phone = "<Sim_"
 
 job_editor_logo = "Tmach"
@@ -57,6 +57,7 @@ class MacroHandler(object):
 
     def replace(self, cmd, **kwargs):
         assist_device_ident = kwargs.pop("assist_device_ident", None)
+        device_id = kwargs.get("device_label", None)
         save_file = ""
         if job_editor_logo in cmd:
             for i in re.findall("Tmach(.*?) ", cmd):
@@ -75,7 +76,7 @@ class MacroHandler(object):
             # <Re_appname_type>
             res = re.search("<Acc_(.*?)>", cmd)
             resource = res.group(1)
-            if resource.split("_") < 2:
+            if len(resource.split("_")) < 2:
                 raise EblockResourceMacroWrongFormat
             app_name = resource.split("_")[0]
             type = resource.split("_")[1]
@@ -83,11 +84,12 @@ class MacroHandler(object):
             available_type = {"id": "name", "username": "username", "code": "password"}
             if type.lower() not in available_type.keys():
                 raise EblockResourceMacroWrongFormat
-            device_id = kwargs.get("device_label", None)
+
+            d_params = {"subsidiary_device__serial_number": assist_device_ident} if assist_device_ident else {
+                "device__device_label": device_id}
+            d_params.update({"app_name": app_name, "fields": "name,username,password"})
             try:
-                response = request(url=account_url, params={"app_name": app_name,
-                                                            "device__device_label": device_id,
-                                                            "fields": "name,username,password"}, filter_unique_key=True)
+                response = request(url=account_url, params=d_params, filter_unique_key=True)
             except RequestException:
                 raise DeviceNeedResource
             content = response.get(available_type.get(type.lower()))
@@ -95,11 +97,11 @@ class MacroHandler(object):
         if Phone in cmd:
             res = re.search("<Sim_(.*?)>", cmd)
             sim_number = res.group(1)
-            device_id = kwargs.get("device_label", None)
+            d_params = {"subsidiary_device__serial_number": assist_device_ident} if assist_device_ident else {
+                "device__device_label": device_id}
+            d_params.update({"order": sim_number, "fields": "phone_number"})
             try:
-                response = request(url=simcard_url, params={"device__device_label": device_id, "order": sim_number,
-                                                            "fields": "phone_number"},
-                                   filter_unique_key=True)
+                response = request(url=simcard_url, params=d_params, filter_unique_key=True)
             except RequestException:
                 raise DeviceNeedResource
             phone_number = response.get("phone_number")

@@ -60,7 +60,6 @@ class PerformanceCenter(object):
         self.start_number = 0
         # 等异步线程时间
         time.sleep(0.5)
-        print("scope:", self.scope, "icon -scope", self.icon_scope)
         while self.loop_flag:
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False
             number, picture, next_picture, _ = self.picture_prepare(number, use_icon_scope=use_icon_scope)

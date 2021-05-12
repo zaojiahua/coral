@@ -33,7 +33,7 @@ class PerformanceMinix(object):
                                         self.kwargs.get("work_path"), self.dq, bias=SWIPE_BIAS)
         return performance.start_loop(self._black_field)
 
-    def start_point_with_point_fixed(self, exec_content):
+    def start_point_with_point_template(self, exec_content):
         # 使用实际位置是否为黑色（机械臂遮挡）判定起始按下时间
         data = self._validate(exec_content, PerformanceSchema)
         content = exec_content.copy()
@@ -60,8 +60,8 @@ class PerformanceMinix(object):
             except NotFindIcon:
                 return 1
             # +-camera_x0先换算到裁剪前摄像头图中的绝对坐标，这个数据用于起点的识别
-            icon_real_position_camera = [ocr_obj.cx + camera_x0 - 30, ocr_obj.cy + camera_y0 - 30,
-                                         ocr_obj.cx + camera_x0 + 30, ocr_obj.cy + camera_y0 + 30]
+            icon_real_position_camera = [ocr_obj.cx + camera_x0 - 20, ocr_obj.cy + camera_y0 - 20,
+                                         ocr_obj.cx + camera_x0 + 20, ocr_obj.cy + camera_y0 + 20]
             # 此处换算到裁剪前的，截图下的坐标区域，这个数据用于驱动点击操作
             ocr_obj.cal_realy_xy(ocr_obj.cx, ocr_obj.cy, ocr_obj.default_pic_path)
             ocr_obj.add_bias(snap_x0, snap_y0)
@@ -237,7 +237,6 @@ class PerformanceMinix(object):
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
         final_result = match_ratio > threshold - 0.01
-        print(match_ratio)
         if changed is True:
             final_result = bool(1 - final_result)
         return final_result

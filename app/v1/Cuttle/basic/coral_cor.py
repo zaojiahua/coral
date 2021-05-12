@@ -186,7 +186,8 @@ class Complex_Center(object):
             self.cx, self.cy = point_x, point_y
 
     def get_result_by_template_match(self, info_body, cal_real_xy=True):
-        target = cv2.imread(self._pic_path)
+        target_path = self.default_pic_path if self._pic_path == None else self._pic_path
+        target = cv2.imread(target_path)
         template = cv2.imread(info_body.get("referImgFile"))
         with open(info_body.get('configFile'), "r") as json_file_icon:
             json_data_icon = json.load(json_file_icon)

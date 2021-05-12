@@ -55,7 +55,7 @@ class AreaSelectedMixin(object):
             ocr_obj.get_result_by_feature(info_body)
             ocr_obj.add_bias(x0, y0)
             ocr_obj.point()
-        return ocr_obj.resul
+        return ocr_obj.result
 
     def smart_icon_point_crop_template(self, info_body) -> int:
         data = self._validate(info_body, ImageAreaWithoutInputSchema)

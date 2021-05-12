@@ -142,7 +142,7 @@ class PerformanceCenter(object):
                     self.end_number = number - 1
                     self.move_flag = False
                     break
-            if number >= CameraMax / 3:
+            if number >= CameraMax / 2:
                 self.move_flag = False
                 self.back_up_dq.clear()
                 raise VideoEndPointNotFound

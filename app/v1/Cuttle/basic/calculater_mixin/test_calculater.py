@@ -82,6 +82,38 @@ class TestMixin(object):
             'key_point_two': key_number_2,
         }
 
+    def test_icon_position_fixed(self,exec_content):
+        data = IconTestSchema().load(exec_content)
+        icon_path = self._crop_image_and_save(data.get("input_image"), data.get("areas")[0], mark='icon')
+        image_crop_path = self._crop_image_and_save(data.get("input_image"), data.get("crop_areas")[0])
+        template = cv2.imread(icon_path)
+        target = cv2.imread(image_crop_path)
+        th, tw = template.shape[:2]
+        result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
+        cv2.normalize(result, result, 0, 1, cv2.NORM_MINMAX, -1)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        result_x = min_loc[0] + 1 / 2 * tw
+        result_y = min_loc[1] + 1 / 2 * th
+        img = Image.open(image_crop_path).convert("RGB")
+        img_draw = ImageDraw.Draw(img)
+        length = max(np.array(img).shape[:2])
+        length_cross = int(length * 0.03)
+        img_draw.line(xy=(result_x - length_cross, result_y, result_x + length_cross, result_y), fill='green',
+                      width=int(length * 0.007))
+        img_draw.line(xy=(result_x, result_y - length_cross, result_x, result_y + length_cross), fill='green',
+                      width=int(length * 0.007))
+        output_buffer = BytesIO()
+        output_icon_buffer = BytesIO()
+        img.save(output_buffer, format='JPEG')
+        Image.open(icon_path).convert("RGB").save(output_icon_buffer, format='JPEG')
+        byte_data = output_buffer.getvalue()
+        icon_byte_data = output_icon_buffer.getvalue()
+        self.remove_if_exist(icon_path, data.get("input_image"), image_crop_path)
+        return {
+            "img_detected": 'data:image/jpeg;base64,' + base64.b64encode(byte_data).decode('utf8'),
+            'icon': 'data:image/jpeg;base64,' + base64.b64encode(icon_byte_data).decode('utf8'),
+        }
+
     def test_ocr_result(self, exec_content):
         data = OcrTestSchema().load(exec_content)
         pic_path = self._crop_image_and_save(data.get("input_image"), data.get("areas")[0]) if data.get(

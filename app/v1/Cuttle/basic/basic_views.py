@@ -67,6 +67,12 @@ class TestIconPositionClass(MethodView):
         # except Exception as e:
         #     return jsonify({"status": repr(e)}), 400
 
+def test_position_fixed():
+    image_handler = ImageHandler(model=Dummy_model, many=False)
+    response = image_handler.test_icon_position_fixed(request.files)
+    return jsonify(response), 200
+
+
 
 class TestOcrClass(MethodView):
     def post(self):

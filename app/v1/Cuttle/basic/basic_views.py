@@ -13,7 +13,6 @@ from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 
-
 # 每一个相同的底层unit都有6种情况：
 
 #  主机unit -->  ADB执行unit             1主机有线执行
@@ -27,6 +26,7 @@ from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 
 # 坐标的换算有下面多种情况
 # 相对坐标/绝对坐标  摄像头下像素坐标/截图中像素坐标/机械臂下物理坐标    裁剪图中坐标/实际图中坐标
+from app.v1.Cuttle.basic.url import basic
 
 
 class UnitFactory(object):
@@ -49,41 +49,39 @@ class UnitFactory(object):
                                   **input_data).execute()
 
 
-class TestIconClass(MethodView):
-    def post(self):
-        try:
-            image_handler = ImageHandler(model=Dummy_model, many=False)
-            return jsonify(image_handler.test_icon_exist(request.files)), 200
-        except Exception as e:
-            return jsonify({"status": repr(e)}), 400
+@basic.route('/icon_test/', methods=['POST'])
+def test_icon_exist():
+    try:
+        image_handler = ImageHandler(model=Dummy_model, many=False)
+        return jsonify(image_handler.test_icon_exist(request.files)), 200
+    except Exception as e:
+        return jsonify({"status": repr(e)}), 400
 
 
-class TestIconPositionClass(MethodView):
-    def post(self):
-        # try:
-            image_handler = ImageHandler(model=Dummy_model, many=False)
-            response = image_handler.test_icon_position(request.files)
-            return jsonify(response), 200
-        # except Exception as e:
-        #     return jsonify({"status": repr(e)}), 400
+@basic.route('/icon_test_position/', methods=['POST'])
+def test_position():
+    image_handler = ImageHandler(model=Dummy_model, many=False)
+    response = image_handler.test_icon_position(request.files)
+    return jsonify(response), 200
 
+
+@basic.route('/icon_test_position_fixed/', methods=['POST'])
 def test_position_fixed():
     image_handler = ImageHandler(model=Dummy_model, many=False)
     response = image_handler.test_icon_position_fixed(request.files)
     return jsonify(response), 200
 
 
-
-class TestOcrClass(MethodView):
-    def post(self):
-        try:
-            image_handler = ImageHandler(model=Dummy_model, many=False)
-            request_params = {}
-            request_params.update(request.files)
-            request_params.update(request.form.to_dict())
-            return jsonify(image_handler.test_ocr_result(request_params)), 200
-        except Exception as e:
-            return jsonify({"status": repr(e)}), 400
+@basic.route('/ocr_test/', methods=['POST'])
+def ocr_test():
+    try:
+        image_handler = ImageHandler(model=Dummy_model, many=False)
+        request_params = {}
+        request_params.update(request.files)
+        request_params.update(request.form.to_dict())
+        return jsonify(image_handler.test_ocr_result(request_params)), 200
+    except Exception as e:
+        return jsonify({"status": repr(e)}), 400
 
 
 if __name__ == '__main__':

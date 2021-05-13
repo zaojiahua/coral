@@ -124,7 +124,7 @@ class PerformanceCenter(object):
                 # print(f"find end point number: {number}", "bias:", self.bias)
                 # self.result = {"fps_lost": True, "lost_number": number}
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                if hasattr(self, "candidate") and number - self.candidate >= 3:
+                if hasattr(self, "candidate") and number - self.candidate >= 5:
                     self.result = {"fps_lost": False,
                                    "picture_count": number + 29,
                                    "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}

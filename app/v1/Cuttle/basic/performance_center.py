@@ -138,7 +138,7 @@ class PerformanceCenter(object):
                     continue
             else:
                 if hasattr(self, "candidate"):
-                    self.result = {"fps_lost": True, "lost_number": self.candidate,
+                    self.result = {"fps_lost": True, "lose_frame_point": self.candidate,
                                    "picture_count": number + 29,
                                    "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                     self.end_number = number - 1

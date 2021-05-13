@@ -4,7 +4,7 @@ from flask.views import MethodView
 
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.model import HandDevice, AdbDevice
-# 下面5条不可去掉
+# 下面5条不可去掉,因为是要靠eval实例化的类
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import CameraHandler
 from app.v1.Cuttle.basic.operator.complex_operator import ComplexHandler
@@ -83,20 +83,3 @@ def ocr_test():
     except Exception as e:
         return jsonify({"status": repr(e)}), 400
 
-
-if __name__ == '__main__':
-    test_dict = {
-        "execCmdDict": {
-            "configArea": {
-                "content": "<1ijobFile>Tmach ",
-            },
-            "configFile": {
-                "content": "<1ijobFile>Tmach ",
-            },
-            "inputImgFile": {
-                "content": "<blkOutPath>Tmach ",
-            },
-            "referImgFile": {
-                "content": "<1ijobFile>Tmach ",
-            }
-        }}

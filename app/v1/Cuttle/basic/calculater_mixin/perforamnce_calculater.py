@@ -9,7 +9,7 @@ import numpy as np
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.imgtool import IconTooWeek, NotFindIcon
 from app.libs.thread_extensions import executor_callback
-from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter

@@ -1,4 +1,4 @@
-from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.complex_center import Complex_Center
 
 
 class PreciseMixin(object):

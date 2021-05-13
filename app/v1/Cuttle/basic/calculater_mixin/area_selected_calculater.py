@@ -1,7 +1,7 @@
 import cv2
 
 from app.v1.Cuttle.basic.common_utli import threshold_set
-from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageAreaSchema, ImageOriginalSchema, ImageAreaWithoutInputSchema, \
     ImageRealtimeSchema
 from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate

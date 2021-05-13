@@ -13,7 +13,7 @@ from app.v1.Cuttle.basic.calculater_mixin.perforamnce_calculater import Performa
 from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
 from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
 from app.v1.Cuttle.basic.common_utli import threshold_set
-from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate

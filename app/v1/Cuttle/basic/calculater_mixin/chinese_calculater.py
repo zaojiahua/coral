@@ -1,7 +1,7 @@
 import pypinyin
 
 from app.execption.outer.error_code.adb import PinyinTransferFail
-from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.complex_center import Complex_Center
 
 
 class ChineseMixin(object):

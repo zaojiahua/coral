@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 from app.v1.Cuttle.basic.common_utli import precise_match, blur_match, check_color_by_position
-from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageColorSchema, ImageColorRelativePositionSchema
 from app.v1.Cuttle.basic.setting import color_rate, color_threshold, strip_str
 

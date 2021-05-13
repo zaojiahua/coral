@@ -6,7 +6,7 @@ from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParse
     CannotFindRecentVideoOrImage
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.common_utli import judge_pic_same
-from app.v1.Cuttle.basic.coral_cor import Complex_Center
+from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import SimpleSchema, SimpleVideoPullSchema
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.handler import Standard

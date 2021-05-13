@@ -52,9 +52,7 @@ class TestMixin(object):
             return {"error": e.description}
         if len(response) < 4:
             return {"error": 'sample point not enough'}
-        # k = len(response)//10
-        # print("k:",k)
-        code, centroids = FeatureCompareMixin.kmeans_clustering(response, 4)  # five centroids
+        code, centroids = FeatureCompareMixin.kmeans_clustering(response, 4)
         max_centro = Counter(code).most_common(2)[0][0]
         key_number_1 = Counter(code).most_common(2)[0][1]
         key_number_2 = Counter(code).most_common(2)[1][1]

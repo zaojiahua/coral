@@ -147,13 +147,14 @@ class PerformanceMinix(object):
         return performance.start_loop(self._black_field)
 
     def end_point_with_icon(self, exec_content):
-        self._end_point(exec_content, PerformanceSchema, self._icon_find)
+        return self._end_point(exec_content, PerformanceSchema, self._icon_find)
 
     def end_point_with_icon_template_match(self, exec_content):
-        self._end_point(exec_content, PerformanceSchema, self._icon_find_template_match)
+        print("in end template")
+        return self._end_point(exec_content, PerformanceSchema, self._icon_find_template_match)
 
     def end_point_with_changed(self, exec_content):
-        self._end_point(exec_content, PerformanceSchemaCompare, self._picture_changed)
+        return self._end_point(exec_content, PerformanceSchemaCompare, self._picture_changed)
 
     def _end_point(self, exec_content, schema, judge_function):
         try:

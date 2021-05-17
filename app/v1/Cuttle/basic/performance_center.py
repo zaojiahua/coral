@@ -88,7 +88,7 @@ class PerformanceCenter(object):
             number, picture, next_picture, _ = self.picture_prepare(number)
         while self.loop_flag:
             number, picture, next_picture, _ = self.picture_prepare(number)
-            pic2 = self.judge_icon if judge_function.__name__ == "_icon_find" else next_picture
+            pic2 = self.judge_icon if judge_function.__name__ in ["_icon_find","_icon_find_template_match"] else next_picture
             if judge_function(picture, pic2, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 self.end_number = number - 1

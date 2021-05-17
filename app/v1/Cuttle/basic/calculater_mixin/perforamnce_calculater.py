@@ -147,42 +147,21 @@ class PerformanceMinix(object):
         return performance.start_loop(self._black_field)
 
     def end_point_with_icon(self, exec_content):
-        try:
-            data = self._validate(exec_content, PerformanceSchema)
-            performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
-                                            data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq)
-            performance.end_loop(self._icon_find)
-            time.sleep(0.5)  # 等待后续30张图片save完成
-            self.extra_result = performance.result
-            return 0
-        except APIException as e:
-            self.image = performance.tguard_picture_path
-            self.extra_result = performance.result if isinstance(performance.result, dict) else {}
-            return 1
+        self._end_point(exec_content, PerformanceSchema, self._icon_find)
 
     def end_point_with_icon_template_match(self, exec_content):
-        try:
-            data = self._validate(exec_content, PerformanceSchema)
-            performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
-                                            data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq)
-            performance.end_loop(self._icon_find_template_match)
-            time.sleep(0.5)  # 等待后续30张图片save完成
-            self.extra_result = performance.result
-            return 0
-        except APIException as e:
-            self.image = performance.tguard_picture_path
-            self.extra_result = performance.result if isinstance(performance.result, dict) else {}
-            return 1
+        self._end_point(exec_content, PerformanceSchema, self._icon_find_template_match)
 
     def end_point_with_changed(self, exec_content):
+        self._end_point(exec_content, PerformanceSchemaCompare, self._picture_changed)
+
+    def _end_point(self, exec_content, schema, judge_function):
         try:
-            data = self._validate(exec_content, PerformanceSchemaCompare)
+            data = self._validate(exec_content, schema)
             performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                             data.get("areas")[0], data.get("threshold", 0.99),
                                             self.kwargs.get("work_path"), self.dq)
-            performance.end_loop(self._picture_changed)
+            performance.end_loop(judge_function)
             time.sleep(0.5)  # 等待后续30张图片save完成
             self.extra_result = performance.result
             return 0

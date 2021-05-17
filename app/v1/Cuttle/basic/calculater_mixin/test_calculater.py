@@ -80,7 +80,7 @@ class TestMixin(object):
             'key_point_two': key_number_2,
         }
 
-    def test_icon_position_fixed(self,exec_content):
+    def test_icon_position_fixed(self, exec_content):
         data = IconTestSchema().load(exec_content)
         icon_path = self._crop_image_and_save(data.get("input_image"), data.get("areas")[0], mark='icon')
         image_crop_path = self._crop_image_and_save(data.get("input_image"), data.get("crop_areas")[0])
@@ -110,6 +110,7 @@ class TestMixin(object):
         return {
             "img_detected": 'data:image/jpeg;base64,' + base64.b64encode(byte_data).decode('utf8'),
             'icon': 'data:image/jpeg;base64,' + base64.b64encode(icon_byte_data).decode('utf8'),
+            'min_value': min_val
         }
 
     def test_ocr_result(self, exec_content):

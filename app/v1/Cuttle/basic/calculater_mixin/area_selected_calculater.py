@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 from app.v1.Cuttle.basic.common_utli import threshold_set
 from app.v1.Cuttle.basic.complex_center import Complex_Center
@@ -28,7 +29,7 @@ class AreaSelectedMixin(object):
             ocr_obj.snap_shot()
             from app.v1.device_common.device_model import Device
             dev_obj = Device(pk=self._model.pk)
-            h, w = dev_obj.device_height,dev_obj.device_width
+            h, w = dev_obj.device_height, dev_obj.device_width
             x0, y0 = int(data.get("areas")[0][0] * w), int(data.get("areas")[0][1] * h)
             crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("areas")[0])
             self.image = ocr_obj.default_pic_path
@@ -47,7 +48,7 @@ class AreaSelectedMixin(object):
             ocr_obj.snap_shot()
             from app.v1.device_common.device_model import Device
             dev_obj = Device(pk=self._model.pk)
-            h, w = dev_obj.device_height,dev_obj.device_width
+            h, w = dev_obj.device_height, dev_obj.device_width
             x0, y0 = int(data.get("crop_areas")[0][0] * w), int(data.get("crop_areas")[0][1] * h)
             input_crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("crop_areas")[0])
             self.image = ocr_obj.default_pic_path
@@ -63,7 +64,7 @@ class AreaSelectedMixin(object):
             ocr_obj.snap_shot()
             from app.v1.device_common.device_model import Device
             dev_obj = Device(pk=self._model.pk)
-            h, w = dev_obj.device_height,dev_obj.device_width
+            h, w = dev_obj.device_height, dev_obj.device_width
             x0, y0 = int(data.get("crop_areas")[0][0] * w), int(data.get("crop_areas")[0][1] * h)
             input_crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("crop_areas")[0])
             self.image = ocr_obj.default_pic_path
@@ -78,3 +79,18 @@ class AreaSelectedMixin(object):
         input_im_2 = self._crop_image(data.get("input_im_2"), data.get("areas")[0])
         input_im = self._crop_image(data.get("input_im"), data.get("areas")[0])
         return self.numpy_array(input_im, input_im_2, threshold_set(data.get("threshold", 0.99)))
+
+    def has_icon_template_match(self, exec_content) -> int:
+        data = self._validate(exec_content, ImageAreaSchema)
+        template = self._crop_image(data.get("refer_im"), data.get("areas")[0])
+        target = self._crop_image(data.get("input_im"), data.get("crop_areas")[0])
+        result = self.template_match(target, template)
+        return 0 if result is True else 1
+
+    def template_match(self, target, template):
+        result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
+        cv2.normalize(result, result, 0, 1, cv2.NORM_MINMAX, -1)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        print(np.abs(min_val))
+        result = np.abs(min_val) < 1e-10
+        return result

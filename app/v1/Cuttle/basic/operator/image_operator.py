@@ -14,7 +14,7 @@ from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
 from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
 from app.v1.Cuttle.basic.common_utli import threshold_set
 from app.v1.Cuttle.basic.complex_center import Complex_Center
-from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema
+from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, ImageAreaSchema
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate
 
@@ -87,6 +87,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         # extra_result 的结果会最终合并到unit的结果中去
         self.extra_result = {"point_x": float(point_x), "point_y": float(point_y)}
         return 0
+
+
 
     def has_icon(self, exec_content) -> int:
         # 判断所选择区域内有指定图标

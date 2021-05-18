@@ -104,7 +104,8 @@ class HandHandler(Handler, DefaultMixin):
         sliding_order = self.__sliding_order(point[0], point[1], self.speed)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         # time.sleep(wait_time)
-        self.ignore_reset = True
+        if self.speed == 10000:
+            self.ignore_reset = True
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def trapezoid_slide(self, point, **kwargs):

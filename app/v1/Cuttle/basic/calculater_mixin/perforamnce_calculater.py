@@ -229,6 +229,8 @@ class PerformanceMinix(object):
         response = self.template_match(picture, icon)
         if disappear is True:
             response = bool(1 - response)
+        cv2.imwrite("1-r.jpg", icon)
+        cv2.imwrite("2-r.jpg", picture)
         return response
 
     def _picture_changed(self, last_pic, next_pic, threshold, changed=True):

@@ -90,5 +90,5 @@ class AreaSelectedMixin(object):
     def template_match(self, target, template):
         result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-        result = np.abs(min_val) < 0.01
+        result = np.abs(min_val) < 0.05
         return result

@@ -94,7 +94,7 @@ class ImageMainColorSchema(ImageColorSchema):
 class ImageColorRelativePositionSchema(ImageSchema):
     requiredWords = fields.String(required=True, data_key="requiredWords")
     xyShift = fields.String(required=True, data_key="xyShift", validate=verify_format)
-    position = fields.String(required=True, data_key="position", validate=(verify_not_relative_coor, verify_format))
+    position = fields.String(required=True, data_key="position", validate=verify_format)
 
 
 class ImageAreaSchema(ImageSchema):

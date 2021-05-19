@@ -150,7 +150,6 @@ class PerformanceMinix(object):
         return self._end_point(exec_content, PerformanceSchema, self._icon_find)
 
     def end_point_with_icon_template_match(self, exec_content):
-        print("in end template")
         return self._end_point(exec_content, PerformanceSchema, self._icon_find_template_match)
 
     def end_point_with_changed(self, exec_content):
@@ -229,8 +228,6 @@ class PerformanceMinix(object):
         response = self.template_match(picture, icon)
         if disappear is True:
             response = bool(1 - response)
-        cv2.imwrite("1-r.jpg", icon)
-        cv2.imwrite("2-r.jpg", picture)
         return response
 
     def _picture_changed(self, last_pic, next_pic, threshold, changed=True):

@@ -40,13 +40,10 @@ class TestMixin(object):
         data = IconTestSchema().load(exec_content)
         icon = self._crop_image(data.get("input_image"), data.get("areas")[0])
         picture = self._crop_image(data.get("input_image"), data.get("crop_areas")[0])
-        cv2.imwrite("1-t.jpg",icon)
-        cv2.imwrite("2-t.jpg",picture)
         result = cv2.matchTemplate(picture, icon, cv2.TM_SQDIFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-        print("min-val", min_val)
         message = "ok" if min_val < 0.05 else 'fail'
-        return {"sample": ((1 - np.abs(min_val)) * 10.52 - 10) * 50 + 10,
+        return {"sample": round(((1 - np.abs(min_val)) * 10.52 - 10) * 50 + 10, 0),
                 "required": 10,
                 'message': message}
 

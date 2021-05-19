@@ -5,12 +5,12 @@ import cv2
 from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE
 
 
-def vertify_exist(path):
+def verify_exist(path):
     if not os.path.exists(path):
         raise ValidationError('path not exist')
 
 
-def vertify_format(str):
+def verify_format(str):
     coor_list = str.strip().split(" ")
     if len(coor_list) != 2:
         raise ValidationError('params wrong format --only one blank')
@@ -22,7 +22,7 @@ def vertify_format(str):
         raise ValidationError('color coordinate should be digit')
 
 
-def vertify_not_relative_coor(str):
+def verify_not_relative_coor(str):
     coor_list = str.strip().split(" ")
     try:
         for coor in coor_list:
@@ -41,13 +41,13 @@ def verify_image(image_path):
         raise ValidationError('image need bigger size ')
 
 
-def vertify_has_grep(cmd):
+def verify_has_grep(cmd):
     if not "grep" in cmd and not "findstr" in cmd:
         raise ValidationError('input adb order should have "grep"/"findstr" ')
 
 
 class ImageOriginalSchema(Schema):
-    config = fields.String(required=True, data_key="configFile", validate=vertify_exist)
+    config = fields.String(required=True, data_key="configFile", validate=verify_exist)
 
     class Meta:
         unknown = INCLUDE
@@ -66,21 +66,21 @@ class ImageOriginalSchema(Schema):
 
 
 class ImageBasicSchema(ImageOriginalSchema):
-    input_im = fields.String(required=True, data_key="inputImgFile", validate=(vertify_exist, verify_image))
+    input_im = fields.String(required=True, data_key="inputImgFile", validate=(verify_exist, verify_image))
     output_path = fields.String(data_key="outputPath")
 
 
 class ImageOutPutSchema(ImageOriginalSchema):
     output_path = fields.String(data_key="outputPath")
-    refer_im = fields.String(required=True, data_key="referImgFile", validate=(vertify_exist, verify_image))
+    refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
 
 
 class ImageSchema(ImageBasicSchema):
-    refer_im = fields.String(required=True, data_key="referImgFile", validate=(vertify_exist, verify_image))
+    refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
 
 
 class ImageRealtimeSchema(ImageBasicSchema):
-    input_im_2 = fields.String(required=True, data_key="inputImgFile2", validate=(vertify_exist, verify_image))
+    input_im_2 = fields.String(required=True, data_key="inputImgFile2", validate=(verify_exist, verify_image))
 
 
 class ImageColorSchema(ImageBasicSchema):
@@ -93,12 +93,12 @@ class ImageMainColorSchema(ImageColorSchema):
 
 class ImageColorRelativePositionSchema(ImageSchema):
     requiredWords = fields.String(required=True, data_key="requiredWords")
-    xyShift = fields.String(required=True, data_key="xyShift", validate=vertify_format)
-    position = fields.String(required=True, data_key="position", validate=(vertify_not_relative_coor, vertify_format))
+    xyShift = fields.String(required=True, data_key="xyShift", validate=verify_format)
+    position = fields.String(required=True, data_key="position", validate=(verify_not_relative_coor, verify_format))
 
 
 class ImageAreaSchema(ImageSchema):
-    area_config = fields.String(required=True, data_key="configArea", validate=vertify_exist)
+    area_config = fields.String(required=True, data_key="configArea", validate=verify_exist)
 
     @post_load()
     def explain(self, data, **kwargs):
@@ -113,7 +113,7 @@ class ImageAreaSchema(ImageSchema):
 
 
 class ImageAreaWithoutInputSchema(ImageSchema):
-    area_config = fields.String(required=True, data_key="configArea", validate=vertify_exist)
+    area_config = fields.String(required=True, data_key="configArea", validate=verify_exist)
     input_im = fields.String(required=False, data_key="inputImgFile")
 
     @post_load()
@@ -130,8 +130,8 @@ class ImageAreaWithoutInputSchema(ImageSchema):
 
 class VideoBaseSchema(Schema):
     video_file = fields.String(required=True, data_key="videoFile")
-    start_config = fields.String(required=True, data_key="startConfig", validate=vertify_exist)
-    end_config = fields.String(required=True, data_key="endConfig", validate=vertify_exist)
+    start_config = fields.String(required=True, data_key="startConfig", validate=verify_exist)
+    end_config = fields.String(required=True, data_key="endConfig", validate=verify_exist)
 
     class Meta:
         unknown = INCLUDE
@@ -160,10 +160,10 @@ class VideoWordsSchema(VideoBaseSchema):
 
 
 class VideoPicSchema(VideoBaseSchema):
-    end_image = fields.String(required=True, data_key="endImage", validate=(vertify_exist, verify_image))
-    start_image = fields.String(required=True, data_key="startImage", validate=(vertify_exist, verify_image))
-    start_icon_config = fields.String(required=True, data_key="startIconConfig", validate=vertify_exist)
-    end_icon_config = fields.String(required=True, data_key="endIconConfig", validate=vertify_exist)
+    end_image = fields.String(required=True, data_key="endImage", validate=(verify_exist, verify_image))
+    start_image = fields.String(required=True, data_key="startImage", validate=(verify_exist, verify_image))
+    start_icon_config = fields.String(required=True, data_key="startIconConfig", validate=verify_exist)
+    end_icon_config = fields.String(required=True, data_key="endIconConfig", validate=verify_exist)
 
     @post_load()
     def explain(self, data, **kwargs):
@@ -226,7 +226,7 @@ class IconTestSchema(OcrTestSchema):
 
 class SimpleSchema(Schema):
     outputPath = fields.String(required=True)
-    adbCommand = fields.String(required=True, validate=vertify_has_grep)
+    adbCommand = fields.String(required=True, validate=verify_has_grep)
 
 
 def has_format(path: str):
@@ -242,7 +242,7 @@ class SimpleVideoPullSchema(Schema):
 
 
 class PerformanceSchemaCompare(Schema):
-    config = fields.String(required=True, data_key="configArea", validate=vertify_exist)
+    config = fields.String(required=True, data_key="configArea", validate=verify_exist)
 
     class Meta:
         unknown = INCLUDE
@@ -263,10 +263,9 @@ class PerformanceSchemaFps(PerformanceSchemaCompare):
     fps = fields.Int(required=True)
 
 
-
 class PerformanceSchema(PerformanceSchemaCompare):
-    icon_config = fields.String(required=True, data_key="configFile", validate=vertify_exist)
-    refer_im = fields.String(required=True, data_key="referImgFile", validate=(vertify_exist, verify_image))
+    icon_config = fields.String(required=True, data_key="configFile", validate=verify_exist)
+    refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
 
     @post_load()
     def explain(self, data, **kwargs):

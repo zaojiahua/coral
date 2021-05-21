@@ -117,7 +117,7 @@ class MacroHandler(object):
         if Phone in cmd:
             res = re.search("<Sim_(.*?)>", cmd)
             sim_resource = res.group(1)
-            if len(sim_resource.split("_")) < 2 or phone_type not in [0, 1, 2, 3]:
+            if len(sim_resource.split("_")) < 2 or sim_resource not in [0, 1, 2, 3]:
                 raise EblockResourceMacroWrongFormat
             sim_number = sim_resource.split("_")[0]
             phone_type = sim_resource.split("_")[2]

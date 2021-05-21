@@ -35,15 +35,17 @@ class TBoard(BaseModel):
         return self.pk
 
     def save(self, action, attr=None, value=None):
+        # 关联删除操作
         if action == "pre_remove":  # attr = 'pk', value = self.pk
             for dut in self.dut_list.smembers():
                 dut.remove()
 
     def start_tboard(self, jobs):
         try:
+            # job 本地资源同步
             job_cache_proxy = JobCacheProxy(jobs)
             job_cache_proxy.sync()
-
+            # 从项目同级目录job_resource下获取幸运的job zipfile解压到运行目录 self.tboard_path
             for job in jobs:
                 job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job['job_label']}.zip")
                 with zipfile.ZipFile(job_msg_name, 'r') as zip_ref:
@@ -57,9 +59,9 @@ class TBoard(BaseModel):
             for dut in self.dut_list.smembers():
                 dut.start_dut()
         except Exception as e:
-            print(job_msg_name)
             logger.error(e)
             logger.exception(e)
+            # 解压失败，停止 tboard，释放device
             self.send_tborad_finish()
 
     def send_tborad_finish(self):

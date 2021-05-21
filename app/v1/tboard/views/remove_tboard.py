@@ -18,7 +18,7 @@ from app.v1.tboard.views import tborad_router
 def remove_tboard(tboard_id):
     return remove_tboard_inner(tboard_id)
 
-
+# 根据 tboard_id 停止tboard
 def remove_tboard_inner(tboard_id):
     tboard = TBoard(pk=tboard_id)
     if tboard.exist():

@@ -7,7 +7,7 @@ from app.v1.tboard.views import tborad_router
 def stop_specific_device(device_label):
     return stop_specific_device_inner(device_label)
 
-
+# 停止单个device 执行的 dut
 def stop_specific_device_inner(device_label):
     dut_list = Dut.all(device_label=device_label)
     if len(dut_list) > 0:

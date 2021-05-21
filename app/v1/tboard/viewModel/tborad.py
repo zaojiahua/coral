@@ -49,6 +49,10 @@ class TBoardViewModel(object):
         return dut_obj_list
 
     def create_tboard(self):
+        """
+        生产tboard model 对象，并关联dut
+        :return:
+        """
         usable_device_list = self.get_usable_device_list()
         if not usable_device_list:
             return -1
@@ -68,6 +72,13 @@ class TBoardViewModel(object):
         return tboard_obj
 
     def get_usable_device_list(self):
+        """
+        filter: 过滤掉正在执行的device
+        create tboard 时，查看tboard 创建的级别，该级别的可以停止低级别的tboard，目前只有两个级别
+            AI_TEST = 0
+            USER = 1
+        :return:
+        """
         executor = ThreadPoolExecutor(MAX_CONCURRENT_NUMBER)
         all_task = []
         usable_device_list = []

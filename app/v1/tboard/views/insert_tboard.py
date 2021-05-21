@@ -33,10 +33,12 @@ def insert_tboard():
 
 
 def insert_tboard_inner(**kwargs):
+    # 调用 make_user 返回 TBoardViewModel对象
     res = TboardSchema().load_or_parameter_exception(kwargs)
     tboard_obj = res.create_tboard()
     if tboard_obj == -1:
         raise CreateTboardError(description='not useful device')
+    # 异步向下执行
     t1 = threading.Thread(target=tboard_obj.start_tboard, args=(res.jobs,))
     t1.start()
     return {

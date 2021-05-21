@@ -29,7 +29,7 @@ if not os.path.exists(JOB_SYN_RESOURCE_DIR):
 JOB_SYN_RESOURCE_MASSAGE = os.path.join(JOB_SYN_RESOURCE_DIR, "massage.json")
 
 if platform.system() == 'Linux':
-    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_IP}:6379/0"
+    REDIS_URL = f"redis://{REDIS_IP}:6379/3"
 else:
     from app.config.local import LOCAL_REDIS_URL
 

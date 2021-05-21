@@ -120,7 +120,7 @@ class MacroHandler(object):
             if len(sim_resource.split("_")) < 2 :
                 raise EblockResourceMacroWrongFormat
             sim_number = sim_resource.split("_")[0]
-            phone_type = sim_resource.split("_")[1]
+            phone_type = int(sim_resource.split("_")[1])
             if phone_type not in [0, 1, 2, 3]:
                 raise EblockResourceMacroWrongFormat
             if phone_type == 0:

@@ -53,8 +53,9 @@ class ColorMixin(object):
         input_crop_path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         src_refer = cv2.imread(data.get("refer_im"))
         position_list = data.get("position").strip().split(' ')
-        h, w = src_refer.shape[:2]
-        position_list = [h * float(position_list[1]), w * float(position_list[0])]
+        if float(position_list[1]) <= 1 and float(position_list[0]) <= 1:
+            h, w = src_refer.shape[:2]
+            position_list = [h * float(position_list[1]), w * float(position_list[0])]
         refer_b, refer_g, refer_r = check_color_by_position(src_refer, int(position_list[1]),
                                                             int(position_list[0]))
         # input  refer

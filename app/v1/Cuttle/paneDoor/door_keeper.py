@@ -95,7 +95,8 @@ class DoorKeeper(object):
         length = np.hypot(kwargs.get("device_height"), kwargs.get("device_width"))
         kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
         kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + "-" + self.get_default_name()
+        # kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + "-" + self.get_default_name()
+        kwargs["device_label"] = "M-" + kwargs.get("phone_model_name")
         kwargs["manufacturer"] = kwargs["android_version"] = kwargs["rom_version"] = kwargs["cpu_name"] = kwargs[
             "cpu_id"] = "Manual_device"
         kwargs["ip_address"] = "0.0.0.0"
@@ -371,7 +372,7 @@ class DoorKeeper(object):
         #     ThreadPoolExecutor(max_workers=100).submit(device_object.start_device_async_loop, aide_monitor_instance)
 
     def get_default_name(self):
-        real_date = datetime.now().strftime("%m_%d")
+        real_date = datetime.now().strftime("%m-%d")
         if not real_date == self.date_mark:
             self.date_mark = real_date
             self.today_id = 0  # reset to zero in a new day

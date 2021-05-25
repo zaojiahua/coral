@@ -233,7 +233,7 @@ class AutoPaneBorderView(MethodView):
             rect = cv2.minAreaRect(contour[:, 0, :])
             box = cv2.boxPoints(rect)
             area = int(rect[1][1]) * int(rect[1][0])
-            if area <= 5000:
+            if area <= 50000:
                 continue
             box_list.append((box, area))
         box_list.sort(key=lambda x: x[1], reverse=True)

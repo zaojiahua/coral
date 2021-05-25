@@ -110,7 +110,6 @@ class PerformanceCenter(object):
                 self.back_up_dq.clear()
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 raise VideoEndPointNotFound
-        print("end loop time", time.time() - b)
         return 0
 
     def test_fps_lost(self, judge_function):
@@ -192,7 +191,6 @@ class PerformanceCenter(object):
             except IndexError as e:
                 # 向备份Q中放置过快,超过摄像头读取速度，需要等待一帧时间
                 time.sleep(2 / FpsMax)
-        print(f"move src thread stop... save 30 more..")
         # 找到结束点后再继续保存最多30张:
         number = self.end_number
         for i in range(30):

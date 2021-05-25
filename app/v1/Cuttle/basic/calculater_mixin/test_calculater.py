@@ -36,6 +36,17 @@ class TestMixin(object):
                 "required": require_feature_number,
                 'message': message}
 
+    def test_icon_exist_fixed(self, exec_content, clear=True):
+        data = IconTestSchema().load(exec_content)
+        icon = self._crop_image(data.get("input_image"), data.get("areas")[0])
+        picture = self._crop_image(data.get("input_image"), data.get("crop_areas")[0])
+        result = cv2.matchTemplate(picture, icon, cv2.TM_SQDIFF_NORMED)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        message = "ok" if min_val < 0.05 else 'fail'
+        return {"sample": round(((1 - np.abs(min_val)) * 10.52 - 10) * 50 + 10, 0),
+                "required": 10,
+                'message': message}
+
     def test_icon(self, data, clear):
         feature_path = self._crop_image_and_save(data.get("input_image"), data.get("areas")[0], mark='icon')
         image_crop_path = self._crop_image_and_save(data.get("input_image"), data.get("crop_areas")[0])

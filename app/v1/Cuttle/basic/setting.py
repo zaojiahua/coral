@@ -14,7 +14,7 @@ SWIPE_TIME = 1
 # 梯形滑动连带的比例
 trapezoid = 0.5
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
-m_location = [38, 13]
+m_location = [38, 12]
 wait_time = 1
 icon_threshold = 30
 icon_threshold_camera = 14

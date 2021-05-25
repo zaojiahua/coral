@@ -150,7 +150,6 @@ class PerformanceMinix(object):
         return self._end_point(exec_content, PerformanceSchema, self._icon_find)
 
     def end_point_with_icon_template_match(self, exec_content):
-        print("in end template")
         return self._end_point(exec_content, PerformanceSchema, self._icon_find_template_match)
 
     def end_point_with_changed(self, exec_content):

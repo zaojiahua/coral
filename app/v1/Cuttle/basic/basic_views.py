@@ -57,6 +57,14 @@ def test_icon_exist():
     except Exception as e:
         return jsonify({"status": repr(e)}), 400
 
+@basic.route('/icon_test_fixed/', methods=['POST'])
+def test_icon_exist_fixed():
+    try:
+        image_handler = ImageHandler(model=Dummy_model, many=False)
+        return jsonify(image_handler.test_icon_exist_fixed(request.files)), 200
+    except Exception as e:
+        return jsonify({"status": repr(e)}), 400
+
 
 @basic.route('/icon_test_position/', methods=['POST'])
 def test_position():

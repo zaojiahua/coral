@@ -40,3 +40,13 @@ class DeviceNeedResource(APIException):
     error_code = 7006
     code = 400
     description = 'use resource before assign to device or input wrong'
+
+class DeviceNeedRelativeAssisDevice(APIException):
+    error_code = 7007
+    code = 400
+    description = 'set resource Macro to assis-device but no relative device find'
+
+class AssisDeviceNotHaveMainDevie(APIException):
+    error_code = 7008
+    code = 400
+    description = 'device in wrong status'

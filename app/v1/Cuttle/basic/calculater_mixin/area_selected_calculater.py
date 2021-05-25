@@ -1,11 +1,13 @@
 import cv2
 import numpy as np
 
+from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.common_utli import threshold_set
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageAreaSchema, ImageOriginalSchema, ImageAreaWithoutInputSchema, \
     ImageRealtimeSchema
-from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate
+from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate, icon_min_template, \
+    icon_min_template_camera
 
 
 class AreaSelectedMixin(object):
@@ -85,11 +87,12 @@ class AreaSelectedMixin(object):
         template = self._crop_image(data.get("refer_im"), data.get("areas")[0])
         target = self._crop_image(data.get("input_im"), data.get("crop_areas")[0])
         result = self.template_match(target, template)
-        return 0 if result is True else 1
+        return 0 if result == True else 1
 
     @staticmethod
     def template_match(target, template):
         result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-        result = np.abs(min_val) < 0.05
+        th = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
+        result = np.abs(min_val) < th
         return result

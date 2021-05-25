@@ -14,7 +14,8 @@ from app.execption.outer.error import APIException
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin, separate_point_pixel
 from app.v1.Cuttle.basic.image_schema import IconTestSchema, OcrTestSchema
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_threshold, icon_rate
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_threshold, icon_rate, icon_min_template, \
+    icon_min_template_camera
 
 
 class TestMixin(object):
@@ -42,7 +43,8 @@ class TestMixin(object):
         picture = self._crop_image(data.get("input_image"), data.get("crop_areas")[0])
         result = cv2.matchTemplate(picture, icon, cv2.TM_SQDIFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-        message = "ok" if min_val < 0.05 else 'fail'
+        th = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
+        message = "ok" if min_val < th else 'fail'
         return {"sample": round(((1 - np.abs(min_val)) * 10.52 - 10) * 50 + 10, 0),
                 "required": 10,
                 'message': message}

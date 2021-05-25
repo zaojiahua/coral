@@ -7,6 +7,7 @@ def get_dut_progress(device_label):
     return get_dut_progress_inner(device_label)
 
 
+# 查看device是否正在运行
 def get_dut_progress_inner(device_label):
     if len(Dut.all(device_label=device_label)) > 0:
         return {"status": "busy"}

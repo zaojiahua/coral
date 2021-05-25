@@ -7,6 +7,10 @@ class JobFormatTransform:
         self.ui_json = ui_json
 
     def jobDataFormat(self):
+        """
+        格式替换： 将 job editor 中编辑的 ui_json转化成djob可执行的 exec_json
+        :return:
+        """
         originaldata = self.ui_json
         jobNodeDict = {}
         jobLinkDict = {}

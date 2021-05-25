@@ -24,6 +24,7 @@ class Dut(BaseModel):
     job_msg = DictField()
     repeat_time: int = models.IntegerField()
     djob_pk = models.CharField()
+    device_label = models.CharField()
     current_job_index: int = models.IntegerField()
     model = "app.v1.tboard.model.tboard.TBoard"
 
@@ -36,9 +37,9 @@ class Dut(BaseModel):
     def total_job_number(self):
         return self.repeat_time * len(self.job_label_list)
 
-    @property
-    def device_label(self):  # pk  (device_label)_(tboard_id)
-        return self.pk.split("_")[0]
+    # @property
+    # def device_label(self):  # pk  (device_label)_(tboard_id)
+    #     return self.pk.split("_")[0]
 
     def get_job_label_by_index(self, job_index):
         ret = None

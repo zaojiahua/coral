@@ -31,6 +31,7 @@ class TBoardViewModel(object):
         """
 
         dut_obj = Dut(pk=f"{device_label}_{tboard_id}", parent_pk=tboard_id, stop_flag=False,
+                      device_label=device_label,
                       job_msg={job["job_label"]: job for job in self.jobs},
                       repeat_time=repeat_time, current_job_index=-1)
 

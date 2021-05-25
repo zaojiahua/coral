@@ -17,5 +17,8 @@ class DjobDevice(BaseModel):
     temp_port = OwnerList()
 
     def save(self, action, attr=None, value=None):
+        """
+        删除时，会将当前djob的执行目录删除
+        """
         if action == "pre_remove":
             deal_dir_file(self.base_path)

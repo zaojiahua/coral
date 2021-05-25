@@ -55,6 +55,9 @@ from app.v1.djob.viewModel.jobFormatTransferNewLinkNode import JobFormatTransfor
 
 @lru_cache(maxsize=128)
 def get_job_exec_body(tboard_path, job_label, flow_id):
+    """
+    读取job ui_json_file 进行格式转化，在进行宏替换
+    """
     job_flow_path = os.path.join(tboard_path, job_label, str(flow_id)) + os.sep
     ui_json_file_path = os.path.join(job_flow_path, UI_JSON_FILE_NAME)
 
@@ -65,6 +68,10 @@ def get_job_exec_body(tboard_path, job_label, flow_id):
 
 
 def macro_repalce(exec_json_dict, job_flow_path):
+    """
+    换宏 "<1ijobFile>" 替换成 job_flow_path
+    :return:
+    """
     res = json.dumps(exec_json_dict).replace(JOB_FILE_PREFIX, job_flow_path)
     regex = re.compile(r'\\(?![/u"])')
     return json.loads(regex.sub(r"\\\\", res))

@@ -14,7 +14,7 @@ def remove_djob_inner(djob_pk):
 
     if not djob_worker.exist():
         raise RemoveJobException(description=f"djob_worker not exist")
-
+    # 在运行状态
     if djob_worker.using_djob is not None and djob_worker.using_djob == djob:
         djob_worker.using_djob.stop_djob()
 
@@ -22,6 +22,7 @@ def remove_djob_inner(djob_pk):
         return {"status": "a working djob has been deleted"}, 204
 
     else:
+        # 非运行状态
         djob_worker.djozb_list.lrem(1, djob)
 
         djob.remove()

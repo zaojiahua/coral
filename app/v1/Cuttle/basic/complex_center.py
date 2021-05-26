@@ -5,8 +5,10 @@ import shutil
 import traceback
 
 import cv2
+import numpy as np
 
 from app.config.ip import OCR_IP, ADB_TYPE
+from app.config.setting import CORAL_TYPE
 from app.config.url import coral_ocr_url
 from app.execption.outer.error_code.imgtool import OcrRetryTooManyTimes, OcrParseFail, OcrWorkPathNotFound, \
     ComplexSnapShotFail, NotFindIcon, OcrShiftWrongFormat
@@ -14,7 +16,7 @@ from app.libs.functools import handler_switcher
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec, get_file_name
-from app.v1.Cuttle.basic.setting import chinese_ingore
+from app.v1.Cuttle.basic.setting import chinese_ingore, icon_min_template, icon_min_template_camera
 
 
 class Complex_Center(object):
@@ -198,6 +200,10 @@ class Complex_Center(object):
         template = template[area[1]:area[3], area[0]:area[2]]
         th, tw = template.shape[:2]
         result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
+        min_val_original, _, _, _ = cv2.minMaxLoc(result)
+        th = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
+        if np.abs(min_val_original) >= th:
+            raise NotFindIcon
         cv2.normalize(result, result, 0, 1, cv2.NORM_MINMAX, -1)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         point_x = min_loc[0] + 1 / 2 * tw

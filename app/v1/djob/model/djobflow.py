@@ -336,6 +336,12 @@ class DJobFlow(BaseModel):
         stop_eblock(self.rds.eblock_list[-1].pk)
 
     def fake_rds(self, e, error_traceback):
+        """
+        生产异常结果，并记录异常信息
+        :param e:
+        :param error_traceback:
+        :return:
+        """
         if isinstance(e, APIException):
             self.logger.error(
                 f"the djob device_label:{self.device_label}  job_label: {self.job_label} execute exception "
@@ -403,6 +409,7 @@ class DJobFlow(BaseModel):
                     log.close()
 
         for djob_instance in self.inner_job_list:
+            # inner job的 依赖文件上传
             djob_instance.push_log_and_pic(base_data, job_assessment_value, flow_id=flow_id)
 
     def stop_flow(self):

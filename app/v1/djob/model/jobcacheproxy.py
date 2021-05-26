@@ -11,6 +11,9 @@ executer = ThreadPoolExecutor(MAX_CONCURRENT_NUMBER)
 
 
 class JobCacheProxy:
+    """
+    负责job 同步数据
+    """
     def __init__(self, jobs):
         self.jobs = jobs
 

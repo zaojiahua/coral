@@ -21,5 +21,4 @@ class DjobDevice(BaseModel):
         删除时，会将当前djob的执行目录删除
         """
         if action == "pre_remove":
-            pass
-            # deal_dir_file(self.base_path)
+            deal_dir_file(self.base_path)

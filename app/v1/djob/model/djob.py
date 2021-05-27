@@ -74,6 +74,7 @@ class DJob(BaseModel):
                     return
 
                 if int(self.current_djob_flow.job_assessment_value) != 0:
+                    # SingleSplit模式下，不成功则不继续执行
                     break
             self.analysis_result()
             self.postprocess()
@@ -83,6 +84,7 @@ class DJob(BaseModel):
         self.job_assessment_value = self.djob_flow_list[-1].job_assessment_value
         for djob_flow in self.djob_flow_list.lrange(-1, 0):
             for key in self.rds_info_list:
+                # 将执行过程中需要写入rds的内容写入到djob对象
                 if getattr(djob_flow, key):
                     setattr(self, key, getattr(djob_flow, key))
 
@@ -139,7 +141,7 @@ class DJob(BaseModel):
         try:
             result = request(method="POST", json=json_data, url=rds_create_or_update_url)
             self.logger.info(f"ready to update rds<{result['id']}> info  to reef:{json_data}")
-        except APIException as e:  # todo:会造成rds丢失，之后可以使用mq 异步推送
+        except APIException as e:  # todo:会造成rds丢失，之后可以使用 mq 异步推送
             self.logger.error(
                 f"the djob (device: {self.device_label}job: {self.job_label}) send api(rds_create_or_update) failed.{e}")
         else:

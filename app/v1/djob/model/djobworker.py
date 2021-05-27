@@ -36,7 +36,7 @@ class DJobWorker(BaseModel):
                              f"({self.using_djob.job_label, self.using_djob.device_label})from wait list and put execute")
 
             self.using_djob.run_job_with_flow_execute_mode()
-
+            # 执行完成，调用dut，推送djob到 DJobWorker
             self.callback()
 
             self.using_djob.remove()

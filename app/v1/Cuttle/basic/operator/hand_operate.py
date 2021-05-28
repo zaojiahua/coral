@@ -204,7 +204,7 @@ class HandHandler(Handler, DefaultMixin):
         if float(sleep_time) > 0:
             time.sleep(float(sleep_time) + wait_bias)
         if move:
-            self.reset_hand(hand_reset_orders="G01 X0Y35ZF3000 \r\n")
+            self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")
         hand_serial_obj_dict.get(self._model.pk).recv()
         self.ignore_reset = True
         return 0

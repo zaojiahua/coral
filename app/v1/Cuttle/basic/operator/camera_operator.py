@@ -110,7 +110,7 @@ def camera_init_HK(**kwargs):
 def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
     cam_obj = CamObjList[-1]
     while (device_object.has_camera):
-        ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 3)
+        ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
         if ret == 0:
             stParam = MV_SAVE_IMAGE_PARAM_EX()
             m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 2048

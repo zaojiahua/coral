@@ -1,5 +1,6 @@
 from astra import models
 
+from app.config.setting import CORAL_TYPE
 from app.libs.extension.field import OwnerList
 from app.libs.extension.model import BaseModel
 from app.libs.ospathutil import deal_dir_file
@@ -21,4 +22,5 @@ class DjobDevice(BaseModel):
         删除时，会将当前djob的执行目录删除
         """
         if action == "pre_remove":
-            deal_dir_file(self.base_path)
+            if CORAL_TYPE <= 4:
+                deal_dir_file(self.base_path)

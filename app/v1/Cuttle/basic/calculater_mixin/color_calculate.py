@@ -56,8 +56,8 @@ class ColorMixin(object):
         if float(position_list[1]) <= 1 and float(position_list[0]) <= 1:
             h, w = src_refer.shape[:2]
             position_list = [h * float(position_list[1]), w * float(position_list[0])]
-        refer_b, refer_g, refer_r = check_color_by_position(src_refer, int(position_list[1]),
-                                                            int(position_list[0]))
+        refer_b, refer_g, refer_r = check_color_by_position(src_refer, int(float(position_list[1])),
+                                                            int(float(position_list[0])))
         # input  refer
         with Complex_Center(inputImgFile=input_crop_path, **data, **self.kwargs) as ocr_obj:
             ocr_obj.default_pic_path = input_crop_path

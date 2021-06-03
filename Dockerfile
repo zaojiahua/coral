@@ -1,4 +1,4 @@
-
+# 这是5型柜单独使用的 docker file 运行前需要把海康涉及到的.sh文件全部放到根目录下。
 FROM ubuntu:18.04
 
 ENV PYTHONUNBUFFERED 1

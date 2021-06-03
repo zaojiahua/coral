@@ -15,36 +15,56 @@ class AreaSelectedMixin(object):
 
     def has_icon_area_selected(self, exec_content) -> int:
         # 判断所选择区域内有指定图标
+        # 确认图标存在-2
         data = self._validate(exec_content, ImageAreaSchema)
+        # 按照选区先裁剪参考图片-->裁成icon
         feature_refer = self._crop_image(data.get("refer_im"), data.get("areas")[0])
+        # 按照选区裁剪输入图片 -->裁成一个大范围
         image_crop = self._crop_image(data.get("input_im"), data.get("crop_areas")[0])
+        # 得到特征点的列表
         feature_point_list = self.shape_identify(image_crop, feature_refer)
         from app.v1.device_common.device_model import Device
+        # 此处的判定为根据区分1234型柜和5型柜，取不同的标准值
         threshold = icon_threshold if Device(pk=self._model.pk).has_camera == False else icon_threshold_camera
         self._model.logger.info(
             f"feature point number:{len(feature_point_list)},threshold:{threshold - (1 - data.get('threshold', 0.99)) * icon_rate}")
+        # 判断找到的特征点数量是否足够
         return 0 if len(feature_point_list) >= threshold - (1 - data.get("threshold", 0.99)) * icon_rate else 1
 
     def smart_ocr_point_crop(self, info_body, match_function="get_result") -> int:
+        # 点击文字-选区
+
         data = self._validate(info_body, ImageOriginalSchema)
+        # 创建一个复合unit中心对象，
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
+            # 先截一张图
             ocr_obj.snap_shot()
             from app.v1.device_common.device_model import Device
             dev_obj = Device(pk=self._model.pk)
+            # 拿到手机的分辨率，用来把选区的左上角相对坐标->绝对坐标，后面用来加在识别结果上（因为识别的图是裁剪过，需要点击的位置是全局的）
             h, w = dev_obj.device_height, dev_obj.device_width
             x0, y0 = int(data.get("areas")[0][0] * w), int(data.get("areas")[0][1] * h)
+            # 裁剪前面截的图，并保存起来
             crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("areas")[0])
+            # 赋值给self.image 的图会在unit结果不为0时，拿去T-guard处理异常
             self.image = ocr_obj.default_pic_path
+            # 复合unit中心对象有两个存放图片地址的路径，ocr_obj.default_pic_path-->现截的图，ocr_obj._pic_path创建时传入的图/加工后的图
             ocr_obj._pic_path = crop_path
+            # 执行ocr_obj的对应match方法
             getattr(ocr_obj, match_function)()
+            # 把前面算的左上点的绝对坐标加到识别坐标上来。
             ocr_obj.add_bias(x0, y0)
+            # 做点击动作
             ocr_obj.point()
         return ocr_obj.result
 
     def smart_ocr_point_ignore_speed(self, info_body) -> int:
+        # 点击文字_选区_模糊
+        # 与上一个方法的区别就是使用的match_function不同
         return self.smart_ocr_point_crop(info_body, match_function="get_result_ignore_speed")
 
     def smart_icon_point_crop(self, info_body) -> int:
+        # 点击图标-1
         data = self._validate(info_body, ImageAreaWithoutInputSchema)
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
@@ -55,12 +75,14 @@ class AreaSelectedMixin(object):
             input_crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("crop_areas")[0])
             self.image = ocr_obj.default_pic_path
             ocr_obj._pic_path = input_crop_path
+            # 与上面唯一的区别在这块调用的方法不同，以后可以考虑优化。
             ocr_obj.get_result_by_feature(info_body)
             ocr_obj.add_bias(x0, y0)
             ocr_obj.point()
         return ocr_obj.result
 
     def smart_icon_point_crop_template(self, info_body) -> int:
+        # 点击图标-1
         data = self._validate(info_body, ImageAreaWithoutInputSchema)
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
@@ -77,12 +99,16 @@ class AreaSelectedMixin(object):
         return ocr_obj.result
 
     def realtime_picture_compare(self, exec_content) -> int:
+        # 截图变化对比
         data = self._validate(exec_content, ImageRealtimeSchema)
+        # 两张传入的图，都按同一个areas裁剪，得到两个图的src
         input_im_2 = self._crop_image(data.get("input_im_2"), data.get("areas")[0])
         input_im = self._crop_image(data.get("input_im"), data.get("areas")[0])
+        # 直接对比两张图的rgb均值
         return self.numpy_array(input_im, input_im_2, threshold_set(data.get("threshold", 0.99)))
 
     def has_icon_template_match(self, exec_content) -> int:
+        # 确认图标存在-1
         data = self._validate(exec_content, ImageAreaSchema)
         template = self._crop_image(data.get("refer_im"), data.get("areas")[0])
         target = self._crop_image(data.get("input_im"), data.get("crop_areas")[0])
@@ -91,7 +117,9 @@ class AreaSelectedMixin(object):
 
     @staticmethod
     def template_match(target, template):
+        # 模板匹配的方法，判定图标存在
         result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
+        # 选用 cv2.TM_SQDIFF_NORMED时，只看最小值，min_val/min_loc
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         th = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
         result = np.abs(min_val) < th

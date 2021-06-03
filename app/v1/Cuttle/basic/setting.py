@@ -50,6 +50,7 @@ CamObjList = []
 normal_result = (False, None)
 handler_config = {
     # 当复合unit中新增adb方法，需要更新此配置文件，指明其可能性
+
     "point": ("AdbHandler", "HandHandler"),
     "long_press": ("AdbHandler", "HandHandler"),
     "swipe": ("AdbHandler", "HandHandler"),

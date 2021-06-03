@@ -23,22 +23,33 @@ class Complex_Center(object):
     # 2020/09/09 注: 随着复合unit类型增多，数量变大，这个文件已经不适合保持这个名字和相关init方法，待有空余精力需要对此进行处进行重构。
     # 重构时需要注意此处的unit 都需要同时支持 adb无线/机械臂+摄像头/adb有限 三种不同模式。
 
+    # 2021 06/03交接备注
+    # 这个模块比较重要，基本上所有的复合unit都通过这个类实现。
+
     def __init__(self, device_label, requiredWords=None, xyShift="0 0", inputImgFile=None, work_path="", *args,
                  **kwargs):
         self.device_label = device_label
+        # _pic_path 存实例化时传入的图（很可能没有）
         self._pic_path = inputImgFile
+        # 如果传入的图为正式格式，就往work_path复制一份，用以最后上传至rds 的结果图片
         if type(inputImgFile) == str and inputImgFile.split(".")[-1].upper() in ["PNG", "JPG", "JPEG", "GIF", "TIF"]:
             shutil.copy(inputImgFile, os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png"))
+        # ocr 要查找的文字
         self._searching_word = requiredWords
+        # 找到文字后的偏移量
         self.x_shift, self.y_shift = self._shift(xyShift)
+        # 这个图用来执行时 当场截图存放
         self.default_pic_path = os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png")
         self.result = 0
         from app.v1.device_common.device_model import Device
         device = Device(pk=device_label)
+        # 僚机mode为0，其他除了5型柜也都为0
         self.mode = 0 if (kwargs.get("assist_device_serial_number") is not None or (
                 device.has_arm is False and device.has_camera is False)) else 1
         self.logger = setup_logger(f'coral-ocr', f'coral-ocr.log')
+        # 存很多辅助信息
         self.kwargs = kwargs
+        # 上下裁剪的补偿，用于文字点击时，先裁剪掉上半屏幕（防止同样字干扰），再从结果中加回offset得到真实坐标。
         self.crop_offset = [0, 0, device.device_width, device.device_height]
 
     def __enter__(self):
@@ -50,6 +61,7 @@ class Complex_Center(object):
                 self.logger.warning(f"ocr service retry over 3 times")
                 return False
             elif exc_type == OcrParseFail or exc_type == NotFindIcon:
+                # 对文字和图标识别抛出的异常，给与结果置为1
                 self.logger.warning(f"can not find required words {self._searching_word} in ocr result")
                 self.result = 1
                 return True
@@ -71,6 +83,7 @@ class Complex_Center(object):
 
     @property
     def connect_number(self):
+        # 是僚机直接用上层传下来的僚机serial number/ip 主机根据1/2345型柜不同选主机ip/serial number
         from app.v1.device_common.device_model import Device
         connect_number = Device(pk=self.device_label).connect_number if self.kwargs.get(
             "assist_device_serial_number") is None else self.kwargs.get("assist_device_serial_number")
@@ -83,20 +96,28 @@ class Complex_Center(object):
         return float(result.get("cx")), float(result.get("cy"))
 
     def get_result(self, parse_function=default_parse_response.__func__):
+        # ocr 识别的方法
+        # ocr请求最多retry3次
         for i in range(3):
+            # 如果有文字的话，文字要传递给ocr服务，找文字位置，没有文字的话是识别所有的文字再做判断
             body = {"words": self._searching_word} if self._searching_word else {}
             pic_path = self.default_pic_path if self._pic_path == None else self._pic_path
+            # 发送请求给ocr服务
             response = self._ocr_request(**body, pic_path=pic_path)
             if response.get("status") == "success":
                 self.logger.info(f"get ocr result {response.get('result')}")
+                # 只计算坐标，不return的情况
                 if self._searching_word or parse_function.__name__ != self.default_parse_response.__name__:
                     pic_x, pic_y = parse_function(response.get("result"))
+                    # 把识别得到的x.y结果根据不同的机柜情况-换算到实际需要的坐标
                     self.cal_realy_xy(pic_x, pic_y, self.default_pic_path)
                     self.result = 0
                     break
+                # 需要return所有识别出所有文字的结果。
                 else:
                     self.result = response.get('result')
                     return self.result
+            # ocr 找不到对应文字情况，抛异常，会被exit中捕获把结果设置为1
             elif response.get("status") == "not found":
                 raise OcrParseFail
             else:
@@ -107,6 +128,7 @@ class Complex_Center(object):
             raise OcrRetryTooManyTimes(description=f"ocr response:{response}")
 
     def get_result_ignore_speed(self):
+        # 与上面的方法有一些区别，
         for i in range(3):
             pic_path = self.default_pic_path if self._pic_path == None else self._pic_path
             response = self._ocr_request(pic_path=pic_path)

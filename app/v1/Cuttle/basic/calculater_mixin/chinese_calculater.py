@@ -20,18 +20,23 @@ class ChineseMixin(object):
     }
 
     def transfer_2_pinyin(self, word):
+        # 把文字转换成拼音的列表
         return [i[0] for i in pypinyin.pinyin(word, style=pypinyin.NORMAL)]
 
     def is_chinese(self, word):
+        # 判定文字是中文
         for ch in word:
             if '\u4e00' <= ch <= '\u9fff':
                 return True
         return False
 
     def pinyin_2_coordinate(self, pinyin, device_obj, coor_tuple_list):
+        # 把拼音转换成9宫格上的位置。
         x = device_obj.kx2 - device_obj.kx1
         y = device_obj.ky2 - device_obj.ky1
+        # 遍历每个拼音字母
         for letter in pinyin:
+            # 对每个字母遍历9宫格9个位置，找到对应位置，并得出字母的坐标
             for key, value in self.keyboard_mapping_dict.items():
                 if letter in key:
                     coor_tuple = (device_obj.kx1 + x * value[0], device_obj.ky1 + y * value[1])

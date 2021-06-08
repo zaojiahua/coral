@@ -84,7 +84,8 @@ def recover_device(executer, logger):
                     PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer, rotate=rotate)
                     hand_used_list.append(port)
                 set_border(device_dict, device_obj)
-        except (AttributeError, APIException):
+        except (AttributeError, APIException) as e:
+            print(repr(e))
             pass
         # start a loop for each device when recover+
         recover_root(device_obj.device_label, device_obj.connect_number)

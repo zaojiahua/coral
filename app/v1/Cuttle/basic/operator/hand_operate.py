@@ -256,7 +256,7 @@ class HandHandler(Handler, DefaultMixin):
         if axis_x > HAND_MAX_X or axis_y > HAND_MAX_X:
             return {"error:Invalid axis_Point"}
         return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN+5, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN + 5, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
@@ -275,19 +275,21 @@ class HandHandler(Handler, DefaultMixin):
         #     end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
         if normal:
             return [
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN+5, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN + 5, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN - 1, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, speed),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
             ]
         else:
-            x1 = start_x - (end_x - start_x) * trapezoid
-            y1 = start_y - (end_y - start_y) * trapezoid
-            x4 = end_x + (end_x - start_x) * trapezoid
-            y4 = end_y + (end_y - start_y) * trapezoid
+            x1 = min(max(start_x - (end_x - start_x) * trapezoid, 0), 120)
+            y1 = min(max(start_y - (end_y - start_y) * trapezoid, 0), 150)
+            x4 = min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
+            y4 = min(max(end_y + (end_y - start_y) * trapezoid, 0), 150)
+            print("1:", x1, y1)
+            print("2", start_x, start_y)
             return [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN-1, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN - 1, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_DOWN + 3, speed),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
             ]

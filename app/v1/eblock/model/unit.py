@@ -116,6 +116,7 @@ class Unit(BaseModel):
 
             save_list = []
             cmd_dict: dict = self.execCmdDict
+
             if 'ADBC' == self.execModName:
                 # only want content， get ride of meaning&type
                 cmd_list = [i.get("content") for i in cmd_dict.get("execCmdList")]
@@ -136,8 +137,6 @@ class Unit(BaseModel):
                 cmd_dict["execCmdList"] = repalced_cmd_list
 
                 sending_data = {"device_label": self.device_label, "ip_address": handler.ip_address, **cmd_dict}
-                if kwargs.pop("test_running", False):
-                    sending_data["test_running"] = True
 
                 if assist_device_ident is None:
                     from app.v1.device_common.device_model import Device
@@ -172,6 +171,8 @@ class Unit(BaseModel):
                 cmd_dict["functionName"] = self.functionName
                 sending_data = {"execCmdDict": cmd_dict}
                 target = "ImageHandler" if self.execModName == "IMGTOOL" else "ComplexHandler"
+            if kwargs.pop("test_running", False):
+                sending_data["test_running"] = True
             sending_data["work_path"] = handler.work_path
             sending_data["device_label"] = self.device_label
             if self.ocrChoice:

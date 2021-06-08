@@ -21,6 +21,9 @@ class PerformanceMinix(object):
 
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
+        return self.swipe_calculate(exec_content, SWIPE_BIAS)
+
+    def swipe_calculate(self, exec_content, bias):
         data = self._validate(exec_content, PerformanceSchema)
         # 获取用户的icon选区，按中心点重建边长为30的正方形选区
         x1 = data.get("icon_areas")[0][0]
@@ -30,8 +33,11 @@ class PerformanceMinix(object):
         icon_areas = [(x1 + x2) / 2 - 0.03, (y1 + y2) / 2 - 0.02, (x1 + x2) / 2 + 0.03, (y1 + y2) / 2 + 0.02]
         performance = PerformanceCenter(self._model.pk, [icon_areas], data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=SWIPE_BIAS)
+                                        self.kwargs.get("work_path"), self.dq, bias=bias)
         return performance.start_loop(self._black_field)
+
+    def start_point_with_swipe_slow(self, exec_content):
+        self.swipe_calculate(exec_content, BIAS)
 
     def start_point_with_point_template(self, exec_content):
         # 使用实际位置是否为黑色（机械臂遮挡）判定起始按下时间

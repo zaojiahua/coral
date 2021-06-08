@@ -69,7 +69,8 @@ class PerformanceCenter(object):
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 if judge_function.__name__ == "_black_field":
-                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // 0.25)
+                    print("bias add:",int((self.icon_scope[0] + self.icon_scope[2]) // (30/FpsMax)))
+                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // (30/FpsMax)) if self.bias != 0 else self.bias
                 break
             if number >= CameraMax / 2:
                 self.move_flag = False
@@ -82,7 +83,7 @@ class PerformanceCenter(object):
             raise VideoStartPointNotFound
         number = self.start_number + 1
         b = time.time()
-        print("end loop start... now number:", number)
+        print("end loop start... now number:", number,"bisa:",self.bias)
         for i in range(self.bias):
             # 对bias补偿的帧数，先只保存对应图片，不做结果判断
             number, picture, next_picture, _ = self.picture_prepare(number)
@@ -163,6 +164,7 @@ class PerformanceCenter(object):
                 pic_next_next = self.back_up_dq[1]
                 break
             except IndexError:
+                print("error in picture_prepare")
                 time.sleep(0.02)
         # save_pic = cv2.resize(picture, dsize=(0, 0), fx=0.5, fy=0.5)
         cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture)
@@ -185,7 +187,7 @@ class PerformanceCenter(object):
         while self.move_flag:
             try:
                 src = camera_dq_dict.get(self.device_id).popleft()
-                src = cv2.imdecode(src, 1)
+                # src = cv2.imdecode(src, 1)
                 src = np.rot90(src, 3)
                 self.back_up_dq.append(src)
             except IndexError as e:

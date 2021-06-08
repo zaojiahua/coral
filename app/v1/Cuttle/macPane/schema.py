@@ -58,8 +58,8 @@ class PaneSchema(Schema):
         if device_obj.has_camera:
             from app.v1.Cuttle.basic.setting import camera_dq_dict
             src = camera_dq_dict.get(device_label).pop()
-            image = cv2.imdecode(src, 1)
-            image = np.rot90(image, 3)
+            # image = cv2.imdecode(src, 1)
+            image = np.rot90(src, 3)
             # src = CameraHandler.get_roi(device_label, image)
             cv2.imwrite(image_path, image)
         else:
@@ -92,7 +92,7 @@ class OriginalPicSchema(Schema):
 
     @post_load
     def make_sure(self, data, **kwargs):
-        lock.acquire(timeout=10)
+        lock.acquire(timeout=15)
         print("1.get lock ")
         path = "original.png"
         device_obj = Device(pk=data.get("device_label"))
@@ -102,7 +102,7 @@ class OriginalPicSchema(Schema):
         time.sleep(2)
         executer = ThreadPoolExecutor()
         executer.submit(camera_start_3, 1, device_obj)
-        time.sleep(2.5)
+        time.sleep(3)
         self.get_snap_shot(data.get("device_label"), path)
         f = open(path, "rb")
         image = f.read()
@@ -112,12 +112,12 @@ class OriginalPicSchema(Schema):
     def get_snap_shot(self, device_label, path):
         from app.v1.Cuttle.basic.setting import camera_dq_dict
         src = camera_dq_dict.get(device_label)[-1]
-        image = cv2.imdecode(src, 1)
+        # image = cv2.imdecode(src, 1)
         try:
             os.remove(path)
         except FileNotFoundError:
             pass
-        cv2.imwrite(path, image)
+        cv2.imwrite(path, src)
         return 0
 
 
@@ -156,8 +156,9 @@ class CoordinateSchema(Schema):
         executer = ThreadPoolExecutor()
         bias = 16 if data.get("inside_upper_left_x") % 16 >= 8 else 0
         executer.submit(camera_start_3, 1, device_obj,
-                        OffsetX=data.get("inside_upper_left_x") // 16 * 16 + bias,
-                        OffsetY=data.get("inside_upper_left_y") // 2 * 2 + 200,
+                        OffsetX=data.get("inside_upper_left_x") // 16 * 16 + bias +32,
+                        # 120-->2   240-->4
+                        OffsetY=data.get("inside_upper_left_y") // 4 * 4 + 248,
                         Width=(data.get("inside_under_right_x") - data.get("inside_upper_left_x")) // 16 * 16 + bias,
-                        Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y")) // 2 * 2 + 2)
+                        Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y")) // 4 * 4 + 4)
         return jsonify({"status": "success"}), 200

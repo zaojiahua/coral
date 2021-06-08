@@ -1,4 +1,5 @@
 import collections
+import random
 import re
 import time
 from ctypes import *
@@ -8,9 +9,12 @@ import numpy as np
 
 from app.execption.outer.error_code.camera import NoSrc, NoCamera, CameraInitFail
 from app.v1.Cuttle.basic.MvImport.HK_import import *
+
+
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
-from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, camera_params, FpsMax, CameraMax
+from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, camera_params, FpsMax, CameraMax, \
+    camera_params_240
 from redis_init import redis_client
 
 MoveToPress = 9
@@ -70,6 +74,7 @@ def camera_start_3(camera_id, device_object, **kwargs):
     camera_dq_dict[device_object.pk] = dq
     redis_client.set("g_bExit", "0")
     response = camera_init_HK(**kwargs)
+    print("half done")
     camera_start_HK(dq, *response, device_object)
 
 
@@ -84,23 +89,30 @@ def camera_init_HK(**kwargs):
     # index 0--->第一个设备
     stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
     check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
-
     check_result(CamObj.MV_CC_OpenDevice, 6, 0)
     if kwargs.get("init") is None:
-        for key in camera_params[::-1]:
-            check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
-    for key in camera_params:
+        CamObj.MV_CC_SetIntValue("OffsetY", 0)
+        CamObj.MV_CC_SetIntValue("OffsetX", 0)
+        CamObj.MV_CC_SetEnumValue("ADCBitDepth",2)
+        CamObj.MV_CC_SetEnumValue("PixelFormat",0x01080009)
+        for key in camera_params_240:
+            if isinstance(key[1], int):
+                check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
+            elif isinstance(key[1], float):
+                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
+    for key in camera_params_240:
         if kwargs.get(key[0]) is not None:
             check_result(CamObj.MV_CC_SetIntValue, key[0], kwargs.get(key[0]))
     check_result(CamObj.MV_CC_StartGrabbing)
-
     stParam = MVCC_INTVALUE()
+
     memset(byref(stParam), 0, sizeof(MVCC_INTVALUE))
     check_result(CamObj.MV_CC_GetIntValue, "PayloadSize", stParam)
-
     nPayloadSize = stParam.nCurValue
+    # 1555200  / 4665600
     data_buf = (c_ubyte * nPayloadSize)()
     stFrameInfo = MV_FRAME_OUT_INFO_EX()
+    # stFrameInfo.
     CamObjList.append(CamObj)
 
     memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
@@ -112,30 +124,27 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
     while (device_object.has_camera):
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
         if ret == 0:
-            stParam = MV_SAVE_IMAGE_PARAM_EX()
-            m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 2048
-            # print(stFrameInfo.nWidth,stFrameInfo.nHeight,stFrameInfo.nOffsetY)
-            m_pBufForSaveImage = (c_ubyte * m_nBufSizeForSaveImage)()
-            # set xxsize in stparam to 0
-            memset(byref(stParam), 0, sizeof(stParam))
-            stParam.enImageType = MV_Image_Jpeg
-            stParam.enPixelType = stFrameInfo.enPixelType
-            stParam.nWidth = stFrameInfo.nWidth
-            stParam.nHeight = stFrameInfo.nHeight
-            stParam.nDataLen = stFrameInfo.nFrameLen
-
-            stParam.pData = cast(byref(data_buf), POINTER(c_ubyte))
-            stParam.pImageBuffer = cast(byref(m_pBufForSaveImage), POINTER(c_ubyte))
-            stParam.nBufferSize = m_nBufSizeForSaveImage
-            stParam.nJpgQuality = 80
-            cam_obj.MV_CC_SaveImageEx2(stParam)
-            # cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
-            image = np.asarray(m_pBufForSaveImage, dtype="uint8")
-            # print(np.all(image == 0))
-            # src = cv2.imdecode(image, cv2.IMREAD_COLOR)
-            # cv2.imwrite(f"{random.randint(1,100)}.jpg",src)
+            # a = time.time()
+            nRGBSize = stFrameInfo.nWidth * stFrameInfo.nHeight * 3
+            stConvertParam = MV_CC_PIXEL_CONVERT_PARAM()
+            memset(byref(stConvertParam), 0, sizeof(stConvertParam))
+            stConvertParam.nWidth = stFrameInfo.nWidth
+            stConvertParam.nHeight = stFrameInfo.nHeight
+            stConvertParam.pSrcData = data_buf
+            stConvertParam.nSrcDataLen = stFrameInfo.nFrameLen
+            stConvertParam.enSrcPixelType = stFrameInfo.enPixelType
+            stConvertParam.enDstPixelType = PixelType_Gvsp_BGR8_Packed
+            content = (c_ubyte * nRGBSize)()
+            stConvertParam.pDstBuffer = content
+            stConvertParam.nDstBufferSize = nRGBSize
+            ret = cam_obj.MV_CC_ConvertPixelType(stConvertParam)
+            image = np.asarray(content, dtype="uint8")
+            image = image.reshape((stFrameInfo.nHeight,stFrameInfo.nWidth,3))
             dq.append(image)
+            # print(time.time() - a)
+            time.sleep(0.001)
         else:
+            # print("fail")
             continue
         if redis_client.get("g_bExit") == "1":
             cam_obj.MV_CC_StopGrabbing()
@@ -148,6 +157,7 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
 def check_result(func, *args):
     return_value = func(*args)
     if return_value != 0:
+        print("return_value", return_value)
         raise CameraInitFail
 
 
@@ -178,7 +188,7 @@ class CameraHandler(Handler):
         for i in range(5):
             try:
                 src = camera_dq_dict.get(self._model.pk)[-1]
-                src = cv2.imdecode(src, 1)
+                # src = cv2.imdecode(src, 1)
                 src = np.rot90(src, 3)
             except IndexError:
                 time.sleep(0.03)
@@ -186,22 +196,22 @@ class CameraHandler(Handler):
         self.src = src
         return 0
 
-    def get_video(self, *args, **kwargs):
-        time_sleep = args[0]
-        max_save_time = CameraMax / FpsMax
-        pic_count = float(time_sleep) * FpsMax if float(time_sleep) < max_save_time else CameraMax
-        self.video_src = deque()
-        camera_dq_dict.get(self._model.pk).clear()
-        # 留出0.5s余量，保证取够图片
-        print("获取一段视频....", float(time_sleep) + 0.5)
-        time.sleep(float(time_sleep) + 0.5)
-        a = time.time()
-        print("总图片数：", pic_count, "现有：", len(camera_dq_dict.get(self._model.pk)))
-        temp_list = [camera_dq_dict.get(self._model.pk).popleft() for i in range(int(pic_count))]
-        for i in temp_list:
-            self.video_src.append(self.get_roi(self._model.pk, cv2.imdecode(i, 1)))
-        print("copy&decode&wrap  pic time:", time.time() - a)
-        return 0
+    # def get_video(self, *args, **kwargs):
+    #     time_sleep = args[0]
+    #     max_save_time = CameraMax / FpsMax
+    #     pic_count = float(time_sleep) * FpsMax if float(time_sleep) < max_save_time else CameraMax
+    #     self.video_src = deque()
+    #     camera_dq_dict.get(self._model.pk).clear()
+    #     # 留出0.5s余量，保证取够图片
+    #     print("获取一段视频....", float(time_sleep) + 0.5)
+    #     time.sleep(float(time_sleep) + 0.5)
+    #     a = time.time()
+    #     print("总图片数：", pic_count, "现有：", len(camera_dq_dict.get(self._model.pk)))
+    #     temp_list = [camera_dq_dict.get(self._model.pk).popleft() for i in range(int(pic_count))]
+    #     for i in temp_list:
+    #         self.video_src.append(self.get_roi(self._model.pk, cv2.imdecode(i, 1)))
+    #     print("copy&decode&wrap  pic time:", time.time() - a)
+    #     return 0
 
     def move(self, *args, **kwargs):
         if hasattr(self, "src"):

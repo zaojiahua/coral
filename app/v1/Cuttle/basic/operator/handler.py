@@ -1,4 +1,3 @@
-import abc
 import collections
 import copy
 import re
@@ -14,12 +13,16 @@ from app.v1.Cuttle.basic.setting import normal_result
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
 Standard = collections.namedtuple("Standard", ["mark", "code"])
 
+# 虚拟model，用来给没有model对象的赋值。
 Dummy_model = collections.namedtuple("Dummy_model", ["is_busy", "pk", "logger"])
 
 
 class Handler():
+    # process_list里面放具体的Abnormal namedtuple，用来根据结果内容做后处理（Tguard介入/adb 重连/解析获取电量信息等..）
     process_list = []
+    # skip_list 里放对应放方法名，用于跳过后处理机制（通常需要跳过的后处理为Tguard）
     skip_list = []
+    # standard_list 里放Standard namedtuple，用来根据执行结果（字符串等情况）设定 unit结果
     standard_list = []
 
     def __init__(self, *args, **kwargs):
@@ -82,10 +85,12 @@ class Handler():
 
     @method_dispatch
     def do(self, exec_content, **kwargs):
+        # 具体执行方法，这部分处理不是字符串的unit
         return self.func(exec_content, **kwargs)
 
     @do.register(str)
     def _(self, exec_content, **kwargs):
+        # 处理content为字符串的unit
         return self.str_func(exec_content, **kwargs)
 
     @method_dispatch
@@ -155,6 +160,8 @@ class Handler():
         return normal_result
 
     def _relative_swipe(self):
+        # 兼容相对坐标的‘滑动’方法，把执行体内的相对坐标先会换成绝对坐标。
+        # 就是按正则找到对应坐标位置，并根据设备分辨率进行替换
         regex = re.compile("shell input swipe ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*)")
         result = re.search(regex, self.exec_content)
         x1 = float(result.group(1))

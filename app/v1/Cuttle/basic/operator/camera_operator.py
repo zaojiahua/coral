@@ -113,27 +113,20 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
         if ret == 0:
             stParam = MV_SAVE_IMAGE_PARAM_EX()
-            m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3 + 2048
-            # print(stFrameInfo.nWidth,stFrameInfo.nHeight,stFrameInfo.nOffsetY)
+            m_nBufSizeForSaveImage = stFrameInfo.nWidth * stFrameInfo.nHeight * 3
             m_pBufForSaveImage = (c_ubyte * m_nBufSizeForSaveImage)()
-            # set xxsize in stparam to 0
             memset(byref(stParam), 0, sizeof(stParam))
             stParam.enImageType = MV_Image_Jpeg
             stParam.enPixelType = stFrameInfo.enPixelType
             stParam.nWidth = stFrameInfo.nWidth
             stParam.nHeight = stFrameInfo.nHeight
             stParam.nDataLen = stFrameInfo.nFrameLen
-
             stParam.pData = cast(byref(data_buf), POINTER(c_ubyte))
             stParam.pImageBuffer = cast(byref(m_pBufForSaveImage), POINTER(c_ubyte))
             stParam.nBufferSize = m_nBufSizeForSaveImage
             stParam.nJpgQuality = 80
             cam_obj.MV_CC_SaveImageEx2(stParam)
-            # cdll.msvcrt.memcpy(byref(m_pBufForSaveImage), stParam.pImageBuffer, stParam.nImageLen)
             image = np.asarray(m_pBufForSaveImage, dtype="uint8")
-            # print(np.all(image == 0))
-            # src = cv2.imdecode(image, cv2.IMREAD_COLOR)
-            # cv2.imwrite(f"{random.randint(1,100)}.jpg",src)
             dq.append(image)
         else:
             continue

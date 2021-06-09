@@ -151,6 +151,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return 1
 
     def pull_recent_video_or_picture(self, content):
+        # 为rds结果人工评定开发一半的unit，目前暂时没有用
         # 需要接受所有格式的文件pull请求
         from app.v1.device_common.device_model import Device
         connect_number = Device(pk=self._model.pk).connect_number if self.kwargs.get(

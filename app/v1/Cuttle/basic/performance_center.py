@@ -15,7 +15,9 @@ sp = '/' if platform.system() == 'Linux' else '\\'
 
 
 class PerformanceCenter(object):
-
+    # 这部分是性能测试的中心对象，性能测试主要测试启动点 和终止点两个点位，并根据拍照频率计算实际时间
+    # 终止点比较简单，但是启动点由于现有机械臂无法确认到具体点压的时间，只能通过机械臂遮挡关键位置时间+补偿时间（机械臂下落按压时间）计算得到
+    # 补偿时间又区分出多种情况，点击普通滑动 和用力滑动，第一接触点位置位于屏幕x方向的位置（摄像头角度），需要分别计算补偿的帧数。
     def __new__(cls, *args, **kwargs):
         # 单例
         if not hasattr(cls, "instance"):
@@ -25,6 +27,7 @@ class PerformanceCenter(object):
     def __init__(self, device_id, icon_area, refer_im_path, scope, threshold, work_path: str, dq, **kwargs):
         self.device_id = device_id
         self.result = 0
+        # dq存储起始点前到终止点后的每一帧图片
         self.back_up_dq = dq
         # 使用黑色区域时，icon_scope为icon实际出现在snap图中的位置，使用icon surf时icon_scope为编辑时出现在refer图中的位置
         # 使用选区变化/不变时 icon_scope 为None
@@ -53,39 +56,46 @@ class PerformanceCenter(object):
         return picture[area[1]:area[3], area[0]:area[2]]
 
     def start_loop(self, judge_function):
+        # 计算起始点的方法
         self.back_up_dq.clear()
         executer = ThreadPoolExecutor()
-        # 异步开始记录照片
+        # 先清空back_up_dq并异步开始记录照片
         self.move_src_task = executer.submit(self.move_src_to_backup)
         number = 0
         self.start_number = 0
-        # 等异步线程时间
+        # 等异步线程时间，确认back_up_dq已经有了一些照片
         time.sleep(0.5)
         while self.loop_flag:
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False
+            # 裁剪图片获取当前和下一张
             number, picture, next_picture, _ = self.picture_prepare(number, use_icon_scope=use_icon_scope)
             pic2 = self.judge_icon if judge_function.__name__ in ("_icon_find", "_black_field") else next_picture
+            # judge_function 返回True时 既是发现了起始点
             if judge_function(picture, pic2, self.threshold) == True:
                 self.bias = self.kwargs.get("bias") if self.kwargs.get("bias") else 0
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 if judge_function.__name__ == "_black_field":
+                    # 除了查询丢帧情况，都要计算bias，既补偿的帧数，这部分是根据第一点击点的x位置，给一个线性的补偿。后续可以考虑优化成多项式
                     self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // 0.25)
                 break
             if number >= CameraMax / 2:
+                # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
                 self.move_flag = False
                 self.back_up_dq.clear()
                 raise VideoStartPointNotFound
         return 0
 
     def end_loop(self, judge_function):
+        # 计算终止点的方法
         if not hasattr(self, "start_number"):
+            # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             raise VideoStartPointNotFound
         number = self.start_number + 1
         b = time.time()
         print("end loop start... now number:", number)
         for i in range(self.bias):
-            # 对bias补偿的帧数，先只保存对应图片，不做结果判断
+            # 对bias补偿的帧数，先只保存对应图片，不做结果判断（因为肯定终止点不会出现在里面）
             number, picture, next_picture, _ = self.picture_prepare(number)
         while self.loop_flag:
             number, picture, next_picture, _ = self.picture_prepare(number)
@@ -93,6 +103,7 @@ class PerformanceCenter(object):
                                                                   "_icon_find_template_match"] else next_picture
             if judge_function(picture, pic2, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
+                # 找到终止点后，包装一个json格式，推到reef。
                 self.end_number = number - 1
                 self.start_number = int(self.start_number + self.bias)
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
@@ -115,6 +126,9 @@ class PerformanceCenter(object):
         return 0
 
     def test_fps_lost(self, judge_function):
+        # 丢帧检测的单独方法，原理是看滑动时没帧图片是不是和上一帧相同，
+        # 同样由于机械臂硬件无法获取终止滑动的时间，所以与上一帧相同的图片可能为丢帧，也可能为滑动已经停止
+        # 需要设定为候选candidate，再继续看后续后面连续几（5）帧，如果都不变默认为已经停止
         if hasattr(self, "candidate"):
             delattr(self, "candidate")
         number = self.start_number + 1

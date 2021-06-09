@@ -43,7 +43,7 @@ macro_dict = {
     Rotate_switchHold: "G01 X34Y33Z0F1500 \r\n<move><rotateSleep>",
     RotateNormal: arm_default,
     RotateInit: "G01 X0Y00Z0F5000 \r\n",
-    RotateUp: "G01 X0Y123Z0F3000 \r\n"
+    RotateUp: "G01 X0Y123Z0F7000 \r\n"
 }
 
 

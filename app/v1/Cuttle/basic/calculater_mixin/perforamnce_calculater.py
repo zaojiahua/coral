@@ -17,7 +17,7 @@ from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, 
 
 
 class PerformanceMinix(object):
-    dq = deque(maxlen=CameraMax)
+    dq = deque(maxlen=CameraMax*2)
 
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法

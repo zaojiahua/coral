@@ -145,9 +145,11 @@ class Complex_Center(object):
             pic_h, pic_w = src.shape[:2]
             device_width = device.device_width
             device_height = device.device_height
+            print(pic_h, pic_w,device_width,device_height)
             # print(pic_y,pic_x,device_height,pic_h,pic_w)
             self.cx = int(pic_x * (device_width / pic_w))
             self.cy = int(pic_y * (device_height / pic_h))
+            print(self.cx,self.cy)
         elif self.crop_offset != [0, 0, device.device_width, device.device_height]:
             # 截图内裁剪
             self.cx = int(pic_x + int(self.crop_offset[0]))
@@ -201,8 +203,8 @@ class Complex_Center(object):
         th, tw = template.shape[:2]
         result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
         min_val_original, _, _, _ = cv2.minMaxLoc(result)
-        th = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
-        if np.abs(min_val_original) >= th:
+        thres = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
+        if np.abs(min_val_original) >= thres:
             raise NotFindIcon
         cv2.normalize(result, result, 0, 1, cv2.NORM_MINMAX, -1)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)

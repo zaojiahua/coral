@@ -1,6 +1,8 @@
 import re
 import time
 
+import numpy as np
+
 from app.config.setting import CORAL_TYPE
 from app.config.url import device_url, phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet
@@ -281,8 +283,8 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
             ]
         else:
-            x1 = min(max(start_x - (end_x - start_x) * trapezoid, 0), 120)
-            y1 = min(max(start_y - (end_y - start_y) * trapezoid, 0), 150)
+            x1 = min(max(start_x - (end_x - start_x)*10/np.abs(end_x-start_x) * trapezoid, 0), 120)
+            y1 = min(max(start_y - (end_y - start_y)*10/np.abs((end_y-start_y)) * trapezoid, 0), 150)
             x4 = min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
             y4 = min(max(end_y + (end_y - start_y) * trapezoid, 0), 150)
             print("1:", x1, y1)

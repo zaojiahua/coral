@@ -105,6 +105,7 @@ class TestMixin(object):
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         result_x = min_loc[0] + 1 / 2 * tw
         result_y = min_loc[1] + 1 / 2 * th
+        print("test:", result_x, result_y,min_loc,tw,th)
         img = Image.open(image_crop_path).convert("RGB")
         img_draw = ImageDraw.Draw(img)
         length = max(np.array(img).shape[:2])

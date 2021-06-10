@@ -69,8 +69,8 @@ class PerformanceCenter(object):
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 if judge_function.__name__ == "_black_field":
-                    print("bias add:",int((self.icon_scope[0] + self.icon_scope[2]) // (30/FpsMax)))
-                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // (30/FpsMax)) if self.bias != 0 else self.bias
+                    print(int((self.icon_scope[0] + self.icon_scope[2]) // (35/FpsMax)))
+                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // (35/FpsMax))
                 break
             if number >= CameraMax / 2:
                 self.move_flag = False
@@ -84,9 +84,10 @@ class PerformanceCenter(object):
         number = self.start_number + 1
         b = time.time()
         print("end loop start... now number:", number,"bisa:",self.bias)
-        for i in range(self.bias):
-            # 对bias补偿的帧数，先只保存对应图片，不做结果判断
-            number, picture, next_picture, _ = self.picture_prepare(number)
+        if self.bias > 0:
+            for i in range(self.bias):
+                # 对bias补偿的帧数，先只保存对应图片，不做结果判断
+                number, picture, next_picture, _ = self.picture_prepare(number)
         while self.loop_flag:
             number, picture, next_picture, _ = self.picture_prepare(number)
             pic2 = self.judge_icon if judge_function.__name__ in ["_icon_find","_icon_find_template_match"] else next_picture
@@ -102,7 +103,7 @@ class PerformanceCenter(object):
                 self.move_flag = False
                 break
             if number >= CameraMax / 2:
-                self.result = {"start_point": self.start_number, "end_point": number,
+                self.result = {"start_point": self.start_number+ self.bias, "end_point": number,
                                "job_duration": max(round((number - self.start_number) * 1 / FpsMax, 3), 0),
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": number,
@@ -113,13 +114,18 @@ class PerformanceCenter(object):
                 raise VideoEndPointNotFound
         return 0
 
+    def get_correct_picture(self,fps):
+        if fps > 240:
+            raise
+        (fps//120)
+
     def test_fps_lost(self, judge_function):
         if hasattr(self, "candidate"):
             delattr(self, "candidate")
         number = self.start_number + 1
-        for i in range(200):
+        for i in range(300):
             number, picture, next_picture, next_next_picture = self.picture_prepare(number)
-            pic2 = next_picture if self.kwargs.get("fps") >= 120 else next_next_picture
+            pic2 = next_next_picture if self.kwargs.get("fps") >= 120 else next_next_picture
             if judge_function(picture, pic2, self.threshold) == False:
                 # print(f"find end point number: {number}", "bias:", self.bias)
                 # self.result = {"fps_lost": True, "lost_number": number}

@@ -133,3 +133,8 @@ class VideoEndPointNotFound(APIException):
     code = 400
     description = "can not find end point in video"
 
+class FpsLostWrongValue(APIException):
+    error_code = 2018
+    code = 400
+    description = "fps lost only support 60 90 120"
+

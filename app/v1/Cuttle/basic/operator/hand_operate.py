@@ -123,7 +123,7 @@ class HandHandler(Handler, DefaultMixin):
 
     def reset_hand(self, hand_reset_orders=arm_wait_position, **kwargs):
         # 恢复手臂位置 可能是龙门架也可能是旋转机械臂
-        self._model.logger(f"reset hand order:{hand_reset_orders}")
+        self._model.logger.info(f"reset hand order:{hand_reset_orders}")
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time)

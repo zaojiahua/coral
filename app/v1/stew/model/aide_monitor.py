@@ -19,6 +19,7 @@ from app.v1.tboard.views.stop_specific_device import stop_specific_device
 
 @execute_limit(60)
 def send_battery_check(device_label, device_ip):
+    # 此处只负责下发检测电量的adb指令，在adb operator里会根据结果解析具体电量数据。
     work_path = os.path.join(PROJECT_SIBLING_DIR, "Pacific", device_label, "djobBattery", )
     if not os.path.exists(work_path):
         os.makedirs(work_path)

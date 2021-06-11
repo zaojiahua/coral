@@ -278,6 +278,7 @@ class Device(models.Model):
         self.flag = False
 
     def start_device_sequence_loop(self, aide_monitor_instance):
+        # 每一个设备拥有自己的同步循环loop，优先处理下发的任务，没有下发任务且auto test开启时执行推荐任务。
         self.logger.info(f"new device {self.device_label} into sequence_loop")
         # ------------------------Loop------------------------
         add_device_thread_status(self.device_label)

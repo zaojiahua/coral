@@ -8,6 +8,7 @@ from app.v1.Cuttle.basic.setting import handler_config
 
 
 def async_timeout(timeout=20):
+    # 限制函数最大执行时间的装饰器
     def decorate(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -19,6 +20,7 @@ def async_timeout(timeout=20):
 
 
 def execute_limit(interval_time=300):
+    # 限制函数最高触发频率的装饰器
     def decorate(func):
         cache = {}
 
@@ -40,6 +42,7 @@ def execute_limit(interval_time=300):
 
 
 def handler_switcher(func):
+    # 自动根据配置选择handler的装饰器（eg：adb和机械臂之间选择）
     @wraps(func)
     def wrapper(*args, **kw):
         kw.update({"handler": handler_config.get(func.__name__)})

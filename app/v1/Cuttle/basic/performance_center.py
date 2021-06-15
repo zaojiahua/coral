@@ -83,7 +83,7 @@ class PerformanceCenter(object):
             raise VideoStartPointNotFound
         number = self.start_number + 1
         b = time.time()
-        print("end loop start... now number:", number, "bisa:", self.bias)
+        print("end loop start... now number:", number, "bias:", self.bias)
         if self.bias > 0:
             for i in range(self.bias):
                 # 对bias补偿的帧数，先只保存对应图片，不做结果判断
@@ -143,7 +143,7 @@ class PerformanceCenter(object):
                 elif hasattr(self, "candidate"):
                     continue
                 else:
-                    self.candidate = number
+                    self.candidate = number-1
                     continue
             else:
                 if hasattr(self, "candidate"):
@@ -172,8 +172,8 @@ class PerformanceCenter(object):
                 pic_next = self.back_up_dq[0]
                 pic_next_next = self.back_up_dq[1]
                 break
-            except IndexError:
-                print("error in picture_prepare")
+            except IndexError as e:
+                print("error in picture_prepare",repr(e))
                 time.sleep(0.02)
         # save_pic = cv2.resize(picture, dsize=(0, 0), fx=0.5, fy=0.5)
         cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture)

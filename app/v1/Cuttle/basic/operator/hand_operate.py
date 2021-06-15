@@ -287,8 +287,6 @@ class HandHandler(Handler, DefaultMixin):
             y1 = min(max(start_y - (end_y - start_y)*10/np.abs((end_y-start_y)) * trapezoid, 0), 150)
             x4 = min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
             y4 = min(max(end_y + (end_y - start_y) * trapezoid, 0), 150)
-            print("1:", x1, y1)
-            print("2", start_x, start_y)
             return [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN - 1, MOVE_SPEED),

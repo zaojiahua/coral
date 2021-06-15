@@ -57,6 +57,7 @@ class DJobFlow(BaseModel):
     start_point = models.IntegerField()  # 记录性能测试起点
     end_point = models.IntegerField()  # 记录性能测试终点
     picture_count = models.IntegerField()  # 记录性能测试记录的总图片
+    lose_frame_point = models.IntegerField()  # 记录性能测试记录的总图片
     url_prefix = models.CharField()  # 记录性能测试存图的url前缀
     time_per_unit = OwnerFloatField()  # 记录性能测试存图单位
     rds = OwnerForeignKey(to=RDS)  # 记录rds 详细结果,用于分析
@@ -301,7 +302,7 @@ class DJobFlow(BaseModel):
 
         :return:
         """
-        rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit"]
+        rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit","lose_frame_point"]
         self.recent_img_res_list = None  # 每一个block 产生的结果会覆盖recent_img_res_list
         self.recent_img_rpop_list = None
 

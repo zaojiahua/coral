@@ -42,10 +42,11 @@ class DJob(BaseModel):
     job_duration = OwnerFloatField()  # 记录性能测试用例性能数据（运行时间）
     start_point = models.IntegerField()  # 记录性能测试起点
     end_point = models.IntegerField()  # 记录性能测试终点
+    lose_frame_point = models.IntegerField()  # 记录性能测试终点
     picture_count = models.IntegerField()  # 记录性能测试记录的总图片
     url_prefix = models.CharField()  # 记录性能测试存图的url前缀
     time_per_unit = OwnerFloatField()  # 记录性能测试存图单位时间
-    rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit"]
+    rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit","lose_frame_point"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -2,7 +2,7 @@ hand_serial_obj_dict = {}
 hand_used_list = []
 camera_dq_dict = {}
 camera_params = [("Width", 1280), ("Height", 720), ("OffsetY", 200), ("OffsetX", 0)]
-camera_params_240 = [("Width", 1296), ("Height", 720), ("OffsetY", 248), ("OffsetX", 32),("AcquisitionFrameRate",240.0),("ExposureTime",2500.0)]
+camera_params_240 = [("Width", 1296), ("Height", 720), ("OffsetY", 248), ("OffsetX", 32),("AcquisitionFrameRate",240.0),("ExposureTime",2500.0),("Gain",1.51)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
@@ -14,7 +14,7 @@ Z_UP = 0
 MOVE_SPEED = 15000
 SWIPE_TIME = 1
 # 梯形滑动连带的比例
-trapezoid = 0.6
+trapezoid = 0.9
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
 m_location = [38, 13]
 wait_time = 1
@@ -36,7 +36,7 @@ g_bExit = False
 FpsMax = 240
 CameraMax = 1200
 BIAS = int(FpsMax / 120 * 19)   # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
-SWIPE_BIAS = 2  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
+SWIPE_BIAS = int(FpsMax / 120 * 5)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
 
 Continues_Number = 1  # 连续多张判断准则，适用于性能测试
 camera_w = 1280  # 摄像头拍摄分辨率，需要根据具体摄像头设置

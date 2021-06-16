@@ -17,6 +17,7 @@ sp = '/' if platform.system() == 'Linux' else '\\'
 class PerformanceCenter(object):
 
     def __new__(cls, *args, **kwargs):
+        # 单例
         if not hasattr(cls, "instance"):
             cls.instance = super().__new__(cls)
         return cls.instance
@@ -114,10 +115,6 @@ class PerformanceCenter(object):
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 raise VideoEndPointNotFound
         return 0
-
-    # def get_correct_picture(self, fps):
-    #     fps = min(max(fps, 60), 240)
-    #     return 5 - (fps // 60)
 
     def test_fps_lost(self, judge_function):
         if self.kwargs.get("fps") not in [60, 90, 120]:

@@ -9,8 +9,6 @@ import numpy as np
 
 from app.execption.outer.error_code.camera import NoSrc, NoCamera, CameraInitFail
 from app.v1.Cuttle.basic.MvImport.HK_import import *
-
-
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, camera_params, FpsMax, CameraMax, \
@@ -89,6 +87,7 @@ def camera_init_HK(**kwargs):
     # index 0--->第一个设备
     stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
     check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
+
     check_result(CamObj.MV_CC_OpenDevice, 6, 0)
     if kwargs.get("init") is None:
         CamObj.MV_CC_SetIntValue("OffsetY", 0)
@@ -104,15 +103,14 @@ def camera_init_HK(**kwargs):
         if kwargs.get(key[0]) is not None:
             check_result(CamObj.MV_CC_SetIntValue, key[0], kwargs.get(key[0]))
     check_result(CamObj.MV_CC_StartGrabbing)
-    stParam = MVCC_INTVALUE()
 
+    stParam = MVCC_INTVALUE()
     memset(byref(stParam), 0, sizeof(MVCC_INTVALUE))
     check_result(CamObj.MV_CC_GetIntValue, "PayloadSize", stParam)
+
     nPayloadSize = stParam.nCurValue
-    # 1555200  / 4665600
     data_buf = (c_ubyte * nPayloadSize)()
     stFrameInfo = MV_FRAME_OUT_INFO_EX()
-    # stFrameInfo.
     CamObjList.append(CamObj)
 
     memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
@@ -144,7 +142,6 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
             # print(time.time() - a)
             time.sleep(0.001)
         else:
-            # print("fail")
             continue
         if redis_client.get("g_bExit") == "1":
             cam_obj.MV_CC_StopGrabbing()

@@ -37,18 +37,24 @@ class UnitFactory(object):
     }
 
     def __new__(cls, *args, **kwargs):
+        # 确保自己为单例对象
         if not hasattr(cls, "instance"):
             cls.instance = super().__new__(cls)
         return cls.instance
 
     def create(self, handler_type, input_data):
+        # 所有unit的入口文件
+        # 先实例化一个对应的model
         model = self.model_dict.get(handler_type, Dummy_model)
         pk = input_data.get("device_label")
         model_obj = model(is_busy=False, pk=pk, logger=setup_logger(f'{handler_type}-{pk}', f'{handler_type}-{pk}.log'))
+        # 此处，会根据handler_type(是个字符串)实例化一个对应的handler（eg:AdbHandler,ImageHandler），并把刚刚的model，
+        # 和执行中unit的信息（input_data）传入handler的构造函数，并显示的调用execute方法。
         return eval(handler_type)(model=model_obj, many=isinstance(input_data.get('execCmdList'), list),
                                   **input_data).execute()
 
 
+# 下面的都为cypress编辑时，点击测试按钮的执行api
 @basic.route('/icon_test/', methods=['POST'])
 def test_icon_exist():
     try:
@@ -56,6 +62,7 @@ def test_icon_exist():
         return jsonify(image_handler.test_icon_exist(request.files)), 200
     except Exception as e:
         return jsonify({"status": repr(e)}), 400
+
 
 @basic.route('/icon_test_fixed/', methods=['POST'])
 def test_icon_exist_fixed():
@@ -90,4 +97,3 @@ def ocr_test():
         return jsonify(image_handler.test_ocr_result(request_params)), 200
     except Exception as e:
         return jsonify({"status": repr(e)}), 400
-

@@ -9,7 +9,7 @@ HAND_MAX_X = 315
 HAND_MAX_Y = 245
 Z_START = 0
 # Z_DOWN = -3.5   tianjing setting
-Z_DOWN = -24
+Z_DOWN = -30
 Z_UP = 0
 MOVE_SPEED = 15000
 SWIPE_TIME = 1
@@ -52,6 +52,7 @@ CamObjList = []
 normal_result = (False, None)
 handler_config = {
     # 当复合unit中新增adb方法，需要更新此配置文件，指明其可能性
+
     "point": ("AdbHandler", "HandHandler"),
     "long_press": ("AdbHandler", "HandHandler"),
     "swipe": ("AdbHandler", "HandHandler"),
@@ -60,5 +61,5 @@ handler_config = {
 strip_str = '<>[]{}/",.\n、'
 # imageTool排除干扰词
 bounced_words = ["确定", "同意", "同意并继续", "同意并使用", "暂不开启", "允许", "好的", "开始", "继续", "我知道了",
-                 "跳过", "以后再说", "仅使用期间允许", "始终允许", "下一步", "暂不升级", "不了，谢谢", "知道了", "不开启",
+                 "跳过", "以后再说", "仅使用期间允许", "仅在使用中允许","始终允许", "下一步", "暂不升级", "不了，谢谢", "知道了", "不开启",
                  "仅在使用此应用时允许"]

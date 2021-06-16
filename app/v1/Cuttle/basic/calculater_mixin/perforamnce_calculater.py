@@ -14,8 +14,8 @@ from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchem
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
 from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS
-
-
+# from skimage.measure import compare_ssim
+# from skimage.metrics.structural_similarity import compare_ssim
 class PerformanceMinix(object):
     dq = deque(maxlen=CameraMax*2)
 
@@ -210,7 +210,7 @@ class PerformanceMinix(object):
         response = UnitFactory().create("ImageHandler", request_dict)
         return response
 
-    def _black_field(self, picture, _, threshold):
+    def _black_field(self, picture, _,__, threshold):
         result = np.count_nonzero(picture < 50)
         standard = picture.shape[0] * picture.shape[1] * picture.shape[2]
         # picture shape is 0?
@@ -236,20 +236,31 @@ class PerformanceMinix(object):
             response = bool(1 - response)
         return response
 
-    def _picture_changed(self, last_pic, next_pic, threshold, changed=True):
+    def _picture_changed(self, last_pic, next_pic,third_pic, threshold):
+        # ssim_value = compare_ssim(last_pic,next_pic,multichannel=True,gaussian_weights=True)
+        # print("ssim error:",ssim_value)
+        # final_result =  float(ssim_value) > threshold
+        # error = np.sum(np.subtract(last_pic,next_pic) **2)
+        # error /= last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
+        # print("mse error:",error)
         difference = np.absolute(np.subtract(last_pic, next_pic))
         result = np.count_nonzero(difference < 35)
         result2 = np.count_nonzero(220 < difference)
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
-        final_result = match_ratio > threshold - 0.01
-        if changed is True:
-            final_result = bool(1 - final_result)
-        # if final_result:
-        #     cv2.imwrite("changed_next.jpg",next_pic)
-        #     cv2.imwrite("changed_last.jpg",last_pic)
-        #     print(match_ratio)
-        return final_result
+        final_result = match_ratio < threshold - 0.01
+        if third_pic is not None:
+            difference_2 = np.absolute(np.subtract(last_pic, third_pic))
+            result_2 = np.count_nonzero(difference_2 < 30)
+            result2_2 = np.count_nonzero(225 < difference_2)
+            standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
+            match_ratio_2 = ((result_2 + result2_2) / standard)
+            final_result_2 = match_ratio_2 < threshold - 0.03
+        else:
+            final_result_2 = True
+            match_ratio_2 = 1
+        return (final_result_2 and final_result) or match_ratio_2 < 0.9
+
 
     def delay_exec(self, function, *args, **kwargs):
         time.sleep(kwargs.get("sleep", 0.5))

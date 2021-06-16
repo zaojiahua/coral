@@ -62,9 +62,9 @@ class PerformanceCenter(object):
         time.sleep(0.5)
         while self.loop_flag:
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False
-            number, picture, next_picture, _ = self.picture_prepare(number, use_icon_scope=use_icon_scope)
+            number, picture, next_picture, third_pic = self.picture_prepare(number, use_icon_scope=use_icon_scope)
             pic2 = self.judge_icon if judge_function.__name__ in ("_icon_find", "_black_field") else next_picture
-            if judge_function(picture, pic2, self.threshold) == True:
+            if judge_function(picture, pic2, third_pic, self.threshold) == True:
                 self.bias = self.kwargs.get("bias") if self.kwargs.get("bias") else 0
                 self.start_number = number - 1
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
@@ -89,10 +89,10 @@ class PerformanceCenter(object):
                 # 对bias补偿的帧数，先只保存对应图片，不做结果判断
                 number, picture, next_picture, _ = self.picture_prepare(number)
         while self.loop_flag:
-            number, picture, next_picture, _ = self.picture_prepare(number)
+            number, picture, next_picture, third_pic = self.picture_prepare(number)
             pic2 = self.judge_icon if judge_function.__name__ in ["_icon_find",
                                                                   "_icon_find_template_match"] else next_picture
-            if judge_function(picture, pic2, self.threshold) == True:
+            if judge_function(picture, pic2,third_pic, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 self.end_number = number - 1
                 self.start_number = int(self.start_number + self.bias)
@@ -125,32 +125,33 @@ class PerformanceCenter(object):
         if hasattr(self, "candidate"):
             delattr(self, "candidate")
         number = self.start_number + 1
-        for i in range(300):
-            number, picture_1,picture_2, picture_3 = self.picture_prepare(number)
-            number, picture_4, picture_5, picture_6 = self.picture_prepare(number)
+        for i in range(FpsMax*4):
+            number, picture_1, picture_2, picture_3 = self.picture_prepare(number)
+            number, picture_2, picture_3, picture_4 = self.picture_prepare(number)
+            number, picture_3, picture_4, picture_5 = self.picture_prepare(number)
             pic2 = picture_3 if self.kwargs.get("fps") == 120 else picture_5
-            if judge_function(picture_1, pic2, self.threshold) == False:
+            if judge_function(picture_1, pic2,None, self.threshold) == False:
                 # print(f"find end point number: {number}", "bias:", self.bias)
                 # self.result = {"fps_lost": True, "lost_number": number}
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                if hasattr(self, "candidate") and number - self.candidate >= 5:
+                if hasattr(self, "candidate") and number - self.candidate >= 12:
                     self.result = {"fps_lost": False,
                                    "picture_count": number + 29,
                                    "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-                    self.end_number = number - 1
+                    self.end_number = number
                     self.move_flag = False
                     break
                 elif hasattr(self, "candidate"):
                     continue
                 else:
-                    self.candidate = number-1
+                    self.candidate = number - 3
                     continue
             else:
                 if hasattr(self, "candidate"):
                     self.result = {"fps_lost": True, "lose_frame_point": self.candidate,
                                    "picture_count": number + 29,
                                    "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-                    self.end_number = number - 1
+                    self.end_number = number
                     self.move_flag = False
                     break
             if number >= CameraMax / 2:
@@ -159,7 +160,7 @@ class PerformanceCenter(object):
                 raise VideoEndPointNotFound
         else:
             self.result = {"fps_lost": False}
-            self.end_number = number - 1
+            self.end_number = number
             self.move_flag = False
         return 0
 
@@ -173,7 +174,7 @@ class PerformanceCenter(object):
                 pic_next_next = self.back_up_dq[1]
                 break
             except IndexError as e:
-                print("error in picture_prepare",repr(e))
+                print("error in picture_prepare", repr(e))
                 time.sleep(0.02)
         # save_pic = cv2.resize(picture, dsize=(0, 0), fx=0.5, fy=0.5)
         cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture)

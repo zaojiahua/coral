@@ -65,6 +65,7 @@ class DoorKeeper(object):
         #     for port in port_list:
         #         PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
         try:
+            # 一个机柜只放一台手机限定
             available_port_list = list(set(port_list) ^ set(hand_used_list))
             print("available port list :", available_port_list)
             if len(available_port_list) == 0:
@@ -93,6 +94,7 @@ class DoorKeeper(object):
 
     def authorize_device_manually(self, **kwargs):
         length = np.hypot(kwargs.get("device_height"), kwargs.get("device_width"))
+        # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
         kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
         kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         # kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + "-" + self.get_default_name()
@@ -108,11 +110,13 @@ class DoorKeeper(object):
         return 0
 
     def open_device_wifi_service(self, device_id=""):
+        # 好像已经作废的方法
         dev_info_dict = self.get_device_info(device_id)
 
         return dev_info_dict
 
     def reconnect_device(self, device_label):
+        # 设备重连，只做获取最新ip和开启5555端口的操作
         if device_label is None or len(device_label) < 1:
             return -1
         s_id = device_label.split("---")[-1]
@@ -380,6 +384,7 @@ class DoorKeeper(object):
             ThreadPoolExecutor(max_workers=100).submit(device_object.start_device_async_loop, aide_monitor_instance)
 
     def get_default_name(self):
+        # 对于没起名字的手机，给默认名规则为NewDevice月日-序号 eg：NewDevice0702-001
         real_date = datetime.now().strftime("%m-%d")
         if not real_date == self.date_mark:
             self.date_mark = real_date
@@ -398,6 +403,7 @@ class DoorKeeper(object):
         return ret_ip_address
 
     def get_screen_size_internal(self, num):
+        # 获取设备分辨率 eg 1080*2160
         ret_size_list = []
         tmp_str = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell wm size")
         tmp_list = tmp_str.split("Physical size: ")
@@ -510,9 +516,3 @@ class ShellCmdThread(threading.Thread):
             except Exception as e:
                 logger.error("Got exception in ShellCmdThread-terminateThread: " + str(e))
         return 0
-
-
-if __name__ == '__main__':
-    a = DoorKeeper()
-    result = a.get_mutidevice_list()
-    print(result)

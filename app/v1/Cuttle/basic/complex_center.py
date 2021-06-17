@@ -167,11 +167,8 @@ class Complex_Center(object):
             pic_h, pic_w = src.shape[:2]
             device_width = device.device_width
             device_height = device.device_height
-            print(pic_h, pic_w,device_width,device_height)
-            # print(pic_y,pic_x,device_height,pic_h,pic_w)
             self.cx = int(pic_x * (device_width / pic_w))
             self.cy = int(pic_y * (device_height / pic_h))
-            print(self.cx,self.cy)
         elif self.crop_offset != [0, 0, device.device_width, device.device_height]:
             # 截图内裁剪
             self.cx = int(pic_x + int(self.crop_offset[0]))

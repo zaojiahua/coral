@@ -93,7 +93,7 @@ class PerformanceCenter(object):
             number, picture, next_picture, third_pic = self.picture_prepare(number)
             pic2 = self.judge_icon if judge_function.__name__ in ["_icon_find",
                                                                   "_icon_find_template_match"] else next_picture
-            if judge_function(picture, pic2,third_pic, self.threshold) == True:
+            if judge_function(picture, pic2, third_pic, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 self.end_number = number - 1
                 self.start_number = int(self.start_number + self.bias)
@@ -122,16 +122,12 @@ class PerformanceCenter(object):
         if hasattr(self, "candidate"):
             delattr(self, "candidate")
         number = self.start_number + 1
-        for i in range(FpsMax*4):
-            number, picture_1, picture_2, picture_3 = self.picture_prepare(number)
-            number, picture_2, picture_3, picture_4 = self.picture_prepare(number)
-            number, picture_3, picture_4, picture_5 = self.picture_prepare(number)
-            pic2 = picture_3 if self.kwargs.get("fps") == 120 else picture_5
-            if judge_function(picture_1, pic2,None, self.threshold) == False:
-                # print(f"find end point number: {number}", "bias:", self.bias)
-                # self.result = {"fps_lost": True, "lost_number": number}
+        skip = 2 if self.kwargs.get("fps") == 120 else 4
+        for i in range(FpsMax * 4):
+            number, picture_original, picture_comp_1, picture_comp_2 = self.picture_prepare_for_fps_lost(number, skip)
+            if judge_function(picture_original, picture_comp_1, picture_comp_2, self.threshold) == False:
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                if hasattr(self, "candidate") and number - self.candidate >= 12:
+                if hasattr(self, "candidate") and number - self.candidate >= skip*4:
                     self.result = {"fps_lost": False,
                                    "picture_count": number + 29,
                                    "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
@@ -141,7 +137,7 @@ class PerformanceCenter(object):
                 elif hasattr(self, "candidate"):
                     continue
                 else:
-                    self.candidate = number - 3
+                    self.candidate = number - 1
                     continue
             else:
                 if hasattr(self, "candidate"):
@@ -184,6 +180,31 @@ class PerformanceCenter(object):
         pic_next = pic_next[area[1]:area[3], area[0]:area[2]]
         pic_next_next = pic_next_next[area[1]:area[3], area[0]:area[2]]
         return number, picture, pic_next, pic_next_next
+
+    def picture_prepare_for_fps_lost(self, number, skip=2):
+        for i in range(3):
+            try:
+                for i in range(skip + 1):
+                    pic = self.back_up_dq.popleft()
+                    if i == 0:
+                        pic_original = pic
+                    elif i == skip:
+                        pic_compare_1 = pic
+                    cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), pic)
+                    number += 1
+                pic_compare_2 = self.back_up_dq[skip - 1]
+                break
+            except IndexError as e:
+                print("error in picture_prepare", repr(e))
+                time.sleep(0.05)
+        h, w = pic_original.shape[:2]
+        area = [int(i) if i > 0 else 0 for i in
+                [self.scope[0] * w, self.scope[1] * h, self.scope[2] * w, self.scope[3] * h]] \
+            if 0 < all(i <= 1 for i in self.scope) else [int(i) for i in self.scope]
+        pic_original = pic_original[area[1]:area[3], area[0]:area[2]]
+        pic_compare_1 = pic_compare_1[area[1]:area[3], area[0]:area[2]]
+        pic_compare_2 = pic_compare_2[area[1]:area[3], area[0]:area[2]]
+        return number, pic_original, pic_compare_1, pic_compare_2
 
     def move_src_to_backup(self):
         # 把dq内图片放置到备用dq中去，此方法在起始点判定时异步开始执行，到终止点判定结束退出

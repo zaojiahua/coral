@@ -244,8 +244,8 @@ class PerformanceMinix(object):
         # error /= last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         # print("mse error:",error)
         difference = np.absolute(np.subtract(last_pic, next_pic))
-        result = np.count_nonzero(difference < 35)
-        result2 = np.count_nonzero(220 < difference)
+        result = np.count_nonzero(difference < 25)
+        result2 = np.count_nonzero(230 < difference)
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
         final_result = match_ratio < threshold - 0.01

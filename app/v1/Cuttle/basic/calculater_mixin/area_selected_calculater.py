@@ -25,7 +25,7 @@ class AreaSelectedMixin(object):
         image_crop = self._crop_image(data.get("input_im"), data.get("crop_areas")[0])
         # 得到特征点的列表
         file_name = data.get('input_im').split("\\")[-1]
-        path = os.path.join(self.kwargs.get("work_path"), f"crop-icon_exist{file_name}")
+        path = os.path.join(self.kwargs.get("work_path"), f"crop-icon_exist1-{file_name}")
         cv2.imwrite(path, image_crop)
         feature_point_list = self.shape_identify(image_crop, feature_refer)
         from app.v1.device_common.device_model import Device
@@ -118,7 +118,7 @@ class AreaSelectedMixin(object):
         template = self._crop_image(data.get("refer_im"), data.get("areas")[0])
         target = self._crop_image(data.get("input_im"), data.get("crop_areas")[0])
         file_name = data.get('input_im').split("\\")[-1]
-        path = os.path.join(self.kwargs.get("work_path"), f"crop-icon_exist{file_name}")
+        path = os.path.join(self.kwargs.get("work_path"), f"crop-icon_exist2-{file_name}")
         cv2.imwrite(path, target)
         result = self.template_match(target, template)
         return 0 if result == True else 1

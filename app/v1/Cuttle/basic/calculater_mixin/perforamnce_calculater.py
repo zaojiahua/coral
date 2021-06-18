@@ -236,7 +236,7 @@ class PerformanceMinix(object):
             response = bool(1 - response)
         return response
 
-    def _picture_changed(self, last_pic, next_pic,third_pic, threshold):
+    def _picture_changed(self, last_pic, next_pic,third_pic, threshold,fps_lost=False):
         # ssim_value = compare_ssim(last_pic,next_pic,multichannel=True,gaussian_weights=True)
         # print("ssim error:",ssim_value)
         # final_result =  float(ssim_value) > threshold
@@ -244,8 +244,8 @@ class PerformanceMinix(object):
         # error /= last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         # print("mse error:",error)
         difference = np.absolute(np.subtract(last_pic, next_pic))
-        result = np.count_nonzero(difference < 25)
-        result2 = np.count_nonzero(230 < difference)
+        result = np.count_nonzero(difference < 30)
+        result2 = np.count_nonzero(225 < difference)
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
         final_result = match_ratio < threshold - 0.01
@@ -259,6 +259,9 @@ class PerformanceMinix(object):
         else:
             final_result_2 = True
             match_ratio_2 = 1
+        print(match_ratio,match_ratio_2)
+        if fps_lost:
+            return not (not final_result and not final_result_2)
         return (final_result_2 and final_result) or match_ratio_2 < 0.9
 
 

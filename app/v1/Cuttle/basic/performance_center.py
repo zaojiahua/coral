@@ -123,9 +123,9 @@ class PerformanceCenter(object):
             delattr(self, "candidate")
         number = self.start_number + 1
         skip = 2 if self.kwargs.get("fps") == 120 else 4
-        for i in range(FpsMax * 4):
+        for i in range(FpsMax * 3):
             number, picture_original, picture_comp_1, picture_comp_2 = self.picture_prepare_for_fps_lost(number, skip)
-            if judge_function(picture_original, picture_comp_1, picture_comp_2, self.threshold) == False:
+            if judge_function(picture_original, picture_comp_1, picture_comp_2, min(self.threshold+0.005,1),fps_lost = True) == False:
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 if hasattr(self, "candidate") and number - self.candidate >= skip*4:
                     self.result = {"fps_lost": False,

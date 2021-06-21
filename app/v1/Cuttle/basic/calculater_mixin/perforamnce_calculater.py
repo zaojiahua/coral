@@ -259,7 +259,6 @@ class PerformanceMinix(object):
         else:
             final_result_2 = True
             match_ratio_2 = 1
-        print(match_ratio,match_ratio_2)
         if fps_lost:
             return not (not final_result and not final_result_2)
         return (final_result_2 and final_result) or match_ratio_2 < 0.9

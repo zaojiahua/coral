@@ -115,4 +115,5 @@ class Dut(BaseModel):
             "tboard_id": self.parent.pk,
             "tboard_path": self.parent.tboard_path
         }
+        logger.info(f"send insert djob, body：{json_data}")
         return insert_djob_inner(**json_data)

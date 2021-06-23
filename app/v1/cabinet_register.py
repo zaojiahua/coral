@@ -11,7 +11,8 @@ def cabinet_register():
         jsdata = {"cabinet_name": f"I'M {cabinet_id}#-({CORAL_TYPE})",
                   "ip_address": HOST_IP,
                   "is_delete": False,
-                  "type": f"Tcab_{CORAL_TYPE}"}
+                  "type": f"Tcab_{CORAL_TYPE}",
+                  "id":cabinet_id}
     except:
         cabinet_id = REEF_IP.split(".")[-1]
         jsdata = {"cabinet_name": "default_name"}

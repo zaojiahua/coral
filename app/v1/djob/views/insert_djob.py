@@ -1,10 +1,13 @@
+import logging
+
 from flask import request
 
+from app.config.log import DJOB_LOG_NAME
 from app.v1.djob.model.djob import DJob
 from app.v1.djob.model.djobworker import DJobWorker
 from app.v1.djob.validators.djobSchema import DJobSchema
 from app.v1.djob.views import djob_router
-
+logger = logging.getLogger(DJOB_LOG_NAME)
 """
 a = {'device_label': 'chiron---msm8998---8480c8f',
      'job_label': 'job-8fafcfa9-7619-3591-c38d-e394d24864b0',
@@ -21,7 +24,7 @@ def insert_djob_inner(**kwargs):
 
     djob = DJob(**validate_data)
     djob.job_flows_order.rpush(*[flow["id"] for flow in sorted(validate_data["job_flows"], key=lambda x: x["order"])])
-
+    logger.info(f"create a djobworker and a djob object {djob}")
     djob_worker = DJobWorker(pk=validate_data["device_label"])
     djob_worker.add(djob)
 

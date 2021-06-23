@@ -50,6 +50,9 @@ class DataCollectMonitor(threading.Thread):
 
 
 class SimilarityMatrixMonitor(DataCollectMonitor):
+    # 比较早时写的自动推荐用例运行的逻辑，主要思想是用设备最近时间内运行过的任务，根据距今时间进行加权累加，得到设备-用例权重矩阵，
+    # 根据权重矩阵挑选前Njob进行推荐，因为是稀疏矩阵，矩阵的补全主要依赖item based 的cf（协调过滤）方法,
+    # 根据作者+testArea特征做encoding，之后计算得到向量的cos相似度
     _default_dict = {
         "job_para": {
             "fields": "job_label,test_area,test_area.description,author,author.username,recently_used_time,"
@@ -208,7 +211,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
         return matrix
 
     def cal_time_weight(self, job_first_use_time, job_last_using_time, rds_create_time):
-        # todo verify this function when back to company
+        # 目前这个函数为人工设定的参数
         k = 1  # auto set this k&a when we have feedback data
         a = 4
         job_time_interval = (self.strftTime(job_last_using_time) - self.strftTime(rds_create_time))
@@ -310,6 +313,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
         elif method == "l2_distance":
             return 1.0 / (1.0 + np.linalg.norm(vector_1 - vector_2))
         else:
+
             return -1
 
     @staticmethod

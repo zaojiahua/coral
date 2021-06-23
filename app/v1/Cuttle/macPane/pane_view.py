@@ -99,6 +99,7 @@ class PaneDeleteView(MethodView):
         # 解除路由器IP绑定 start after jsp finished
         if ADB_TYPE == 0:
             res = unbind_spec_ip(data.get("ip_address"))
+            # 此处注释了路由绑定的验证，因为有很多款不同路由，现在状态不能保证成功
             # if res != 0:
             #     raise DeviceBindFail
         return jsonify({"status": "success"}), 200

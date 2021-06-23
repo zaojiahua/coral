@@ -65,6 +65,7 @@ class DoorKeeper(object):
         #     for port in port_list:
         #         PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
         try:
+            # 一个机柜只放一台手机限定
             available_port_list = list(set(port_list) ^ set(hand_used_list))
             print("available port list :", available_port_list)
             if len(available_port_list) == 0:
@@ -93,6 +94,7 @@ class DoorKeeper(object):
 
     def authorize_device_manually(self, **kwargs):
         length = np.hypot(kwargs.get("device_height"), kwargs.get("device_width"))
+        # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
         kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
         kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         # kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + "-" + self.get_default_name()
@@ -108,11 +110,13 @@ class DoorKeeper(object):
         return 0
 
     def open_device_wifi_service(self, device_id=""):
+        # 好像已经作废的方法
         dev_info_dict = self.get_device_info(device_id)
 
         return dev_info_dict
 
     def reconnect_device(self, device_label):
+        # 设备重连，只做获取最新ip和开启5555端口的操作
         if device_label is None or len(device_label) < 1:
             return -1
         s_id = device_label.split("---")[-1]
@@ -175,6 +179,7 @@ class DoorKeeper(object):
         return ret_dict
 
     def get_device_connect_id(self, multi=False):
+        # 获取adb连接的所有设备，并与已经注册过的设备取差集，得到唯一待注册设备，差集为0或大于1都抛异常
         adb_response = self.adb_cmd_obj.run_cmd_to_get_result("adb -d devices -l", 6)
         if "device usb" not in adb_response and "device product" not in adb_response:
             logger.info("[get device info]: no device found")
@@ -193,6 +198,7 @@ class DoorKeeper(object):
             return register_id_list
 
     def _get_device_dpi(self, ret_dict, num):
+        # 正则匹配手机信息内对应位置的dpi值，如有新版本手机可能需要更改此处来抓到对应dpi的值
         try:
             keyword = "findstr" if sys.platform.startswith("win") else "grep"
             result_words = self.adb_cmd_obj.run_cmd_to_get_result(
@@ -205,7 +211,9 @@ class DoorKeeper(object):
             return ret_dict
 
     def get_device_info_compatibility(self):
+        # 通过adb拿设备信息，第一次只拿必要的，需要用户确认的信息。待用户确认后，再通过set接口拿其余信息并彻底注册
         s_id = self.get_device_connect_id(multi=False)
+        # 不同手机机型名称放置的位置不同，现在只已知小米手机+oppo部分机型的情况，有新机型可能需要加逻辑
         phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.oppo.market.name")
         old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
         productName = phone_model if len(phone_model) != 0 else old_phone_model
@@ -217,7 +225,7 @@ class DoorKeeper(object):
                         f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0'}
         ret_dict["device_label"] = (old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
         self._check_device_already_in_cabinet(ret_dict["device_label"])
-
+        # rom version数据不同类型手机可能藏在不同的地方，oppo已知型号要去拿color_os+版本， mi的直接拿ro.build.version.incremental
         color_os = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.opporom")
         rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.ota")
         if len(rom_version) == 0:
@@ -225,6 +233,7 @@ class DoorKeeper(object):
         ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
             self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.incremental")
 
+        # 判定是否为未见过的机型，是-->手机内获取机型信息   否-->从reef缓存机型信息
         phone_model_info_dict, status = self.is_new_phone_model(productName)
         if not status:
             ret_dict.update(phone_model_info_dict)
@@ -322,6 +331,7 @@ class DoorKeeper(object):
         return True if 0 == self.adb_cmd_obj.run_cmd(f"adb {num} remount", "remount succeeded", 1, 5) else False
 
     def set_adb_wifi_property_internal(self, rootable, num="-d"):
+        # 对有root权限手机，永久打开5555端口，没有的只能临时打开，重启就会失效，需要重新走此流程
         if rootable:
             for i in range(3):
                 self.adb_cmd_obj.run_cmd(f"adb {num} shell setprop persist.adb.tcp.port 5555")
@@ -339,6 +349,7 @@ class DoorKeeper(object):
             return -2
 
     def set_tmac_client_apk_internal(self, remountable):
+        # 很久很久之前的需要推送到手机的配置文件和apk，目前已经不需要了。
         dev_client_apk_file = "tstMacCli.apk"
         dev_reg_config_file = "TstMacCli.conf"
 
@@ -350,6 +361,7 @@ class DoorKeeper(object):
         return 0
 
     def send_dev_info_to_reef(self, device_name, dev_data_dict, with_monitor=True):
+        # 设备信息推到reef，更新本地redis缓存，开启此设备的loop
         if device_name == "":
             device_name = self.get_default_name()
         dev_data_dict["device_name"] = device_name  # add device name before post to pane
@@ -368,10 +380,11 @@ class DoorKeeper(object):
         t = threading.Thread(target=device_object.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(dev_data_dict["device_label"])
         t.start()
-        # if with_monitor:
-        #     ThreadPoolExecutor(max_workers=100).submit(device_object.start_device_async_loop, aide_monitor_instance)
+        if with_monitor:
+            ThreadPoolExecutor(max_workers=100).submit(device_object.start_device_async_loop, aide_monitor_instance)
 
     def get_default_name(self):
+        # 对于没起名字的手机，给默认名规则为NewDevice月日-序号 eg：NewDevice0702-001
         real_date = datetime.now().strftime("%m-%d")
         if not real_date == self.date_mark:
             self.date_mark = real_date
@@ -390,6 +403,7 @@ class DoorKeeper(object):
         return ret_ip_address
 
     def get_screen_size_internal(self, num):
+        # 获取设备分辨率 eg 1080*2160
         ret_size_list = []
         tmp_str = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell wm size")
         tmp_list = tmp_str.split("Physical size: ")
@@ -502,9 +516,3 @@ class ShellCmdThread(threading.Thread):
             except Exception as e:
                 logger.error("Got exception in ShellCmdThread-terminateThread: " + str(e))
         return 0
-
-
-if __name__ == '__main__':
-    a = DoorKeeper()
-    result = a.get_mutidevice_list()
-    print(result)

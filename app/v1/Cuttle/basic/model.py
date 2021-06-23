@@ -3,7 +3,7 @@ from astra import models
 from app.libs.extension.model import BaseModel
 from app.libs.log import setup_logger
 
-
+# 这部分现在起到的作用比较少，打log时候还会用到。
 class AdbDevice(BaseModel):
     is_connected = models.BooleanField()
     is_busy = models.BooleanField()

@@ -216,7 +216,7 @@ class Unit(BaseModel):
             if file in save_list:
                 shutil.copyfile(os.path.join(handler.work_path, file),
                                 os.path.join(handler.rds_path, f"({handler.block_index}_{self.unit_list_index}){file}"))
-            elif file.startswith("ocr-"):
+            elif file.startswith("ocr-") or file.startswith("crop-"):
                 # 复合型unit产生的图片只有自己会使用，因此move即可
                 shutil.move(os.path.join(handler.work_path, file),
                             os.path.join(handler.rds_path, f"({handler.block_index}_{self.unit_list_index}){file}"))

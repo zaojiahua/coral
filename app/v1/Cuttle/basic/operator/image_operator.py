@@ -43,7 +43,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     skip_list = ["realtime_picture_compare", "end_point_with_fps_lost"]
 
     def img_compare_func3(self, exec_content, **kwargs) -> int:
-        # 均值方差对比方法
+        # 均值方差对比方法，现在基本不在用了
         data = self._validate(exec_content, ImageSchema)
         for area in data.get("areas"):
             result = self.numpy_array(self._crop_image(data.get("refer_im"), area),
@@ -54,7 +54,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return 0
 
     def identify_icon(self, exec_content, is_write_file=True) -> int:
-        # surf特征找图标方法 （返回类型特殊）
+        # surf特征找图标方法，返回位置，现在基本不在用了 （返回类型特殊）
         data = self._validate(exec_content, ImageSchema)
         try:
             result = self.identify_icon_point(self._crop_image(data.get("input_im"), [1, 1, 1, 1]),
@@ -322,6 +322,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
             raise OcrParseFail
 
     def _crop_image(self, image_path, area):
+        # 常用方法，根据area裁剪输入路径下的图片，并返回图片内容矩阵
         try:
             image = cv2.imread(image_path)
             if area[3] == area[2] == 0.99999 and area[0] == area[0] == 0:
@@ -336,6 +337,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
             return None
 
     def _crop_image_and_save(self, image_path, area, mark=''):
+        # 在上一个方法的基础上，把结果保存到返回的路径中去
         src = self._crop_image(image_path, area)
         if src is not None:
             new_path = ".".join(image_path.split(".")[:-1]) + mark + "-crop.jpg"
@@ -361,5 +363,6 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return 0
 
     def is_pure(self, exec_content):
+        # 规划一半未启用的方法，暂时无用
         data = self._validate(exec_content, ImageBasicSchema)
         feature_refer = self._crop_image(data.get("refer_im"), data.get("areas")[0])

@@ -29,7 +29,7 @@ class DJobWorker(BaseModel):
         self.logger.info("(DJobWorker) add new DJob to wait list")
 
     def djob_process(self):
-        self.logger.info(f"{self.device_label} djobworker djob_process ")
+        # self.logger.info(f"{self.device_label} djobworker djob_process ")
         while len(self.djob_list) > 0:
             self.using_djob = self.djob_list.rpop()
             self.logger.info(f" DJobWorker ({self.pk}) pop a DJob"

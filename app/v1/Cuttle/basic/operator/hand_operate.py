@@ -15,6 +15,7 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_ST
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
+    # 龙门架机械臂初始化
     """
     1. 解锁机械臂，并将机械臂移动至Home位置
     2. 设置坐标模式为绝对值模式
@@ -38,6 +39,7 @@ def hand_init(arm_com_id, device_obj, **kwargs):
 
 
 def rotate_hand_init(arm_com_id, device_obj, **kwargs):
+    # 旋转机械臂初始化
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[device_obj.pk] = hand_serial_obj
@@ -56,6 +58,7 @@ def rotate_hand_init(arm_com_id, device_obj, **kwargs):
 
 class HandHandler(Handler, DefaultMixin):
     before_match_rules = {
+        # 用在执行之前，before_execute中针对不同方法正则替换其中的相对坐标到绝对坐标
         "input tap": "_relative_point",
         "input swipe": "_relative_swipe",
         "double_point": "_relative_double_point",
@@ -72,7 +75,10 @@ class HandHandler(Handler, DefaultMixin):
                 getattr(self, value)()
         # 根据adb指令中的关键词dispatch到对应机械臂方法,pix_points为adb模式下的截图中的像素坐标
         pix_points, opt_type, self.speed = self.grouping(self.exec_content)
+        # 根据截图中的像素坐标，根据dpi和起始点坐标，换算到物理距离中毫米为单位的坐标
         self.exec_content = self.transform_pix_point(pix_points)
+        # 龙门架机械臂self.exec_content是列表（放点击的坐标），所以会找self.func这个方法来执行（写在基类的流程中）
+        # 旋转机械臂self.exec_content是字符串命令，所以会找self.str_func这个方法来执行
         self.func = getattr(self, opt_type)
         return normal_result
 
@@ -102,7 +108,7 @@ class HandHandler(Handler, DefaultMixin):
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def sliding(self, point, swipe_time=SWIPE_TIME, **kwargs):
-        # TODO 控制滑动时间,增加移动速度的换算
+        # 滑动，self.speed是滑动速度
         sliding_order = self.__sliding_order(point[0], point[1], self.speed)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         # time.sleep(wait_time)
@@ -111,26 +117,29 @@ class HandHandler(Handler, DefaultMixin):
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def trapezoid_slide(self, point, **kwargs):
-        # time.sleep(0.2) # 确保性能测试照片拍到滑动起始点
+        # 用力滑动，会先计算滑动起始/终止点的  同方向延长线坐标，并做梯形滑动
         sliding_order = self.__sliding_order(point[0], point[1], self.speed, normal=False)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         time.sleep(3)  # 确保动作执行完成
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def reset_hand(self, hand_reset_orders=arm_wait_position, **kwargs):
+        # 恢复手臂位置 可能是龙门架也可能是旋转机械臂
+        self._model.logger.info(f"reset hand order:{hand_reset_orders}")
         hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
         hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time)
         return 0
 
     def continuous_swipe(self, commend, **kwargs):
-        # 执行完不做等待
+        # 连续滑动方法，多次滑动之间不抬起，执行完不做等待
         sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0),
                                                      kwargs.get('length', 0))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order, ignore_reset=True)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def back(self, _, **kwargs):
+        # 按返回键，需要在5#型柜 先配置过返回键的位置
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
         click_orders = self.__single_click_order(self.calculate((device_obj.back_x, device_obj.back_y)))
@@ -140,6 +149,7 @@ class HandHandler(Handler, DefaultMixin):
         return result
 
     def double_back(self, _, **kwargs):
+        # 双击返回键  同5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
         click_orders = self.__double_click_order(self.calculate((device_obj.back_x, device_obj.back_y)))
@@ -149,6 +159,7 @@ class HandHandler(Handler, DefaultMixin):
         return result
 
     def home(self, _, **kwargs):
+        # 点击桌面键 5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
         click_orders = self.__single_click_order(self.calculate((device_obj.home_x, device_obj.home_y)))
@@ -158,6 +169,7 @@ class HandHandler(Handler, DefaultMixin):
         return result
 
     def menu(self, _, **kwargs):
+        # 点击菜单键 5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
         click_orders = self.__single_click_order(self.calculate((device_obj.menu_x, device_obj.menu_y)))
@@ -167,6 +179,7 @@ class HandHandler(Handler, DefaultMixin):
         return result
 
     def long_press_menu(self, _, **kwargs):
+        # 长按菜单键 5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
         click_orders = self.__single_click_order(self.calculate((device_obj.menu_x, device_obj.menu_y)))
@@ -176,6 +189,7 @@ class HandHandler(Handler, DefaultMixin):
         return result
 
     def power(self, _, **kwargs):
+        # 按电源键，5#柜规划，还未实现
         pass
 
     def _find_key_point(self, name):
@@ -189,16 +203,19 @@ class HandHandler(Handler, DefaultMixin):
         return position
 
     def str_func(self, commend, **kwargs):
+        # 旋转机械臂执行的方法
         from app.v1.device_common.device_model import Device
         move = False
         sleep_time = 0
         if Device(pk=self._model.pk).has_rotate_arm is False:
             return -9
         if '<rotateSleep>' in commend:
+            # 长按的等待操作，等待输入的时间+wait_bias时间。
             res = re.search("<rotateSleep>(.*?)$", commend)
             sleep_time = res.group(1)
             commend = commend.replace("<rotateSleep>" + sleep_time, "")
         if '<move>' in commend:
+            # 归位操作，用于长按电源后归reset位置。
             commend = commend.replace('<move>', "")
             move = True
         hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
@@ -215,6 +232,7 @@ class HandHandler(Handler, DefaultMixin):
         return self.str_func(commend)
 
     def after_unit(self):
+        # unit执行完 5型柜执行移开的操作，防止长时间遮挡摄像头
         if self.ignore_reset is False and CORAL_TYPE == 5:
             self.reset_hand()
 

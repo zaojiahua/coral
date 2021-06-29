@@ -217,7 +217,7 @@ class PerformanceMinix(object):
         match_ratio = result / standard
         return match_ratio > threshold - 0.01
 
-    def _icon_find(self, picture, icon, threshold, disappear=False):
+    def _icon_find(self, picture, icon,_, threshold, disappear=False):
         try:
             feature_point_list = self.shape_identify(picture, icon)
         except IconTooWeek:

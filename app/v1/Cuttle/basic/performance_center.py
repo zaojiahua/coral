@@ -72,7 +72,7 @@ class PerformanceCenter(object):
             number, picture, next_picture, third_pic = self.picture_prepare(number, use_icon_scope=use_icon_scope)
             pic2 = self.judge_icon if judge_function.__name__ in ("_icon_find", "_black_field") else next_picture
             # judge_function 返回True时 既是发现了起始点
-            if judge_function(picture, pic2, self.threshold) == True:
+            # if judge_function(picture, pic2, self.threshold) == True:
             if judge_function(picture, pic2, third_pic, self.threshold) == True:
                 self.bias = self.kwargs.get("bias") if self.kwargs.get("bias") else 0
                 self.start_number = number - 1

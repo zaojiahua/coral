@@ -110,7 +110,8 @@ class Complex_Center(object):
                 if self._searching_word or parse_function.__name__ != self.default_parse_response.__name__:
                     pic_x, pic_y = parse_function(response.get("result"))
                     # 把识别得到的x.y结果根据不同的机柜情况-换算到实际需要的坐标
-                    self.cal_realy_xy(pic_x, pic_y, self.default_pic_path)
+                    rpic_path = self.default_pic_path if self.default_pic_path is not  None else self._pic_path
+                    self.cal_realy_xy(pic_x, pic_y, rpic_path)
                     self.result = 0
                     break
                 # 需要return所有识别出所有文字的结果。

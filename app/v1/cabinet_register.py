@@ -8,7 +8,7 @@ def cabinet_register():
     try:
         cabinet_id = HOST_IP.split(".")[-1]
 
-        jsdata = {"cabinet_name": f"I'M {cabinet_id}#)",
+        jsdata = {"cabinet_name": f"I'M {cabinet_id}#",
                   "ip_address": HOST_IP,
                   "is_delete": False,
                   "type": f"Tcab_{CORAL_TYPE}",

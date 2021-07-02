@@ -4,6 +4,7 @@ from astra import models
 
 from app.config.ip import ADB_TYPE
 from app.config.url import device_create_update_url
+from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
@@ -18,7 +19,7 @@ from app.v1.tboard.model.dut import Dut
 from redis_init import redis_client
 
 
-class Device(models.Model):
+class Device(BaseModel):
     # attribute that only coral have
     exclude_list = ["src_list", "has_camera", "has_arm", "flag", "is_bind", "x_border", "y_border", "kx1", "kx2", "ky1",
                     "ky2", "assis_1", "assis_2", "assis_3", "x1", "x2", "y1", "y2"]
@@ -80,8 +81,6 @@ class Device(models.Model):
     def __repr__(self):
         return f"{self.__class__.__name__}_{self.pk}_{self.device_name}_{self.id}"
 
-    def get_db(self):
-        return redis_client
 
     @property
     def connect_number(self):

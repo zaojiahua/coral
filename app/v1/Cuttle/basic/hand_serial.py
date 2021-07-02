@@ -25,7 +25,7 @@ class HandSerial:
         if kwargs.get("wait"):
             for g_order in g_orders:
                 self.ser.write(g_order.encode())
-            time.sleep(2)
+            time.sleep(float(kwargs.get("wait_time", 2000)) / 1000)
             self.ser.write(deviate_order.encode())
             return 0
         elif kwargs.get("ignore_reset") or CORAL_TYPE < 5:

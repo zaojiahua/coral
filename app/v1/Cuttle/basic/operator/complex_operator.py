@@ -1,7 +1,9 @@
 import datetime
 import subprocess
 import sys
+import time
 
+from app.config.setting import CORAL_TYPE
 from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParseFail, SwipeAndFindWordsFail, \
     CannotFindRecentVideoOrImage
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
@@ -144,7 +146,10 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     x_start, y_start, x_end, y_end = mapping_dict.get(content.get("direction"), (500, 500, 900, 700))
                     ocr_obj.cx = x_start
                     ocr_obj.cy = y_start
-                    ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=1000)
+                    speed = 500 if CORAL_TYPE < 4 else 11000
+                    ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=speed)
+                    if CORAL_TYPE >= 4:
+                        time.sleep(1)
                     continue
             return ocr_obj.result
         else:

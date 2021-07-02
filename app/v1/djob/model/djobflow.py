@@ -133,7 +133,7 @@ class DJobFlow(BaseModel):
         while True:
             self.logger.info(
                 f"the djob (device: {self.device_label}job: {self.job_label}) exec"
-                f" node_key :{node_key} , node_dict :{node_dict}")
+                f" node_key :{node_key}")
 
             if self.stop_flag:
                 raise EblockEarlyStop

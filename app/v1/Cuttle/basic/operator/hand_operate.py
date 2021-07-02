@@ -103,7 +103,7 @@ class HandHandler(Handler, DefaultMixin):
     def long_press(self, start_point, swipe_time=SWIPE_TIME, **kwargs):
         # 长按
         long_click_orders = self.__single_click_order(start_point[0])
-        hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2], wait=True)
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2], wait=True, wait_time=self.speed)
         time.sleep(wait_time)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 

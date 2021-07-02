@@ -46,9 +46,10 @@ def pic_push(device_object, pic_name="success.png"):
         "ip_address": device_object.ip_address,
         "device_label": device_object.device_label,
         "execCmdList": [
-            "adb -s " + device_object.ip_address + f":5555 shell am start -a android.intent.action.VIEW -d http://{pic_ip}:5000/static/{pic_name}"]
+            "adb -s " + device_object.connect_number + f" shell am start -a android.intent.action.VIEW -d http://{pic_ip}:5000/static/{pic_name}"]
 
     }
+    print(jsdata)
     if pic_name == LEAVE_PIC_NAME:
         jsdata["execCmdList"].append(f"adb disconnect {device_object.ip_address}")
     pic_push_result = UnitFactory().create("AdbHandler", jsdata)

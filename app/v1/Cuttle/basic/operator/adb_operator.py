@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -7,7 +8,7 @@ from ast import literal_eval
 from datetime import datetime
 
 from app.config.ip import HOST_IP, ADB_TYPE
-from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE
+from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name
 from app.config.url import battery_url
 from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
@@ -41,7 +42,8 @@ class AdbHandler(Handler, ChineseMixin):
         Abnormal("unable to connect", "reconnect", -7),
         Abnormal("battery mark", "save_battery", 0),
         Abnormal("cpu", "save_cpu_info", 0),
-        Abnormal("battery fail mark", "_get_battery_detail", 0)
+        Abnormal("battery fail mark", "_get_battery_detail", 0),
+        Abnormal(f"generating {Bugreport_file_name}", "_get_zipfile", 0)
     ]
     before_match_rules = {
         # 根据cmd中内容，执行对应的预处理方法
@@ -166,6 +168,10 @@ class AdbHandler(Handler, ChineseMixin):
     def after_unit(self):
         time.sleep(0.5)
 
+    def _get_zipfile(self):
+        if os.path.exists(f"./{Bugreport_file_name}"):
+            shutil.move(f"./{Bugreport_file_name}", self.kwargs.get("work_path"))
+
     def _get_battery_detail(self, *args):
         from app.v1.device_common.device_model import Device
         device_ip = Device(pk=self._model.pk).connect_number
@@ -250,9 +256,6 @@ class AdbHandler(Handler, ChineseMixin):
             return True, self.chinese_support(words)
         else:
             return False, None
-
-
-
 
     def _ignore_unsupported_commend(self):
         return True, -9

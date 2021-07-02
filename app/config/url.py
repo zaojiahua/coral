@@ -13,6 +13,7 @@ delete_unfinished_rds_url = "/api/v1/cedar/rds/bulk_delete_rds/?rds_id_list=end_
 rds_create_or_update_url = "/api/v1/coral/rds_create_or_update/"
 upload_rds_screen_shot_url = "/api/v1/coral/upload_rds_screen_shot/"
 upload_rds_log_file_url = "/api/v1/coral/upload_rds_log_file/"
+upload_rds_zip_file_url = "/api/v1/coral/upload_rds_zip_file/"
 rds_with_param_url = "/api/v1/cedar/rds/{}"
 
 # ==================================job=======================================

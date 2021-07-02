@@ -5,7 +5,7 @@ from shutil import copyfile
 
 from astra import models
 
-from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url
+from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url, upload_rds_zip_file_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import JobExecBodyException, JobExecUnknownException, \
     JobMaxRetryCycleException, InnerJobNotAssociated
@@ -302,7 +302,8 @@ class DJobFlow(BaseModel):
 
         :return:
         """
-        rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit","lose_frame_point"]
+        rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit",
+                         "lose_frame_point"]
         self.recent_img_res_list = None  # 每一个block 产生的结果会覆盖recent_img_res_list
         self.recent_img_rpop_list = None
 
@@ -385,33 +386,27 @@ class DJobFlow(BaseModel):
             if os.path.getsize(file_path):
                 if int(job_assessment_value) != 0:  # 针对正确的结果不推送文件
                     if file_name.endswith((".png", ".jpg")):
-                        base_data["file_name"] = file_name
-
-                        pic = open(file_path, "rb")
-
-                        try:
-                            request(method="POST", url=upload_rds_screen_shot_url, data=base_data,
-                                    files={"rds_screen_shot": pic})
-                        except APIException as e:
-                            self.logger.error(f"{file_path} push failed: {e}")
-                            copyfile(file_path, os.path.join(ERROR_FILE_DIR, file_name))
-
-                        pic.close()
-
+                        self._send_file(base_data, file_name, file_path, upload_rds_screen_shot_url, "rds_screen_shot")
+                    elif file_name.endswith(".zip"):
+                        self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "zip_file")
                 if file_name.endswith((".txt", ".log", ".json")):
-                    base_data["file_name"] = file_name
-                    log = open(file_path, "rb")
-                    try:
-                        request(method="POST", url=upload_rds_log_file_url, data=base_data,
-                                files={"log_file": log})
-                    except APIException as e:
-                        self.logger.error(f"{file_path} push failed: {e}")
-                        copyfile(file_path, os.path.join(ERROR_FILE_DIR, file_name))
-                    log.close()
+                    self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "zip_file")
+                # elif file_name.endswith(".zip"):
+                #     self._send_file(base_data, file_name, file_path, upload_rds_zip_file_url,"zip_file")
 
         for djob_instance in self.inner_job_list:
             # inner job的 依赖文件上传
             djob_instance.push_log_and_pic(base_data, job_assessment_value, flow_id=flow_id)
+
+    def _send_file(self, base_data, file_name, file_path, url, key):
+        base_data["file_name"] = file_name
+        zip_file = open(file_path, "rb")
+        try:
+            request(method="POST", url=url, data=base_data, files={key: zip_file})
+        except APIException as e:
+            self.logger.error(f"{file_path} push failed: {e}")
+            copyfile(file_path, os.path.join(ERROR_FILE_DIR, file_name))
+        zip_file.close()
 
     def stop_flow(self):
         self.stop_flag = True

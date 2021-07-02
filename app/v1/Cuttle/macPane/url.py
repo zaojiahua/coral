@@ -1,7 +1,7 @@
 from flask import Blueprint
 
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
-    AutoPaneBorderView
+    AutoPaneBorderView, update_phone_model
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, PaneConfigView, \
     PaneBorderView
 
@@ -33,6 +33,8 @@ leave_data_example = {
     ]
 }
 pane.add_url_rule('/device_update/', view_func=PaneUpdateView.as_view('pane_create_view'))
+pane.add_url_rule('/phone_module_update/', view_func=update_phone_model,methods=['POST'])
+
 pane.add_url_rule('/device_leave/', view_func=PaneDeleteView.as_view('pane_leave_view'))
 pane.add_url_rule('/device_assis_leave/', view_func=PaneAssisDeleteView.as_view('pane_assis_leave_view'))
 # 获取一张手机照片/1234型柜获取手机adb截图，5型柜获取带roi且旋转后的摄像头照片
@@ -49,3 +51,4 @@ pane.add_url_rule('/device_border/', view_func=PaneBorderView.as_view('device_bo
 pane.add_url_rule('/get_roi/', view_func=AutoPaneBorderView.as_view('get_roi'))
 # 给所有adb连接状态的手机推图片的接口，仅在天津给编辑用例人使用
 pane.add_url_rule('/file_push/', view_func=FilePushView.as_view('file_push'))
+

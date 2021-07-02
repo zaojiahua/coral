@@ -55,6 +55,14 @@ def pic_push(device_object, pic_name="success.png"):
     logger.info(f"picture push result for {pic_name}'s result :{pic_push_result}")
 
 
+def update_phone_model():
+    data = request.get_json()
+    for device_obj in Device.all():
+        if device_obj.phone_model_name == data.get("phone_model_name"):
+            device_obj._update_attr_from_device(**data)
+    return jsonify({"status": "success"}), 200
+
+
 class PaneUpdateView(MethodView):
     def post(self):
         data = request.get_json()

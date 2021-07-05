@@ -400,13 +400,13 @@ class DJobFlow(BaseModel):
 
     def _send_file(self, base_data, file_name, file_path, url, key):
         base_data["file_name"] = file_name
-        zip_file = open(file_path, "rb")
+        file = open(file_path, "rb")
         try:
-            request(method="POST", url=url, data=base_data, files={key: zip_file})
+            request(method="POST", url=url, data=base_data, files={key: file})
         except APIException as e:
             self.logger.error(f"{file_path} push failed: {e}")
             copyfile(file_path, os.path.join(ERROR_FILE_DIR, file_name))
-        zip_file.close()
+        file.close()
 
     def stop_flow(self):
         self.stop_flag = True

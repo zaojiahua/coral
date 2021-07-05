@@ -170,9 +170,7 @@ class AdbHandler(Handler, ChineseMixin):
         time.sleep(0.5)
 
     def _get_zipfile(self, *args):
-        print(os.listdir("./"))
         if os.path.exists(f"./{Bugreport_file_name}"):
-            print("zip file exist")
             shutil.move(f"./{Bugreport_file_name}", self.kwargs.get("work_path"))
 
     def _get_battery_detail(self, *args):

@@ -169,7 +169,7 @@ class AdbHandler(Handler, ChineseMixin):
     def after_unit(self):
         time.sleep(0.5)
 
-    def _get_zipfile(self):
+    def _get_zipfile(self, *args):
         print(os.listdir("./"))
         if os.path.exists(f"./{Bugreport_file_name}"):
             print("zip file exist")

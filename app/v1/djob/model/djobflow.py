@@ -388,9 +388,9 @@ class DJobFlow(BaseModel):
                     if file_name.endswith((".png", ".jpg")):
                         self._send_file(base_data, file_name, file_path, upload_rds_screen_shot_url, "rds_screen_shot")
                     elif file_name.endswith(".zip"):
-                        self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "zip_file")
+                        self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
                 if file_name.endswith((".txt", ".log", ".json")):
-                    self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "zip_file")
+                    self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
                 # elif file_name.endswith(".zip"):
                 #     self._send_file(base_data, file_name, file_path, upload_rds_zip_file_url,"zip_file")
 

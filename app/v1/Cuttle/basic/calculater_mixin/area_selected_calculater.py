@@ -7,13 +7,15 @@ from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.common_utli import threshold_set
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageAreaSchema, ImageOriginalSchema, ImageAreaWithoutInputSchema, \
-    ImageRealtimeSchema
+    ImageRealtimeSchema, ImageOutPutSchema, ImageOutPutSchemaCompatible, ImageAreaSchemaNoInput
 from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate, icon_min_template, \
     icon_min_template_camera
 
 
 class AreaSelectedMixin(object):
     # 主要负责增加图像选区相关方法
+
+    # ---------------------------------------------------图标相关--------------------------------------------------------------
 
     def has_icon_area_selected(self, exec_content) -> int:
         # 判断所选择区域内有指定图标
@@ -36,51 +38,12 @@ class AreaSelectedMixin(object):
         # 判断找到的特征点数量是否足够
         return 0 if len(feature_point_list) >= threshold - (1 - data.get("threshold", 0.99)) * icon_rate else 1
 
-    def smart_ocr_point_crop(self, info_body, match_function="get_result") -> int:
-        # 点击文字-选区
-
-        data = self._validate(info_body, ImageOriginalSchema)
-        # 创建一个复合unit中心对象，
-        with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
-            # 先截一张图
-            ocr_obj.snap_shot()
-            from app.v1.device_common.device_model import Device
-            dev_obj = Device(pk=self._model.pk)
-            # 拿到手机的分辨率，用来把选区的左上角相对坐标->绝对坐标，后面用来加在识别结果上（因为识别的图是裁剪过，需要点击的位置是全局的）
-            h, w = dev_obj.device_height, dev_obj.device_width
-            x0, y0 = int(data.get("areas")[0][0] * w), int(data.get("areas")[0][1] * h)
-            # 裁剪前面截的图，并保存起来
-            crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("areas")[0])
-            # 赋值给self.image 的图会在unit结果不为0时，拿去T-guard处理异常
-            self.image = ocr_obj.default_pic_path
-            # 复合unit中心对象有两个存放图片地址的路径，ocr_obj.default_pic_path-->现截的图，ocr_obj._pic_path创建时传入的图/加工后的图
-            ocr_obj._pic_path = crop_path
-            # 执行ocr_obj的对应match方法
-            getattr(ocr_obj, match_function)()
-            # 把前面算的左上点的绝对坐标加到识别坐标上来。
-            ocr_obj.add_bias(x0, y0)
-            # 做点击动作
-            ocr_obj.point()
-        return ocr_obj.result
-
-    def smart_ocr_point_ignore_speed(self, info_body) -> int:
-        # 点击文字_选区_模糊
-        # 与上一个方法的区别就是使用的match_function不同
-        return self.smart_ocr_point_crop(info_body, match_function="get_result_ignore_speed")
-
     def smart_icon_point_crop(self, info_body) -> int:
-        # 点击图标-1
+        # 点击图标-2
         data = self._validate(info_body, ImageAreaWithoutInputSchema)
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
-            from app.v1.device_common.device_model import Device
-            dev_obj = Device(pk=self._model.pk)
-            h, w = dev_obj.device_height, dev_obj.device_width
-            x0, y0 = int(data.get("crop_areas")[0][0] * w), int(data.get("crop_areas")[0][1] * h)
-            input_crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("crop_areas")[0])
-            self.image = ocr_obj.default_pic_path
-            ocr_obj._pic_path = input_crop_path
-            # 与上面唯一的区别在这块调用的方法不同，以后可以考虑优化。
+            x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "crop_areas")
             ocr_obj.get_result_by_feature(info_body)
             ocr_obj.add_bias(x0, y0)
             ocr_obj.point()
@@ -91,13 +54,7 @@ class AreaSelectedMixin(object):
         data = self._validate(info_body, ImageAreaWithoutInputSchema)
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
-            from app.v1.device_common.device_model import Device
-            dev_obj = Device(pk=self._model.pk)
-            h, w = dev_obj.device_height, dev_obj.device_width
-            x0, y0 = int(data.get("crop_areas")[0][0] * w), int(data.get("crop_areas")[0][1] * h)
-            input_crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get("crop_areas")[0])
-            self.image = ocr_obj.default_pic_path
-            ocr_obj._pic_path = input_crop_path
+            x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "crop_areas")
             ocr_obj.get_result_by_template_match(info_body)
             ocr_obj.add_bias(x0, y0)
             ocr_obj.point()
@@ -123,6 +80,17 @@ class AreaSelectedMixin(object):
         result = self.template_match(target, template)
         return 0 if result == True else 1
 
+    def smart_icon_long_press(self, content) -> int:
+        # 长按图标-新增选区，要求支持之前没有选区的unit正常运行
+        data = self._validate(content, ImageAreaSchemaNoInput)
+        with Complex_Center(**self.kwargs) as ocr_obj:
+            ocr_obj.snap_shot()
+            x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "crop_areas")
+            ocr_obj.get_result_by_template_match(content)
+            ocr_obj.add_bias(x0, y0)
+            ocr_obj.long_press()
+        return ocr_obj.result
+
     @staticmethod
     def template_match(target, template):
         # 模板匹配的方法，判定图标存在
@@ -132,3 +100,48 @@ class AreaSelectedMixin(object):
         th = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
         result = np.abs(min_val) < th
         return result
+
+    # ----------------------------------------文字相关-----------------------------------------------------
+    def smart_ocr_point_crop(self, info_body, match_function="get_result") -> int:
+        # 点击文字-选区
+
+        data = self._validate(info_body, ImageOutPutSchemaCompatible)
+        # 创建一个复合unit中心对象，
+        with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
+            # 先截一张图
+            ocr_obj.snap_shot()
+            x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
+            # 执行ocr_obj的对应match方法
+            getattr(ocr_obj, match_function)()
+            # 把前面算的左上点的绝对坐标加到识别坐标上来。
+            ocr_obj.add_bias(x0, y0)
+            # 做点击动作
+            ocr_obj.point()
+        return ocr_obj.result
+
+    def crop_input_picture_record_position(self, data, ocr_obj, config_name):
+        from app.v1.device_common.device_model import Device
+        dev_obj = Device(pk=self._model.pk)
+        # 拿到手机的分辨率，用来把选区的左上角相对坐标->绝对坐标，后面用来加在识别结果上（因为识别的图是裁剪过，需要点击的位置是全局的）
+        h, w = dev_obj.device_height, dev_obj.device_width
+        x0, y0 = int(data.get(config_name)[0][0] * w), int(data.get(config_name)[0][1] * h)
+        # 裁剪前面截的图，并保存起来
+        crop_path = self._crop_image_and_save(ocr_obj.default_pic_path, data.get(config_name)[0])
+        self.image = ocr_obj.default_pic_path
+        ocr_obj._pic_path = crop_path
+        return x0, y0
+
+    def smart_ocr_point_ignore_speed(self, info_body) -> int:
+        # 点击文字_选区_模糊
+        # 与上一个方法的区别就是使用的match_function不同
+        return self.smart_ocr_point_crop(info_body, match_function="get_result_ignore_speed")
+
+    def smart_ocr_long_press(self, content) -> int:
+        data = self._validate(content, ImageOutPutSchemaCompatible)
+        with Complex_Center(**content, **self.kwargs) as ocr_obj:
+            ocr_obj.snap_shot()
+            x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
+            ocr_obj.get_result()
+            ocr_obj.add_bias(x0, y0)
+            ocr_obj.long_press()
+        return ocr_obj.result

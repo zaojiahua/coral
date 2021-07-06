@@ -30,7 +30,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         opt_type = self.exec_content.pop("functionName")
         self.func = getattr(self, opt_type)
         return normal_result
-
+#   -------已经可以去掉的unit，但是之前编辑过的用例仍需要支持运行，所以以下方法暂时保留，待统一做名称转换后删除----------
     def smart_ocr_point(self, content) -> int:
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
@@ -55,21 +55,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.point()
         return ocr_obj.result
 
-    def smart_ocr_long_press(self, content) -> int:
-        with Complex_Center(**content, **self.kwargs) as ocr_obj:
-            ocr_obj.snap_shot()
-            self.image = ocr_obj.default_pic_path
-            ocr_obj.get_result()
-            ocr_obj.long_press()
-        return ocr_obj.result
-
-    def smart_icon_long_press(self, content) -> int:
-        with Complex_Center(**self.kwargs) as ocr_obj:
-            ocr_obj.snap_shot()
-            self.image = ocr_obj.default_pic_path
-            ocr_obj.get_result_by_feature(content)
-            ocr_obj.long_press()
-        return ocr_obj.result
 
     def smart_ocr_point_extend(self, content) -> int:
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
@@ -82,6 +67,8 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.point()
         return ocr_obj.result
 
+    #   -------已经可以去掉的unit，但是之前编辑过的用例仍需要支持运行，所以以上方法暂时保留，待统一做名称转换后删除----------
+
     def initiative_remove_interference(self, *args):
         # 主动清除异常方法，return 2
         with Complex_Center(**self.kwargs) as ocr_obj:
@@ -90,6 +77,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return 2
 
     def press_and_swipe(self, content) -> int:
+        # 未知意义方法，似乎已经没有在使用....
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             self.image = ocr_obj.default_pic_path
@@ -182,9 +170,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         response = self.send_adb_request(
             f"adb -s {connect_number} pull /sdcard/DCIM/Camera/{file_name} {file_name_in_server}")
         return response
-
-    def add_judgements_standard(self):
-        pass
 
     def send_adb_request(self, content):
         sub_proc = subprocess.Popen(content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

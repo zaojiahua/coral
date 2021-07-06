@@ -135,24 +135,13 @@ class ImageAreaSchema(ImageSchema):
         except FileNotFoundError:
             data["crop_areas"] = [[0, 0, 1, 1]]
             return data
+
 class ImageAreaSchemaNoInput(ImageAreaSchema):
     input_im = fields.String(data_key="inputImgFile")
 
 
-class ImageAreaWithoutInputSchema(ImageSchema):
-    area_config = fields.String(required=True, data_key="configArea", validate=verify_exist)
+class ImageAreaWithoutInputSchema(ImageAreaSchema):
     input_im = fields.String(required=False, data_key="inputImgFile")
-
-    @post_load()
-    def explain(self, data, **kwargs):
-        crop_area_path = data.get("area_config")
-        data = super().explain(data, **kwargs)
-        with open(crop_area_path, "r") as json_file:
-            json_data = json.load(json_file)
-            areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
-                     "area" + str(i) in json_data.keys()]
-        data["crop_areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
-        return data
 
 
 class VideoBaseSchema(Schema):

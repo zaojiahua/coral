@@ -52,7 +52,7 @@ class BaseModel(models.Model, metaclass=CheckMeta):
             self._astra_load_fields()
 
         # Keys + some internal methods
-        if key.startswith('_astra_') or key == '__class__':
+        if key.startswith('_astra_') or key == '__class__' or key in ('data', "connect_number"):
             return object.__getattribute__(self, key)
 
         if key in self._astra_fields:

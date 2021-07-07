@@ -6,8 +6,8 @@ import numpy as np
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.common_utli import threshold_set
 from app.v1.Cuttle.basic.complex_center import Complex_Center
-from app.v1.Cuttle.basic.image_schema import ImageAreaSchema, ImageOriginalSchema, ImageAreaWithoutInputSchema, \
-    ImageRealtimeSchema, ImageOutPutSchema, ImageOutPutSchemaCompatible, ImageAreaSchemaNoInput
+from app.v1.Cuttle.basic.image_schema import ImageAreaSchema, ImageAreaWithoutInputSchema, \
+    ImageRealtimeSchema, ImageOnlyConfigCompatible
 from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate, icon_min_template, \
     icon_min_template_camera
 
@@ -82,7 +82,7 @@ class AreaSelectedMixin(object):
 
     def smart_icon_long_press(self, content) -> int:
         # 长按图标-新增选区，要求支持之前没有选区的unit正常运行
-        data = self._validate(content, ImageAreaSchemaNoInput)
+        data = self._validate(content, ImageAreaWithoutInputSchema)
         with Complex_Center(**self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "crop_areas")
@@ -105,7 +105,7 @@ class AreaSelectedMixin(object):
     def smart_ocr_point_crop(self, info_body, match_function="get_result") -> int:
         # 点击文字-选区
 
-        data = self._validate(info_body, ImageOutPutSchemaCompatible)
+        data = self._validate(info_body, ImageOnlyConfigCompatible)
         # 创建一个复合unit中心对象，
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
             # 先截一张图
@@ -137,7 +137,7 @@ class AreaSelectedMixin(object):
         return self.smart_ocr_point_crop(info_body, match_function="get_result_ignore_speed")
 
     def smart_ocr_long_press(self, content) -> int:
-        data = self._validate(content, ImageOutPutSchemaCompatible)
+        data = self._validate(content, ImageOnlyConfigCompatible)
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")

@@ -14,7 +14,8 @@ from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
 from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
 from app.v1.Cuttle.basic.common_utli import threshold_set
 from app.v1.Cuttle.basic.complex_center import Complex_Center
-from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, ImageAreaSchema
+from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, ImageBasicSchemaCompatible, \
+    ImageSchemaCompatible
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate
 
@@ -43,8 +44,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     skip_list = ["realtime_picture_compare", "end_point_with_fps_lost"]
 
     def img_compare_func3(self, exec_content, **kwargs) -> int:
-        # 均值方差对比方法，现在基本不在用了
-        data = self._validate(exec_content, ImageSchema)
+        # 图像对比，均值方差对比方法，现在基本不在用了。
+        data = self._validate(exec_content, ImageSchemaCompatible)
         for area in data.get("areas"):
             result = self.numpy_array(self._crop_image(data.get("refer_im"), area),
                                       self._crop_image(self.image, area),
@@ -87,8 +88,6 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         # extra_result 的结果会最终合并到unit的结果中去
         self.extra_result = {"point_x": float(point_x), "point_y": float(point_y)}
         return 0
-
-
 
     def has_icon(self, exec_content) -> int:
         # 判断所选择区域内有指定图标
@@ -280,7 +279,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     #     return int(fps / drop)
 
     def words_prepare(self, exec_content, key):
-        data = self._validate(exec_content, schema=ImageBasicSchema)
+        data = self._validate(exec_content, schema=ImageBasicSchemaCompatible)
         words_list = exec_content.get(key).split(",")
         input = self._crop_image(self.image, data.get("areas")[0])
         path = os.path.join(self.kwargs.get("work_path"), f"ocr-{random.random()}.png")
@@ -302,13 +301,6 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     #   辅助函数
     def _validate(self, exec_content, schema):
         data = schema().load(exec_content)
-        # self.video = data.get("video_file")
-        # from app.v1.device_common.device_model import Device
-        # name = ""
-        # if Device(pk=self._model.pk).has_camera and self.video is not None:
-        #     with open(get_file_name(self.video) + ImageNumberFile) as f:
-        #         total_number = f.read()
-        #     name = get_file_name(self.video) + f"__{int(total_number) - 1}.png"
         self.image = data.get("input_im", "")
         return data
 
@@ -351,7 +343,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return 0
 
     def record_words(self, exec_content) -> int:
-        data = self._validate(exec_content, ImageSchema)
+        data = self._validate(exec_content, ImageSchemaCompatible)
         path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             self.image = path

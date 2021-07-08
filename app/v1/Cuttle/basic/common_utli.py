@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 from app.execption.outer.error_code.imgtool import ColorPositionCrossMax
+from app.v1.Cuttle.basic.setting import blur_signal
 
 
 def get_file_name(path):
@@ -63,3 +64,10 @@ def check_color_by_position(src, x, y):
         return src[x][y]
     except KeyError:
         raise ColorPositionCrossMax
+
+
+def suit_for_blur(exec_content):
+    key = "requiredWords" if exec_content.get("requiredWords") else "exceptWords"
+    is_blur = True if exec_content.get(key, "").startswith(blur_signal) else False
+    exec_content[key] = exec_content.get(key, "").replace(blur_signal, "")
+    return exec_content, is_blur

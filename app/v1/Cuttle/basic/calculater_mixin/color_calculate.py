@@ -4,7 +4,7 @@ import random
 import cv2
 import numpy as np
 
-from app.v1.Cuttle.basic.common_utli import precise_match, blur_match, check_color_by_position
+from app.v1.Cuttle.basic.common_utli import precise_match, blur_match, check_color_by_position, suit_for_blur
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageColorSchema, ImageColorRelativePositionSchema
 from app.v1.Cuttle.basic.setting import color_rate, color_threshold, strip_str
@@ -24,12 +24,12 @@ class ColorMixin(object):
 
     def is_excepted_color_words(self, exec_content) -> int:
         # 判断所选区域内文字为期待的颜色
+        exec_content, is_blur = suit_for_blur(exec_content)
         identify_words_list, words_list = self._is_color_words(exec_content)
-        return precise_match(identify_words_list, words_list)
-
-    def is_excepted_color_word_blur(self, exec_content) -> int:
-        identify_words_list, words_list = self._is_color_words(exec_content)
-        return blur_match(identify_words_list, words_list)
+        if not is_blur:
+            return precise_match(identify_words_list, words_list)
+        else:
+            return blur_match(identify_words_list, words_list)
 
     def _is_color_words(self, exec_content):
         data = self._validate(exec_content, ImageColorSchema)
@@ -77,3 +77,8 @@ class ColorMixin(object):
         self._model.logger.info(f"differ r g b :{differ_r} {differ_g} {differ_b}")
         result = 0 if (max(differ_b, differ_g, differ_r) - (1 - data.get("threshold", 0.99)) * color_rate) <= 0 else 1
         return result
+
+    # ------------------------------已经废弃的unit   但还需要支持之前用过的job  不能删除----------------------
+    def is_excepted_color_word_blur(self, exec_content) -> int:
+        identify_words_list, words_list = self._is_color_words(exec_content)
+        return blur_match(identify_words_list, words_list)

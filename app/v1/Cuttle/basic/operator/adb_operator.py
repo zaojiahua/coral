@@ -53,6 +53,7 @@ class AdbHandler(Handler, ChineseMixin):
         "input swipe": "_relative_swipe",
         "G01": "_ignore_unsupported_commend"
     }
+    NoSleepList = ["screencap -p ","pull /sdcard/","shell rm"]
 
     def before_execute(self, *args, **kwargs):
         if self._model.is_connected == False:
@@ -69,7 +70,13 @@ class AdbHandler(Handler, ChineseMixin):
             return ""
         sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         restr = sub_proc.communicate()[0]
-        time.sleep(1)
+        no_sleep = False
+        for cmd in self.NoSleepList:
+            if cmd in exec_content:
+                no_sleep = True
+                break
+        if not no_sleep:
+            time.sleep(1)
         try:
             execute_result = restr.strip().decode(coding)
         except UnicodeDecodeError:

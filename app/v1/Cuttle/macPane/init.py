@@ -92,7 +92,7 @@ def recover_device(executer, logger):
         t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(device_dict.get("device_label"))
         t.start()
-        if device_obj.ip_address != "0.0.0.0":
+        if CORAL_TYPE!= 5:
             executer.submit(device_obj.start_device_async_loop, aide_monitor_instance)
 
 

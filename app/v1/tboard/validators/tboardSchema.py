@@ -68,9 +68,6 @@ class TboardJobPrioritySchema(TboardSchema):
     device_label_list = fields.Raw(required=False, missing=[])
     jobs = fields.Raw(required=False, missing=[])
 
-    class Meta:
-        unknown = INCLUDE
-
     @post_load
     def make_user(self, data, **kwargs):
         if not data.get("board_name"):

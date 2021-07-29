@@ -404,8 +404,10 @@ class DoorKeeper(object):
     def get_screen_size_internal(self, num):
         # 获取设备分辨率 eg 1080*2160
         ret_size_list = []
-        tmp_str = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell wm size")
+        tmp_str = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell wm size",timeout=5)
+        print("???",tmp_str)
         tmp_list = tmp_str.split("Physical size: ")
+        print(tmp_str,tmp_list)
         if len(tmp_list) > 1:
             tmp_str = tmp_list[1]
             tmp_list = tmp_str.split("x")
@@ -442,10 +444,12 @@ class AdbCommand(object):
         run_thread = ShellCmdThread(one_cmd_string)
         run_thread.start()
         result = ""
-        for r in range(timeout * 2):
+        for r in range(timeout * 4):
             time.sleep(0.2)
             if run_thread.is_finished():
+                print("&&&&&&&&&&")
                 result = run_thread.get_result()
+                print("get result----------",result)
                 # run_thread = ShellCmdThread(one_cmd_string)
                 # run_thread.start()
                 logger.debug("adbCmd run get result: " + str(result))

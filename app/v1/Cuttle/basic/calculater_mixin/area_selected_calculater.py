@@ -133,11 +133,13 @@ class AreaSelectedMixin(object):
         return ocr_obj.result
 
     def smart_ocr_long_press(self, content) -> int:
+        info_body, is_blur = suit_for_blur(content)
+        match_function = "get_result" if is_blur == False else "get_result_ignore_speed"
         data = self._validate(content, ImageOnlyConfigCompatible)
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
-            ocr_obj.get_result()
+            getattr(ocr_obj, match_function)()
             ocr_obj.add_bias(x0, y0)
             ocr_obj.long_press()
         return ocr_obj.result

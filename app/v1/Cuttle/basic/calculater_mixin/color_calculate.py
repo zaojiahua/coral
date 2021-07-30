@@ -59,9 +59,11 @@ class ColorMixin(object):
         refer_b, refer_g, refer_r = check_color_by_position(src_refer, int(float(position_list[1])),
                                                             int(float(position_list[0])))
         # input  refer
+        info_body, is_blur = suit_for_blur(data)
+        match_function = "get_result" if is_blur == False else "get_result_ignore_speed"
         with Complex_Center(inputImgFile=input_crop_path, **data, **self.kwargs) as ocr_obj:
             ocr_obj.default_pic_path = input_crop_path
-            ocr_obj.get_result()
+            getattr(ocr_obj, match_function)()
             x = ocr_obj.cx + ocr_obj.x_shift
             y = ocr_obj.cy + ocr_obj.y_shift
         if type(ocr_obj.result) == int and ocr_obj.result != 0:

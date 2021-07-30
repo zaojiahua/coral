@@ -7,7 +7,7 @@ from app.config.setting import CORAL_TYPE
 from app.execption.outer.error_code.imgtool import EndPointWrongFormat, OcrParseFail, SwipeAndFindWordsFail, \
     CannotFindRecentVideoOrImage
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
-from app.v1.Cuttle.basic.common_utli import judge_pic_same
+from app.v1.Cuttle.basic.common_utli import judge_pic_same, suit_for_blur
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import SimpleSchema, SimpleVideoPullSchema
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
@@ -30,7 +30,8 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         opt_type = self.exec_content.pop("functionName")
         self.func = getattr(self, opt_type)
         return normal_result
-#   -------已经可以去掉的unit，但是之前编辑过的用例仍需要支持运行，所以以下方法暂时保留，待统一做名称转换后删除----------
+
+    #   -------已经可以去掉的unit，但是之前编辑过的用例仍需要支持运行，所以以下方法暂时保留，待统一做名称转换后删除----------
     def smart_ocr_point(self, content) -> int:
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
@@ -55,7 +56,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.point()
         return ocr_obj.result
 
-
     def smart_ocr_point_extend(self, content) -> int:
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
@@ -67,7 +67,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             ocr_obj.point()
         return ocr_obj.result
 
-    #   -------已经可以去掉的unit，但是之前编辑过的用例仍需要支持运行，所以以上方法暂时保留，待统一做名称转换后删除----------
+    #   --↑↑↑↑-----已经可以去掉的unit，但是之前编辑过的用例仍需要支持运行，所以以上方法暂时保留，待统一做名称转换后删除----↑↑↑↑------
 
     def initiative_remove_interference(self, *args):
         # 主动清除异常方法，return 2
@@ -103,12 +103,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         self._model.logger.debug(f"adb response:{execute_result}")
         return execute_result
 
-    # 复合unit输入参数例子：
-    # kwargs = {'model': Dummy_model, 'many': False, 'execCmdDict':
-    #      {'xyShift': '0 0', 'requiredWords': '蓝牙','functionName': 'smart_ocr_point'},
-    #      'work_path': 'D:\\Pacific\\chiron---msm8998---3613ef3d\\1599471222.1818228\\djobwork\\',
-    #      'device_label': 'chiron---msm8998---3613ef3d'}
-    # info_body = {'xyShift': '0 0', 'requiredWords': '蓝牙'}
     def icon_found_with_direction(self, content, click=True):
         # 自动找icon
         from app.v1.device_common.device_model import Device
@@ -120,6 +114,8 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                         "right": ((device_width * 0.1), center_y, (device_width * 0.9), center_y),
                         "down": (center_x, (device_height * 0.3), center_x, (device_height * 0.7)),
                         "up": (center_x, (device_height * 0.7), center_x, (device_height * 0.3))}
+        info_body, is_blur = suit_for_blur(content)
+        match_function = "get_result" if is_blur == False else "get_result_ignore_speed"
         for i in range(15):
             with Complex_Center(**content, **self.kwargs) as ocr_obj:
                 try:
@@ -127,7 +123,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     if hasattr(self, "image") and judge_pic_same(ocr_obj.default_pic_path, self.image):
                         return 1
                     self.image = ocr_obj.default_pic_path
-                    ocr_obj.get_result()
+                    getattr(ocr_obj, match_function)()
                     if click:
                         ocr_obj.point()
                 except OcrParseFail:

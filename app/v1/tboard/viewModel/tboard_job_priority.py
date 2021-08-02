@@ -3,9 +3,12 @@ from app.v1.tboard.viewModel.tborad import TBoardViewModel
 
 class TBoardJobPriorityViewModel(TBoardViewModel):
     def __init__(self, *args, **kwargs):
-        self.device_mapping = kwargs.get("device_mapping")
-        kwargs["jobs"] = []
-        kwargs["device_label_list"] = []
+        self.device_mapping = kwargs.pop("device_mapping")
+        job_obj_list = []
+        for i in self.device_mapping:
+            job_obj_list +=i.get("job")
+        kwargs["jobs"] = job_obj_list
+        kwargs["device_label_list"] = [i.get("device_label") for i in self.device_mapping]
         super().__init__(*args, **kwargs)
 
     def add_dut_list(self, device_idle_list):

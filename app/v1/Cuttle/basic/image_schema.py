@@ -85,7 +85,7 @@ class ImageBasicSchemaCompatible(ImageBasicSchema):
             data["areas"] = areas if areas is not [] else [[0, 0, 1, 1]]
             data["threshold"] = threshold
             return data
-        except FileNotFoundError:
+        except (FileNotFoundError,TypeError):
             data["areas"] = [[0, 0, 1, 1]]
             data["threshold"] = 0.99
             return data
@@ -108,7 +108,7 @@ class ImageOnlyConfigCompatible(ImageOriginalSchema):
             data["areas"] = areas if areas is not [] else [[0, 0, 1, 1]]
             data["threshold"] = threshold
             return data
-        except FileNotFoundError:
+        except (FileNotFoundError, TypeError):
             data["areas"] = [[0, 0, 1, 1]]
             data["threshold"] = 0.99
             return data
@@ -155,7 +155,7 @@ class ImageAreaSchema(ImageSchema):
                          "area" + str(i) in json_data.keys()]
             data["crop_areas"] = areas if areas is not [] else [[0, 0, 1, 1]]
             return data
-        except FileNotFoundError:
+        except (FileNotFoundError,TypeError):
             data["crop_areas"] = [[0, 0, 1, 1]]
             return data
 

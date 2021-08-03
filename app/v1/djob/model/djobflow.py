@@ -1,10 +1,12 @@
 import os
 import traceback
+import zipfile
 from datetime import datetime
 from shutil import copyfile
 
 from astra import models
 
+from app.config.setting import JOB_SYN_RESOURCE_DIR
 from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url, upload_rds_zip_file_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import JobExecBodyException, JobExecUnknownException, \
@@ -13,7 +15,7 @@ from app.execption.outer.error_code.eblock import EblockEarlyStop
 from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, DictField, OwnerList, OwnerForeignKey, \
     OwnerFloatField
 from app.libs.extension.model import BaseModel
-from app.libs.http_client import request
+from app.libs.http_client import request, request_file
 from app.libs.log import setup_logger
 from app.libs.ospathutil import file_rename_from_path
 from app.v1.djob.config.setting import NORMAL_TYPE, SWITCH_TYPE, END_TYPE, FAILED_TYPE, ADBC_TYPE, TEMPER_TYPE, \
@@ -107,6 +109,8 @@ class DJobFlow(BaseModel):
     def prepare(self):
         if self.source == DJOB:  # djob 表明为innerjob, 只有一个job flow 且未传,需要自己获取
             if not os.path.exists(os.path.join(self.tboard_path, self.job_label)):
+                self.download_fix(self.tboard_path, self.job_label)
+            if not os.path.exists(os.path.join(self.tboard_path, self.job_label)):
                 raise InnerJobNotAssociated
             self.flow_id = int(os.listdir(os.path.join(self.tboard_path, self.job_label))[0])
 
@@ -119,6 +123,19 @@ class DJobFlow(BaseModel):
 
         device_vm = DeviceViewModel(device_label=self.device_label, flow_id=self.flow_id)
         self.device = device_vm.to_model()
+
+    @staticmethod
+    def download_fix(tboard_path, job_label):
+        try:
+            url = f"/media/job_res_file_export/{job_label}.zip"
+            job_msg_temp_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job_label}.zip")
+            file_content = request_file(url, timeout=100.0)
+            with open(job_msg_temp_name, "wb") as code:
+                code.write(file_content.content)
+            with zipfile.ZipFile(job_msg_temp_name, 'r') as zip_ref:
+                zip_ref.extractall(os.path.join(tboard_path, job_label))
+        except Exception:
+            raise InnerJobNotAssociated
 
     def create_rds(self):
         self.rds = RDS(job_flow_id=self.flow_id)

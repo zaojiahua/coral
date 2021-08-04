@@ -66,3 +66,5 @@ elif CORAL_TYPE == 4:
 else:
     HARDWARE_MAPPING_LIST = ['1',arm_com]
 
+
+Bugreport_file_name = "bugreport.zip"

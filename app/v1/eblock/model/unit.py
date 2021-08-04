@@ -5,6 +5,7 @@ from astra import models
 from func_timeout import func_set_timeout
 
 from app.config.ip import ADB_TYPE
+from app.config.setting import Bugreport_file_name
 from app.config.url import device_url
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
 from app.execption.outer.error_code.eblock import EblockCannotFindFile
@@ -113,8 +114,8 @@ class Unit(BaseModel):
 
         @func_set_timeout(timeout=self.timeout if self.timeout else DEFAULT_TIMEOUT)
         def _inner_func():
-
-            save_list = []
+            # 默认保存bugreport.zip 根据2021/7/2客户需求，储存并下载zip文件
+            save_list = [Bugreport_file_name]
             cmd_dict: dict = self.execCmdDict
 
             if 'ADBC' == self.execModName:

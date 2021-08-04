@@ -23,6 +23,7 @@ RUN apt-get install -y kmod
 RUN bash setup.sh
 RUN cp -r /opt/MVS/lib/64/. /lib/
 
+ENV LANG C.UTF-8
 #RUN export LD_LIBRARY_PATH=./app/coral/lib:$LD_LIBRARY_PATH
 
 ENTRYPOINT ["gunicorn","-c", "gunicorn.py", "manage:app"]

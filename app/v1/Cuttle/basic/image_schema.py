@@ -70,20 +70,64 @@ class ImageBasicSchema(ImageOriginalSchema):
     output_path = fields.String(data_key="outputPath")
 
 
-class ImageOutPutSchema(ImageOriginalSchema):
-    output_path = fields.String(data_key="outputPath")
+class ImageBasicSchemaCompatible(ImageBasicSchema):
+    config = fields.String(data_key="configFile")
+
+    @post_load()
+    def explain(self, data, **kwargs):
+        path = data.get("config")
+        try:
+            with open(path, "r") as json_file:
+                json_data = json.load(json_file)
+                areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
+                         "area" + str(i) in json_data.keys()]
+                threshold = float(json_data.get("threshold", 0.99))
+            data["areas"] = areas if areas is not [] else [[0, 0, 1, 1]]
+            data["threshold"] = threshold
+            return data
+        except (FileNotFoundError,TypeError):
+            data["areas"] = [[0, 0, 1, 1]]
+            data["threshold"] = 0.99
+            return data
+
+
+class ImageOnlyConfigCompatible(ImageOriginalSchema):
+    # 向前兼容已有用例中，ConfigFile实际指明configArea的情况。允许configfile非必填。解决历史遗留但已经不允许更改的问题
+    # 不能使用于图标识别的方法中
+    config = fields.String(data_key="configFile")
+
+    @post_load()
+    def explain(self, data, **kwargs):
+        path = data.get("config")
+        try:
+            with open(path, "r") as json_file:
+                json_data = json.load(json_file)
+                areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
+                         "area" + str(i) in json_data.keys()]
+                threshold = float(json_data.get("threshold", 0.99))
+            data["areas"] = areas if areas is not [] else [[0, 0, 1, 1]]
+            data["threshold"] = threshold
+            return data
+        except (FileNotFoundError, TypeError):
+            data["areas"] = [[0, 0, 1, 1]]
+            data["threshold"] = 0.99
+            return data
+
+
+class ImageSchemaCompatible(ImageBasicSchemaCompatible):
     refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
 
 
 class ImageSchema(ImageBasicSchema):
+    # configArea可以为空，configFile不能为空
     refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
 
 
-class ImageRealtimeSchema(ImageBasicSchema):
+class ImageRealtimeSchema(ImageBasicSchemaCompatible):
     input_im_2 = fields.String(required=True, data_key="inputImgFile2", validate=(verify_exist, verify_image))
 
 
-class ImageColorSchema(ImageBasicSchema):
+class ImageColorSchema(ImageBasicSchemaCompatible):
     color = fields.String(required=True, data_key="color")
 
 
@@ -98,34 +142,26 @@ class ImageColorRelativePositionSchema(ImageSchema):
 
 
 class ImageAreaSchema(ImageSchema):
-    area_config = fields.String(required=True, data_key="configArea", validate=verify_exist)
+    area_config = fields.String(required=False, data_key="configArea")
 
     @post_load()
     def explain(self, data, **kwargs):
         crop_area_path = data.get("area_config")
         data = super().explain(data, **kwargs)
-        with open(crop_area_path, "r") as json_file:
-            json_data = json.load(json_file)
-            areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
-                     "area" + str(i) in json_data.keys()]
-        data["crop_areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
-        return data
+        try:
+            with open(crop_area_path, "r") as json_file:
+                json_data = json.load(json_file)
+                areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
+                         "area" + str(i) in json_data.keys()]
+            data["crop_areas"] = areas if areas is not [] else [[0, 0, 1, 1]]
+            return data
+        except (FileNotFoundError,TypeError):
+            data["crop_areas"] = [[0, 0, 1, 1]]
+            return data
 
 
-class ImageAreaWithoutInputSchema(ImageSchema):
-    area_config = fields.String(required=True, data_key="configArea", validate=verify_exist)
+class ImageAreaWithoutInputSchema(ImageAreaSchema):
     input_im = fields.String(required=False, data_key="inputImgFile")
-
-    @post_load()
-    def explain(self, data, **kwargs):
-        crop_area_path = data.get("area_config")
-        data = super().explain(data, **kwargs)
-        with open(crop_area_path, "r") as json_file:
-            json_data = json.load(json_file)
-            areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
-                     "area" + str(i) in json_data.keys()]
-        data["crop_areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
-        return data
 
 
 class VideoBaseSchema(Schema):

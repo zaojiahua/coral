@@ -1,11 +1,13 @@
 import os
 import traceback
+import zipfile
 from datetime import datetime
 from shutil import copyfile
 
 from astra import models
 
-from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url
+from app.config.setting import JOB_SYN_RESOURCE_DIR
+from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url, upload_rds_zip_file_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import JobExecBodyException, JobExecUnknownException, \
     JobMaxRetryCycleException, InnerJobNotAssociated
@@ -13,7 +15,7 @@ from app.execption.outer.error_code.eblock import EblockEarlyStop
 from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, DictField, OwnerList, OwnerForeignKey, \
     OwnerFloatField
 from app.libs.extension.model import BaseModel
-from app.libs.http_client import request
+from app.libs.http_client import request, request_file
 from app.libs.log import setup_logger
 from app.libs.ospathutil import file_rename_from_path
 from app.v1.djob.config.setting import NORMAL_TYPE, SWITCH_TYPE, END_TYPE, FAILED_TYPE, ADBC_TYPE, TEMPER_TYPE, \
@@ -107,6 +109,8 @@ class DJobFlow(BaseModel):
     def prepare(self):
         if self.source == DJOB:  # djob 表明为innerjob, 只有一个job flow 且未传,需要自己获取
             if not os.path.exists(os.path.join(self.tboard_path, self.job_label)):
+                self.download_fix(self.tboard_path, self.job_label)
+            if not os.path.exists(os.path.join(self.tboard_path, self.job_label)):
                 raise InnerJobNotAssociated
             self.flow_id = int(os.listdir(os.path.join(self.tboard_path, self.job_label))[0])
 
@@ -119,6 +123,19 @@ class DJobFlow(BaseModel):
 
         device_vm = DeviceViewModel(device_label=self.device_label, flow_id=self.flow_id)
         self.device = device_vm.to_model()
+
+    @staticmethod
+    def download_fix(tboard_path, job_label):
+        try:
+            url = f"/media/job_res_file_export/{job_label}.zip"
+            job_msg_temp_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job_label}.zip")
+            file_content = request_file(url, timeout=100.0)
+            with open(job_msg_temp_name, "wb") as code:
+                code.write(file_content.content)
+            with zipfile.ZipFile(job_msg_temp_name, 'r') as zip_ref:
+                zip_ref.extractall(os.path.join(tboard_path, job_label))
+        except Exception:
+            raise InnerJobNotAssociated
 
     def create_rds(self):
         self.rds = RDS(job_flow_id=self.flow_id)
@@ -302,7 +319,8 @@ class DJobFlow(BaseModel):
 
         :return:
         """
-        rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit","lose_frame_point"]
+        rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit",
+                         "lose_frame_point"]
         self.recent_img_res_list = None  # 每一个block 产生的结果会覆盖recent_img_res_list
         self.recent_img_rpop_list = None
 
@@ -385,33 +403,27 @@ class DJobFlow(BaseModel):
             if os.path.getsize(file_path):
                 if int(job_assessment_value) != 0:  # 针对正确的结果不推送文件
                     if file_name.endswith((".png", ".jpg")):
-                        base_data["file_name"] = file_name
-
-                        pic = open(file_path, "rb")
-
-                        try:
-                            request(method="POST", url=upload_rds_screen_shot_url, data=base_data,
-                                    files={"rds_screen_shot": pic})
-                        except APIException as e:
-                            self.logger.error(f"{file_path} push failed: {e}")
-                            copyfile(file_path, os.path.join(ERROR_FILE_DIR, file_name))
-
-                        pic.close()
-
+                        self._send_file(base_data, file_name, file_path, upload_rds_screen_shot_url, "rds_screen_shot")
+                    elif file_name.endswith(".zip"):
+                        self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
                 if file_name.endswith((".txt", ".log", ".json")):
-                    base_data["file_name"] = file_name
-                    log = open(file_path, "rb")
-                    try:
-                        request(method="POST", url=upload_rds_log_file_url, data=base_data,
-                                files={"log_file": log})
-                    except APIException as e:
-                        self.logger.error(f"{file_path} push failed: {e}")
-                        copyfile(file_path, os.path.join(ERROR_FILE_DIR, file_name))
-                    log.close()
+                    self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
+                # elif file_name.endswith(".zip"):
+                #     self._send_file(base_data, file_name, file_path, upload_rds_zip_file_url,"zip_file")
 
         for djob_instance in self.inner_job_list:
             # inner job的 依赖文件上传
             djob_instance.push_log_and_pic(base_data, job_assessment_value, flow_id=flow_id)
+
+    def _send_file(self, base_data, file_name, file_path, url, key):
+        base_data["file_name"] = file_name
+        file = open(file_path, "rb")
+        try:
+            request(method="POST", url=url, data=base_data, files={key: file})
+        except APIException as e:
+            self.logger.error(f"{file_path} push failed: {e}")
+            copyfile(file_path, os.path.join(ERROR_FILE_DIR, file_name))
+        file.close()
 
     def stop_flow(self):
         self.stop_flag = True

@@ -92,8 +92,12 @@ class PaneDeleteView(MethodView):
             # todo  clear used list when only one arm for one server
             self._reset_arm(device_object)
         if device_object.has_arm:
-            hand_serial_obj = hand_serial_obj_dict[device_object.pk]
-            hand_serial_obj.close()
+            try:
+                hand_serial_obj = hand_serial_obj_dict[device_object.pk]
+                hand_serial_obj.close()
+            except KeyError:
+                # 多见与机柜型号填写有误时
+                pass
         if device_object.has_camera:
             redis_client.set("g_bExit", "1")
         from app.v1.Cuttle.basic.setting import hand_used_list

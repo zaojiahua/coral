@@ -50,6 +50,8 @@ right_switch_percent = 0.87
 
 CamObjList = []
 normal_result = (False, None)
+blur_signal = "[B]"
+
 handler_config = {
     # 当复合unit中新增adb方法，需要更新此配置文件，指明其可能性
 

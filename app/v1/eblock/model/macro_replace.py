@@ -84,7 +84,7 @@ class MacroHandler(object):
             type = resource.split("_")[1]
             phone_type = int(resource.split("_")[2])
             # 兼容用户输入简便，与数据库定义
-            available_type = {"id": "name", "username": "username", "code": "password"}
+            available_type = {"id": "name", "username": "username", "code": "password", 'phone': 'phone_number'}
             if type.lower() not in available_type.keys() or phone_type not in [0, 1, 2, 3]:
                 raise EblockResourceMacroWrongFormat
             # 在僚机载体执行的unit，里面可能需要替换自己关联的主机的账号相关信息，也可能换自己关联的主机关联的其他僚机的账号相关信息
@@ -186,7 +186,7 @@ class MacroHandler(object):
         return relative_ass_device
 
     def set_account_value(self, available_type, cmd, d_params, type, app_name):
-        d_params.update({"app_name": app_name, "fields": "name,username,password"})
+        d_params.update({"app_name": app_name, "fields": "name,username,password,phone_number"})
         try:
             response = request(url=account_url, params=d_params, filter_unique_key=True)
         except RequestException:

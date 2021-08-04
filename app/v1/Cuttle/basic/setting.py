@@ -2,7 +2,7 @@ hand_serial_obj_dict = {}
 hand_used_list = []
 camera_dq_dict = {}
 camera_params = [("Width", 1280), ("Height", 720), ("OffsetY", 200), ("OffsetX", 0)]
-camera_params_240 = [("Width", 1296), ("Height", 720), ("OffsetY", 248), ("OffsetX", 32),("AcquisitionFrameRate",240.0),("ExposureTime",2500.0),("Gain",1.51)]
+camera_params_240 = [("Width", 1296), ("Height", 720), ("OffsetY", 248), ("OffsetX", 32),("AcquisitionFrameRate",240.0),("ExposureTime",2500.0),("Gain",2.5)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
@@ -22,11 +22,11 @@ icon_threshold = 30
 icon_threshold_camera = 12
 icon_rate = 500
 icon_min_template = 0.005
-icon_min_template_camera = 0.05
+icon_min_template_camera = 0.01
 wait_bias = 1.1  # 从发给旋转机械臂-到触碰到开关键的时间补偿
 adb_disconnect_threshold = 15
 arm_default = "G01 X0Y33Z0F5000 \r\n"
-arm_wait_position = f"G01 X20Y-95Z{Z_UP}F15000 \r\n"
+arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
 last_swipe_end_point = [0, 0]
 
 color_threshold = 40
@@ -36,7 +36,8 @@ g_bExit = False
 FpsMax = 240
 CameraMax = 1200
 BIAS = int(FpsMax / 120 * 19)   # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
-SWIPE_BIAS = int(FpsMax / 120 * 5)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
+SWIPE_BIAS_HARD = int(FpsMax / 120 * 5)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
+SWIPE_BIAS = int(FpsMax / 120 * (19+50))
 
 Continues_Number = 1  # 连续多张判断准则，适用于性能测试
 camera_w = 1280  # 摄像头拍摄分辨率，需要根据具体摄像头设置

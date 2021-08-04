@@ -13,7 +13,9 @@ from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS, SWIPE_BIAS_HARD
+
+
 # from skimage.measure import compare_ssim
 # from skimage.metrics.structural_similarity import compare_ssim
 class PerformanceMinix(object):
@@ -21,7 +23,7 @@ class PerformanceMinix(object):
 
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
-        return self.swipe_calculate(exec_content, SWIPE_BIAS)
+        return self.swipe_calculate(exec_content, SWIPE_BIAS_HARD)
 
     def swipe_calculate(self, exec_content, bias):
         data = self._validate(exec_content, PerformanceSchema)
@@ -256,12 +258,13 @@ class PerformanceMinix(object):
             standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
             match_ratio_2 = ((result_2 + result2_2) / standard)
             final_result_2 = match_ratio_2 < threshold - 0.03
+            print(match_ratio_2,match_ratio)
         else:
             final_result_2 = True
             match_ratio_2 = 1
         if fps_lost:
             return not (not final_result and not final_result_2)
-        return (final_result_2 and final_result) or match_ratio_2 < 0.9
+        return (final_result_2 and final_result) or match_ratio_2 < 0.95
 
 
     def delay_exec(self, function, *args, **kwargs):

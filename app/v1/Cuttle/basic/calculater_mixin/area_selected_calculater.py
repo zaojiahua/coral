@@ -99,6 +99,7 @@ class AreaSelectedMixin(object):
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         th = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
         result = np.abs(min_val) < th
+        print(th,np.abs(min_val))
         return result
 
     # ----------------------------------------文字相关-----------------------------------------------------

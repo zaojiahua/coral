@@ -294,15 +294,18 @@ class HandHandler(Handler, DefaultMixin):
         # if (start_x == end_x) and (start_y > end_y):
         #     end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
         if normal:
-            return [
+            commend_list = [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN + 5, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN - 1, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, speed),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
             ]
+            # if speed <= 500:
+            #     commend_list.insert(2, "<SLEEP>")
+            return commend_list
         else:
-            x1 = min(max(start_x - (end_x - start_x)*10/np.abs(end_x-start_x) * trapezoid, 0), 120)
-            y1 = min(max(start_y - (end_y - start_y)*10/np.abs((end_y-start_y)) * trapezoid, 0), 150)
+            x1 = min(max(start_x - (end_x - start_x) * 10 / np.abs(end_x - start_x) * trapezoid, 0), 120)
+            y1 = min(max(start_y - (end_y - start_y) * 10 / np.abs((end_y - start_y)) * trapezoid, 0), 150)
             x4 = min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
             y4 = min(max(end_y + (end_y - start_y) * trapezoid, 0), 150)
             return [

@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 
 from app.config.setting import CORAL_TYPE
+from app.execption.outer.error_code.imgtool import IconBiggerThanField
 from app.v1.Cuttle.basic.common_utli import threshold_set, suit_for_blur
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageAreaSchema, ImageAreaWithoutInputSchema, \
@@ -94,6 +95,9 @@ class AreaSelectedMixin(object):
     @staticmethod
     def template_match(target, template):
         # 模板匹配的方法，判定图标存在
+        if target.shape[0] < template.shape[0] or target.shape[1] < template.shape[1]:
+            print(target.shape,template.shape)
+            raise IconBiggerThanField
         result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
         # 选用 cv2.TM_SQDIFF_NORMED时，只看最小值，min_val/min_loc
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)

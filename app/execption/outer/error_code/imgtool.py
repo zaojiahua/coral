@@ -143,3 +143,17 @@ class CameraNotResponse(APIException):
     code = 400
     description = "camera can not receive picture"
 
+class PerformanceNotStart(APIException):
+    """
+    性能分析过程中，front set fail
+    """
+    error_code = 2020
+    code = 400
+    description = "performance not start"
+
+class IconBiggerThanField(APIException):
+    error_code = 2021
+    code = 400
+    description = "icon bigger than field"
+
+

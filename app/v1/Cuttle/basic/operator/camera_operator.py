@@ -89,7 +89,10 @@ def camera_init_HK(**kwargs):
     stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
     check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
 
-    check_result(CamObj.MV_CC_OpenDevice, 1, 0)
+    check_result(CamObj.MV_CC_OpenDevice, 5, 0)
+    CamObj.MV_CC_CloseDevice()
+    # CamObj.MV_CC_DestroyHandle()
+    check_result(CamObj.MV_CC_OpenDevice, 5, 0)
     if kwargs.get("init") is None:
         CamObj.MV_CC_SetIntValue("OffsetY", 0)
         CamObj.MV_CC_SetIntValue("OffsetX", 0)

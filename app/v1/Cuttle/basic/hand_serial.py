@@ -1,6 +1,7 @@
 import time
 
 import serial
+from serial import SerialException
 
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.setting import Z_UP, arm_wait_position
@@ -40,7 +41,10 @@ class HandSerial:
 
     def recv(self, buffer_size=32):
         # print(self.ser.read(buffer_size))
-        rev = self.ser.read(buffer_size).decode()
+        try:
+            rev = self.ser.read(buffer_size).decode()
+        except SerialException:
+            raise
         if 'ok' in rev or 'unlock' in rev:
             return 0
         return -1

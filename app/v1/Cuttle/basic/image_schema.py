@@ -278,21 +278,26 @@ class SimpleVideoPullSchema(Schema):
 
 
 class PerformanceSchemaCompare(Schema):
-    config = fields.String(required=True, data_key="configArea", validate=verify_exist)
+    config = fields.String(data_key="configArea")
 
     class Meta:
         unknown = INCLUDE
 
     @post_load()
     def explain(self, data, **kwargs):
-        with open(data.get('config'), "r") as json_file:
-            json_data = json.load(json_file)
-            areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
-                     "area" + str(i) in json_data.keys()]
-            threshold = float(json_data.get("threshold", 0.99))
-        data["areas"] = areas if areas != [] else [[1, 1, 1, 1]]
-        data["threshold"] = threshold
-        return data
+        try:
+            with open(data.get('config'), "r") as json_file:
+                json_data = json.load(json_file)
+                areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
+                         "area" + str(i) in json_data.keys()]
+                threshold = float(json_data.get("threshold", 0.99))
+            data["areas"] = areas if areas != [] else [[1, 1, 1, 1]]
+            data["threshold"] = threshold
+            return data
+        except (FileNotFoundError,TypeError):
+            data["areas"] = [[0, 0, 1, 1]]
+            data["threshold"] = 0.99
+            return data
 
 
 class PerformanceSchemaFps(PerformanceSchemaCompare):

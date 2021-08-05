@@ -60,7 +60,7 @@ class ImageOriginalSchema(Schema):
             areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
                      "area" + str(i) in json_data.keys()]
             threshold = float(json_data.get("threshold", 0.99))
-        data["areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
+        data["areas"] = areas if areas != [] else [[1, 1, 1, 1]]
         data["threshold"] = threshold
         return data
 
@@ -82,7 +82,7 @@ class ImageBasicSchemaCompatible(ImageBasicSchema):
                 areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
                          "area" + str(i) in json_data.keys()]
                 threshold = float(json_data.get("threshold", 0.99))
-            data["areas"] = areas if areas is not [] else [[0, 0, 1, 1]]
+            data["areas"] = areas if areas != [] else [[0, 0, 1, 1]]
             data["threshold"] = threshold
             return data
         except (FileNotFoundError,TypeError):
@@ -105,7 +105,7 @@ class ImageOnlyConfigCompatible(ImageOriginalSchema):
                 areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
                          "area" + str(i) in json_data.keys()]
                 threshold = float(json_data.get("threshold", 0.99))
-            data["areas"] = areas if areas is not [] else [[0, 0, 1, 1]]
+            data["areas"] = areas if areas != [] else [[0, 0, 1, 1]]
             data["threshold"] = threshold
             return data
         except (FileNotFoundError, TypeError):
@@ -153,7 +153,7 @@ class ImageAreaSchema(ImageSchema):
                 json_data = json.load(json_file)
                 areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
                          "area" + str(i) in json_data.keys()]
-            data["crop_areas"] = areas if areas is not [] else [[0, 0, 1, 1]]
+            data["crop_areas"] = areas if areas != [] else [[0, 0, 1, 1]]
             return data
         except (FileNotFoundError,TypeError):
             data["crop_areas"] = [[0, 0, 1, 1]]
@@ -185,7 +185,7 @@ class VideoBaseSchema(Schema):
             areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
                      "area" + str(i) in json_data.keys()]
             threshold = float(json_data.get("threshold", 0.99))
-        data[f"{prex}_areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
+        data[f"{prex}_areas"] = areas if areas != [] else [[1, 1, 1, 1]]
         data[f"{prex}_threshold"] = threshold
         return data
 
@@ -235,7 +235,7 @@ class OcrTestSchema(Schema):
             area = data.get("config_file")
             areas = [area["area" + str(i)] for i in range(1, len(area.keys())) if
                      "area" + str(i) in area.keys()]
-            data["areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
+            data["areas"] = areas if areas != [] else [[1, 1, 1, 1]]
         return data
 
 
@@ -251,7 +251,7 @@ class IconTestSchema(OcrTestSchema):
         areas = [area["area" + str(i)] for i in range(1, len(area.keys())) if
                  "area" + str(i) in area.keys()]
         threshold = float(area.get("threshold", 0.99))
-        data["areas"] = areas if areas is not [] else [[1, 1, 1, 1]]
+        data["areas"] = areas if areas != [] else [[1, 1, 1, 1]]
         data["threshold"] = threshold
         crop_area = data.get("config_area")
         areas = [crop_area["area" + str(i)] for i in range(1, len(crop_area.keys())) if
@@ -316,6 +316,6 @@ class PerformanceSchema(PerformanceSchemaCompare):
             icon_areas = [json_data_icon["area" + str(i)] for i in range(1, len(json_data_icon.keys())) if
                           "area" + str(i) in json_data_icon.keys()]
             icon_threshold = float(json_data_icon.get("threshold", 0.99))
-        data["icon_areas"] = icon_areas if icon_areas is not [] else [[1, 1, 1, 1]]
+        data["icon_areas"] = icon_areas if icon_areas != [] else [[1, 1, 1, 1]]
         data["threshold"] = icon_threshold
         return data

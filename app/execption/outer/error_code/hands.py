@@ -36,3 +36,9 @@ class KeyPositionUsedBeforesSet(APIException):
     code = 400
     description = 'key point used before used '
 
+class SerialLostConnection(APIException):
+    error_code = 3004
+    code = 400
+    description = 'Arm Serial lost connection'
+
+

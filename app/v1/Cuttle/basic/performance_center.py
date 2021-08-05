@@ -8,7 +8,7 @@ import numpy as np
 
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
-    VideoEndPointNotFound, FpsLostWrongValue
+    VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
 
 sp = '/' if platform.system() == 'Linux' else '\\'
@@ -79,7 +79,7 @@ class PerformanceCenter(object):
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 if judge_function.__name__ == "_black_field":
                     # 除了查询丢帧情况，都要计算bias，既补偿的帧数，这部分是根据第一点击点的x位置，给一个线性的补偿。后续可以考虑优化成多项式
-                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // 0.25)
+                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // 0.3)
                     print(int((self.icon_scope[0] + self.icon_scope[2]) // (35 / FpsMax)))
                     self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // (35 / FpsMax))
                 break
@@ -97,8 +97,9 @@ class PerformanceCenter(object):
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             raise VideoStartPointNotFound
         number = self.start_number + 1
-        b = time.time()
         print("end loop start... now number:", number, "bias:", self.bias)
+        if len(self.back_up_dq) == 0:
+            raise PerformanceNotStart
         if self.bias > 0:
             for i in range(self.bias):
                 # 对bias补偿的帧数，先只保存对应图片，不做结果判断
@@ -186,7 +187,7 @@ class PerformanceCenter(object):
                 break
             except IndexError as e:
                 print("error in picture_prepare", repr(e))
-                time.sleep(0.02)
+                time.sleep(0.2)
         # save_pic = cv2.resize(picture, dsize=(0, 0), fx=0.5, fy=0.5)
         cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture)
         number += 1

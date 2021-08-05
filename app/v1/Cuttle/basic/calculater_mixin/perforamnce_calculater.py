@@ -65,7 +65,8 @@ class PerformanceMinix(object):
             try:
                 # ocr_obj.get_result_by_feature(content, cal_real_xy=False)
                 ocr_obj.get_result_by_template_match(content, cal_real_xy=False)
-            except NotFindIcon:
+            except NotFindIcon as e:
+                print(repr(e))
                 return 1
             # +-camera_x0先换算到裁剪前摄像头图中的绝对坐标，这个数据用于起点的识别
             icon_real_position_camera = [ocr_obj.cx + camera_x0 - 20, ocr_obj.cy + camera_y0 - 20,
@@ -176,6 +177,8 @@ class PerformanceMinix(object):
         except APIException as e:
             self.image = performance.tguard_picture_path if hasattr(performance,"tguard_picture_path") else None
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
+            if hasattr(e,'error_code'):
+                return e.error_code
             return 1
 
     def start_point_with_fps_lost(self, exec_content):

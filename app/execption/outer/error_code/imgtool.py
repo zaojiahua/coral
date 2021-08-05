@@ -151,3 +151,9 @@ class PerformanceNotStart(APIException):
     code = 400
     description = "performance not start"
 
+class IconBiggerThanField(APIException):
+    error_code = 2021
+    code = 400
+    description = "icon bigger than field"
+
+

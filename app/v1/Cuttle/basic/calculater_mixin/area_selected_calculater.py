@@ -96,15 +96,24 @@ class AreaSelectedMixin(object):
     def template_match(target, template):
         # 模板匹配的方法，判定图标存在
         if target.shape[0] < template.shape[0] or target.shape[1] < template.shape[1]:
-            print(target.shape,template.shape)
             raise IconBiggerThanField
         result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
         # 选用 cv2.TM_SQDIFF_NORMED时，只看最小值，min_val/min_loc
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         th = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
         result = np.abs(min_val) < th
-        print(th,np.abs(min_val))
+        print(th, np.abs(min_val))
         return result
+
+    @staticmethod
+    def template_match_temp(target, template):
+        # 5#型柜着急送走时候临时加的方法，避免改动多处调用的方法没有时间进行测试。
+        # 此方法后续变动需要合并上面那个方法中去。
+        if target.shape[0] < template.shape[0] or target.shape[1] < template.shape[1]:
+            raise IconBiggerThanField
+        result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        return min_val
 
     # ----------------------------------------文字相关-----------------------------------------------------
     def crop_input_picture_record_position(self, data, ocr_obj, config_name):

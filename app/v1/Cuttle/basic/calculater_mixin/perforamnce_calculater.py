@@ -13,13 +13,14 @@ from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS, SWIPE_BIAS_HARD
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS, SWIPE_BIAS_HARD, \
+    icon_min_template_camera
 
 
 # from skimage.measure import compare_ssim
 # from skimage.metrics.structural_similarity import compare_ssim
 class PerformanceMinix(object):
-    dq = deque(maxlen=CameraMax*2)
+    dq = deque(maxlen=CameraMax * 2)
 
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
@@ -66,7 +67,6 @@ class PerformanceMinix(object):
                 # ocr_obj.get_result_by_feature(content, cal_real_xy=False)
                 ocr_obj.get_result_by_template_match(content, cal_real_xy=False)
             except NotFindIcon as e:
-                print(repr(e))
                 return 1
             # +-camera_x0先换算到裁剪前摄像头图中的绝对坐标，这个数据用于起点的识别
             icon_real_position_camera = [ocr_obj.cx + camera_x0 - 20, ocr_obj.cy + camera_y0 - 20,
@@ -175,9 +175,9 @@ class PerformanceMinix(object):
             self.extra_result = performance.result
             return 0
         except APIException as e:
-            self.image = performance.tguard_picture_path if hasattr(performance,"tguard_picture_path") else None
+            self.image = performance.tguard_picture_path if hasattr(performance, "tguard_picture_path") else None
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
-            if hasattr(e,'error_code'):
+            if hasattr(e, 'error_code'):
                 return e.error_code
             return 1
 
@@ -215,14 +215,14 @@ class PerformanceMinix(object):
         response = UnitFactory().create("ImageHandler", request_dict)
         return response
 
-    def _black_field(self, picture, _,__, threshold):
+    def _black_field(self, picture, _, __, threshold):
         result = np.count_nonzero(picture < 50)
         standard = picture.shape[0] * picture.shape[1] * picture.shape[2]
         # picture shape is 0?
         match_ratio = result / standard
         return match_ratio > threshold - 0.01
 
-    def _icon_find(self, picture, icon,_, threshold, disappear=False):
+    def _icon_find(self, picture, icon, _, threshold, disappear=False):
         try:
             feature_point_list = self.shape_identify(picture, icon)
         except IconTooWeek:
@@ -235,13 +235,17 @@ class PerformanceMinix(object):
             response = bool(1 - response)
         return response
 
-    def _icon_find_template_match(self, picture, icon, threshold, disappear=False):
-        response = self.template_match(picture, icon)
+    def _icon_find_template_match(self, picture, icon, next_pic, disappear=False):
+        min_value_1 = self.template_match_temp(picture, icon)
+        min_value_2 = self.template_match_temp(next_pic, icon)
+        result_1 = np.abs(min_value_2) < icon_min_template_camera
+        result_2 = min_value_2 <= min_value_1 * 0.5
+        response = result_1 and result_2
         if disappear is True:
             response = bool(1 - response)
         return response
 
-    def _picture_changed(self, last_pic, next_pic,third_pic, threshold,fps_lost=False):
+    def _picture_changed(self, last_pic, next_pic, third_pic, threshold, fps_lost=False):
         # ssim_value = compare_ssim(last_pic,next_pic,multichannel=True,gaussian_weights=True)
         # print("ssim error:",ssim_value)
         # final_result =  float(ssim_value) > threshold
@@ -261,14 +265,13 @@ class PerformanceMinix(object):
             standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
             match_ratio_2 = ((result_2 + result2_2) / standard)
             final_result_2 = match_ratio_2 < threshold - 0.03
-            print(match_ratio_2,match_ratio)
+            print(match_ratio_2, match_ratio)
         else:
             final_result_2 = True
             match_ratio_2 = 1
         if fps_lost:
             return not (not final_result and not final_result_2)
         return (final_result_2 and final_result) or match_ratio_2 < 0.95
-
 
     def delay_exec(self, function, *args, **kwargs):
         time.sleep(kwargs.get("sleep", 0.5))

@@ -106,12 +106,12 @@ class PerformanceCenter(object):
                 number, picture, next_picture, _ = self.picture_prepare(number)
         while self.loop_flag:
             number, picture, next_picture, third_pic = self.picture_prepare(number)
-            pic2 = self.judge_icon if judge_function.__name__ in ["_icon_find",
-                                                                  "_icon_find_template_match"] else next_picture
+            pic2, third_pic = self.judge_icon, next_picture if judge_function.__name__ in ["_icon_find",
+                                                                                           "_icon_find_template_match"] else next_picture
             if judge_function(picture, pic2, third_pic, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 # 找到终止点后，包装一个json格式，推到reef。
-                self.end_number = number - 1
+                self.end_number = number - 1 if judge_function.__name__ != "_icon_find_template_match" else number
                 self.start_number = int(self.start_number + self.bias)
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
@@ -144,9 +144,10 @@ class PerformanceCenter(object):
         skip = 2 if self.kwargs.get("fps") == 120 else 4
         for i in range(FpsMax * 3):
             number, picture_original, picture_comp_1, picture_comp_2 = self.picture_prepare_for_fps_lost(number, skip)
-            if judge_function(picture_original, picture_comp_1, picture_comp_2, min(self.threshold+0.005,1),fps_lost = True) == False:
+            if judge_function(picture_original, picture_comp_1, picture_comp_2, min(self.threshold + 0.005, 1),
+                              fps_lost=True) == False:
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                if hasattr(self, "candidate") and number - self.candidate >= skip*4:
+                if hasattr(self, "candidate") and number - self.candidate >= skip * 4:
                     self.result = {"fps_lost": False,
                                    "picture_count": number + 29,
                                    "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}

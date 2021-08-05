@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 from app.execption.outer.error_code.camera import NoSrc, NoCamera, CameraInitFail
+from app.execption.outer.error_code.imgtool import CameraNotResponse
 from app.v1.Cuttle.basic.MvImport.HK_import import *
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
@@ -190,7 +191,10 @@ class CameraHandler(Handler):
             except IndexError:
                 time.sleep(0.03)
                 continue
-        self.src = src
+        try:
+            self.src = src
+        except UnboundLocalError:
+            raise CameraNotResponse
         return 0
 
     # def get_video(self, *args, **kwargs):

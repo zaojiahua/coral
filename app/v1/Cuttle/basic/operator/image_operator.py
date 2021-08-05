@@ -124,6 +124,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return 0
 
     def clear(self, *args):
+        if not hasattr(self,"image") or self.image is None:
+            return 1
         with Complex_Center(inputImgFile=self.image, **self.kwargs) as ocr_obj:
             ocr_obj.get_result(parse_function=self._parse_function)
             if ocr_obj.result == 0:

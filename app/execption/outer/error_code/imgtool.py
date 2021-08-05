@@ -138,3 +138,8 @@ class FpsLostWrongValue(APIException):
     code = 400
     description = "fps lost only support 60 90 120"
 
+class CameraNotResponse(APIException):
+    error_code = 2019
+    code = 400
+    description = "camera can not receive picture"
+

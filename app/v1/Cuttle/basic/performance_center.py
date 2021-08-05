@@ -87,6 +87,7 @@ class PerformanceCenter(object):
                 # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
                 self.move_flag = False
                 self.back_up_dq.clear()
+                self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 raise VideoStartPointNotFound
         return 0
 

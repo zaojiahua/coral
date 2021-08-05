@@ -2,14 +2,14 @@ hand_serial_obj_dict = {}
 hand_used_list = []
 camera_dq_dict = {}
 camera_params = [("Width", 1280), ("Height", 720), ("OffsetY", 200), ("OffsetX", 0)]
-camera_params_240 = [("Width", 1296), ("Height", 720), ("OffsetY", 248), ("OffsetX", 32),("AcquisitionFrameRate",240.0),("ExposureTime",2500.0),("Gain",2.5)]
+camera_params_240 = [("Width", 1440), ("Height", 1080), ("OffsetY", 0), ("OffsetX", 0),("AcquisitionFrameRate",240.0),("ExposureTime",2500.0),("Gain",2.5)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
 HAND_MAX_Y = 245
 Z_START = 0
 # Z_DOWN = -3.5   tianjing setting
-Z_DOWN = -24
+Z_DOWN = -26
 Z_UP = 0
 MOVE_SPEED = 15000
 SWIPE_TIME = 1

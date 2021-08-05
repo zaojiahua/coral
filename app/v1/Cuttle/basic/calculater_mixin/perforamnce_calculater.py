@@ -174,7 +174,7 @@ class PerformanceMinix(object):
             self.extra_result = performance.result
             return 0
         except APIException as e:
-            self.image = performance.tguard_picture_path
+            self.image = performance.tguard_picture_path if hasattr(performance,"tguard_picture_path") else None
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
             return 1
 

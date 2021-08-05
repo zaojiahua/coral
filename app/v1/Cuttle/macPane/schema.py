@@ -157,9 +157,9 @@ class CoordinateSchema(Schema):
         bias = 16 if data.get("inside_upper_left_x") % 16 > 8 else 0
         w_bias =16 if ((data.get("inside_under_right_x") - data.get("inside_upper_left_x")) % 16) > 8 else 0
         executer.submit(camera_start_3, 1, device_obj,
-                        OffsetX=data.get("inside_upper_left_x") // 16 * 16 + bias +32,
+                        OffsetX=data.get("inside_upper_left_x") // 16 * 16 + bias ,
                         # 120-->2   240-->4
-                        OffsetY=data.get("inside_upper_left_y") // 4 * 4 + 248,
+                        OffsetY=data.get("inside_upper_left_y") // 4 * 4 ,
                         Width=(data.get("inside_under_right_x") - data.get("inside_upper_left_x")) // 16 * 16 + w_bias,
                         Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y")) // 4 * 4 + 4)
         return jsonify({"status": "success"}), 200

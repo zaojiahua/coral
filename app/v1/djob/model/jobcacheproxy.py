@@ -14,6 +14,7 @@ class JobCacheProxy:
     """
     负责job 同步数据
     """
+
     def __init__(self, jobs):
         self.jobs = jobs
 
@@ -52,7 +53,7 @@ class JobCacheProxy:
         job_label = job_msg["job_label"]
         job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job_label}.zip")
         job_msg_temp_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job_label}_temp.zip")
-        file_content = request_file(url)
+        file_content = request_file(url, timeout=100.0)
         with open(job_msg_temp_name, "wb") as code:
             code.write(file_content.content)
         if os.path.exists(job_msg_name):

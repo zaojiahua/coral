@@ -98,6 +98,13 @@ def camera_init_HK(**kwargs):
         CamObj.MV_CC_SetIntValue("OffsetX", 0)
         CamObj.MV_CC_SetEnumValue("ADCBitDepth",2)
         CamObj.MV_CC_SetEnumValue("PixelFormat",0x01080009)
+        CamObj.MV_CC_SetEnumValue("BalanceWhiteAuto",0)
+        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector",0)
+        CamObj.MV_CC_SetIntValue("BalanceRatio",1295)
+        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector",1)
+        CamObj.MV_CC_SetIntValue("BalanceRatio",1000)
+        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector",2)
+        CamObj.MV_CC_SetIntValue("BalanceRatio",1600)
         for key in camera_params_240:
             if isinstance(key[1], int):
                 check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])

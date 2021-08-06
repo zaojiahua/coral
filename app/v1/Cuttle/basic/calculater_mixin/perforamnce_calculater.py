@@ -20,8 +20,7 @@ from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, 
 # from skimage.measure import compare_ssim
 # from skimage.metrics.structural_similarity import compare_ssim
 class PerformanceMinix(object):
-    dq = deque(maxlen=CameraMax * 2)
-
+    dq = deque(maxlen=CameraMax * 3)
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
         return self.swipe_calculate(exec_content, SWIPE_BIAS_HARD)
@@ -165,6 +164,7 @@ class PerformanceMinix(object):
         return self._end_point(exec_content, PerformanceSchemaCompare, self._picture_changed)
 
     def _end_point(self, exec_content, schema, judge_function):
+        keep_pic = [2017]
         try:
             data = self._validate(exec_content, schema)
             performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
@@ -178,7 +178,10 @@ class PerformanceMinix(object):
             self.image = performance.tguard_picture_path if hasattr(performance, "tguard_picture_path") else None
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
             if hasattr(e, 'error_code'):
-                return e.error_code
+                if e.error_code in keep_pic:
+                    return 1
+                else:
+                    return e.error_code
             return 1
 
     def start_point_with_fps_lost(self, exec_content):
@@ -239,7 +242,7 @@ class PerformanceMinix(object):
         min_value_1 = self.template_match_temp(picture, icon)
         min_value_2 = self.template_match_temp(next_pic, icon)
         result_1 = np.abs(min_value_2) < icon_min_template_camera
-        result_2 = min_value_2 <= min_value_1 * 0.5
+        result_2 = min_value_2 <= min_value_1 * 0.8
         response = result_1 and result_2
         if disappear is True:
             response = bool(1 - response)
@@ -265,7 +268,6 @@ class PerformanceMinix(object):
             standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
             match_ratio_2 = ((result_2 + result2_2) / standard)
             final_result_2 = match_ratio_2 < threshold - 0.03
-            print(match_ratio_2, match_ratio)
         else:
             final_result_2 = True
             match_ratio_2 = 1

@@ -241,8 +241,9 @@ class PerformanceMinix(object):
     def _icon_find_template_match(self, picture, icon, next_pic, disappear=False):
         min_value_1 = self.template_match_temp(picture, icon)
         min_value_2 = self.template_match_temp(next_pic, icon)
+        print("1 2:",min_value_1,min_value_2)
         result_1 = np.abs(min_value_2) < icon_min_template_camera
-        result_2 = min_value_2 <= min_value_1 * 0.8
+        result_2 = min_value_2 <= min_value_1 * 0.95
         response = result_1 and result_2
         if disappear is True:
             response = bool(1 - response)

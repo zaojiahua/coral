@@ -101,7 +101,7 @@ class Handler():
             for abnormal in self.process_list:
                 if result == abnormal.mark:
                     self._model.logger.info(f"after execute result: {self._model}")
-                    getattr(self, abnormal.method)(result)
+                    getattr(self, abnormal.method)(result, self.kwargs.get("t_guard"))
                     return abnormal.code
         result = result if isinstance(result, int) else 0
         return result

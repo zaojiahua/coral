@@ -104,6 +104,7 @@ class Unit(BaseModel):
     assistDevice = models.IntegerField()
     finalResult = models.BooleanField()
     ocrChoice = models.IntegerField()
+    tGuard = models.IntegerField()
     unit_list_index = models.IntegerField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult")
@@ -178,6 +179,8 @@ class Unit(BaseModel):
             sending_data["device_label"] = self.device_label
             if self.ocrChoice:
                 sending_data["ocr_choice"] = self.ocrChoice
+            if self.tGuard:
+                sending_data['t_guard'] = self.tGuard
             if assist_device_ident:
                 sending_data["assist_device_serial_number"] = assist_device_ident
             logger.info(f"unit:{sending_data}")

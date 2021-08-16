@@ -131,6 +131,11 @@ class ImageColorSchema(ImageBasicSchemaCompatible):
     color = fields.String(required=True, data_key="color")
 
 
+class ImageColorPostionSchema(ImageBasicSchemaCompatible):
+    refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
+    position = fields.String(required=True, data_key="position", validate=verify_format)
+
+
 class ImageMainColorSchema(ImageColorSchema):
     percent = fields.String(required=True, data_key="percent")
 

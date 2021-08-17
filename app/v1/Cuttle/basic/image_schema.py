@@ -46,6 +46,23 @@ def verify_has_grep(cmd):
         raise ValidationError('input adb order should have "grep"/"findstr" ')
 
 
+def load_config_file_v1(data):
+    path = data.get("config")
+    try:
+        with open(path, "r") as json_file:
+            json_data = json.load(json_file)
+            areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
+                     "area" + str(i) in json_data.keys()]
+            threshold = float(json_data.get("threshold", 0.99))
+        data["areas"] = areas if areas != [] else [[0, 0, 1, 1]]
+        data["threshold"] = threshold
+        return data
+    except (FileNotFoundError, TypeError):
+        data["areas"] = [[0, 0, 1, 1]]
+        data["threshold"] = 0.99
+        return data
+
+
 class ImageOriginalSchema(Schema):
     config = fields.String(required=True, data_key="configFile", validate=verify_exist)
 
@@ -75,20 +92,7 @@ class ImageBasicSchemaCompatible(ImageBasicSchema):
 
     @post_load()
     def explain(self, data, **kwargs):
-        path = data.get("config")
-        try:
-            with open(path, "r") as json_file:
-                json_data = json.load(json_file)
-                areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
-                         "area" + str(i) in json_data.keys()]
-                threshold = float(json_data.get("threshold", 0.99))
-            data["areas"] = areas if areas != [] else [[0, 0, 1, 1]]
-            data["threshold"] = threshold
-            return data
-        except (FileNotFoundError,TypeError):
-            data["areas"] = [[0, 0, 1, 1]]
-            data["threshold"] = 0.99
-            return data
+        return load_config_file_v1(data)
 
 
 class ImageOnlyConfigCompatible(ImageOriginalSchema):
@@ -98,20 +102,7 @@ class ImageOnlyConfigCompatible(ImageOriginalSchema):
 
     @post_load()
     def explain(self, data, **kwargs):
-        path = data.get("config")
-        try:
-            with open(path, "r") as json_file:
-                json_data = json.load(json_file)
-                areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
-                         "area" + str(i) in json_data.keys()]
-                threshold = float(json_data.get("threshold", 0.99))
-            data["areas"] = areas if areas != [] else [[0, 0, 1, 1]]
-            data["threshold"] = threshold
-            return data
-        except (FileNotFoundError, TypeError):
-            data["areas"] = [[0, 0, 1, 1]]
-            data["threshold"] = 0.99
-            return data
+        return load_config_file_v1(data)
 
 
 class ImageSchemaCompatible(ImageBasicSchemaCompatible):
@@ -140,7 +131,21 @@ class ImageMainColorSchema(ImageColorSchema):
     percent = fields.String(required=True, data_key="percent")
 
 
-class ImageColorRelativePositionSchema(ImageSchema):
+class ImageColorRelativePositionBaseSchema(Schema):
+    refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
+    config = fields.String(required=True, data_key="configFile")
+    input_im = fields.String(required=True, data_key="inputImgFile", validate=(verify_exist, verify_image))
+    output_path = fields.String(data_key="outputPath")
+
+    class Meta:
+        unknown = INCLUDE
+
+    @post_load()
+    def explain(self, data, **kwargs):
+        return load_config_file_v1(data)
+
+
+class ImageColorRelativePositionSchema(ImageColorRelativePositionBaseSchema):
     requiredWords = fields.String(required=True, data_key="requiredWords")
     xyShift = fields.String(required=True, data_key="xyShift", validate=verify_format)
     position = fields.String(required=True, data_key="position", validate=verify_format)

@@ -111,10 +111,10 @@ def request_with_response_detail(method="GET", url="", retry=3, filter_unique_ke
 
     # 500及以上错误和requests请求错误异常需要重试
     # retry值 大于等于一
+    ip = kwargs.pop("ip") if kwargs.get("ip") else None
     for i in range(retry):
         request_error = None  # 用于记录最后一次request 内部未知异常造成的Exception
         try:
-            ip = kwargs.pop("ip") if kwargs.get("ip") else None
             response = requests.request(method, _parse_url(url, ip), timeout=120.0, **kwargs)
         except Exception as e:
             request_error = e

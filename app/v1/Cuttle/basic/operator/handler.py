@@ -101,7 +101,10 @@ class Handler():
             for abnormal in self.process_list:
                 if result == abnormal.mark:
                     self._model.logger.info(f"after execute result: {self._model}")
-                    getattr(self, abnormal.method)(result, self.kwargs.get("t_guard"))
+                    try:
+                        getattr(self, abnormal.method)(result, self.kwargs.get("t_guard"))
+                    except Exception as e:
+                        self._model.logger.error(f'tGuard error: {str(e)}')
                     return abnormal.code
         result = result if isinstance(result, int) else 0
         return result

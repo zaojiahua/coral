@@ -30,6 +30,7 @@ class JobCacheProxy:
         }
         """
         temp = copy.deepcopy(job_syn_resource_massage)
+        update_json_content = copy.deepcopy(job_syn_resource_massage)
         update_job_list = []
         update_job_labels = []
 
@@ -41,7 +42,7 @@ class JobCacheProxy:
                 if job_label not in update_job_labels:
                     update_job_list.append(job)
                     update_job_labels.append(job_label)
-                    temp[(job_label)] = job["updated_time"]
+                    temp[job_label] = job["updated_time"]
 
         for job in self.jobs:
             # 没有缓存的zip或zip需要更新
@@ -50,11 +51,16 @@ class JobCacheProxy:
                 for inner_job in job["inner_job"]:
                     find_update_job_list(inner_job)
 
-        dump_json_file(temp, JOB_SYN_RESOURCE_MASSAGE)
-
         all_task = [executer.submit(self.download, update_job) for update_job in update_job_list]
 
         wait(all_task)
+
+        # 根据是否下载下来更新json文件
+        for task_result in all_task:
+            download_result = task_result.result()
+            if download_result != -1:
+                update_json_content[download_result] = temp[download_result]
+        dump_json_file(update_json_content, JOB_SYN_RESOURCE_MASSAGE)
 
     def download(self, job_msg):
         try:
@@ -72,7 +78,9 @@ class JobCacheProxy:
             os.rename(job_msg_temp_name, job_msg_name)
             # 下载完成
             logger.info(f'下载完成: {job_label}')
+            return job_label
         except Exception as e:
             logger.error('-----------------下载出错了-------------')
             logger.error(e)
             logger.error('-----------------下载出错了-------------')
+            return -1

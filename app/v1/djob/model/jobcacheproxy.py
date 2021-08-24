@@ -63,12 +63,15 @@ class JobCacheProxy:
             logger.info(f'正在下载的是: {url} {job_label}')
             job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job_label}.zip")
             job_msg_temp_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job_label}_temp.zip")
-            file_content = request_file(url)
+            # 设置超时时间，否则会一直等待
+            file_content = request_file(url, timeout=60)
             with open(job_msg_temp_name, "wb") as code:
                 code.write(file_content.content)
             if os.path.exists(job_msg_name):
                 os.remove(job_msg_name)
             os.rename(job_msg_temp_name, job_msg_name)
+            # 下载完成
+            logger.info(f'下载完成: {job_label}')
         except Exception as e:
             logger.error('-----------------下载出错了-------------')
             logger.error(e)

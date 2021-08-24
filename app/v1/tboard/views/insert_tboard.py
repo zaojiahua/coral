@@ -5,7 +5,7 @@ from flask import request
 
 from app.config.log import TBOARD_LOG_NAME
 from app.execption.outer.error_code.tboard import CreateTboardError
-from app.v1.tboard.validators.tboardSchema import TboardSchema
+from app.v1.tboard.validators.tboardSchema import TboardSchema, TboardJobPrioritySchema
 from app.v1.tboard.views import tborad_router
 
 """
@@ -34,7 +34,9 @@ def insert_tboard():
 
 def insert_tboard_inner(**kwargs):
     # 调用 make_user 返回 TBoardViewModel对象
-    res = TboardSchema().load_or_parameter_exception(kwargs)
+
+    res = TboardJobPrioritySchema().load_or_parameter_exception(kwargs) if kwargs.get(
+        "device_mapping") else TboardSchema().load_or_parameter_exception(kwargs)
     tboard_obj = res.create_tboard()
     if tboard_obj == -1:
         raise CreateTboardError(description='not useful device')

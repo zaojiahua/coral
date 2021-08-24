@@ -22,7 +22,7 @@ class OcrParseFail(APIException):
 
 class OcrWorkPathNotFound(APIException):
     """
-    ocr图片路径下没有图片
+    ocr图片路径下没有图片，可能原因是设备存储空间已满。
     """
     error_code = 2003
     code = 400

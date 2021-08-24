@@ -1,10 +1,11 @@
 import time
 
-from marshmallow import fields, post_load, validate
+from marshmallow import fields, post_load, validate, INCLUDE
 
 from app.libs.extension.schema import BaseSchema
 from app.v1.djob.config.setting import FLOW_EXECUTE_MODE
 from app.v1.tboard.validators.role import Role
+from app.v1.tboard.viewModel.tboard_job_priority import TBoardJobPriorityViewModel
 from app.v1.tboard.viewModel.tborad import TBoardViewModel
 
 
@@ -24,6 +25,11 @@ class JobSchema(BaseSchema):
     updated_time = fields.Str(required=True)
     url = fields.Str(required=True)
     inner_job = fields.Nested("self", many=True, only=["job_label", "updated_time", "url"])
+
+
+class DeviceMappingSchema(BaseSchema):
+    device_label = fields.Str(required=True)
+    job = fields.Nested(JobSchema, many=True, required=True)
 
 
 class TboardSchema(BaseSchema):
@@ -55,6 +61,21 @@ class TboardSchema(BaseSchema):
         # data = self.computer_repeat_time(data)
 
         return TBoardViewModel(**data)
+
+
+class TboardJobPrioritySchema(TboardSchema):
+    device_mapping = fields.Nested(DeviceMappingSchema, many=True, required=True)
+    device_label_list = fields.Raw(required=False, missing=[])
+    jobs = fields.Raw(required=False, missing=[])
+
+    @post_load
+    def make_user(self, data, **kwargs):
+        if not data.get("board_name"):
+            data["board_name"] = get_tboard_default_name()
+
+        # data = self.computer_repeat_time(data)
+
+        return TBoardJobPriorityViewModel(**data)
 
     # @staticmethod
     # def computer_repeat_time(data):

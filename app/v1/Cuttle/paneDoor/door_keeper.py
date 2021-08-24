@@ -77,6 +77,12 @@ class DoorKeeper(object):
             raise ArmNorEnough
 
     def get_connected_device_list(self, adb_response):
+        try:
+            # 在adb server没启动的时候，执行第一个命令会启动adb server，这个时候，返回的字符串包含了adb server启动的信息
+            adb_response = re.sub(r'[\s\S]*(List of devices attached)', r'\1', adb_response)
+        except Exception:
+            logger.error('List of devices attached re pattern failed')
+
         id_list = []
         for i in adb_response.split("\n")[1:]:
             item = i.split(" ")[0]
@@ -180,7 +186,7 @@ class DoorKeeper(object):
 
     def get_device_connect_id(self, multi=False):
         # 获取adb连接的所有设备，并与已经注册过的设备取差集，得到唯一待注册设备，差集为0或大于1都抛异常
-        adb_response = self.adb_cmd_obj.run_cmd_to_get_result("adb -d devices -l", 6)
+        adb_response = self.adb_cmd_obj.run_cmd_to_get_result("adb -d devices -l", 12)
         if "device usb" not in adb_response and "device product" not in adb_response:
             logger.info("[get device info]: no device found")
             raise DeviceNotInUsb  # no device found

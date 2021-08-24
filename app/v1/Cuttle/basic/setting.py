@@ -29,7 +29,7 @@ arm_default = "G01 X0Y33Z0F5000 \r\n"
 arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
 last_swipe_end_point = [0, 0]
 
-color_threshold = 40
+color_threshold = 4000
 color_rate = 1500
 g_bExit = False
 # BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量

@@ -123,15 +123,17 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
             self._write_down(data.get("output_path"), f"{words}")
         return 0
 
-    def clear(self, *args):
+    def clear(self, result, t_guard):
         if not hasattr(self,"image") or self.image is None:
             return 1
-        with Complex_Center(inputImgFile=self.image, **self.kwargs) as ocr_obj:
-            ocr_obj.get_result(parse_function=self._parse_function)
-            if ocr_obj.result == 0:
-                ocr_obj.point()
-                return 0
-            return ocr_obj.result
+        # t_guard is None用来兼容旧的
+        if t_guard is None or t_guard == 1:
+            with Complex_Center(inputImgFile=self.image, **self.kwargs) as ocr_obj:
+                ocr_obj.get_result(parse_function=self._parse_function)
+                if ocr_obj.result == 0:
+                    ocr_obj.point()
+                    return 0
+                return ocr_obj.result
 
     #   -------------辅助函数---------
     def _validate(self, exec_content, schema):

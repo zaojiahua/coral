@@ -15,6 +15,7 @@ class UnitSchema(BaseSchema):
     assistDevice = fields.Integer()
     finalResult = fields.Boolean()
     ocrChoice = fields.Integer()
+    tGuard = fields.Integer()
     device_label = fields.Str()
 
 

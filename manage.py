@@ -60,7 +60,7 @@ def doc():
     def special_case():
         special_error_file_path = os.path.join(BASE_DIR, "app", "execption", "outer", "error_code",
                                                "special_error.json")
-        with open(special_error_file_path, "r") as json_file:
+        with open(special_error_file_path, "r", encoding='utf-8') as json_file:
             special_msg_list = json.load(json_file)
         return [
             SpecialException(error_code=special_msg["error_code"], description=special_msg["description"])

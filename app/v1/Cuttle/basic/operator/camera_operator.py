@@ -198,6 +198,7 @@ class CameraHandler(Handler):
                 src = camera_dq_dict.get(self._model.pk)[-1]
                 # src = cv2.imdecode(src, 1)
                 src = np.rot90(src, 3)
+                break
             except IndexError:
                 time.sleep(0.03)
                 continue

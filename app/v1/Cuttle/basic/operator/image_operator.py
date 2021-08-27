@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 
 import cv2
 import numpy as np
@@ -12,7 +13,7 @@ from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompa
 from app.v1.Cuttle.basic.calculater_mixin.perforamnce_calculater import PerformanceMinix
 from app.v1.Cuttle.basic.calculater_mixin.precise_calculater import PreciseMixin
 from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
-from app.v1.Cuttle.basic.common_utli import threshold_set
+from app.v1.Cuttle.basic.common_utli import threshold_set, get_file_name
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, ImageBasicSchemaCompatible, \
     ImageSchemaCompatible
@@ -124,15 +125,16 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return 0
 
     def clear(self, result, t_guard):
-        if not hasattr(self,"image") or self.image is None:
-            return 1
-        # t_guard is None用来兼容旧的
         if t_guard is None or t_guard == 1:
-            with Complex_Center(inputImgFile=self.image, **self.kwargs) as ocr_obj:
+            with Complex_Center(**self.kwargs) as ocr_obj:
+                if not hasattr(self, "image") or self.image is None:
+                    ocr_obj.snap_shot()
+                else:
+                    ocr_obj.default_pic_path = self.image
                 ocr_obj.get_result(parse_function=self._parse_function)
                 if ocr_obj.result == 0:
                     ocr_obj.point()
-                    return 0
+                shutil.move(ocr_obj.default_pic_path, get_file_name(ocr_obj.default_pic_path) + '-Tguard.png')
                 return ocr_obj.result
 
     #   -------------辅助函数---------

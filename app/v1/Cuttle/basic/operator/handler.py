@@ -102,7 +102,9 @@ class Handler():
                 if result == abnormal.mark:
                     self._model.logger.info(f"after execute result: {self._model}")
                     try:
-                        getattr(self, abnormal.method)(result, self.kwargs.get("t_guard"))
+                        response = getattr(self, abnormal.method)(result, self.kwargs.get("t_guard"))
+                        if response == 0:
+                            return 666
                     except Exception as e:
                         self._model.logger.error(f'tGuard error: {str(e)}')
                     return abnormal.code

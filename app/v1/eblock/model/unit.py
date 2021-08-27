@@ -7,6 +7,7 @@ from func_timeout import func_set_timeout
 from app.config.ip import ADB_TYPE
 from app.config.setting import Bugreport_file_name
 from app.config.url import device_url
+from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
 from app.execption.outer.error_code.eblock import EblockCannotFindFile
 from app.libs.extension.field import DictField
@@ -127,7 +128,7 @@ class Unit(BaseModel):
                     try:
                         replaced_cmd, save_file = handler.replace(cmd,
                                                                   assist_device_ident=assist_device_ident,
-                                                                  device_label= self.device_label)
+                                                                  device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
                         return
@@ -184,12 +185,21 @@ class Unit(BaseModel):
             if assist_device_ident:
                 sending_data["assist_device_serial_number"] = assist_device_ident
             logger.info(f"unit:{sending_data}")
-
             try:
-                self.detail = UnitFactory().create(target, sending_data)
-                logger.debug(f"unit finished result:{self.detail}")
+                for i in range(3):
+                    # # 给Tguard 留下发现重试执行当前unit的机会
+                    self.detail = UnitFactory().create(target, sending_data)
+                    if self.detail.get("result") == 666:
+                        continue
+                    else:
+                        break
+                else:
+                    # 三次Tguard后unit结果设置为1
+                    self.detail.update({"result": 1})
             except Exception as e:
                 logger.debug(f'unit 不正常结束 {e}')
+                if isinstance(e, APIException):
+                    self.detail = {"result": e.error_code}
             finally:
                 self.copy_save_file(save_list, handler)
 

@@ -42,7 +42,7 @@ class UnitFactory(object):
             cls.instance = super().__new__(cls)
         return cls.instance
 
-    def create(self, handler_type, input_data):
+    def create(self, handler_type, input_data) -> dict:
         # 所有unit的入口文件
         # 先实例化一个对应的model
         model = self.model_dict.get(handler_type, Dummy_model)

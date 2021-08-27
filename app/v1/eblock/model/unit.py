@@ -184,10 +184,22 @@ class Unit(BaseModel):
             if assist_device_ident:
                 sending_data["assist_device_serial_number"] = assist_device_ident
             logger.info(f"unit:{sending_data}")
-            self.detail = UnitFactory().create(target, sending_data)
-
-            logger.debug(f"unit finished result:{self.detail}")
-            self.copy_save_file(save_list, handler)
+            try:
+                for i in range(3):
+                    # # 给Tguard 留下发现重试执行当前unit的机会
+                    self.detail = UnitFactory().create(target, sending_data)
+                    if self.detail.get("result") == 666:
+                        continue
+                    else:
+                        break
+                else:
+                    # 三次Tguard后unit结果设置为1
+                    self.detail.update({"result": 1})
+            except Exception as e:
+                logger.debug(f'unit 不正常结束 {e}')
+            finally:
+                self.detail = {"result":1}
+                self.copy_save_file(save_list, handler)
 
             # def _replace(item_iter,saving_container):
             #     save_list = []

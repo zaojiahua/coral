@@ -7,6 +7,7 @@ from func_timeout import func_set_timeout
 from app.config.ip import ADB_TYPE
 from app.config.setting import Bugreport_file_name
 from app.config.url import device_url
+from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
 from app.execption.outer.error_code.eblock import EblockCannotFindFile
 from app.libs.extension.field import DictField
@@ -127,7 +128,7 @@ class Unit(BaseModel):
                     try:
                         replaced_cmd, save_file = handler.replace(cmd,
                                                                   assist_device_ident=assist_device_ident,
-                                                                  device_label= self.device_label)
+                                                                  device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
                         return
@@ -197,8 +198,9 @@ class Unit(BaseModel):
                     self.detail.update({"result": 1})
             except Exception as e:
                 logger.debug(f'unit 不正常结束 {e}')
+                if isinstance(e, APIException):
+                    self.detail = {"result": e.error_code}
             finally:
-                self.detail = {"result":1}
                 self.copy_save_file(save_list, handler)
 
             # def _replace(item_iter,saving_container):

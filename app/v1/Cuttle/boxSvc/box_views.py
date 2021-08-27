@@ -30,13 +30,13 @@ class BoxManagement(MethodView):
     def power_view(box_obj):
         order_set_name = "set_on_order" if box_obj.init_status else "set_off_order"
         order_dict = getattr(box_setting, order_set_name)
-        verified_list = box_obj.verfiy_box(order_dict)
+        verified_list = box_obj.verify_box(order_dict)
         return jsonify({"verified_list": verified_list}), 200
 
     @staticmethod
     def temper_view(box_obj):
         order_dict = getattr(box_setting, "check_temperature_order")
-        verified_list = box_obj.verfiy_box(order_dict)
+        verified_list = box_obj.verify_box(order_dict)
         return jsonify({"verified_list": verified_list}), 200
 
     def delete(self, name):
@@ -87,7 +87,7 @@ def on_or_off_singal_port(params_dict):
     order = order_dict.get(port.split("-")[-1])
     response = send_order(power_box_obj.ip, power_box_obj.port, order, power_box_obj.method)
     power_box_obj.logger.info(f"on_or_off_singal_port result：{response}")
-    return power_box_obj.judeg_result(order, response)
+    return power_box_obj.judge_result(order, response)
 
 
 @execute_limit(5)

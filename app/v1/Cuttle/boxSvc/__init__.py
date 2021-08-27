@@ -16,7 +16,7 @@ def deal_with_singal_box(box):
     else:
         order_set_name = "check_temperature_order"
     order_dict = getattr(box_setting, order_set_name)
-    verfied_list = box_obj.verfiy_box(order_dict)
+    verfied_list = box_obj.verify_box(order_dict)
     return verfied_list
 
 

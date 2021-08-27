@@ -36,25 +36,25 @@ class Box(models.Model):
             if kwargs.get(key):
                 setattr(self, key, kwargs.get(key))
 
-    def verfiy_box(self, order_dict: dict) -> List:
+    def verify_box(self, order_dict: dict) -> List:
         # 遍历验证单个木盒所有端口
         verified_list = []
         for port in range(1, self.total_number + 1):
-            result = self.verfiy_singal_port(order_dict, port)
+            result = self.verify_single_port(order_dict, port)
             if result:
                 verified_list.append(result)
         return verified_list
 
-    def verfiy_singal_port(self, order_dict: dict, port: int) -> str:
+    def verify_single_port(self, order_dict: dict, port: int) -> str:
         # 验证单个端口
         num = "{:0>2d}".format(port)
         order = order_dict.get(num)
         response = send_order(self.ip, self.port, order, self.method)
-        if self.judeg_result(order, response):
+        if self.judge_result(order, response):
             return f"{self.name}-{num}"
 
     @staticmethod
-    def judeg_result(request: str, response: str) -> bool:
+    def judge_result(request: str, response: str) -> bool:
         # 判断返回码是否与发送一致16位标识电量盒子，14位标识温度盒子
         if len(response) == 16:
             return True if request == response else False

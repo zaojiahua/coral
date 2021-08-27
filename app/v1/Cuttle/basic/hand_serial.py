@@ -1,6 +1,7 @@
 import time
 
 import serial
+from serial import SerialException
 
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.setting import Z_UP, arm_wait_position
@@ -18,29 +19,32 @@ class HandSerial:
         return 0
 
     def send_single_order(self, g_order):
-        return self.ser.write(g_order.encode())
+        return self.write(g_order)
 
     def send_list_order(self, g_orders, **kwargs):
         deviate_order = arm_wait_position
         if kwargs.get("wait"):
             for g_order in g_orders:
-                self.ser.write(g_order.encode())
+                self.write(g_order)
             time.sleep(float(kwargs.get("wait_time", 2000)) / 1000)
-            self.ser.write(deviate_order.encode())
+            self.write(deviate_order)
             return 0
         elif kwargs.get("ignore_reset") or CORAL_TYPE < 5:
             for g_order in g_orders:
-                self.ser.write(g_order.encode())
+                self.write(g_order)
             return 0
         else:
             g_orders.append(deviate_order)
             for g_order in g_orders:
-                self.ser.write(g_order.encode())
+                self.write(g_order)
             return 0
 
     def recv(self, buffer_size=32):
         # print(self.ser.read(buffer_size))
-        rev = self.ser.read(buffer_size).decode()
+        try:
+            rev = self.ser.read(buffer_size).decode()
+        except SerialException:
+            raise
         if 'ok' in rev or 'unlock' in rev:
             return 0
         return -1
@@ -48,3 +52,9 @@ class HandSerial:
     def close(self):
         self.ser.close()
         return 0
+
+    def write(self, content):
+        if content == "<SLEEP>":
+            time.sleep(0.8)
+            return ""
+        return self.ser.write(content.encode())

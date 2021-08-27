@@ -8,7 +8,7 @@ import numpy as np
 
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
-    VideoEndPointNotFound, FpsLostWrongValue
+    VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
 
 sp = '/' if platform.system() == 'Linux' else '\\'
@@ -79,14 +79,15 @@ class PerformanceCenter(object):
                 print(f"find start point number :{number - 1} start number:{self.start_number}")
                 if judge_function.__name__ == "_black_field":
                     # 除了查询丢帧情况，都要计算bias，既补偿的帧数，这部分是根据第一点击点的x位置，给一个线性的补偿。后续可以考虑优化成多项式
-                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // 0.25)
-                    print(int((self.icon_scope[0] + self.icon_scope[2]) // (35 / FpsMax)))
-                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // (35 / FpsMax))
+                    # self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // 0.4)
+                    # print(int((self.icon_scope[0] + self.icon_scope[2]) // (35 / FpsMax)))
+                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // (50 / FpsMax))
                 break
             if number >= CameraMax / 2:
                 # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
                 self.move_flag = False
                 self.back_up_dq.clear()
+                self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 raise VideoStartPointNotFound
         return 0
 
@@ -96,20 +97,25 @@ class PerformanceCenter(object):
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             raise VideoStartPointNotFound
         number = self.start_number + 1
-        b = time.time()
         print("end loop start... now number:", number, "bias:", self.bias)
+        if len(self.back_up_dq) == 0:
+            raise PerformanceNotStart
         if self.bias > 0:
             for i in range(self.bias):
                 # 对bias补偿的帧数，先只保存对应图片，不做结果判断
                 number, picture, next_picture, _ = self.picture_prepare(number)
         while self.loop_flag:
             number, picture, next_picture, third_pic = self.picture_prepare(number)
-            pic2 = self.judge_icon if judge_function.__name__ in ["_icon_find",
-                                                                  "_icon_find_template_match"] else next_picture
+            if judge_function.__name__ in ["_icon_find", "_icon_find_template_match"]:
+                pic2 = self.judge_icon
+                third_pic = next_picture
+            else:
+                pic2 = next_picture
+                third_pic = third_pic
             if judge_function(picture, pic2, third_pic, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 # 找到终止点后，包装一个json格式，推到reef。
-                self.end_number = number - 1
+                self.end_number = number - 1 if judge_function.__name__ != "_icon_find_template_match" else number
                 self.start_number = int(self.start_number + self.bias)
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
@@ -142,9 +148,10 @@ class PerformanceCenter(object):
         skip = 2 if self.kwargs.get("fps") == 120 else 4
         for i in range(FpsMax * 3):
             number, picture_original, picture_comp_1, picture_comp_2 = self.picture_prepare_for_fps_lost(number, skip)
-            if judge_function(picture_original, picture_comp_1, picture_comp_2, min(self.threshold+0.005,1),fps_lost = True) == False:
+            if judge_function(picture_original, picture_comp_1, picture_comp_2, min(self.threshold + 0.005, 1),
+                              fps_lost=True) == False:
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                if hasattr(self, "candidate") and number - self.candidate >= skip*4:
+                if hasattr(self, "candidate") and number - self.candidate >= skip * 4:
                     self.result = {"fps_lost": False,
                                    "picture_count": number + 29,
                                    "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
@@ -185,9 +192,9 @@ class PerformanceCenter(object):
                 break
             except IndexError as e:
                 print("error in picture_prepare", repr(e))
-                time.sleep(0.02)
-        # save_pic = cv2.resize(picture, dsize=(0, 0), fx=0.5, fy=0.5)
-        cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture)
+                time.sleep(0.2)
+        picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
+        cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
         number += 1
         h, w = picture.shape[:2]
         scope = self.scope if use_icon_scope is False else self.icon_scope
@@ -243,7 +250,8 @@ class PerformanceCenter(object):
         for i in range(30):
             try:
                 src = self.back_up_dq.popleft()
-                cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), src)
+                picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)
+                cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
                 number += 1
             except IndexError as e:
                 print(repr(e))

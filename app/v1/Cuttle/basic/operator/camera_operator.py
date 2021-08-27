@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 from app.execption.outer.error_code.camera import NoSrc, NoCamera, CameraInitFail
+from app.execption.outer.error_code.imgtool import CameraNotResponse
 from app.v1.Cuttle.basic.MvImport.HK_import import *
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
@@ -88,12 +89,22 @@ def camera_init_HK(**kwargs):
     stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
     check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
 
-    check_result(CamObj.MV_CC_OpenDevice, 6, 0)
+    check_result(CamObj.MV_CC_OpenDevice, 5, 0)
+    CamObj.MV_CC_CloseDevice()
+    # CamObj.MV_CC_DestroyHandle()
+    check_result(CamObj.MV_CC_OpenDevice, 5, 0)
     if kwargs.get("init") is None:
         CamObj.MV_CC_SetIntValue("OffsetY", 0)
         CamObj.MV_CC_SetIntValue("OffsetX", 0)
         CamObj.MV_CC_SetEnumValue("ADCBitDepth",2)
         CamObj.MV_CC_SetEnumValue("PixelFormat",0x01080009)
+        CamObj.MV_CC_SetEnumValue("BalanceWhiteAuto",0)
+        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector",0)
+        CamObj.MV_CC_SetIntValue("BalanceRatio",1295)
+        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector",1)
+        CamObj.MV_CC_SetIntValue("BalanceRatio",1000)
+        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector",2)
+        CamObj.MV_CC_SetIntValue("BalanceRatio",1600)
         for key in camera_params_240:
             if isinstance(key[1], int):
                 check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
@@ -187,10 +198,14 @@ class CameraHandler(Handler):
                 src = camera_dq_dict.get(self._model.pk)[-1]
                 # src = cv2.imdecode(src, 1)
                 src = np.rot90(src, 3)
+                break
             except IndexError:
                 time.sleep(0.03)
                 continue
-        self.src = src
+        try:
+            self.src = src
+        except UnboundLocalError:
+            raise CameraNotResponse
         return 0
 
     # def get_video(self, *args, **kwargs):

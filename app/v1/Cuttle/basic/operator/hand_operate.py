@@ -294,15 +294,18 @@ class HandHandler(Handler, DefaultMixin):
         # if (start_x == end_x) and (start_y > end_y):
         #     end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
         if normal:
-            return [
+            commend_list = [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN + 5, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN - 1, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, speed),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
             ]
+            # if speed <= 500:
+            #     commend_list.insert(2, "<SLEEP>")
+            return commend_list
         else:
-            x1 = min(max(start_x - (end_x - start_x)*10/np.abs(end_x-start_x) * trapezoid, 0), 120)
-            y1 = min(max(start_y - (end_y - start_y)*10/np.abs((end_y-start_y)) * trapezoid, 0), 150)
+            x1 = min(max(start_x - (end_x - start_x) * 10 / np.abs(end_x - start_x) * trapezoid, 0), 120)
+            y1 = min(max(start_y - (end_y - start_y) * 10 / np.abs((end_y - start_y)) * trapezoid, 0), 150)
             x4 = min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
             y4 = min(max(end_y + (end_y - start_y) * trapezoid, 0), 150)
             return [
@@ -317,10 +320,11 @@ class HandHandler(Handler, DefaultMixin):
         end_x, end_y = end_point
         # 连续滑动保证动作无偏差
         from app.v1.Cuttle.basic.setting import last_swipe_end_point
-        if start_x - last_swipe_end_point[0] < 15 and start_y - last_swipe_end_point[1] < 15:
+        th = 15 if CORAL_TYPE < 5 else 1
+        if np.abs(start_x - last_swipe_end_point[0]) < th and np.abs(start_y - last_swipe_end_point[1]) < th:
             start_x, start_y = last_swipe_end_point
-        last_swipe_end_point[0] = start_x
-        last_swipe_end_point[1] = start_y
+        last_swipe_end_point[0] = end_x
+        last_swipe_end_point[1] = end_y
         # 首次动作有移动和下压动作
         if commend_index == 0:
             return [

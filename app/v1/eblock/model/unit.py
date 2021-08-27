@@ -184,10 +184,14 @@ class Unit(BaseModel):
             if assist_device_ident:
                 sending_data["assist_device_serial_number"] = assist_device_ident
             logger.info(f"unit:{sending_data}")
-            self.detail = UnitFactory().create(target, sending_data)
 
-            logger.debug(f"unit finished result:{self.detail}")
-            self.copy_save_file(save_list, handler)
+            try:
+                self.detail = UnitFactory().create(target, sending_data)
+                logger.debug(f"unit finished result:{self.detail}")
+            except Exception as e:
+                logger.debug(f'unit 不正常结束 {e}')
+            finally:
+                self.copy_save_file(save_list, handler)
 
             # def _replace(item_iter,saving_container):
             #     save_list = []

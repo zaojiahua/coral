@@ -17,7 +17,7 @@ from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
-    device_assis_url
+    device_assis_url, device_update_url
 from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevice, DeviceChanged, DeviceCannotSetprop, \
     DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough
 from app.execption.outer.error_code.total import RequestException
@@ -131,9 +131,20 @@ class DoorKeeper(object):
             raise DeviceNotInUsb
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=device_label)
-        res = request(method="PATCH", url=device_url + str(device_obj.id) + "/",
-                      json={"ip_address": ip})
+        room_version = self.get_room_version(s_id)
+        android_version = self.adb_cmd_obj.run_cmd_to_get_result(
+            f"adb -s {s_id} shell getprop ro.build.version.release")
+        manufacturer = self.adb_cmd_obj.run_cmd_to_get_result(
+            f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize()
+        res = request(method="POST", url=device_update_url,
+                      json={"ip_address": ip,
+                            "rom_version": room_version,
+                            "device_label": device_label,
+                            "manufacturer": manufacturer,
+                            "android_version": android_version})
         device_obj.ip_address = ip
+        device_obj.android_version = android_version
+        device_obj.manufacturer = manufacturer
         logger.info(f"response from reef: {res}")
         return self.open_wifi_service(f"-s {s_id}")
 
@@ -232,12 +243,7 @@ class DoorKeeper(object):
         ret_dict["device_label"] = (old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
         self._check_device_already_in_cabinet(ret_dict["device_label"])
         # rom version数据不同类型手机可能藏在不同的地方，oppo已知型号要去拿color_os+版本， mi的直接拿ro.build.version.incremental
-        color_os = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.opporom")
-        rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.ota")
-        if len(rom_version) == 0:
-            rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.id")
-        ret_dict["rom_version"] = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
-            self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.incremental")
+        ret_dict["rom_version"] = self.get_room_version(s_id)
 
         # 判定是否为未见过的机型，是-->手机内获取机型信息   否-->从reef缓存机型信息
         phone_model_info_dict, status = self.is_new_phone_model(productName)
@@ -247,6 +253,15 @@ class DoorKeeper(object):
             ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         logger.info(f"[get device info] device info dict :{ret_dict}")
         return ret_dict
+
+    def get_room_version(self, s_id):
+        color_os = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.opporom")
+        rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.ota")
+        if len(rom_version) == 0:
+            rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.id")
+        rom_version = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
+            self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.incremental")
+        return rom_version
 
     def get_assis_device(self):
         s_id = self.get_device_connect_id(multi=False)
@@ -410,7 +425,7 @@ class DoorKeeper(object):
     def get_screen_size_internal(self, num):
         # 获取设备分辨率 eg 1080*2160
         ret_size_list = []
-        tmp_str = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell wm size",timeout=5)
+        tmp_str = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell wm size", timeout=5)
         tmp_list = tmp_str.split("Physical size: ")
         if len(tmp_list) > 1:
             tmp_str = tmp_list[1]

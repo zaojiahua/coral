@@ -145,6 +145,7 @@ class DoorKeeper(object):
         device_obj.ip_address = ip
         device_obj.android_version = android_version
         device_obj.manufacturer = manufacturer
+        device_obj.rom_version = room_version
         logger.info(f"response from reef: {res}")
         return self.open_wifi_service(f"-s {s_id}")
 

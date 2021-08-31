@@ -66,7 +66,7 @@ class TboardSchema(BaseSchema):
 class TboardJobPrioritySchema(TboardSchema):
     device_mapping = fields.Nested(DeviceMappingSchema, many=True, required=True)
     device_label_list = fields.Raw(required=False, missing=[])
-    jobs = fields.Raw(required=False, missing=[])
+    jobs = fields.Raw(required=False, validate=validate.Length(min=1))
 
     @post_load
     def make_user(self, data, **kwargs):

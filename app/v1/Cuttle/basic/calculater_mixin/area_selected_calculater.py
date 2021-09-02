@@ -131,6 +131,9 @@ class AreaSelectedMixin(object):
     def smart_ocr_point_crop(self, info_body, match_function="get_result") -> int:
         # 点击文字-选区，注：未用到的参数match_function，是为兼容之前用例，不可去掉。
         info_body, is_blur = suit_for_blur(info_body)
+        if match_function == "get_result_ignore_speed":
+            # 向前兼容
+            is_blur = True
         match_function = "get_result" if is_blur == False else "get_result_ignore_speed"
         data = self._validate(info_body, ImageOnlyConfigCompatible)
         # 创建一个复合unit中心对象，

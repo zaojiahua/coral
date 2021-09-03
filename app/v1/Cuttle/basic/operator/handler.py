@@ -25,6 +25,9 @@ class Handler():
     # standard_list 里放Standard namedtuple，用来根据执行结果（字符串等情况）设定 unit结果
     standard_list = []
 
+    skip_retry_list = ["end_point_with_icon", "end_point_with_icon_template_match", "end_point_with_changed",
+                       "end_point_with_fps_lost"]
+
     def __init__(self, *args, **kwargs):
         self._model = kwargs.get("model", Dummy_model(False, 0, setup_logger(f'dummy', 'dummy.log')))
         # execCmdList 对应adb格式的创建，execCmdDict对应其他格式，此处为主要执行内容
@@ -103,7 +106,7 @@ class Handler():
                     self._model.logger.info(f"after execute result: {self._model}")
                     try:
                         response = getattr(self, abnormal.method)(result, self.kwargs.get("t_guard"))
-                        if response == 0:
+                        if response == 0 and funcname not in self.skip_retry_list:
                             return 666
                     except Exception as e:
                         self._model.logger.error(f'tGuard error: {str(e)}')

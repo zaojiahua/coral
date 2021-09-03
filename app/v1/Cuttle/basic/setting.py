@@ -2,7 +2,8 @@ hand_serial_obj_dict = {}
 hand_used_list = []
 camera_dq_dict = {}
 camera_params = [("Width", 1280), ("Height", 720), ("OffsetY", 200), ("OffsetX", 0)]
-camera_params_240 = [("Width", 1440), ("Height", 1080), ("OffsetY", 0), ("OffsetX", 0),("AcquisitionFrameRate",240.0),("ExposureTime",2500.0),("Gain",2.5)]
+camera_params_240 = [("Width", 1440), ("Height", 1080), ("OffsetY", 0), ("OffsetX", 0), ("AcquisitionFrameRate", 240.0),
+                     ("ExposureTime", 2500.0), ("Gain", 2.5)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
@@ -35,9 +36,9 @@ g_bExit = False
 # BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量
 FpsMax = 240
 CameraMax = 1200
-BIAS = int(FpsMax / 120 * 20)   # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
+BIAS = int(FpsMax / 120 * 18)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
 SWIPE_BIAS_HARD = int(FpsMax / 120 * 9)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
-SWIPE_BIAS = int(FpsMax / 120 * (19+50))
+SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
 
 Continues_Number = 1  # 连续多张判断准则，适用于性能测试
 camera_w = 1280  # 摄像头拍摄分辨率，需要根据具体摄像头设置
@@ -52,6 +53,8 @@ right_switch_percent = 0.87
 CamObjList = []
 normal_result = (False, None)
 blur_signal = "[B]"
+light_pyramid_setting = [0.06, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.4, 1.6, 1.8, 1.9, 2, 2.3]
+light_pyramid_setting_simple = [0.1, 0.2, 0.4, 0.7, 1.3, 1.6, 1.8]
 
 handler_config = {
     # 当复合unit中新增adb方法，需要更新此配置文件，指明其可能性
@@ -64,5 +67,5 @@ handler_config = {
 strip_str = '<>[]{}/",.\n、'
 # imageTool排除干扰词
 bounced_words = ["确定", "同意", "同意并继续", "同意并使用", "暂不开启", "允许", "好的", "开始", "继续", "我知道了",
-                 "跳过", "以后再说", "仅使用期间允许", "仅在使用中允许","始终允许", "下一步", "暂不升级", "不了，谢谢",  "不了k谢谢","知道了", "不开启",
+                 "跳过", "以后再说", "仅使用期间允许", "仅在使用中允许", "始终允许", "下一步", "暂不升级", "不了，谢谢", "不了k谢谢", "知道了", "不开启",
                  "仅在使用此应用时允许"]

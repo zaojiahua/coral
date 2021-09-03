@@ -6,6 +6,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 import cv2
 import numpy as np
 
+from app.config.setting import CORAL_TYPE
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.imgtool import IconTooWeek, NotFindIcon
 from app.libs.thread_extensions import executor_callback
@@ -14,13 +15,13 @@ from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchem
 from app.v1.Cuttle.basic.operator.camera_operator import CameraMax
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
 from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS, SWIPE_BIAS_HARD, \
-    icon_min_template_camera
+    icon_min_template_camera, light_pyramid_setting, light_pyramid_setting_simple
 
 
 # from skimage.measure import compare_ssim
 # from skimage.metrics.structural_similarity import compare_ssim
 class PerformanceMinix(object):
-    dq = deque(maxlen=CameraMax * 3)
+    dq = deque(maxlen=CameraMax * 4)
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
         return self.swipe_calculate(exec_content, SWIPE_BIAS_HARD)
@@ -219,7 +220,7 @@ class PerformanceMinix(object):
         return response
 
     def _black_field(self, picture, _, __, threshold):
-        result = np.count_nonzero(picture < 50)
+        result = np.count_nonzero(picture < 40)
         standard = picture.shape[0] * picture.shape[1] * picture.shape[2]
         # picture shape is 0?
         match_ratio = result / standard
@@ -238,15 +239,12 @@ class PerformanceMinix(object):
             response = bool(1 - response)
         return response
 
-    def _icon_find_template_match(self, picture, icon, next_pic, disappear=False):
-        min_value_1 = self.template_match_temp(picture, icon)
-        min_value_2 = self.template_match_temp(next_pic, icon)
-        result_1 = np.abs(min_value_2) < icon_min_template_camera
-        result_2 = min_value_2 <= min_value_1 * 0.95
-        response = result_1 and result_2
-        if disappear is True:
-            response = bool(1 - response)
-        return response
+    def _icon_find_template_match(self, picture, icon, next_pic,th):
+        max_value_1 = self.template_match_temp(picture, icon)
+        result_1 = (1- np.abs(max_value_1)) < 0.07
+        print((1- np.abs(max_value_1)) )
+        return result_1
+
 
     def _picture_changed(self, last_pic, next_pic, third_pic, threshold, fps_lost=False):
         # ssim_value = compare_ssim(last_pic,next_pic,multichannel=True,gaussian_weights=True)
@@ -276,5 +274,5 @@ class PerformanceMinix(object):
         return (final_result_2 and final_result) or match_ratio_2 < 0.95
 
     def delay_exec(self, function, *args, **kwargs):
-        time.sleep(kwargs.get("sleep", 0.5))
+        time.sleep(kwargs.get("sleep", 0.3))
         return function(*args, **kwargs)

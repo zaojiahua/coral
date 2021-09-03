@@ -111,9 +111,11 @@ class AreaSelectedMixin(object):
         # 此方法后续变动需要合并上面那个方法中去。
         if target.shape[0] < template.shape[0] or target.shape[1] < template.shape[1]:
             raise IconBiggerThanField
-        result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
+        result = cv2.matchTemplate(target, template, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-        return min_val
+        return max_val
+
+
 
     # ----------------------------------------文字相关-----------------------------------------------------
     def crop_input_picture_record_position(self, data, ocr_obj, config_name):

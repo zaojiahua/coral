@@ -64,7 +64,7 @@ class PerformanceCenter(object):
         number = 0
         self.start_number = 0
         # 等异步线程时间，确认back_up_dq已经有了一些照片
-        time.sleep(0.5)
+        time.sleep(0.2)
         while self.loop_flag:
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False
             # 裁剪图片获取当前和下一张
@@ -115,12 +115,14 @@ class PerformanceCenter(object):
             if judge_function(picture, pic2, third_pic, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 # 找到终止点后，包装一个json格式，推到reef。
-                self.end_number = number - 1 if judge_function.__name__ != "_icon_find_template_match" else number
+                # self.end_bias = -1  if judge_function.__name__ != "_icon_find_template_match" else 2
+                cv2.imwrite("end.jpg",picture)
+                self.end_number = number -1
                 self.start_number = int(self.start_number + self.bias)
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
                                "time_per_unit": round(1 / FpsMax, 4),
-                               "picture_count": self.end_number + 29,
+                               "picture_count": self.end_number + 39,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.move_flag = False
                 break
@@ -246,8 +248,8 @@ class PerformanceCenter(object):
                 # 向备份Q中放置过快,超过摄像头读取速度，需要等待一帧时间
                 time.sleep(2 / FpsMax)
         # 找到结束点后再继续保存最多30张:
-        number = self.end_number
-        for i in range(30):
+        number = self.end_number+1
+        for i in range(40):
             try:
                 src = self.back_up_dq.popleft()
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)

@@ -213,7 +213,6 @@ class Complex_Center(object):
     def get_result_by_template_match(self, info_body, cal_real_xy=True):
         target_path = self.default_pic_path if self._pic_path == None else self._pic_path
         target = cv2.imread(target_path)
-        template_list = []
         template = cv2.imread(info_body.get("referImgFile"))
         with open(info_body.get('configFile'), "r") as json_file_icon:
             json_data_icon = json.load(json_file_icon)
@@ -223,13 +222,9 @@ class Complex_Center(object):
                 [icon_areas[0] * w, icon_areas[1] * h, icon_areas[2] * w, icon_areas[3] * h]]
         template = template[area[1]:area[3], area[0]:area[2]]
         th, tw = template.shape[:2]
-        template_list.append(template)
         # add light pyramid to support difference of phone-light
-        if CORAL_TYPE == 5:
-            for light_present in light_pyramid_setting:
-                template_light_changed = np.clip(template * light_present, 0, 255)
-                template_light_changed = template_light_changed.astype(np.uint8)
-                template_list.append(template_light_changed)
+        template_list = [np.clip(template * present, 0, 255).astype(np.uint8) for present in
+                         light_pyramid_setting] if CORAL_TYPE == 5 else []
         for template in template_list:
             result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
             min_val_original, _, _, _ = cv2.minMaxLoc(result)

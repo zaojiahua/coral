@@ -53,7 +53,8 @@ right_switch_percent = 0.87
 CamObjList = []
 normal_result = (False, None)
 blur_signal = "[B]"
-light_pyramid_setting = [0.06, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.4, 1.6, 1.8, 1.9, 2, 2.3]
+# 需要按常见顺序调整 亮度百分比的顺序 尽可能优先匹配到常见亮度变化。
+light_pyramid_setting = [1, 0.06, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 1.4, 1.6, 1.8, 1.9, 2, 2.3]
 light_pyramid_setting_simple = [0.1, 0.2, 0.4, 0.7, 1.3, 1.6, 1.8]
 
 handler_config = {

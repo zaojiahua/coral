@@ -307,5 +307,4 @@ class Device(BaseModel):
                 time.sleep(2)
             except Exception as e:
                 self.logger.error(f"Exception in async_loop: {repr(e)}")
-                raise e
         self.logger.warning(f"--flag changed--：{self.flag}")

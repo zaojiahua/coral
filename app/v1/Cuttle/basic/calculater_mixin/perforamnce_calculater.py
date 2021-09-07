@@ -252,31 +252,38 @@ class PerformanceMinix(object):
         return result_1
 
     def _picture_changed(self, last_pic, next_pic, third_pic, threshold, fps_lost=False):
+        # LOW TH -->  EASY TO
         # ssim_value = compare_ssim(last_pic,next_pic,multichannel=True,gaussian_weights=True)
         # print("ssim error:",ssim_value)
         # final_result =  float(ssim_value) > threshold
         # error = np.sum(np.subtract(last_pic,next_pic) **2)
         # error /= last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         # print("mse error:",error)
+        if 0.999 >= threshold > 0.99:
+            threshold = (1 - threshold) * 10 + 0.99
+        elif 1 >= threshold > 0.999:
+            threshold = 1.08
+
         difference = np.absolute(np.subtract(last_pic, next_pic))
         result = np.count_nonzero(difference < 25)
         result2 = np.count_nonzero(230 < difference)
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
-        final_result = match_ratio < threshold - 0.01
+        final_result = match_ratio < (1.97-threshold)
         if third_pic is not None:
             difference_2 = np.absolute(np.subtract(last_pic, third_pic))
             result_2 = np.count_nonzero(difference_2 < 25)
             result2_2 = np.count_nonzero(230 < difference_2)
             standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
             match_ratio_2 = ((result_2 + result2_2) / standard)
-            final_result_2 = match_ratio_2 < threshold - 0.03
+            final_result_2 = match_ratio_2 < (1.95-threshold)
         else:
             final_result_2 = True
             match_ratio_2 = 1
         if fps_lost:
             return not (not final_result and not final_result_2)
-        return (final_result_2 and final_result) or match_ratio_2 < 0.95
+        print(match_ratio_2,match_ratio)
+        return (final_result_2 and final_result) or match_ratio_2 < (1.94-threshold)
 
     def delay_exec(self, function, *args, **kwargs):
         time.sleep(kwargs.get("sleep", 0.3))

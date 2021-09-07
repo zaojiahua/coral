@@ -10,7 +10,6 @@ from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
-from PIL import Image, ImageDraw
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 
@@ -120,8 +119,9 @@ class PerformanceCenter(object):
                 # end point draw pic...
                 self.draw_line_in_pic(number, picture)
                 self.end_number = number - 1
+                end = self.end_number if judge_function.__name__ in ["_icon_find", "_icon_find_template_match"] else self.end_number+1
                 self.start_number = int(self.start_number + self.bias)
-                self.result = {"start_point": self.start_number, "end_point": self.end_number,
+                self.result = {"start_point": self.start_number, "end_point": end,
                                "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": self.end_number + 39,
@@ -141,6 +141,8 @@ class PerformanceCenter(object):
         return 0
 
     def draw_line_in_pic(self, number, picture):
+        if self.icon_scope is None or len(self.icon_scope)<4:
+            return
         h, w = picture.shape[:2]
         area = [int(i) if i > 0 else 0 for i in
                 [self.icon_scope[0] * w, self.icon_scope[1] * h, self.icon_scope[2] * w,
@@ -148,12 +150,10 @@ class PerformanceCenter(object):
             if 0 < all(i <= 1 for i in self.icon_scope) else [int(i) for i in self.icon_scope]
         x1, y1 = area[:2]
         x4, y4 = area[2:]
-        x2, y2 = x1, y4
-        x3, y3 = x4, y1
-        img_draw = ImageDraw.Draw(picture)
-        for xy in [(x1, y1, x2, y2), (x2, y2, x3, y3), (x3, y3, x4, y4), (x4, y4, x1, y1)]
-            img_draw.line(xy=xy, fill="red", width=4)
-        cv2.imwrite(os.path.join(self.work_path, f"{number - 1}.jpg"), picture)
+        pic = picture.copy()
+        cv2.rectangle(pic, (x1, y1), (x4, y4), (0, 255, 0), 4)
+        cv2.imwrite(os.path.join(self.work_path, f"{number - 1}.jpg"), pic)
+
 
     def test_fps_lost(self, judge_function):
         # 丢帧检测的单独方法，原理是看滑动时没帧图片是不是和上一帧相同，

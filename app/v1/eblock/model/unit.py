@@ -200,6 +200,8 @@ class Unit(BaseModel):
                 logger.debug(f'unit 不正常结束 {e}')
                 if isinstance(e, APIException):
                     self.detail = {"result": e.error_code}
+                else:
+                    raise e
             finally:
                 self.copy_save_file(save_list, handler)
 

@@ -36,7 +36,7 @@ g_bExit = False
 # BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量
 FpsMax = 240
 CameraMax = 1200
-BIAS = int(FpsMax / 120 * 18)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
+BIAS = int(FpsMax / 120 * 19)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
 SWIPE_BIAS_HARD = int(FpsMax / 120 * 9)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
 SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
 

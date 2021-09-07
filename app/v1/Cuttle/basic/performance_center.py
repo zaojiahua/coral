@@ -68,7 +68,7 @@ class PerformanceCenter(object):
         while self.loop_flag:
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False
             # 裁剪图片获取当前和下一张
-            number, picture, next_picture, _ = self.picture_prepare(number, use_icon_scope=use_icon_scope)
+            # number, picture, next_picture, _ = self.picture_prepare(number, use_icon_scope=use_icon_scope)
             number, picture, next_picture, third_pic = self.picture_prepare(number, use_icon_scope=use_icon_scope)
             pic2 = self.judge_icon if judge_function.__name__ in ("_icon_find", "_black_field") else next_picture
             # judge_function 返回True时 既是发现了起始点
@@ -106,6 +106,7 @@ class PerformanceCenter(object):
                 number, picture, next_picture, _ = self.picture_prepare(number)
         while self.loop_flag:
             number, picture, next_picture, third_pic = self.picture_prepare(number)
+            number, picture, next_picture, third_pic = self.picture_prepare(number)
             if judge_function.__name__ in ["_icon_find", "_icon_find_template_match"]:
                 pic2 = self.judge_icon
                 third_pic = next_picture
@@ -115,8 +116,8 @@ class PerformanceCenter(object):
             if judge_function(picture, pic2, third_pic, self.threshold) == True:
                 print(f"find end point number: {number}", self.bias)
                 # 找到终止点后，包装一个json格式，推到reef。
-                # self.end_bias = -1  if judge_function.__name__ != "_icon_find_template_match" else 2
-                cv2.imwrite("end.jpg",picture)
+                # end point draw pic...
+                cv2.imwrite(os.path.join(self.work_path, f"{number-1}.jpg"), picture_save)
                 self.end_number = number -1
                 self.start_number = int(self.start_number + self.bias)
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,

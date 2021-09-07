@@ -22,6 +22,7 @@ from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, 
 # from skimage.metrics.structural_similarity import compare_ssim
 class PerformanceMinix(object):
     dq = deque(maxlen=CameraMax * 4)
+
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
         return self.swipe_calculate(exec_content, SWIPE_BIAS_HARD)
@@ -239,12 +240,16 @@ class PerformanceMinix(object):
             response = bool(1 - response)
         return response
 
-    def _icon_find_template_match(self, picture, icon, next_pic,th):
+    def _icon_find_template_match(self, picture, icon, next_pic, th):
         max_value_1 = self.template_match_temp(picture, icon)
-        result_1 = (1- np.abs(max_value_1)) < 0.07
-        print((1- np.abs(max_value_1)) )
+        if 0.999 >= th > 0.99:
+            th = (1 - th) * 10 + 0.99
+        elif 1 >= th > 0.999:
+            th = 1.08
+        corr_th = 0.09 + (1 - th)
+        result_1 = (1 - np.abs(max_value_1)) < corr_th
+        print((1 - np.abs(max_value_1)))
         return result_1
-
 
     def _picture_changed(self, last_pic, next_pic, third_pic, threshold, fps_lost=False):
         # ssim_value = compare_ssim(last_pic,next_pic,multichannel=True,gaussian_weights=True)

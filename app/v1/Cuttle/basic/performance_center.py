@@ -117,10 +117,13 @@ class PerformanceCenter(object):
                 print(f"find end point number: {number}", self.bias)
                 # 找到终止点后，包装一个json格式，推到reef。
                 # end point draw pic...
-                self.draw_line_in_pic(number, picture)
                 self.end_number = number - 1
-                end = self.end_number if judge_function.__name__ in ["_icon_find",
-                                                                     "_icon_find_template_match"] else self.end_number + 1
+                if not judge_function.__name__ in ["_icon_find", "_icon_find_template_match"]:
+                    self.draw_rec = True
+                    end = self.end_number + 1
+                else:
+                    self.draw_line_in_pic(number, picture)
+                    end = self.end_number
                 self.start_number = int(self.start_number + self.bias)
                 self.result = {"start_point": self.start_number, "end_point": end,
                                "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
@@ -269,6 +272,11 @@ class PerformanceCenter(object):
             try:
                 src = self.back_up_dq.popleft()
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)
+                if self.draw_rec:
+                    number += 1
+                    self.draw_line_in_pic(number=number, picture=picture_save)
+                    self.draw_rec = False
+                    continue
                 cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
                 number += 1
             except IndexError as e:

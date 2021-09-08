@@ -114,13 +114,21 @@ class HandHandler(Handler, DefaultMixin):
         # time.sleep(wait_time)
         if self.speed == 10000:
             self.ignore_reset = True
-        return hand_serial_obj_dict.get(self._model.pk).recv()
+        result = hand_serial_obj_dict.get(self._model.pk).recv()
+        # ensure low speed swipe can end with true-time(get sleep time according to swipe distance and speed)
+        if self.speed < 2000:
+            distance = np.hypot(point[1][0] - point[0][0], point[1][1] - point[0][1]) * 50
+            time.sleep((distance / self.speed) + 0.5)
+        return result
 
     def trapezoid_slide(self, point, **kwargs):
         # 用力滑动，会先计算滑动起始/终止点的  同方向延长线坐标，并做梯形滑动
         sliding_order = self.__sliding_order(point[0], point[1], self.speed, normal=False)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
-        time.sleep(3)  # 确保动作执行完成
+        if self.speed < 2000:
+            distance = np.hypot(point[1][0] - point[0][0], point[1][1] - point[0][1]) * 50
+            time.sleep((distance / self.speed) + 1.5)
+        time.sleep(3)  # 因为用力滑动会有惯性,sleep3确保动作执行完成
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def reset_hand(self, hand_reset_orders=arm_wait_position, **kwargs):

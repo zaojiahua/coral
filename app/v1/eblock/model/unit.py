@@ -1,6 +1,8 @@
 import os
 import shutil
 from functools import lru_cache
+
+import cv2
 from astra import models
 from func_timeout import func_set_timeout
 
@@ -231,6 +233,7 @@ class Unit(BaseModel):
 
         针对ocr模块 临时提供解决方案
         """
+        self.remove_duplicate_pic(handler.work_path)
         for file in os.listdir(handler.work_path):
             # 普通unit产生的图片可能会被下一个unit使用，因此只能copy
             if file in save_list:
@@ -240,3 +243,22 @@ class Unit(BaseModel):
                 # 复合型unit产生的图片只有自己会使用，因此move即可
                 shutil.move(os.path.join(handler.work_path, file),
                             os.path.join(handler.rds_path, f"({handler.block_index}_{self.unit_list_index}){file}"))
+
+    @staticmethod
+    def remove_duplicate_pic(path):
+        for file in os.listdir(path):
+            file_name = ".".join(file.split(".")[:-1])
+            # 手机推送出来的图片可能是jpg和png两种格式
+            similar_file = os.path.join(path, file_name[:-5] + ".jpg")
+            similar_file_2 = os.path.join(path, file_name[:-5] + ".png")
+            if file_name.endswith("crop") and (os.path.exists(similar_file) or os.path.exists(similar_file_2)):
+                src_crop = cv2.imread(os.path.join(path, file))
+                src = cv2.imread(os.path.join(path,file_name[:-5] + ".jpg"))
+                src_2 = cv2.imread(os.path.join(path,file_name[:-5] + ".png"))
+                src = src if src is not None else src_2
+                # 名称前缀相同，且图片尺寸相同则认为是没经过裁剪
+                if src_crop.shape == src.shape:
+                    try:
+                        os.remove(os.path.join(path,file))
+                    except FileNotFoundError:
+                        print("un able to find similar file to delete")

@@ -156,6 +156,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         # 常用方法，根据area裁剪输入路径下的图片，并返回图片内容矩阵
         try:
             image = cv2.imread(image_path)
+            if area == [0, 0, 1, 1]:
+                return image
             if area[3] == area[2] == 0.99999 and area[0] == area[0] == 0:
                 return image
             if any(np.array(area) < 1):

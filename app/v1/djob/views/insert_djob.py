@@ -20,9 +20,6 @@ a = {'device_label': 'chiron---msm8998---8480c8f',
 
 
 def insert_djob_inner(**kwargs):
-    # 需要去掉
-    # for job_flow in kwargs.get('job_flows', []):
-    #     job_flow['name'] = 'test'
     validate_data = DJobSchema().load_or_parameter_exception(kwargs)
 
     djob = DJob(**validate_data)

@@ -16,6 +16,7 @@ def get_tboard_default_name():
 class UIJsonFileSchema(BaseSchema):
     id = fields.Integer(required=True)
     order = fields.Integer(required=True)
+    name = fields.Str(required=True)
 
 
 class JobSchema(BaseSchema):

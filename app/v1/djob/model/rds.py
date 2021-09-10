@@ -8,6 +8,8 @@ from app.v1.eblock.model.eblock import Eblock
 class RDS(BaseModel):
     error = models.CharField()
     job_flow_id = models.IntegerField()
+    flow_name = models.CharField()
+    block_name = models.CharField()
     is_error = models.BooleanField()
     finish = models.BooleanField()
     error_msg = models.CharField()

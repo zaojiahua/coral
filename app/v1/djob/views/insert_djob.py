@@ -20,10 +20,14 @@ a = {'device_label': 'chiron---msm8998---8480c8f',
 
 
 def insert_djob_inner(**kwargs):
+    # 需要去掉
+    # for job_flow in kwargs.get('job_flows', []):
+    #     job_flow['name'] = 'test'
     validate_data = DJobSchema().load_or_parameter_exception(kwargs)
 
     djob = DJob(**validate_data)
     djob.job_flows_order.rpush(*[flow["id"] for flow in sorted(validate_data["job_flows"], key=lambda x: x["order"])])
+    djob.job_flows_name.rpush(*[flow["name"] for flow in sorted(validate_data["job_flows"], key=lambda x: x["order"])])
     logger.info(f"create a djobworker and a djob object {djob}")
     djob_worker = DJobWorker(pk=validate_data["device_label"])
     djob_worker.add(djob)

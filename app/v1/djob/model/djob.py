@@ -22,6 +22,8 @@ inner job 只有一个 job flow
 class DJob(BaseModel):
     flow_execute_mode = models.CharField()
     job_flows_order = OwnerList(to=int)
+    # 保存job flow的名字，rds中使用
+    job_flows_name = OwnerList(to=str)
 
     current_djob_flow: DJobFlow = OwnerForeignKey(to=DJobFlow)
     djob_flow_list: List[DJobFlow] = OwnerList(to=DJobFlow)
@@ -62,10 +64,10 @@ class DJob(BaseModel):
         self.start_time = datetime.now()
 
         if self.flow_execute_mode == SINGLE_SPLIT:
-            for flow_id in self.job_flows_order:
+            for flow_index, flow_id in enumerate(self.job_flows_order):
                 self.current_djob_flow = DJobFlow(flow_id=flow_id, device_label=self.device_label,
                                                   job_label=self.job_label, source=self.source,
-                                                  tboard_path=self.tboard_path)
+                                                  tboard_path=self.tboard_path, flow_name=self.job_flows_name[flow_index])
                 self.djob_flow_list.rpush(self.current_djob_flow)
 
                 self.current_djob_flow.run_single_flow()

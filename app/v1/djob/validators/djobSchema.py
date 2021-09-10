@@ -7,6 +7,7 @@ from app.v1.djob.config.setting import TBOARD, DJOB, FLOW_EXECUTE_MODE
 class UIJsonSchema(BaseSchema):
     id = fields.Integer(required=True)
     order = fields.Integer(required=True)
+    name = fields.Str(required=True)
 
 
 class DJobSchema(BaseSchema):

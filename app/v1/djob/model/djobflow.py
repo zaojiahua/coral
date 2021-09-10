@@ -38,6 +38,7 @@ class DJobFlow(BaseModel):
     job_label = models.CharField()
     tboard_path = models.CharField()
     flow_id = models.IntegerField()
+    flow_name = models.CharField()
 
     job: Job = OwnerForeignKey(to=Job)
     device: DjobDevice = OwnerForeignKey(to=DjobDevice)
@@ -67,6 +68,8 @@ class DJobFlow(BaseModel):
     inner_job_list = OwnerList(to="app.v1.djob.model.djobflow.DJobFlow")
     inner_job_index = models.IntegerField()  # 当前执行的inner job 的 index
     current_eblock = OwnerForeignKey(to=Eblock)  # 当前正在执行的eblock
+    # 当前的jobflow当做inner job的时候（也就是是其他job_flow的一个block），需要在rds中存储这个字段
+    block_name_as_inner_job = models.CharField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -170,6 +173,8 @@ class DJobFlow(BaseModel):
             self.rds.is_use_result_unit = True
         self.rds.job_assessment_value = self.job_assessment_value
         self.rds.finish = True
+        self.rds.flow_name = self.flow_name
+        self.rds.block_name = self.block_name_as_inner_job
         self.end_time = datetime.now()
         self.status = True
 
@@ -236,7 +241,8 @@ class DJobFlow(BaseModel):
         dJob_flow = DJobFlow(device_label=self.device_label, job_label=job_node.job_label,
                              source=DJOB,
                              tboard_path=self.tboard_path,
-                             inner_job_index=self.exec_node_index)
+                             inner_job_index=self.exec_node_index,
+                             block_name_as_inner_job=job_node.block_name)
         self.inner_job_list.rpush(dJob_flow)
         if job_node.assist_device_serial_number is not None:  # assist_device_serial_number表明运行的是哪一台僚机
             dJob_flow.assist_device_serial_number = job_node.assist_device_serial_number
@@ -253,7 +259,11 @@ class DJobFlow(BaseModel):
 
         if self.current_eblock:
             self._eblock_return_data_parse(self.current_eblock)
-            self.rds.eblock_list.rpush(self.current_eblock.json())
+            block_rds = self.current_eblock.json()
+            if self.recent_img_res_list and len(self.recent_img_res_list) > 0:
+                block_result = self.recent_img_res_list[-1]
+                block_rds['value'] = block_result
+            self.rds.eblock_list.rpush(block_rds)
             self.current_eblock.remove()
 
     def _insert_exec_block(self, job_node):

@@ -142,6 +142,11 @@ class AreaSelectedMixin(object):
         with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
             # 先截一张图
             ocr_obj.snap_shot()
+            # for debug
+            if not os.path.exists(ocr_obj.default_pic_path):
+                self._model.logger.debug(f"{ocr_obj.default_pic_path} 文件不存在")
+                # 没有找到的话，重新截图试试
+                ocr_obj.snap_shot()
             x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
             # 执行ocr_obj的对应match方法
             getattr(ocr_obj, match_function)()

@@ -145,9 +145,15 @@ class PerformanceCenter(object):
         return 0
 
     def draw_line_in_pic(self, number, picture):
-        # 在结尾图片上画上选框
-        scope = self.scope if self.icon_scope is None or len(self.icon_scope) < 1 else self.icon_scope
+        # 在结尾图片上画上选框（可能是画图标，也可能是画判定选区）
+        is_icon = not (self.icon_scope is None or len(self.icon_scope) < 1)
+        scope = self.icon_scope if is_icon else self.scope
         h, w = picture.shape[:2]
+        if is_icon and self.scope != [0, 0, 1, 1]:  # 需要画的是图标，但是需要在已有选区（裁剪后）的图片上画，所以需要换算：
+            scope = [scope[0] * 1 / (self.scope[2] - self.scope[0]) + self.scope[0],
+                     scope[1] * 1 / (self.scope[3] - self.scope[1]) + self.scope[1],
+                     scope[2] * 1 / (self.scope[2] - self.scope[0]) + self.scope[0],
+                     scope[3] * 1 / (self.scope[3] - self.scope[1]) + self.scope[1]]
         area = [int(i) if i > 0 else 0 for i in
                 [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
             if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]

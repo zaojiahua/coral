@@ -128,7 +128,7 @@ class HandHandler(Handler, DefaultMixin):
         if self.speed < 2000:
             distance = np.hypot(point[1][0] - point[0][0], point[1][1] - point[0][1]) * 50
             time.sleep((distance / self.speed) + 1.5)
-        time.sleep(3)  # 因为用力滑动会有惯性,sleep3确保动作执行完成
+        time.sleep(3.5)  # 因为用力滑动会有惯性,sleep3确保动作执行完成
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def reset_hand(self, hand_reset_orders=arm_wait_position, **kwargs):

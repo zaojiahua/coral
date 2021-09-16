@@ -93,7 +93,7 @@ class PerformanceCenter(object):
 
     def end_loop(self, judge_function):
         # 计算终止点的方法
-        if not hasattr(self, "start_number"):
+        if not hasattr(self, "start_number") or not hasattr(self,"bias"):
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             raise VideoStartPointNotFound
         number = self.start_number + 1
@@ -156,7 +156,7 @@ class PerformanceCenter(object):
         x4, y4 = area[2:]
         pic = picture.copy()
         if is_icon and self.scope != [0, 0, 1, 1]:  # 需要画的是图标，但是需要在已有选区（裁剪后）的图片上画，所以需要换算
-            x1 = x1 - self.scope[0] * w
+            x1 = x1 - int(self.scope[0] * w)
             y1 = y1 - self.scope[1] * h
             x4 = x4 - self.scope[0] * w
             y4 = y4 - self.scope[1] * h

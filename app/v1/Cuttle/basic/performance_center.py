@@ -9,6 +9,7 @@ import numpy as np
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
+from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
 
 sp = '/' if platform.system() == 'Linux' else '\\'
@@ -60,7 +61,7 @@ class PerformanceCenter(object):
         self.back_up_dq.clear()
         executer = ThreadPoolExecutor()
         # 先清空back_up_dq并异步开始记录照片
-        self.move_src_task = executer.submit(self.move_src_to_backup)
+        self.move_src_task = executer.submit(self.move_src_to_backup).add_done_callback(executor_callback)
         number = 0
         self.start_number = 0
         # 等异步线程时间，确认back_up_dq已经有了一些照片
@@ -148,7 +149,7 @@ class PerformanceCenter(object):
         # 在结尾图片上画上选框（可能是画图标，也可能是画判定选区）
         is_icon = not (self.icon_scope is None or len(self.icon_scope) < 1)
         scope = self.icon_scope if is_icon else self.scope
-        h, w = picture.shape[:2]
+        h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0].shape[:2]
         area = [int(i) if i > 0 else 0 for i in
                 [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
             if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
@@ -157,9 +158,9 @@ class PerformanceCenter(object):
         pic = picture.copy()
         if is_icon and self.scope != [0, 0, 1, 1]:  # 需要画的是图标，但是需要在已有选区（裁剪后）的图片上画，所以需要换算
             x1 = x1 - int(self.scope[0] * w)
-            y1 = y1 - self.scope[1] * h
-            x4 = x4 - self.scope[0] * w
-            y4 = y4 - self.scope[1] * h
+            y1 = y1 - int(self.scope[1] * h)
+            x4 = x4 - int(self.scope[0] * w)
+            y4 = y4 - int(self.scope[1] * h)
         cv2.rectangle(pic, (x1, y1), (x4, y4), (0, 255, 0), 4)
         cv2.imwrite(os.path.join(self.work_path, f"{number - 1}.jpg"), pic)
 
@@ -278,7 +279,7 @@ class PerformanceCenter(object):
             try:
                 src = self.back_up_dq.popleft()
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)
-                if self.draw_rec:
+                if hasattr(self,"draw_rec") and self.draw_rec:
                     number += 1
                     self.draw_line_in_pic(number=number, picture=picture_save)
                     self.draw_rec = False

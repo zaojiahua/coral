@@ -149,17 +149,17 @@ class PerformanceCenter(object):
         is_icon = not (self.icon_scope is None or len(self.icon_scope) < 1)
         scope = self.icon_scope if is_icon else self.scope
         h, w = picture.shape[:2]
-        if is_icon and self.scope != [0, 0, 1, 1]:  # 需要画的是图标，但是需要在已有选区（裁剪后）的图片上画，所以需要换算：
-            scope = [scope[0] * 1 / (self.scope[2] - self.scope[0]) + self.scope[0],
-                     scope[1] * 1 / (self.scope[3] - self.scope[1]) + self.scope[1],
-                     scope[2] * 1 / (self.scope[2] - self.scope[0]) + self.scope[0],
-                     scope[3] * 1 / (self.scope[3] - self.scope[1]) + self.scope[1]]
         area = [int(i) if i > 0 else 0 for i in
                 [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
             if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
         x1, y1 = area[:2]
         x4, y4 = area[2:]
         pic = picture.copy()
+        if is_icon and self.scope != [0, 0, 1, 1]:  # 需要画的是图标，但是需要在已有选区（裁剪后）的图片上画，所以需要换算
+            x1 = x1 - self.scope[0] * w
+            y1 = y1 - self.scope[1] * h
+            x4 = x4 - self.scope[0] * w
+            y4 = y4 - self.scope[1] * h
         cv2.rectangle(pic, (x1, y1), (x4, y4), (0, 255, 0), 4)
         cv2.imwrite(os.path.join(self.work_path, f"{number - 1}.jpg"), pic)
 

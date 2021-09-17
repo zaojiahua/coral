@@ -248,7 +248,7 @@ class PerformanceMinix(object):
             th = 1.08
         corr_th = 0.09 + (1 - th)
         result_1 = (1 - np.abs(max_value_1)) < corr_th
-        print((1 - np.abs(max_value_1)))
+        # print((1 - np.abs(max_value_1)))
         return result_1
 
     def _picture_changed(self, last_pic, next_pic, third_pic, threshold, fps_lost=False):
@@ -282,7 +282,7 @@ class PerformanceMinix(object):
             match_ratio_2 = 1
         if fps_lost:
             return not (not final_result and not final_result_2)
-        print(match_ratio_2,match_ratio)
+        # print(match_ratio_2,match_ratio)
         return (final_result_2 and final_result) or match_ratio_2 < (1.94-threshold)
 
     def delay_exec(self, function, *args, **kwargs):

@@ -8,6 +8,8 @@ from app.config.setting import TOTAL_LOG_NAME, LOG_DIR, BASE_DIR
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.total import ServerError, RecvHttpException
 from app.libs.logresponse import LogResponse
+from app.config.ip import CORAL_TYPE
+from app.v1.Cuttle.basic.setting import hand_serial_obj_dict
 
 logger = logging.getLogger(TOTAL_LOG_NAME)
 
@@ -82,6 +84,16 @@ def doc():
             else _class.description
         )
     return convert_to_html(result, title)
+
+
+@app.route('/hand-serial/reset/')
+def hand_serial_reset():
+    if len(hand_serial_obj_dict.values()) > 0 and CORAL_TYPE == 3:
+        hand_serial_obj = list(hand_serial_obj_dict.values())[0]
+        hand_serial_obj.send_single_order(f"G01 X0Y0Z0F5000 \r\n")
+        hand_serial_obj.recv(buffer_size=200)
+
+    return 'ok'
 
 
 if __name__ == '__main__':

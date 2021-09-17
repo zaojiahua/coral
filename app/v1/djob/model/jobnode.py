@@ -20,5 +20,6 @@ class JobNode:
             elif INNER_DJOB_TYPE == self.node_type:
                 self.job_label = node_dict["jobLabel"]
                 self.assist_device_serial_number = node_dict.get("assistDevice", None)
+                self.block_name = node_dict['blockName']
             else:
                 raise JobExecBodyException(description=f"Unknown type {self.node_type}")

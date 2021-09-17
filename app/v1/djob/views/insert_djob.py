@@ -24,6 +24,7 @@ def insert_djob_inner(**kwargs):
 
     djob = DJob(**validate_data)
     djob.job_flows_order.rpush(*[flow["id"] for flow in sorted(validate_data["job_flows"], key=lambda x: x["order"])])
+    djob.job_flows_name.rpush(*[flow["name"] for flow in sorted(validate_data["job_flows"], key=lambda x: x["order"])])
     logger.info(f"create a djobworker and a djob object {djob}")
     djob_worker = DJobWorker(pk=validate_data["device_label"])
     djob_worker.add(djob)

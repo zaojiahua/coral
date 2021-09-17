@@ -246,7 +246,7 @@ class PerformanceMinix(object):
             th = (1 - th) * 10 + 0.99
         elif 1 >= th > 0.999:
             th = 1.08
-        corr_th = 0.09 + (1 - th)
+        corr_th = 0.1 + (1 - th)
         result_1 = (1 - np.abs(max_value_1)) < corr_th
         # print((1 - np.abs(max_value_1)))
         return result_1

@@ -104,7 +104,7 @@ class AdbHandler(Handler, ChineseMixin):
                 return -1
             self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
             self.str_func(adb_cmd_prefix + "-s " + device_ip + " tcpip 5555")
-            self.str_func(adb_cmd_prefix + "connect " + device_ip)
+            self.str_func(adb_cmd_prefix + "connect " + device_ip + ":5555")
             self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
             self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
             self._model.is_connected = True

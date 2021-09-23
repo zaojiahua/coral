@@ -133,6 +133,19 @@ class DJob(BaseModel):
             if getattr(self, key):
                 json_data[key] = getattr(self,key)
         if len(rds_result) != 0:
+            if int(self.job_assessment_value) == 0:
+                # 如果job执行成功，删除pictures
+                def delete_picture(eblock):
+                    for unit_list in eblock.get('all_unit_list', []):
+                        for unit in unit_list.get('units', []):
+                            unit['pictures'] = []
+                for job_flow in rds_result:
+                    for eblock in job_flow.get('eblock_list', []):
+                        if 'eblock_list' in eblock:
+                            for inner_eblock in eblock.get('eblock_list', []):
+                                delete_picture(inner_eblock)
+                        else:
+                            delete_picture(eblock)
             json_data["rds_dict"] = json.dumps(rds_result)  # type  str
         from app.v1.device_common.device_model import Device
 

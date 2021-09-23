@@ -38,6 +38,8 @@ class DJobFlow(BaseModel):
     job_label = models.CharField()
     tboard_path = models.CharField()
     flow_id = models.IntegerField()
+    # 记录父级flow_id 为0代表没有父级
+    parent_flow_id = models.IntegerField()
     flow_name = models.CharField()
 
     job: Job = OwnerForeignKey(to=Job)
@@ -75,6 +77,10 @@ class DJobFlow(BaseModel):
         super().__init__(*args, **kwargs)
         self.logger = None
         self.init_logger()
+
+        # 修改推送到rds的文件名时候的用
+        self.inner_job_prefix_name = f"inner_{self.inner_job_index}"
+        self.flow_prefix_name = f"flow_{self.parent_flow_id or self.flow_id}"
 
     def init_logger(self):
         if self.device_label:  # 如果Djob 中没有device_label attr ，写入总的 djob.log
@@ -242,7 +248,8 @@ class DJobFlow(BaseModel):
                              source=DJOB,
                              tboard_path=self.tboard_path,
                              inner_job_index=self.exec_node_index,
-                             block_name_as_inner_job=job_node.block_name)
+                             block_name_as_inner_job=job_node.block_name,
+                             parent_flow_id=self.flow_id)
         self.inner_job_list.rpush(dJob_flow)
         if job_node.assist_device_serial_number is not None:  # assist_device_serial_number表明运行的是哪一台僚机
             dJob_flow.assist_device_serial_number = job_node.assist_device_serial_number
@@ -336,6 +343,19 @@ class DJobFlow(BaseModel):
 
         for unit_list in eblock.all_unit_list:
             for unit in unit_list.units:
+
+                # 修改rds中保存的图片名称
+                new_picture = []
+                picture = unit.pictures.rpop()
+                while picture is not None:
+                    if self.source == DJOB:
+                        picture = self.inner_job_prefix_name + '_' + picture
+                    picture = self.flow_prefix_name + '_' + picture
+                    new_picture.append(picture)
+                    picture = unit.pictures.rpop()
+                for pictures in new_picture:
+                    unit.pictures.lpush(pictures)
+
                 # 存在却没有结果表明未执行完成或未执行,
                 # 因为创建eblock时就会创建unit,但是只有执行完的unit才由result
                 result = unit.detail.get("result", None)
@@ -403,9 +423,9 @@ class DJobFlow(BaseModel):
         if self.device is None:  # device prepare error 导致device 未初始化
             return
         if self.source == DJOB:
-            file_rename_from_path(self.device.rds_data_path, f"inner_{self.inner_job_index}")
+            file_rename_from_path(self.device.rds_data_path, self.inner_job_prefix_name)
 
-        file_rename_from_path(self.device.rds_data_path, f"flow_{flow_id}")
+        file_rename_from_path(self.device.rds_data_path, self.flow_prefix_name)
 
         for file_name in os.listdir(self.device.rds_data_path):
             file_path = os.path.join(self.device.rds_data_path, file_name)

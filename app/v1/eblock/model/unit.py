@@ -12,7 +12,7 @@ from app.config.url import device_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
 from app.execption.outer.error_code.eblock import EblockCannotFindFile
-from app.libs.extension.field import DictField
+from app.libs.extension.field import DictField, OwnerList
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -109,8 +109,9 @@ class Unit(BaseModel):
     ocrChoice = models.IntegerField()
     tGuard = models.IntegerField()
     unit_list_index = models.IntegerField()
+    pictures = OwnerList(to=str)
 
-    load = ("detail", "key", "execModName", "jobUnitName", "finalResult")
+    load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures')
 
     def process_unit(self, logger, handler: MacroHandler, **kwargs):
         assist_device_ident = get_assist_device_ident(self.device_label,
@@ -235,14 +236,17 @@ class Unit(BaseModel):
         """
         self.remove_duplicate_pic(handler.work_path)
         for file in os.listdir(handler.work_path):
+            target_name = f"({handler.block_index}_{self.unit_list_index}){file}"
+            target_path = os.path.join(handler.rds_path, target_name)
             # 普通unit产生的图片可能会被下一个unit使用，因此只能copy
             if file in save_list:
-                shutil.copyfile(os.path.join(handler.work_path, file),
-                                os.path.join(handler.rds_path, f"({handler.block_index}_{self.unit_list_index}){file}"))
+                if not os.path.exists(target_path):
+                    shutil.copyfile(os.path.join(handler.work_path, file), target_path)
+                    self.pictures.lpush(target_name)
             elif file.startswith("ocr-") or file.startswith("crop-"):
                 # 复合型unit产生的图片只有自己会使用，因此move即可
-                shutil.move(os.path.join(handler.work_path, file),
-                            os.path.join(handler.rds_path, f"({handler.block_index}_{self.unit_list_index}){file}"))
+                shutil.move(os.path.join(handler.work_path, file), target_path)
+                self.pictures.lpush(target_name)
 
     @staticmethod
     def remove_duplicate_pic(path):

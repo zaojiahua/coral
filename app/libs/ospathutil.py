@@ -48,7 +48,7 @@ def makedirs_new_folder(path, timeout=5):
 def file_rename_from_path(path, prefix):
     for _file_name in os.listdir(path):
         _file_path = os.path.join(path, _file_name)
-        os.rename(_file_path, os.path.join(path, f"({prefix})_{_file_name}"))
+        os.rename(_file_path, os.path.join(path, f"{prefix}_{_file_name}"))
 
 
 if __name__ == '__main__':

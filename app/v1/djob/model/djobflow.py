@@ -79,8 +79,8 @@ class DJobFlow(BaseModel):
         self.init_logger()
 
         # 修改推送到rds的文件名时候的用
-        self.inner_job_prefix_name = f"inner_{self.inner_job_index}"
-        self.flow_prefix_name = f"flow_{self.parent_flow_id or self.flow_id}"
+        self.inner_job_prefix_name = f"(inner_{self.inner_job_index})"
+        self.flow_prefix_name = f"(flow_{self.parent_flow_id or self.flow_id})"
 
     def init_logger(self):
         if self.device_label:  # 如果Djob 中没有device_label attr ，写入总的 djob.log

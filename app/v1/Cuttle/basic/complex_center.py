@@ -229,7 +229,7 @@ class Complex_Center(object):
             result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
             min_val_original, _, _, _ = cv2.minMaxLoc(result)
             thres = icon_min_template if CORAL_TYPE < 5 else icon_min_template_camera
-            if not np.abs(min_val_original) >= thres * 2:
+            if not np.abs(min_val_original) >= thres * 2.5:
                 break
         else:
             raise NotFindIcon

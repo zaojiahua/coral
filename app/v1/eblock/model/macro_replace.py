@@ -57,6 +57,9 @@ class MacroHandler(object):
         self.device_temp_port_list = temp_port_list
         self.ip_address = ip_address
 
+    def set_work_path(self, new_work_path):
+        self.work_path = new_work_path
+
     def replace(self, cmd, **kwargs):
         assist_device_ident = kwargs.pop("assist_device_ident", None)
         device_id = kwargs.get("device_label", None)

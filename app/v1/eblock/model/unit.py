@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 from functools import lru_cache
 
 import cv2
@@ -110,12 +111,22 @@ class Unit(BaseModel):
     tGuard = models.IntegerField()
     unit_list_index = models.IntegerField()
     pictures = OwnerList(to=str)
+    folder_name = models.CharField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures')
+
+    def __init__(self, pk=None, **kwargs):
+        super().__init__(pk, **kwargs)
+        self.folder_name = str(time.time())
 
     def process_unit(self, logger, handler: MacroHandler, **kwargs):
         assist_device_ident = get_assist_device_ident(self.device_label,
                                                       self.assistDevice) if self.assistDevice else None
+
+        current_unit_folder = os.path.join(handler.work_path, self.folder_name) + os.sep
+        if not os.path.exists(current_unit_folder):
+            os.makedirs(current_unit_folder)
+        handler.set_work_path(current_unit_folder)
 
         @func_set_timeout(timeout=self.timeout if self.timeout else DEFAULT_TIMEOUT)
         def _inner_func():

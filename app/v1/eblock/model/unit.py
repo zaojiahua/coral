@@ -176,6 +176,7 @@ class Unit(BaseModel):
                     try:
                         out_string, save_file = handler.replace(value.get("content"),
                                                                 unit_work_path=self.unit_work_path,
+                                                                cmd_key=key,
                                                                 assist_device_ident=assist_device_ident,
                                                                 device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
@@ -250,8 +251,12 @@ class Unit(BaseModel):
         for file in os.listdir(self.unit_work_path):
             target_name = f"({handler.block_index}_{self.unit_list_index}){file}"
             target_path = os.path.join(handler.rds_path, target_name)
+            # 一个公共读的目录 一个block内的其他unit需要用到之前unit的图片 或者跨block图片的使用 所以需要复制到一个公共的读目录以供其他unit使用
+            target_read_path = os.path.join(handler.work_path, file)
             # 普通unit产生的图片可能会被下一个unit使用，因此只能copy
             if file in save_list:
+                if not os.path.exists(target_read_path):
+                    shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
                 if not os.path.exists(target_path):
                     shutil.copyfile(os.path.join(self.unit_work_path, file), target_path)
                     self.pictures.lpush(target_name)
@@ -259,6 +264,9 @@ class Unit(BaseModel):
                 # 复合型unit产生的图片只有自己会使用，因此move即可
                 shutil.move(os.path.join(self.unit_work_path, file), target_path)
                 self.pictures.lpush(target_name)
+            else:
+                # 其他情况下复制到公共读的目录 比如txt文件等 其他unit需要用到
+                shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
 
     @staticmethod
     def remove_duplicate_pic(path):

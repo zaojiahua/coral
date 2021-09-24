@@ -111,22 +111,21 @@ class Unit(BaseModel):
     tGuard = models.IntegerField()
     unit_list_index = models.IntegerField()
     pictures = OwnerList(to=str)
-    folder_name = models.CharField()
+    unit_work_path = models.CharField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures')
 
     def __init__(self, pk=None, **kwargs):
         super().__init__(pk, **kwargs)
-        self.folder_name = str(time.time())
+        self.unit_work_path = str(time.time())
 
     def process_unit(self, logger, handler: MacroHandler, **kwargs):
         assist_device_ident = get_assist_device_ident(self.device_label,
                                                       self.assistDevice) if self.assistDevice else None
 
-        current_unit_folder = os.path.join(handler.work_path, self.folder_name) + os.sep
-        if not os.path.exists(current_unit_folder):
-            os.makedirs(current_unit_folder)
-        handler.set_work_path(current_unit_folder)
+        self.unit_work_path = os.path.join(handler.work_path, self.unit_work_path) + os.sep
+        if not os.path.exists(self.unit_work_path):
+            os.makedirs(self.unit_work_path)
 
         @func_set_timeout(timeout=self.timeout if self.timeout else DEFAULT_TIMEOUT)
         def _inner_func():
@@ -141,6 +140,7 @@ class Unit(BaseModel):
                 for cmd in cmd_list:
                     try:
                         replaced_cmd, save_file = handler.replace(cmd,
+                                                                  unit_work_path=self.unit_work_path,
                                                                   assist_device_ident=assist_device_ident,
                                                                   device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
@@ -175,6 +175,7 @@ class Unit(BaseModel):
                 for key, value in cmd_dict.items():
                     try:
                         out_string, save_file = handler.replace(value.get("content"),
+                                                                unit_work_path=self.unit_work_path,
                                                                 assist_device_ident=assist_device_ident,
                                                                 device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
@@ -190,7 +191,7 @@ class Unit(BaseModel):
                 target = "ImageHandler" if self.execModName == "IMGTOOL" else "ComplexHandler"
             if kwargs.pop("test_running", False):
                 sending_data["test_running"] = True
-            sending_data["work_path"] = handler.work_path
+            sending_data["work_path"] = self.unit_work_path
             sending_data["device_label"] = self.device_label
             if self.ocrChoice:
                 sending_data["ocr_choice"] = self.ocrChoice
@@ -245,18 +246,18 @@ class Unit(BaseModel):
 
         针对ocr模块 临时提供解决方案
         """
-        self.remove_duplicate_pic(handler.work_path)
-        for file in os.listdir(handler.work_path):
+        self.remove_duplicate_pic(self.unit_work_path)
+        for file in os.listdir(self.unit_work_path):
             target_name = f"({handler.block_index}_{self.unit_list_index}){file}"
             target_path = os.path.join(handler.rds_path, target_name)
             # 普通unit产生的图片可能会被下一个unit使用，因此只能copy
             if file in save_list:
                 if not os.path.exists(target_path):
-                    shutil.copyfile(os.path.join(handler.work_path, file), target_path)
+                    shutil.copyfile(os.path.join(self.unit_work_path, file), target_path)
                     self.pictures.lpush(target_name)
             elif file.startswith("ocr-") or file.startswith("crop-"):
                 # 复合型unit产生的图片只有自己会使用，因此move即可
-                shutil.move(os.path.join(handler.work_path, file), target_path)
+                shutil.move(os.path.join(self.unit_work_path, file), target_path)
                 self.pictures.lpush(target_name)
 
     @staticmethod

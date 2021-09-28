@@ -249,7 +249,10 @@ class Unit(BaseModel):
         """
         self.remove_duplicate_pic(self.unit_work_path)
         for file in os.listdir(self.unit_work_path):
-            target_name = f"({handler.block_index}_{self.unit_list_index}){file}"
+            if file == Bugreport_file_name and self.assistDevice:
+                target_name = f"({handler.block_index}_{self.unit_list_index}){file}-{self.assistDevice}"
+            else:
+                target_name = f"({handler.block_index}_{self.unit_list_index}){file}"
             target_path = os.path.join(handler.rds_path, target_name)
             # 一个公共读的目录 一个block内的其他unit需要用到之前unit的图片 或者跨block图片的使用 所以需要复制到一个公共的读目录以供其他unit使用
             target_read_path = os.path.join(handler.work_path, file)

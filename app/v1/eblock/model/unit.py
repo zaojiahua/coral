@@ -250,7 +250,7 @@ class Unit(BaseModel):
         self.remove_duplicate_pic(self.unit_work_path)
         for file in os.listdir(self.unit_work_path):
             if file == Bugreport_file_name and self.assistDevice:
-                target_name = f"({handler.block_index}_{self.unit_list_index}){file}-{self.assistDevice}"
+                target_name = f"({handler.block_index}_{self.unit_list_index}){file.split('.')[0]}-{self.assistDevice}.{file.split('.')[1]}"
             else:
                 target_name = f"({handler.block_index}_{self.unit_list_index}){file}"
             target_path = os.path.join(handler.rds_path, target_name)

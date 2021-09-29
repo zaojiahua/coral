@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 from functools import lru_cache
 
 import cv2
@@ -12,7 +13,7 @@ from app.config.url import device_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
 from app.execption.outer.error_code.eblock import EblockCannotFindFile
-from app.libs.extension.field import DictField
+from app.libs.extension.field import DictField, OwnerList
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -109,12 +110,22 @@ class Unit(BaseModel):
     ocrChoice = models.IntegerField()
     tGuard = models.IntegerField()
     unit_list_index = models.IntegerField()
+    pictures = OwnerList(to=str)
+    unit_work_path = models.CharField()
 
-    load = ("detail", "key", "execModName", "jobUnitName", "finalResult")
+    load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures')
+
+    def __init__(self, pk=None, **kwargs):
+        super().__init__(pk, **kwargs)
+        self.unit_work_path = str(time.time())
 
     def process_unit(self, logger, handler: MacroHandler, **kwargs):
         assist_device_ident = get_assist_device_ident(self.device_label,
                                                       self.assistDevice) if self.assistDevice else None
+
+        self.unit_work_path = os.path.join(handler.work_path, self.unit_work_path) + os.sep
+        if not os.path.exists(self.unit_work_path):
+            os.makedirs(self.unit_work_path)
 
         @func_set_timeout(timeout=self.timeout if self.timeout else DEFAULT_TIMEOUT)
         def _inner_func():
@@ -129,6 +140,7 @@ class Unit(BaseModel):
                 for cmd in cmd_list:
                     try:
                         replaced_cmd, save_file = handler.replace(cmd,
+                                                                  unit_work_path=self.unit_work_path,
                                                                   assist_device_ident=assist_device_ident,
                                                                   device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
@@ -163,6 +175,8 @@ class Unit(BaseModel):
                 for key, value in cmd_dict.items():
                     try:
                         out_string, save_file = handler.replace(value.get("content"),
+                                                                unit_work_path=self.unit_work_path,
+                                                                cmd_key=key,
                                                                 assist_device_ident=assist_device_ident,
                                                                 device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
@@ -178,7 +192,7 @@ class Unit(BaseModel):
                 target = "ImageHandler" if self.execModName == "IMGTOOL" else "ComplexHandler"
             if kwargs.pop("test_running", False):
                 sending_data["test_running"] = True
-            sending_data["work_path"] = handler.work_path
+            sending_data["work_path"] = self.unit_work_path
             sending_data["device_label"] = self.device_label
             if self.ocrChoice:
                 sending_data["ocr_choice"] = self.ocrChoice
@@ -233,16 +247,29 @@ class Unit(BaseModel):
 
         针对ocr模块 临时提供解决方案
         """
-        self.remove_duplicate_pic(handler.work_path)
-        for file in os.listdir(handler.work_path):
+        self.remove_duplicate_pic(self.unit_work_path)
+        for file in os.listdir(self.unit_work_path):
+            if file == Bugreport_file_name and self.assistDevice:
+                target_name = f"({handler.block_index}_{self.unit_list_index}){file.split('.')[0]}-{self.assistDevice}.{file.split('.')[1]}"
+            else:
+                target_name = f"({handler.block_index}_{self.unit_list_index}){file}"
+            target_path = os.path.join(handler.rds_path, target_name)
+            # 一个公共读的目录 一个block内的其他unit需要用到之前unit的图片 或者跨block图片的使用 所以需要复制到一个公共的读目录以供其他unit使用
+            target_read_path = os.path.join(handler.work_path, file)
             # 普通unit产生的图片可能会被下一个unit使用，因此只能copy
             if file in save_list:
-                shutil.copyfile(os.path.join(handler.work_path, file),
-                                os.path.join(handler.rds_path, f"({handler.block_index}_{self.unit_list_index}){file}"))
+                if not os.path.exists(target_read_path):
+                    shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
+                if not os.path.exists(target_path):
+                    shutil.copyfile(os.path.join(self.unit_work_path, file), target_path)
+                    self.pictures.lpush(target_name)
             elif file.startswith("ocr-") or file.startswith("crop-"):
                 # 复合型unit产生的图片只有自己会使用，因此move即可
-                shutil.move(os.path.join(handler.work_path, file),
-                            os.path.join(handler.rds_path, f"({handler.block_index}_{self.unit_list_index}){file}"))
+                shutil.move(os.path.join(self.unit_work_path, file), target_path)
+                self.pictures.lpush(target_name)
+            else:
+                # 其他情况下复制到公共读的目录 比如txt文件等 其他unit需要用到
+                shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
 
     @staticmethod
     def remove_duplicate_pic(path):

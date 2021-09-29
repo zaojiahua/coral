@@ -57,7 +57,7 @@ class MacroHandler(object):
         self.device_temp_port_list = temp_port_list
         self.ip_address = ip_address
 
-    def replace(self, cmd, **kwargs):
+    def replace(self, cmd, unit_work_path, cmd_key=None, **kwargs):
         assist_device_ident = kwargs.pop("assist_device_ident", None)
         device_id = kwargs.get("device_label", None)
         save_file = ""
@@ -68,9 +68,12 @@ class MacroHandler(object):
             res = re.search("<Macro_(.*?)>", cmd)
             # file_name = res.group(1) + ".txt" if res.group(1).split(".") == 1 else res.group(1)
             file_name = res.group(1)
-            position_path = os.path.join(self.work_path, file_name)
+            position_path = os.path.join(unit_work_path, file_name)
             if not os.path.exists(position_path):
-                raise EblockCannotFindFile
+                # 尝试从公共读目录读取
+                position_path = os.path.join(self.work_path, file_name)
+                if not os.path.exists(position_path):
+                    raise EblockCannotFindFile
             with open(position_path, "r") as f:
                 position = f.read()
                 cmd = re.sub("<Macro_.*?>", position.strip(), cmd)
@@ -137,9 +140,14 @@ class MacroHandler(object):
             except AttributeError:
                 print("wait for re:", cmd)
                 raise MaroUnrecognition
+        # 当需要读取之前unit产生的图片时，从work_path目录中读取
+        if cmd_key in ['inputImgFile']:
+            for work_path_macro in [block_output_path]:
+                if work_path_macro in cmd:
+                    cmd = cmd.replace(work_path_macro, self.work_path)
         for work_path_macro in [block_output_path, adb_data_path, block_input_path]:
             if work_path_macro in cmd:
-                cmd = cmd.replace(work_path_macro, self.work_path)
+                cmd = cmd.replace(work_path_macro, unit_work_path)
         if rds_data_path in cmd:
             cmd = cmd.replace(rds_data_path, self.rds_path + os.path.sep)
         if not self.device_temp_port_list and device_temp_port_list in cmd:

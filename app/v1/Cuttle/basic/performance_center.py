@@ -274,6 +274,8 @@ class PerformanceCenter(object):
                 # 向备份Q中放置过快,超过摄像头读取速度，需要等待一帧时间
                 time.sleep(2 / FpsMax)
         # 找到结束点后再继续保存最多30张:
+        if not hasattr(self,"end_number"):
+            return 0
         number = self.end_number + 1
         for i in range(40):
             try:

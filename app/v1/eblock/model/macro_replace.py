@@ -141,7 +141,7 @@ class MacroHandler(object):
                 print("wait for re:", cmd)
                 raise MaroUnrecognition
         # 当需要读取之前unit产生的图片时，从work_path目录中读取
-        if cmd_key in ['inputImgFile']:
+        if cmd_key and cmd_key.startswith('inputImgFile'):
             for work_path_macro in [block_output_path]:
                 if work_path_macro in cmd:
                     cmd = cmd.replace(work_path_macro, self.work_path)

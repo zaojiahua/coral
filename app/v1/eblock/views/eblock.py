@@ -13,7 +13,7 @@ from app.v1.eblock.model.eblock import Eblock
 from app.v1.eblock.model.macro_replace import MacroHandler
 from app.v1.eblock.model.unit import Unit
 from app.v1.eblock.validators.tboardSchema import EblockSchema, UnitSchema
-from v1.eblock.model.bounced_words import BouncedWords
+from app.v1.eblock.model.bounced_words import BouncedWords
 
 eblock_schema = EblockSchema()
 

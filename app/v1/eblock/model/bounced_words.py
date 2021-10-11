@@ -1,5 +1,5 @@
-from libs.extension.field import DictField
-from libs.extension.model import BaseModel
+from app.libs.extension.field import DictField
+from app.libs.extension.model import BaseModel
 
 
 class BouncedWords(BaseModel):

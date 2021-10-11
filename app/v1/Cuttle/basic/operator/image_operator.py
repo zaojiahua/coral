@@ -18,7 +18,8 @@ from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, ImageBasicSchemaCompatible, \
     ImageSchemaCompatible
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
-from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate
+from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate
+from v1.eblock.model.bounced_words import BouncedWords
 
 VideoSearchPosition = 0.5
 
@@ -145,6 +146,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
 
     @staticmethod
     def _parse_function(result_list):
+        bounced_words = BouncedWords.first().words.values()
+        print(f"干扰词是：", bounced_words)
         for i in result_list:
             for word in bounced_words:
                 if word == i.get("text"):

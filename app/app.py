@@ -18,6 +18,7 @@ from app.v1.log_view import log
 from app.v1.stew.init import calculate_matrix
 from app.v1.tboard.views import tborad_router
 from extensions import ma
+from app.v1.eblock.model.bounced_words import BouncedWords
 
 
 def register_blueprints(app: Flask):
@@ -38,6 +39,11 @@ def register_extensions(app):
 def load_setting(app):
     app.config.from_object('app.config.setting')
     app.config.from_object('app.config.secure')
+
+    # 获取 t-guard 干扰词的配置
+    bounced_words = {1: '确定', 2: '同意'}
+    print('获取到干扰词是：', bounced_words, '*' * 10)
+    BouncedWords(words=bounced_words)
 
 
 def server_init_inside():

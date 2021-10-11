@@ -1,6 +1,6 @@
 from flask import Blueprint
 
-from app.v1.eblock.views.eblock import EblockView, UnitView
+from app.v1.eblock.views.eblock import EblockView, UnitView, BouncedWordsView
 
 eblock = Blueprint("eblock", __name__)
 
@@ -63,3 +63,4 @@ return_format = [
 eblock.add_url_rule("/", view_func=EblockView.as_view("eblcok_create"))
 eblock.add_url_rule("/<int:id>/", view_func=EblockView.as_view("eblcok_stop"))
 eblock.add_url_rule("/unit/", view_func=UnitView.as_view("unit_create"))
+eblock.add_url_rule("/bounced_words", view_func=BouncedWordsView.as_view("bounced_words"))

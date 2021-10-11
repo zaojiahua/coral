@@ -19,7 +19,7 @@ from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, Imag
     ImageSchemaCompatible
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate
-from v1.eblock.model.bounced_words import BouncedWords
+from app.v1.eblock.model.bounced_words import BouncedWords
 
 VideoSearchPosition = 0.5
 

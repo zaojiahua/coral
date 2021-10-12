@@ -18,10 +18,10 @@ from app.v1.eblock.url import eblock
 from app.v1.log_view import log
 from app.v1.stew.init import calculate_matrix
 from app.v1.tboard.views import tborad_router
-from config.url import bounced_words_url
+from app.config.url import bounced_words_url
 from extensions import ma
 from app.v1.eblock.model.bounced_words import BouncedWords
-from libs.http_client import _parse_url
+from app.libs.http_client import _parse_url
 
 
 def register_blueprints(app: Flask):

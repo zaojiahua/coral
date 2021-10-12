@@ -258,8 +258,8 @@ class Unit(BaseModel):
             target_read_path = os.path.join(handler.work_path, file)
             # 普通unit产生的图片可能会被下一个unit使用，因此只能copy
             if file in save_list:
-                if not os.path.exists(target_read_path):
-                    shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
+                # 循环执行用例的时候，文件名是相同的，需要进行覆盖
+                shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
                 if not os.path.exists(target_path):
                     shutil.copyfile(os.path.join(self.unit_work_path, file), target_path)
                     self.pictures.lpush(target_name)

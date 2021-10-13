@@ -9,6 +9,7 @@ from app.execption.outer.error_code.adb import UnitBusy, NoContent
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result
+from app.execption.outer.error_code.imgtool import DetectNoResponse
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
 Standard = collections.namedtuple("Standard", ["mark", "code"])
@@ -108,6 +109,8 @@ class Handler():
                         response = getattr(self, abnormal.method)(result, self.kwargs.get("t_guard"))
                         if response == 0 and funcname not in self.skip_retry_list:
                             return 666
+                    except DetectNoResponse as e:
+                        raise e
                     except Exception as e:
                         self._model.logger.error(f'tGuard error: {str(e)}')
                     return abnormal.code

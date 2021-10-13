@@ -49,6 +49,8 @@ class DJob(BaseModel):
     url_prefix = models.CharField()  # 记录性能测试存图的url前缀
     time_per_unit = OwnerFloatField()  # 记录性能测试存图单位时间
     rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit","lose_frame_point"]
+    # 特殊特征的rds提取和标识
+    rds_feature_list = ['filter']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -85,6 +87,13 @@ class DJob(BaseModel):
     def analysis_result(self):
 
         self.job_assessment_value = self.djob_flow_list[-1].job_assessment_value
+
+        # 特殊特征的rds提取和标识
+        for djob_flow in self.djob_flow_list:
+            for key in self.rds_feature_list:
+                if getattr(djob_flow, key):
+                    setattr(self, key, getattr(djob_flow, key))
+
         for djob_flow in self.djob_flow_list.lrange(-1, 0):
             for key in self.rds_info_list:
                 # 将执行过程中需要写入rds的内容写入到djob对象
@@ -128,6 +137,12 @@ class DJob(BaseModel):
         rds_result = []
         for djob_flow in self.djob_flow_list:
             rds_result.append(djob_flow.rds.json() if djob_flow.rds else {})
+
+        # 特殊特征的rds提取和标识
+        for key in self.rds_feature_list:
+            if getattr(self, key):
+                json_data[key] = getattr(self, key)
+
         # 性能测试用例的测试时间的数据的保存
         for key in self.rds_info_list:
             if getattr(self, key):

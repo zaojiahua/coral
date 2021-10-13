@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from app.execption.outer.error_code.imgtool import OcrParseFail, RecordWordsFindNoWords, \
-    IconTooWeek
+    IconTooWeek, DetectNoResponse
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.calculater_mixin.color_calculate import ColorMixin
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin
@@ -18,7 +18,7 @@ from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, ImageBasicSchemaCompatible, \
     ImageSchemaCompatible
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
-from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate
+from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate, serious_words
 
 VideoSearchPosition = 0.5
 
@@ -145,6 +145,10 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
 
     @staticmethod
     def _parse_function(result_list):
+        for i in result_list:
+            for word in serious_words:
+                if word in i.get('text'):
+                    raise DetectNoResponse
         for i in result_list:
             for word in bounced_words:
                 if word == i.get("text"):

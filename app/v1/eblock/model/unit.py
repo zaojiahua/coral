@@ -20,6 +20,7 @@ from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.eblock.config.leadin import PROCESSER_LIST
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
 from app.v1.eblock.model.macro_replace import MacroHandler
+from app.execption.outer.error_code.imgtool import DetectNoResponse
 
 
 def get_assist_device_ident(device_label, assist_device_serial_number):
@@ -212,6 +213,9 @@ class Unit(BaseModel):
                 else:
                     # 三次Tguard后unit结果设置为1
                     self.detail.update({"result": 1})
+            except DetectNoResponse as e:
+                self.detail = {"result": e.error_code}
+                raise e
             except Exception as e:
                 logger.debug(f'unit 不正常结束 {e}')
                 if isinstance(e, APIException):

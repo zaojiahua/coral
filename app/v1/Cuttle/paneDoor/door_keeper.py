@@ -42,8 +42,8 @@ class DoorKeeper(object):
         s_id = self.get_device_connect_id(multi=False)
         dev_info_dict = self.get_device_info(s_id, kwargs)
         logger.info(f"[get device info] device info dict :{dev_info_dict}")
+        self.open_wifi_service(num=f"-s {s_id}")
         if ADB_TYPE == 0:
-            self.open_wifi_service(num=f"-s {s_id}")
             self.adb_cmd_obj.run_cmd_to_get_result(f"adb connect {dev_info_dict.get('ip_address')}")
             res = bind_spec_ip(dev_info_dict.get("ip_address"), dev_info_dict["device_label"])
             # if res != 0:
@@ -154,7 +154,7 @@ class DoorKeeper(object):
         if rootable:
             self.is_device_remountable(num)
         wifi_response = self.set_adb_wifi_property_internal(rootable, num)
-        if wifi_response != 0:
+        if wifi_response != 0 and ADB_TYPE == 0:
             logger.error("Failed to set adb wifi property.")
             raise DeviceCannotSetprop
         return 0
@@ -239,8 +239,7 @@ class DoorKeeper(object):
                     "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(
                         f"adb -s {s_id} shell getprop ro.board.platform"),
                     "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
-                    "ip_address": self.get_dev_ip_address_internal(
-                        f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0'}
+                    "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}") }
         ret_dict["device_label"] = (old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
         self._check_device_already_in_cabinet(ret_dict["device_label"])
         # rom version数据不同类型手机可能藏在不同的地方，oppo已知型号要去拿color_os+版本， mi的直接拿ro.build.version.incremental
@@ -415,7 +414,7 @@ class DoorKeeper(object):
         return device_name
 
     def get_dev_ip_address_internal(self, num):
-        ret_ip_address = ""
+        ret_ip_address = "0.0.0.0"
         # ip_route "10.80.6.0/24 dev wlan0  proto kernel  scope link  src 10.80.6.153"
         ip_route = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell ip route")
         result = re.findall(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", ip_route)

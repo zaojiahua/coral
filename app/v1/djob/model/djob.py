@@ -140,7 +140,7 @@ class DJob(BaseModel):
 
         # 特殊特征的rds提取和标识
         for key in self.rds_feature_list:
-            if getattr(self, key):
+            if hasattr(self, key):
                 json_data[key] = getattr(self, key)
 
         # 性能测试用例的测试时间的数据的保存

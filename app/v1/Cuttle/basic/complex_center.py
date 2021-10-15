@@ -308,9 +308,7 @@ class Complex_Center(object):
     @handler_switcher
     def snap_shot(self, **kwargs):
         cmd_list = [
-            f"shell rm /sdcard/snap.png",
-            f"shell screencap -p /sdcard/snap.png",
-            f"pull /sdcard/snap.png {self.default_pic_path}"
+            f"exec-out screencap -p > {self.default_pic_path}"
         ]
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
         from app.v1.device_common.device_model import Device

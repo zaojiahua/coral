@@ -175,7 +175,8 @@ class CameraHandler(Handler):
         Function("shell screencap", "snap_shot", ""),
         Function("shell screenrecord", "get_video", re.compile("--time-limit (.*?) ")),
         Function("shell rm", "ignore", ""),
-        Function("pull", "move", re.compile("pull .*? (.*)"))
+        Function("pull", "move", re.compile("pull .*? (.*)")),
+        Function("exec-out screencap", "screen_shot_and_pull", re.compile("screencap -p > (.*)"))
     ]
 
     def before_execute(self, **kwargs):
@@ -244,6 +245,10 @@ class CameraHandler(Handler):
             print("save image time:", time.time() - start)
         else:
             raise NoSrc
+
+    def screen_shot_and_pull(self, *args, **kwargs):
+        self.snap_shot()
+        self.move(*args)
 
     def ignore(self, *arg, **kwargs):
         return 0

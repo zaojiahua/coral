@@ -75,7 +75,7 @@ class AreaSelectedMixin(object):
         data = self._validate(exec_content, ImageAreaSchema)
         template = self._crop_image(data.get("refer_im"), data.get("areas")[0])
         target = self._crop_image(data.get("input_im"), data.get("crop_areas")[0])
-        file_name = data.get('input_im').split("\\")[-1]
+        file_name = data.get('input_im').split(os.sep)[-1]
         path = os.path.join(self.kwargs.get("work_path"), f"crop-icon_exist2-{file_name}")
         cv2.imwrite(path, target)
         result = self.template_match(target, template)

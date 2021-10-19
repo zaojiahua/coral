@@ -6,8 +6,6 @@ ENV PYTHONUNBUFFERED 1
 COPY . /app/coral
 WORKDIR /app/coral
 
-
-RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' >/etc/timezone
 RUN apt-get update
 RUN apt-get install -y wget
 RUN apt-get install -y python3.6
@@ -22,6 +20,8 @@ RUN apt-get install -y android-tools-adb && apt-get install -y usbutils && apt-g
 RUN apt-get install -y kmod
 RUN bash setup.sh
 RUN cp -r /opt/MVS/lib/64/. /lib/
+RUN apt-get install -y tzdata
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' >/etc/timezone
 
 ENV LANG C.UTF-8
 #RUN export LD_LIBRARY_PATH=./app/coral/lib:$LD_LIBRARY_PATH

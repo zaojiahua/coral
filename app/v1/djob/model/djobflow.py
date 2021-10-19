@@ -29,6 +29,7 @@ from app.v1.djob.viewModel.device import DeviceViewModel
 from app.v1.djob.viewModel.job import JobViewModel
 from app.v1.eblock.model.eblock import Eblock
 from app.v1.eblock.views.eblock import insert_eblock, stop_eblock
+from app.execption.outer.error_code.imgtool import DetectNoResponse
 
 
 class DJobFlow(BaseModel):
@@ -72,6 +73,7 @@ class DJobFlow(BaseModel):
     current_eblock = OwnerForeignKey(to=Eblock)  # 当前正在执行的eblock
     # 当前的jobflow当做inner job的时候（也就是是其他job_flow的一个block），需要在rds中存储这个字段
     block_name_as_inner_job = models.CharField()
+    filter = models.CharField()  # 发生了严重错误 比如某些APP没有响应
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,6 +112,13 @@ class DJobFlow(BaseModel):
             self.execute()
         except EblockEarlyStop:
             self.logger.info(f" djobflow ({self.device_label} {self.job_label} {self.flow_id}) be stopped")
+        except DetectNoResponse:
+            # 没有响应，设置特殊的结果以及字段
+            self.job_assessment_value = 1
+            self.filter = 'serious'
+            self.rds.job_assessment_value = self.job_assessment_value
+            self.rds.finish = True
+            self.rds.flow_name = self.flow_name
         except Exception as ex:
             self.logger.exception(f" run single djob exception: {ex}")
             error_traceback = traceback.format_exc()
@@ -262,16 +271,17 @@ class DJobFlow(BaseModel):
 
     def _execute_normal(self, job_node):
 
-        self._insert_exec_block(job_node)
-
-        if self.current_eblock:
-            self._eblock_return_data_parse(self.current_eblock)
-            block_rds = self.current_eblock.json()
-            if self.recent_img_res_list and len(self.recent_img_res_list) > 0:
-                block_result = self.recent_img_res_list[-1]
-                block_rds['value'] = block_result
-            self.rds.eblock_list.rpush(block_rds)
-            self.current_eblock.remove()
+        try:
+            self._insert_exec_block(job_node)
+        finally:
+            if self.current_eblock:
+                self._eblock_return_data_parse(self.current_eblock)
+                block_rds = self.current_eblock.json()
+                if self.recent_img_res_list and len(self.recent_img_res_list) > 0:
+                    block_result = self.recent_img_res_list[-1]
+                    block_rds['value'] = block_result
+                self.rds.eblock_list.rpush(block_rds)
+                self.current_eblock.remove()
 
     def _insert_exec_block(self, job_node):
         """

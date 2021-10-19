@@ -1,6 +1,7 @@
 import threading
 import time
 
+import requests
 from flask import Flask
 from flask_cors import CORS
 
@@ -17,7 +18,10 @@ from app.v1.eblock.url import eblock
 from app.v1.log_view import log
 from app.v1.stew.init import calculate_matrix
 from app.v1.tboard.views import tborad_router
+from app.config.url import bounced_words_url
 from extensions import ma
+from app.v1.eblock.model.bounced_words import BouncedWords
+from app.libs.http_client import _parse_url
 
 
 def register_blueprints(app: Flask):
@@ -38,6 +42,14 @@ def register_extensions(app):
 def load_setting(app):
     app.config.from_object('app.config.setting')
     app.config.from_object('app.config.secure')
+
+    # 获取 t-guard 干扰词的配置
+    bounced_words = requests.get(_parse_url(bounced_words_url)).json()
+    print('获取到干扰词是：', bounced_words, '*' * 10)
+    all_words = {}
+    for word in bounced_words:
+        all_words[word['id']] = word['name']
+    BouncedWords(words=all_words)
 
 
 def server_init_inside():

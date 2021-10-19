@@ -61,3 +61,6 @@ hw_ocr_url = "https://{}/v1.0/ocr/web-image"
 
 coral_ocr_url = "/ocr"
 
+# ==================================tguard=======================================
+
+bounced_words_url = '/api/v1/cedar/tguard/'

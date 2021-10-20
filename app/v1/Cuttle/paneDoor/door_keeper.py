@@ -189,8 +189,7 @@ class DoorKeeper(object):
         ret_dict = {
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
                 f"adb -s {s_id} shell getprop ro.build.version.release"),
-            "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
-                f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(), "device_width": screen_size[0],
+            "device_width": screen_size[0],
             "device_height": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}
         ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         ret_dict.update(device_info_fict)
@@ -199,7 +198,7 @@ class DoorKeeper(object):
     def get_device_connect_id(self, multi=False):
         # 获取adb连接的所有设备，并与已经注册过的设备取差集，得到唯一待注册设备，差集为0或大于1都抛异常
         adb_response = self.adb_cmd_obj.run_cmd_to_get_result("adb -d devices -l", 12)
-        if "device usb" not in adb_response and "device product" not in adb_response:
+        if "device usb" not in adb_response and "device product" not in adb_response and "device transport_id" not in adb_response:
             logger.info("[get device info]: no device found")
             raise DeviceNotInUsb  # no device found
         device_id_list = self.get_connected_device_list(adb_response)
@@ -238,8 +237,10 @@ class DoorKeeper(object):
         ret_dict = {"phone_model_name": productName,
                     "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(
                         f"adb -s {s_id} shell getprop ro.board.platform"),
+                    "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
+                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(),
                     "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
-                    "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}") }
+                    "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}")}
         ret_dict["device_label"] = (old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
         self._check_device_already_in_cabinet(ret_dict["device_label"])
         # rom version数据不同类型手机可能藏在不同的地方，oppo已知型号要去拿color_os+版本， mi的直接拿ro.build.version.incremental

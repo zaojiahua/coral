@@ -76,7 +76,8 @@ class TBoard(BaseModel):
             }  # datetime 格式
             while True:
                 try:
-                    request(method="PUT", url=tboard_id_url.format(self.tboard_id), json=json_data)
+                    response = request(method="PUT", url=tboard_id_url.format(self.tboard_id), json=json_data)
+                    logger.info(f"end tboard response :{response}")
                     break
                 except APIException as e:
                     if e.code not in [502, 504]:

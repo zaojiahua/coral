@@ -13,9 +13,8 @@ RUN apt-get update \
 
 RUN apt-get install -y android-tools-adb && apt-get install -y usbutils && apt-get install -y vim \
     && apt-get install -y kmod \
-    && cp -r /opt/MVS/lib/64/. /lib/ \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' >/etc/timezone \
-    && apt-get install -y tzdata
+    && apt-get install -y tzdata \
     && apt-get install pngquant
 
 COPY . /app/coral
@@ -23,7 +22,8 @@ WORKDIR /app/coral
 
 RUN pip3 install --upgrade pip \
     && pip3 --default-timeout=1000 install  -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple \
-    && bash setup.sh
+    && bash setup.sh \
+    && cp -r /opt/MVS/lib/64/. /lib/
 
 ENV LANG C.UTF-8
 #RUN export LD_LIBRARY_PATH=./app/coral/lib:$LD_LIBRARY_PATH

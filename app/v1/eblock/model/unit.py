@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 import time
 from functools import lru_cache
 
@@ -8,7 +9,7 @@ from astra import models
 from func_timeout import func_set_timeout
 
 from app.config.ip import ADB_TYPE
-from app.config.setting import Bugreport_file_name
+from app.config.setting import Bugreport_file_name, PICTURE_COMPRESS_RATIO
 from app.config.url import device_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
@@ -274,6 +275,25 @@ class Unit(BaseModel):
             else:
                 # 其他情况下复制到公共读的目录 比如txt文件等 其他unit需要用到
                 shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
+
+            # 针对结果为0的unit，进行rds图片的压缩，为了减小体积
+            if self.detail.get("result") == 0:
+                if os.path.exists(target_path):
+                    # 针对png图片进行压缩
+                    if target_path.endswith('png'):
+                        # 先缩放
+                        origin_pic = cv2.imread(target_path, cv2.IMREAD_COLOR)
+                        origin_size = origin_pic.shape
+                        new_size = (int(origin_size[1] * PICTURE_COMPRESS_RATIO), int(origin_size[0] * PICTURE_COMPRESS_RATIO))
+                        compress_pic = cv2.resize(origin_pic, new_size)
+                        cv2.imwrite(target_path, compress_pic)
+                        # 后压缩
+                        self.pngquant_compress(target_path)
+
+    @staticmethod
+    def pngquant_compress(fp):
+        command = f'pngquant {fp} -f --quality 100-100'
+        subprocess.run(command, shell=True)
 
     @staticmethod
     def remove_duplicate_pic(path):

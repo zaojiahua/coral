@@ -21,9 +21,11 @@ COPY . /app/coral
 WORKDIR /app/coral
 
 RUN pip3 install --upgrade pip \
-    && pip3 --default-timeout=1000 install  -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    && pip3 --default-timeout=1000 install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple \
     && bash setup.sh \
-    && cp -r /opt/MVS/lib/64/. /lib/
+    && cp -r /opt/MVS/lib/64/. /lib/ \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get purge -y --auto-remove gcc
 
 ENV LANG C.UTF-8
 #RUN export LD_LIBRARY_PATH=./app/coral/lib:$LD_LIBRARY_PATH

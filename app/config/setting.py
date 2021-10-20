@@ -68,3 +68,6 @@ else:
 
 
 Bugreport_file_name = "bugreport.zip"
+
+PICTURE_COMPRESS_RATIO = 0.5
+

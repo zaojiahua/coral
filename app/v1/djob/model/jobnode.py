@@ -14,7 +14,9 @@ class JobNode:
         else:
             self.node_type = node_dict["nodeType"]
             if SWITCH_TYPE == self.node_type:
-                pass
+                # 最大执行次数
+                self.max_time = node_dict['maxTime']
+                self.block_name = node_dict['blockName']
             elif NORMAL_TYPE == self.node_type:
                 self.exec_node_dict = node_dict["execDict"]
             elif INNER_DJOB_TYPE == self.node_type:

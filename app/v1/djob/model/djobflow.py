@@ -79,6 +79,8 @@ class DJobFlow(BaseModel):
         super().__init__(*args, **kwargs)
         self.logger = None
         self.init_logger()
+        # 记录switch node的引用
+        self.switch_node_ref = {}
 
         # 修改推送到rds的文件名时候的用
         self.inner_job_prefix_name = f"(inner_{self.inner_job_index})"
@@ -192,6 +194,17 @@ class DJobFlow(BaseModel):
         self.rds.block_name = self.block_name_as_inner_job
         self.end_time = datetime.now()
         self.status = True
+        # 写入循环执行的次数
+        self.log_switch_time()
+
+    def log_switch_time(self):
+        # 写入循环执行的次数
+        for key, execute_time in self.switch_node_dict.items():
+            # 执行次数大于1代表是循环
+            if int(execute_time) > 1:
+                job_node = self.switch_node_ref[key]
+                self.rds.switch_times.rpush(
+                    {'time': execute_time, 'name': job_node.block_name, 'max_time': job_node.max_time})
 
     def computed_result(self):
         last_node = self.rds.last_node
@@ -315,9 +328,13 @@ class DJobFlow(BaseModel):
         return insert_eblock(json_data)
 
     def _execute_switch(self, job_node):
+        # 记录引用
+        if self.switch_node_ref.get(job_node.node_key, None) is None:
+            self.switch_node_ref[job_node.node_key] = job_node
+
         switch_node_dict = self.switch_node_dict
 
-        if switch_node_dict.setdefault(job_node.node_key, 0) >= 5:
+        if switch_node_dict.setdefault(job_node.node_key, 0) >= job_node.max_time:
             # 如果任务执行循环是else分支会造成死循环，需要避免,因此采用向上抛出异常
             raise JobMaxRetryCycleException()
         else:
@@ -421,6 +438,8 @@ class DJobFlow(BaseModel):
         self.rds.job_assessment_value = self.job_assessment_value
         self.rds.is_error = True
         self.rds.error_msg = error_traceback
+        # 写入循环执行的次数
+        self.log_switch_time()
 
     def push_log_and_pic(self, base_data: dict, job_assessment_value, **kwargs):
         """

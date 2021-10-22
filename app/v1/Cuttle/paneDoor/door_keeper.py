@@ -106,9 +106,12 @@ class DoorKeeper(object):
         # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
         kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
         kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        # kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + "-" + self.get_default_name()
         kwargs["device_label"] = "M-" + kwargs.get("phone_model_name")
-        kwargs["manufacturer"] = kwargs["android_version"] = kwargs["rom_version"] = kwargs["cpu_name"] = kwargs[
+        response = request(url=phone_model_url, params={"fields": "manufacturer.manufacturer_name",
+                                                        "phone_model_name": kwargs.get("phone_model_name")},
+                           filter_unique_key=True)
+        kwargs["manufacturer"] = response.get("manufacturer").get("manufacturer_name")
+        kwargs["android_version"] = kwargs["rom_version"] = kwargs["cpu_name"] = kwargs[
             "cpu_id"] = "Manual_device"
         kwargs["ip_address"] = "0.0.0.0"
         kwargs["auto_test"] = False

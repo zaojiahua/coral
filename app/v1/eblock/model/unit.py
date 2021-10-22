@@ -312,4 +312,4 @@ class Unit(BaseModel):
                     try:
                         os.remove(os.path.join(path,file))
                     except FileNotFoundError:
-                        print("un able to find similar file to delete")
+                        print("unable to find similar file to delete")

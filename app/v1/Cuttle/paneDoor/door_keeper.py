@@ -111,7 +111,8 @@ class DoorKeeper(object):
                                                         "phone_model_name": kwargs.get("phone_model_name")},
                            filter_unique_key=True)
         kwargs["manufacturer"] = response.get("manufacturer").get("manufacturer_name")
-        kwargs["android_version"] = kwargs["rom_version"] = kwargs["cpu_name"] = kwargs[
+        kwargs["rom_version"] = "Manual_"+kwargs["manufacturer"]
+        kwargs["android_version"] =  kwargs["cpu_name"] = kwargs[
             "cpu_id"] = "Manual_device"
         kwargs["ip_address"] = "0.0.0.0"
         kwargs["auto_test"] = False

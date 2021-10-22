@@ -108,9 +108,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def words_prepare(self, exec_content, key):
         data = self._validate(exec_content, schema=ImageBasicSchemaCompatible)
         words_list = exec_content.get(key).split(",")
-        input = self._crop_image(self.image, data.get("areas")[0])
-        path = os.path.join(self.kwargs.get("work_path"), f"ocr-{random.random()}.png")
-        cv2.imwrite(path, input)
+        path = self._crop_image_and_save(self.image, data.get("areas")[0])
         return words_list, path
 
     def record_words(self, exec_content) -> int:

@@ -77,9 +77,6 @@ class DoorKeeper(object):
             raise ArmNorEnough
 
     def get_connected_device_list(self, adb_response):
-        # [2021-10-20 16:05:06,380][DEBUG][door_keeper:524][140708765759232] - ShellCmdThread run end return List of devices attached
-        # ROOGAJI882800177       device usb:1-9 transport_id:14
-        # 192.168.2.152:5555     device transport_id:5
         try:
             # 在adb server没启动的时候，执行第一个命令会启动adb server，这个时候，返回的字符串包含了adb server启动的信息
             adb_response = re.sub(r'[\s\S]*(List of devices attached)', r'\1', adb_response)
@@ -88,7 +85,6 @@ class DoorKeeper(object):
 
         id_list = []
         for i in adb_response.split("\n")[1:]:
-            print(i)
             item = i.split(" ")[0]
             try:
                 descriptor = i.split(" ")[7]

@@ -283,12 +283,13 @@ class Unit(BaseModel):
                     if target_path.endswith('png'):
                         # 先缩放
                         origin_pic = cv2.imread(target_path, cv2.IMREAD_COLOR)
-                        origin_size = origin_pic.shape
-                        new_size = (int(origin_size[1] * PICTURE_COMPRESS_RATIO), int(origin_size[0] * PICTURE_COMPRESS_RATIO))
-                        compress_pic = cv2.resize(origin_pic, new_size)
-                        cv2.imwrite(target_path, compress_pic)
-                        # 后压缩
-                        self.pngquant_compress(target_path)
+                        if origin_pic is not None:
+                            origin_size = origin_pic.shape
+                            new_size = (int(origin_size[1] * PICTURE_COMPRESS_RATIO), int(origin_size[0] * PICTURE_COMPRESS_RATIO))
+                            compress_pic = cv2.resize(origin_pic, new_size)
+                            cv2.imwrite(target_path, compress_pic)
+                            # 后压缩
+                            self.pngquant_compress(target_path)
 
     @staticmethod
     def pngquant_compress(fp):

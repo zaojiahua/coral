@@ -52,6 +52,7 @@ class DJobFlow(BaseModel):
     status = OwnerBooleanHash()  # False 执行未完成  True 执行完成
     exec_node_index = models.IntegerField()  # 当前执行的node 节点的index
     recent_adb_wrong_code = models.IntegerField()  # 获取当前block 最后一条错误的adbc 指令的code default 为 0 表示没有错误
+    block_recent_adb_wrong_code = models.IntegerField()
     recent_img_res_list = OwnerList(
         to=int)  # 栈结构rpush,rpop 记录当前 normal 中img_tool结果，recent_img_res_list的结果会被switch or end 消耗
     recent_img_rpop_list = OwnerList(to=int)  # 栈结构 rpush,rpop  记录 被switch消耗的 recent_img_res_list的结果，用于end 结果收集
@@ -279,6 +280,7 @@ class DJobFlow(BaseModel):
         dJob_flow.execute()
         self.recent_img_res_list = None
         self.recent_img_rpop_list = None
+        self.block_recent_adb_wrong_code = None
         self.recent_img_res_list.rpush(int(dJob_flow.job_assessment_value))
         self.rds.eblock_list.rpush(dJob_flow.rds.json())
 
@@ -343,12 +345,13 @@ class DJobFlow(BaseModel):
             if len(self.recent_img_res_list):
                 score = self.recent_img_res_list.rpop()  # 最左边的最新
                 self.recent_img_rpop_list.rpush(score)  # 最右边的最新被遗弃的
-                if score == 1 and self.recent_adb_wrong_code:
-                    score = self.recent_adb_wrong_code
+                if score == 1 and self.block_recent_adb_wrong_code:
+                    score = self.block_recent_adb_wrong_code
 
                 score = str(score)
             else:
                 score = "else"
+            self.logger.info(f" switch 最后的计算结果是： {score}) .........")
         next_switch_dict = self.job.link_dict.get(job_node.node_key)
         next_node_dict = next_switch_dict[score] if score in next_switch_dict.keys() else next_switch_dict["else"]
 
@@ -367,6 +370,7 @@ class DJobFlow(BaseModel):
                          "lose_frame_point"]
         self.recent_img_res_list = None  # 每一个block 产生的结果会覆盖recent_img_res_list
         self.recent_img_rpop_list = None
+        self.block_recent_adb_wrong_code = None
 
         for unit_list in eblock.all_unit_list:
             for unit in unit_list.units:
@@ -395,6 +399,7 @@ class DJobFlow(BaseModel):
                 if unit.execModName == ADBC_TYPE:
                     if result is not None and result < 0:
                         self.recent_adb_wrong_code = result
+                        self.block_recent_adb_wrong_code = result
 
                 elif unit.execModName == IMGTOOL_TYPE or unit.execModName == COMPLEX_TYPE:
                     if result is not None:

@@ -60,5 +60,8 @@
     {
     "error_code": -10000,
     "description": "用例中unit key缺失"
+  },{
+    "error_code": -30,
+    "description": "截图变化对比unit中第二张图片不存在"
   }
 ]

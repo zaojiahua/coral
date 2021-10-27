@@ -73,7 +73,7 @@ def camera_start_3(camera_id, device_object, **kwargs):
     camera_dq_dict[device_object.pk] = dq
     redis_client.set("g_bExit", "0")
     response = camera_init_HK(**kwargs)
-    print("half done")
+    print("half done  has camera?",device_object.has_camera)
     camera_start_HK(dq, *response, device_object)
 
 
@@ -158,7 +158,7 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
             cam_obj.MV_CC_StopGrabbing()
             cam_obj.MV_CC_CloseDevice()
             cam_obj.MV_CC_DestroyHandle()
-            print("stop camera finished..")
+            print("stop camera finished..[Debug]")
             break
 
 

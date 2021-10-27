@@ -229,7 +229,6 @@ class DJobFlow(BaseModel):
         job_node = JobNode(node_key, node_dict)
 
         self.rds.last_node = job_node.node_type
-        print(job_node.node_type)
         if job_node.node_type == NORMAL_TYPE:
             self.exec_node_index += 1
             self._execute_normal(job_node)

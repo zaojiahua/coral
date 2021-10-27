@@ -180,6 +180,8 @@ class JobFormatTransform:
                         return 'fail'
                     elif nodeDict['text'] == 'Success':
                         return 'success'
+                    elif nodeDict['text'] == 'Abnormal':
+                        return 'Abnormal'
 
     def isEnd(self, blockKey, nodeDataArray):
         existEnd = False

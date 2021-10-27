@@ -280,7 +280,7 @@ class DJobFlow(BaseModel):
         dJob_flow.execute()
         self.recent_img_res_list = None
         self.recent_img_rpop_list = None
-        self.block_recent_adb_wrong_code = None
+        self.block_recent_adb_wrong_code = 0
         self.recent_img_res_list.rpush(int(dJob_flow.job_assessment_value))
         self.rds.eblock_list.rpush(dJob_flow.rds.json())
 
@@ -293,8 +293,8 @@ class DJobFlow(BaseModel):
                 self._eblock_return_data_parse(self.current_eblock)
                 block_rds = self.current_eblock.json()
                 if self.recent_img_res_list and len(self.recent_img_res_list) > 0:
-                    block_result = self.recent_img_res_list[-1]
-                    block_rds['value'] = block_result
+                    score = self._get_score(False)
+                    block_rds['value'] = score
                 self.rds.eblock_list.rpush(block_rds)
                 self.current_eblock.remove()
 
@@ -342,21 +342,30 @@ class DJobFlow(BaseModel):
         else:
             switch_node_dict[job_node.node_key] += 1
 
-            if len(self.recent_img_res_list):
-                score = self.recent_img_res_list.rpop()  # 最左边的最新
-                self.recent_img_rpop_list.rpush(score)  # 最右边的最新被遗弃的
-                if score == 1 and self.block_recent_adb_wrong_code:
-                    score = self.block_recent_adb_wrong_code
-
-                score = str(score)
-            else:
-                score = "else"
-            self.logger.info(f" switch 最后的计算结果是： {score}) .........")
+            score = self._get_score()
         next_switch_dict = self.job.link_dict.get(job_node.node_key)
         next_node_dict = next_switch_dict[score] if score in next_switch_dict.keys() else next_switch_dict["else"]
 
         self.switch_node_dict = switch_node_dict
         return next_node_dict
+
+    # 获取block的执行结果，根据该结果执行Switch分支
+    def _get_score(self, is_switch=True):
+        if len(self.recent_img_res_list):
+            if is_switch:
+                score = self.recent_img_res_list.rpop()  # 最左边的最新
+                self.recent_img_rpop_list.rpush(score)  # 最右边的最新被遗弃的
+            else:
+                score = self.recent_img_res_list[-1]
+
+            if score == 1 and self.block_recent_adb_wrong_code:
+                score = self.block_recent_adb_wrong_code
+            score = str(score)
+        else:
+            score = "else"
+
+        self.logger.info(f" switch 最后的计算结果是： {score}) .........")
+        return score
 
     def _eblock_return_data_parse(self, eblock):
         """
@@ -370,7 +379,7 @@ class DJobFlow(BaseModel):
                          "lose_frame_point"]
         self.recent_img_res_list = None  # 每一个block 产生的结果会覆盖recent_img_res_list
         self.recent_img_rpop_list = None
-        self.block_recent_adb_wrong_code = None
+        self.block_recent_adb_wrong_code = 0
 
         for unit_list in eblock.all_unit_list:
             for unit in unit_list.units:

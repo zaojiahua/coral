@@ -97,7 +97,7 @@ class Complex_Center(object):
         return float(result.get("cx")), float(result.get("cy"))
 
     def get_result(self, parse_function=default_parse_response.__func__):
-        # ocr 识别的方法
+        # ocr 识别的方法,传递要识别的文字，做精确匹配。
         # ocr请求最多retry3次
         for i in range(3):
             # 如果有文字的话，文字要传递给ocr服务，找文字位置，没有文字的话是识别所有的文字再做判断
@@ -130,7 +130,7 @@ class Complex_Center(object):
             raise OcrRetryTooManyTimes(description=f"ocr response:{response}")
 
     def get_result_ignore_speed(self):
-        # 与上面的方法有一些区别，
+        # 与上面的方法有一些区别，不传递要识别的文字，拿到所有的文字结果，用来做in的判定
         for i in range(3):
             pic_path = self.default_pic_path if self._pic_path == None else self._pic_path
             response = self._ocr_request(pic_path=pic_path)

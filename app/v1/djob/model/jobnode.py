@@ -8,7 +8,6 @@ class JobNode:
         self.node_key = node_key
 
         if node_dict is None:  # fail or end or success
-            print("???",node_key)
             if node_key in [END_TYPE, FAILED_TYPE, SUCCESS_TYPE,ABNORMAL_TYPE]:
                 self.node_type = node_key
             else:

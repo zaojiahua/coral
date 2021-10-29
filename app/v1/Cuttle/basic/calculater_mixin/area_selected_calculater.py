@@ -69,7 +69,8 @@ class AreaSelectedMixin(object):
         input_im_2_path = self._crop_image_and_save(data.get("input_im_2"), data.get("areas")[0])
         input_im_path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         # 直接对比两张图的rgb均值
-        return self.numpy_array(cv2.imread(input_im_path), cv2.imread(input_im_2_path), threshold_set(data.get("threshold", 0.99)))
+        return self.numpy_array(cv2.imread(input_im_path), cv2.imread(input_im_2_path),
+                                threshold_set(data.get("threshold", 0.99)))
 
     def has_icon_template_match(self, exec_content) -> int:
         # 确认图标存在-1
@@ -115,8 +116,6 @@ class AreaSelectedMixin(object):
         result = cv2.matchTemplate(target, template, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         return max_val
-
-
 
     # ----------------------------------------文字相关-----------------------------------------------------
     def crop_input_picture_record_position(self, data, ocr_obj, config_name):

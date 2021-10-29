@@ -2,6 +2,7 @@ import collections
 import copy
 import re
 import time
+import traceback
 
 from marshmallow import ValidationError
 
@@ -113,6 +114,7 @@ class Handler():
                         raise e
                     except Exception as e:
                         self._model.logger.error(f'tGuard error: {str(e)}')
+                        traceback.print_exc()
                     return abnormal.code
         result = result if isinstance(result, int) else 0
         return result

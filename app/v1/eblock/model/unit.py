@@ -268,7 +268,8 @@ class Unit(BaseModel):
                 if not os.path.exists(target_path):
                     shutil.copyfile(os.path.join(self.unit_work_path, file), target_path)
                     self.pictures.lpush(target_name)
-            elif file.startswith("ocr-") or file.startswith("crop-"):
+            elif file.startswith("ocr-") or file.startswith("crop-") or file.endswith("-crop.png") or file.endswith(
+                    "-Tguard.png"):
                 # 复合型unit产生的图片只有自己会使用，因此move即可
                 shutil.move(os.path.join(self.unit_work_path, file), target_path)
                 self.pictures.lpush(target_name)
@@ -285,7 +286,9 @@ class Unit(BaseModel):
                         origin_pic = cv2.imread(target_path, cv2.IMREAD_COLOR)
                         if origin_pic is not None:
                             origin_size = origin_pic.shape
-                            new_size = (int(origin_size[1] * PICTURE_COMPRESS_RATIO), int(origin_size[0] * PICTURE_COMPRESS_RATIO))
+                            new_size = (
+                                int(origin_size[1] * PICTURE_COMPRESS_RATIO),
+                                int(origin_size[0] * PICTURE_COMPRESS_RATIO))
                             compress_pic = cv2.resize(origin_pic, new_size)
                             cv2.imwrite(target_path, compress_pic)
                             # 后压缩
@@ -305,12 +308,13 @@ class Unit(BaseModel):
             similar_file_2 = os.path.join(path, file_name[:-5] + ".png")
             if file_name.endswith("crop") and (os.path.exists(similar_file) or os.path.exists(similar_file_2)):
                 src_crop = cv2.imread(os.path.join(path, file))
-                src = cv2.imread(os.path.join(path,file_name[:-5] + ".jpg"))
-                src_2 = cv2.imread(os.path.join(path,file_name[:-5] + ".png"))
+                src = cv2.imread(os.path.join(path, file_name[:-5] + ".jpg"))
+                src_2 = cv2.imread(os.path.join(path, file_name[:-5] + ".png"))
                 src = src if src is not None else src_2
                 # 名称前缀相同，且图片尺寸相同则认为是没经过裁剪
                 if src_crop.shape == src.shape:
                     try:
-                        os.remove(os.path.join(path,file))
+                        os.remove(os.path.join(path, file))
+                        print("delete one pic。。。")
                     except FileNotFoundError:
                         print("unable to find similar file to delete")

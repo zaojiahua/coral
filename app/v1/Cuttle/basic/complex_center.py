@@ -33,8 +33,8 @@ class Complex_Center(object):
         # _pic_path 存实例化时传入的图（很可能没有）
         self._pic_path = inputImgFile
         # 如果传入的图为正式格式，就往work_path复制一份，用以最后上传至rds 的结果图片
-        if type(inputImgFile) == str and inputImgFile.split(".")[-1].upper() in ["PNG", "JPG", "JPEG", "GIF", "TIF"]:
-            shutil.copy(inputImgFile, os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png"))
+        # if type(inputImgFile) == str and inputImgFile.split(".")[-1].upper() in ["PNG", "JPG", "JPEG", "GIF", "TIF"]:
+        #     shutil.copy(inputImgFile, os.path.join(work_path, f"ocr-{str(random.random())[:7]}-InputCopy.png"))
         # ocr 要查找的文字
         self._searching_word = requiredWords
         # 找到文字后的偏移量

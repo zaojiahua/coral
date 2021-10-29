@@ -126,15 +126,14 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def clear(self, result, t_guard):
         if t_guard is None or t_guard == 1:
             with Complex_Center(**self.kwargs) as ocr_obj:
-                if not hasattr(self, "image") or self.image is None:
-                    ocr_obj.snap_shot()
-                else:
-                    ocr_obj.default_pic_path = self.image
+                ocr_obj.snap_shot()
                 ocr_obj.get_result(parse_function=self._parse_function)
                 if ocr_obj.result == 0:
                     ocr_obj.point()
-                shutil.move(ocr_obj.default_pic_path, get_file_name(ocr_obj.default_pic_path) + '-Tguard.png')
-                return ocr_obj.result
+            pic_name = ".".join(ocr_obj.default_pic_path.split(os.sep)[-1].split(".")[:-1])
+            new_path = os.path.join(self.kwargs.get("work_path"), pic_name + "-Tguard.png")
+            shutil.move(ocr_obj.default_pic_path, new_path)
+            return ocr_obj.result
 
     #   -------------辅助函数---------
     def _validate(self, exec_content, schema):
@@ -178,7 +177,10 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         # 在上一个方法的基础上，把结果保存到返回的路径中去
         src = self._crop_image(image_path, area)
         if src is not None:
-            new_path = ".".join(image_path.split(".")[:-1]) + mark + "-crop.jpg"
+            unit_work_path = self.kwargs.get("work_path") if self.kwargs.get("work_path") else os.path.dirname(image_path)
+            pic_name = ".".join(image_path.split(os.sep)[-1].split(".")[:-1])
+            new_path = os.path.join(unit_work_path, pic_name + "-crop.png")
+            # new_path = ".".join(image_path.split(".")[:-1]) + mark + "-crop.jpg"
             cv2.imwrite(new_path, src)
             return new_path
 

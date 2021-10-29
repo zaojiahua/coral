@@ -1,3 +1,5 @@
+import traceback
+
 from flask import request, jsonify
 
 from flask.views import MethodView
@@ -96,4 +98,5 @@ def ocr_test():
         request_params.update(request.form.to_dict())
         return jsonify(image_handler.test_ocr_result(request_params)), 200
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"status": repr(e)}), 400

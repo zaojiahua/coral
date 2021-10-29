@@ -155,8 +155,8 @@ class Handler():
             from app.v1.device_common.device_model import Device
             w = Device(pk=self._model.pk).device_width * x
             h = Device(pk=self._model.pk).device_height * y
-            self.exec_content = self.exec_content.replace(str(x), str(w))
-            self.exec_content = self.exec_content.replace(str(y), str(h))
+            self.exec_content = self.exec_content.replace(result.group(1), str(w),1)
+            self.exec_content = self.exec_content.replace(result.group(2), str(h),1)
         return normal_result
 
     def _relative_point(self):
@@ -168,8 +168,8 @@ class Handler():
             from app.v1.device_common.device_model import Device
             w = Device(pk=self._model.pk).device_width * x
             h = Device(pk=self._model.pk).device_height * y
-            self.exec_content = self.exec_content.replace(str(x), str(w))
-            self.exec_content = self.exec_content.replace(str(y), str(h))
+            self.exec_content = self.exec_content.replace(result.group(1), str(w),1)
+            self.exec_content = self.exec_content.replace(result.group(2), str(h),1)
         return normal_result
 
     def _relative_swipe(self):
@@ -187,10 +187,10 @@ class Handler():
             h1 = Device(pk=self._model.pk).device_height * y1
             w2 = Device(pk=self._model.pk).device_width * x2
             h2 = Device(pk=self._model.pk).device_height * y2
-            self.exec_content = self.exec_content.replace(result.group(1), str(w1))
-            self.exec_content = self.exec_content.replace(result.group(2), str(h1))
-            self.exec_content = self.exec_content.replace(result.group(3), str(w2))
-            self.exec_content = self.exec_content.replace(result.group(4), str(h2))
+            self.exec_content = self.exec_content.replace(result.group(1), str(w1),1)
+            self.exec_content = self.exec_content.replace(result.group(2), str(h1),1)
+            self.exec_content = self.exec_content.replace(result.group(3), str(w2),1)
+            self.exec_content = self.exec_content.replace(result.group(4), str(h2),1)
 
         return normal_result
 

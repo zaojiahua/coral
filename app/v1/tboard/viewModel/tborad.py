@@ -65,9 +65,11 @@ class TBoardViewModel(object):
                             tboard_path=tboard_path)
 
         self.logger.info(
-            f"create tboard tboard_id:{tboard_obj.tboard_id} own_label:{tboard_obj.owner_label}")
+            f"create tboard tboard_id:{tboard_obj.tboard_id} own_label:{tboard_obj.owner_label}"
+            f" now time usable_device_list:{usable_device_list}")
 
         dut_list = self.add_dut_list(usable_device_list)
+        self.logger.info("dut list created...")
         if dut_list:  # 保证dut被创建  (有空闲的device)
             tboard_obj.dut_list.sadd(*dut_list)  # set 用sadd
         return tboard_obj

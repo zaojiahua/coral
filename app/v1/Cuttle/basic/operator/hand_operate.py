@@ -329,7 +329,7 @@ class HandHandler(Handler, DefaultMixin):
         end_x, end_y = end_point
         # 连续滑动保证动作无偏差
         from app.v1.Cuttle.basic.setting import last_swipe_end_point
-        th = 15 if CORAL_TYPE < 5 else 1
+        th = 15 if CORAL_TYPE < 4 else 1
         if np.abs(start_x - last_swipe_end_point[0]) < th and np.abs(start_y - last_swipe_end_point[1]) < th:
             start_x, start_y = last_swipe_end_point
         last_swipe_end_point[0] = end_x

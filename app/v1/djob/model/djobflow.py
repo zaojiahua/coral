@@ -298,7 +298,7 @@ class DJobFlow(BaseModel):
                 block_rds = self.current_eblock.json()
                 if self.recent_img_res_list and len(self.recent_img_res_list) > 0:
                     score = self._get_score(False)
-                    block_rds['value'] = score
+                    block_rds['value'] = int(score)
                 self.rds.eblock_list.rpush(block_rds)
                 self.current_eblock.remove()
 

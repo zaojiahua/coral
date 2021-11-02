@@ -64,7 +64,8 @@ handler_config = {
     "point": ("AdbHandler", "HandHandler"),
     "long_press": ("AdbHandler", "HandHandler"),
     "swipe": ("AdbHandler", "HandHandler"),
-    "snap_shot": ("AdbHandler", "CameraHandler")
+    "snap_shot": ("AdbHandler", "CameraHandler"),
+    'bug_report': ('AdbHandler',)
 }
 strip_str = '<>[]{}/",.\n、'
 # 特征词

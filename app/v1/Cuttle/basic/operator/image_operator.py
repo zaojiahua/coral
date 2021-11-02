@@ -130,6 +130,12 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
                 ocr_obj.get_result(parse_function=self._parse_function)
                 if ocr_obj.result == 0:
                     ocr_obj.point()
+
+                # 检测无响应的情况
+                if self.detect_no_response(ocr_obj.ocr_result):
+                    ocr_obj.bug_report()
+                    raise DetectNoResponse
+
             pic_name = ".".join(ocr_obj.default_pic_path.split(os.sep)[-1].split(".")[:-1])
             new_path = os.path.join(self.kwargs.get("work_path"), pic_name + "-Tguard.png")
             shutil.move(ocr_obj.default_pic_path, new_path)
@@ -142,13 +148,19 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return data
 
     @staticmethod
-    def _parse_function(result_list):
+    def detect_no_response(result_list):
         bounced_words = BouncedWords.first().words.values()
         print(f"干扰词是：", bounced_words)
         for i in result_list:
             for word in serious_words:
                 if word in i.get('text'):
-                    raise DetectNoResponse
+                    return True
+        return False
+
+    @staticmethod
+    def _parse_function(result_list):
+        bounced_words = BouncedWords.first().words.values()
+        print(f"干扰词是：", bounced_words)
         for i in result_list:
             for word in bounced_words:
                 if word == i.get("text"):

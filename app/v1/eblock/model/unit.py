@@ -129,7 +129,6 @@ class Unit(BaseModel):
         if not os.path.exists(self.unit_work_path):
             os.makedirs(self.unit_work_path)
 
-        @func_set_timeout(timeout=self.timeout if self.timeout else DEFAULT_TIMEOUT)
         def _inner_func():
             # 默认保存bugreport.zip 根据2021/7/2客户需求，储存并下载zip文件
             save_list = [Bugreport_file_name]
@@ -196,6 +195,7 @@ class Unit(BaseModel):
                 sending_data["test_running"] = True
             sending_data["work_path"] = self.unit_work_path
             sending_data["device_label"] = self.device_label
+            sending_data['timeout'] = self.timeout
             if self.ocrChoice:
                 sending_data["ocr_choice"] = self.ocrChoice
             if self.tGuard:
@@ -267,7 +267,8 @@ class Unit(BaseModel):
                 shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
                 if not os.path.exists(target_path):
                     shutil.copyfile(os.path.join(self.unit_work_path, file), target_path)
-                    self.pictures.lpush(target_name)
+                    if Bugreport_file_name not in target_name:
+                        self.pictures.lpush(target_name)
             elif file.startswith("ocr-") or file.startswith("crop-") or file.endswith("-crop.png") or file.endswith(
                     "-Tguard.png"):
                 # 复合型unit产生的图片只有自己会使用，因此move即可

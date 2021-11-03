@@ -10,7 +10,7 @@ HAND_MAX_X = 315
 HAND_MAX_Y = 245
 Z_START = 0
 # Z_DOWN = -3.5   tianjing setting
-Z_DOWN = -27
+Z_DOWN = -26
 Z_UP = 0
 MOVE_SPEED = 15000
 SWIPE_TIME = 1
@@ -64,7 +64,8 @@ handler_config = {
     "point": ("AdbHandler", "HandHandler"),
     "long_press": ("AdbHandler", "HandHandler"),
     "swipe": ("AdbHandler", "HandHandler"),
-    "snap_shot": ("AdbHandler", "CameraHandler")
+    "snap_shot": ("AdbHandler", "CameraHandler"),
+    'bug_report': ('AdbHandler',)
 }
 strip_str = '<>[]{}/",.\n、'
 # 特征词

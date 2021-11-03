@@ -18,6 +18,7 @@ from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec, get_file_name
 from app.v1.Cuttle.basic.setting import chinese_ingore, icon_min_template, icon_min_template_camera, \
     light_pyramid_setting
+from app.v1.eblock.config.setting import BUG_REPORT_TIMEOUT
 
 
 class Complex_Center(object):
@@ -41,7 +42,9 @@ class Complex_Center(object):
         self.x_shift, self.y_shift = self._shift(xyShift)
         # 这个图用来执行时 当场截图存放
         self.default_pic_path = os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png")
+        self.work_path = work_path
         self.result = 0
+        self.ocr_result = None
         from app.v1.device_common.device_model import Device
         device = Device(pk=device_label)
         # 僚机mode为0，其他除了5型柜也都为0
@@ -114,10 +117,12 @@ class Complex_Center(object):
                     rpic_path = self.default_pic_path if self.default_pic_path is not None else self._pic_path
                     self.cal_realy_xy(pic_x, pic_y, rpic_path)
                     self.result = 0
+                    self.ocr_result = response.get('result')
                     break
                 # 需要return所有识别出所有文字的结果。
                 else:
                     self.result = response.get('result')
+                    self.ocr_result = response.get('result')
                     return self.result
             # ocr 找不到对应文字情况，抛异常，会被exit中捕获把结果设置为1
             elif response.get("status") == "not found":
@@ -318,6 +323,18 @@ class Complex_Center(object):
             raise ComplexSnapShotFail(error_code=self.result,
                                       description=str(self.result))
         self.logger.debug("snap-shot in smart ocr finished ")
+
+    @handler_switcher
+    def bug_report(self, **kwargs):
+        from app.v1.device_common.device_model import Device
+        device = Device(pk=self.device_label)
+        if not device.has_camera:
+            cmd_list = [
+                f"bugreport {self.work_path}bugreport.zip"
+            ]
+            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, BUG_REPORT_TIMEOUT)
+            handler_exec(request_body, kwargs.get("handler")[0])
+            self.logger.debug("bug report finished ")
 
     def picture_crop(self):
         src = cv2.imread(self.default_pic_path)

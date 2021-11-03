@@ -13,7 +13,7 @@ from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result
 from app.execption.outer.error_code.imgtool import DetectNoResponse
-from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
+from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
 Standard = collections.namedtuple("Standard", ["mark", "code"])
@@ -41,6 +41,7 @@ class Handler():
         self.timeout = 40
         self.kwargs = kwargs
         self.handler_timeout = self.kwargs.get('timeout') or DEFAULT_TIMEOUT
+        self.str_handler_timeout = self.kwargs.get('timeout') or ADB_DEFAULT_TIMEOUT
         self.extra_result = {}
 
     def __new__(cls, *args, **kwargs):
@@ -104,7 +105,7 @@ class Handler():
     @do.register(str)
     def _(self, exec_content, **kwargs):
         # 处理content为字符串的unit
-        @func_set_timeout(timeout=self.handler_timeout)
+        @func_set_timeout(timeout=self.str_handler_timeout)
         def _inner_func():
             return self.str_func(exec_content, **kwargs)
 

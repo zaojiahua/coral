@@ -146,6 +146,7 @@ class Unit(BaseModel):
                                                                   device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
+                        self.detail = {"result": ex.error_code}
                         return
                     if save_file:
                         save_list.append(save_file)
@@ -182,6 +183,7 @@ class Unit(BaseModel):
                                                                 device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
+                        self.detail = {"result": ex.error_code}
                         return
                     if save_file:
                         save_list.append(save_file)

@@ -329,7 +329,9 @@ class HandHandler(Handler, DefaultMixin):
         end_x, end_y = end_point
         # 连续滑动保证动作无偏差
         from app.v1.Cuttle.basic.setting import last_swipe_end_point
+        # 在4,5 型号柜1代表毫米，其他型柜15代表像素，所以这里做区分。
         th = 15 if CORAL_TYPE < 4 else 1
+        # 如果前一滑动的终止点和下一次滑动的起始点很接近，我们认为就是要连续滑动，直接把其赋值为相同点。并且每次都缓存此次的终止点做下次对比
         if np.abs(start_x - last_swipe_end_point[0]) < th and np.abs(start_y - last_swipe_end_point[1]) < th:
             start_x, start_y = last_swipe_end_point
         last_swipe_end_point[0] = end_x

@@ -13,7 +13,7 @@ door = Blueprint('door', __name__)
 # 前两个为设备注册用url，先get 再set
 door.add_url_rule('/set_device_in_door/', view_func=SetDevice.as_view('set_device_in_door'))
 door.add_url_rule('/get_device_in_door/', view_func=GetDevice.as_view('get_device_in_door'))
-# 注册僚机的url
+# 注册僚机的url，顺序同主机先get 再set
 door.add_url_rule('/get_assistance_device_in_door/', view_func=GetAssisDevice.as_view('get_assistance_device_in_door'))
 door.add_url_rule('/set_assistance_device_in_door/', view_func=SetAssisDevice.as_view('set_assistance_device_in_door'))
 # 注册非adb设备的url

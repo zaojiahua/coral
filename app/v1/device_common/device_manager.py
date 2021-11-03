@@ -7,7 +7,7 @@ from redis_init import redis_client
 
 device_process_list_filed = "device:process"
 device_thread_list_filed = "device:thread:{}"
-
+# 这个文件主要是用来对每个设备的线程做监控的，之前用来debug用，不涉及到业务逻辑逻辑
 
 def add_device_thread_status(device_label):
     redis_client.sadd(device_process_list_filed, os.getpid())

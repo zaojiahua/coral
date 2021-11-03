@@ -4,6 +4,7 @@ import re
 import time
 import traceback
 
+import func_timeout
 from func_timeout import func_set_timeout
 from marshmallow import ValidationError
 
@@ -98,7 +99,7 @@ class Handler():
             # 具体执行方法，这部分处理不是字符串的unit
             return self.func(exec_content, **kwargs)
 
-        return _inner_func()
+        return self.retry_timeout_func(_inner_func)
 
     @do.register(str)
     def _(self, exec_content, **kwargs):
@@ -107,7 +108,18 @@ class Handler():
         def _inner_func():
             return self.str_func(exec_content, **kwargs)
 
-        return _inner_func()
+        return self.retry_timeout_func(_inner_func)
+
+    @staticmethod
+    def retry_timeout_func(func, max_retry_time=3):
+        retry_time = 0
+        while retry_time < max_retry_time:
+            try:
+                return func()
+            except func_timeout.exceptions.FunctionTimedOut as e:
+                retry_time += 1
+                if retry_time == max_retry_time:
+                    raise e
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:

@@ -29,7 +29,7 @@ class PerformanceMinix(object):
 
     def swipe_calculate(self, exec_content, bias):
         data = self._validate(exec_content, PerformanceSchema)
-        # 获取用户的icon选区，按中心点重建边长为30的正方形选区
+        # 获取用户的icon选区，按中心点重建边长为30的正方形选区，如果机械臂的延长角铁变细这个可以随着做一些变化
         x1 = data.get("icon_areas")[0][0]
         y1 = data.get("icon_areas")[0][1]
         x2 = data.get("icon_areas")[0][2]
@@ -44,6 +44,7 @@ class PerformanceMinix(object):
         self.swipe_calculate(exec_content, BIAS)
 
     def start_point_with_point_template(self, exec_content):
+        # 点击相应的主要使用方法
         # 使用实际位置是否为黑色（机械臂遮挡）判定起始按下时间
         data = self._validate(exec_content, PerformanceSchema)
         content = exec_content.copy()
@@ -61,7 +62,7 @@ class PerformanceMinix(object):
             ocr_obj.snap_shot()
             # 截图按选区先进行裁剪，再set进_pic_path
             ocr_obj._pic_path = self._crop_image_and_save(ocr_obj.default_pic_path, data["areas"][0])
-            # 裁剪前的摄像头下的实际图片，赋值给Tguard的判定依据
+            # 裁剪前的摄像头下的实际图片，赋值给Tguard的判定依据（2021-11-14更新，这步已经没有用了）
             self.image = ocr_obj.default_pic_path
             # 此处得到的是icon在裁剪后的，摄像头下，图中的绝对坐标
             try:
@@ -84,13 +85,14 @@ class PerformanceMinix(object):
                                    icon_real_position_camera[2] / w, icon_real_position_camera[3] / h]]
             if self.kwargs.get("test_running"):  # 对试运行的unit只进行点击，不计算时间。
                 return 0
-        # 创建performance对象，
+        # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"), self.dq, bias=BIAS)
         return performance.start_loop(self._black_field)
 
     def start_point_with_point(self, exec_content):
+        # 跟上面那个方法差不多，就是把模板匹配换成surf特征了，其实可以重构时候做些合并
         # 使用实际位置是否为黑色（机械臂遮挡）判定起始按下时间
         data = self._validate(exec_content, PerformanceSchema)
         content = exec_content.copy()
@@ -138,6 +140,7 @@ class PerformanceMinix(object):
         return performance.start_loop(self._black_field)
 
     def start_point_with_point_fixed(self, exec_content):
+        # 与上面两个方法也差不多，不做图标搜索了，就是按给的图标位置直接按，适合特别难识别的图标，但没有抵抗变化的能力
         data = self._validate(exec_content, PerformanceSchemaCompare)
         x1, y1, x2, y2 = data.get("areas")[0]
         x = (x1 + x2) / 2
@@ -156,6 +159,7 @@ class PerformanceMinix(object):
                                         self.kwargs.get("work_path"), self.dq, bias=BIAS)
         return performance.start_loop(self._black_field)
 
+    # 下面几个就是上面那几个结束点版本
     def end_point_with_icon(self, exec_content):
         return self._end_point(exec_content, PerformanceSchema, self._icon_find)
 
@@ -241,7 +245,13 @@ class PerformanceMinix(object):
         return response
 
     def _icon_find_template_match(self, picture, icon, next_pic, th):
+        # 这个是用来做阈值过滤的方法
+        # self.template_match_temp 返回的是模板匹配后得到的max value值
+        # 这个值越接近1代表匹配的结果越接近
         max_value_1 = self.template_match_temp(picture, icon)
+        # 这部分主要有历史原因，因为之前的用例阈值都默认给了99%，所以向下调可以98%，97% 但是向上只能99.5% 99.9%这样
+        # 由于上下调整的幅度不一致（差一位）,所以这块做了区别处理，让其调整的幅度变成相同的。
+        # 统一原则是th变大--> 此方法判定严格-->最后得到的点延后
         if 0.999 >= th > 0.99:
             th = (1 - th) * 10 + 0.99
         elif 1 >= th > 0.999:
@@ -259,6 +269,7 @@ class PerformanceMinix(object):
         # error = np.sum(np.subtract(last_pic,next_pic) **2)
         # error /= last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         # print("mse error:",error)
+        # 这个方法和上面一样，也是调节了阈值的范围，让向下和向上变成相同的力度。
         if 0.999 >= threshold > 0.99:
             threshold = (1 - threshold) * 10 + 0.99
         elif 1 >= threshold > 0.999:

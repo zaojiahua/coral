@@ -4,6 +4,7 @@ import re
 import time
 import traceback
 
+import func_timeout
 from func_timeout import func_set_timeout
 from marshmallow import ValidationError
 
@@ -12,7 +13,7 @@ from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result
 from app.execption.outer.error_code.imgtool import DetectNoResponse
-from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
+from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
 Standard = collections.namedtuple("Standard", ["mark", "code"])
@@ -40,6 +41,7 @@ class Handler():
         self.timeout = 40
         self.kwargs = kwargs
         self.handler_timeout = self.kwargs.get('timeout') or DEFAULT_TIMEOUT
+        self.str_handler_timeout = self.kwargs.get('timeout') or ADB_DEFAULT_TIMEOUT
         self.extra_result = {}
 
     def __new__(cls, *args, **kwargs):
@@ -98,16 +100,27 @@ class Handler():
             # 具体执行方法，这部分处理不是字符串的unit
             return self.func(exec_content, **kwargs)
 
-        return _inner_func()
+        return self.retry_timeout_func(_inner_func)
 
     @do.register(str)
     def _(self, exec_content, **kwargs):
         # 处理content为字符串的unit
-        @func_set_timeout(timeout=self.handler_timeout)
+        @func_set_timeout(timeout=self.str_handler_timeout)
         def _inner_func():
             return self.str_func(exec_content, **kwargs)
 
-        return _inner_func()
+        return self.retry_timeout_func(_inner_func)
+
+    @staticmethod
+    def retry_timeout_func(func, max_retry_time=3):
+        retry_time = 0
+        while retry_time < max_retry_time:
+            try:
+                return func()
+            except func_timeout.exceptions.FunctionTimedOut as e:
+                retry_time += 1
+                if retry_time == max_retry_time:
+                    raise e
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:

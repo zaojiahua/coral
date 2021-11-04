@@ -250,8 +250,12 @@ class AutoPaneBorderView(MethodView):
                 continue
             box_list.append((box, area))
         box_list.sort(key=lambda x: x[1], reverse=True)
-        point = box_list[0][0].tolist()
-        point.sort(key=lambda x:x[0]+x[1])
+        try:
+            point = box_list[0][0].tolist()
+        except IndexError:
+            return jsonify(
+                {"status": "can not find suitable area, please make sure phone is showing a light page"}), 400
+        point.sort(key=lambda x: x[0] + x[1])
         return jsonify({"upper_left_x": int(point[0][0]),
                         "upper_left_y": int(point[0][1]),
                         "under_right_x": int(point[3][0]),

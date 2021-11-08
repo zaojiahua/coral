@@ -1,3 +1,4 @@
+import copy
 import os
 import shutil
 import subprocess
@@ -215,7 +216,9 @@ class Unit(BaseModel):
                         break
                 else:
                     # 三次Tguard后unit结果设置为1
-                    self.detail.update({"result": 1})
+                    result = copy.deepcopy(self.detail)
+                    result.update({"result": 1})
+                    self.detail = result
             except DetectNoResponse as e:
                 self.detail = {"result": e.error_code}
                 raise e

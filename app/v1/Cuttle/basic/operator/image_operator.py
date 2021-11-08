@@ -43,7 +43,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     process_list = [Abnormal(mark=1, method="clear", code=1),
                     Abnormal(mark=2, method="clear", code=0)]
 
-    skip_list = ["realtime_picture_compare", "end_point_with_fps_lost"]
+    skip_list = ["realtime_picture_compare", "end_point_with_fps_lost","initiative_remove_interference"]
 
     def img_compare_func3(self, exec_content, **kwargs) -> int:
         # 图像对比，均值方差对比方法，现在基本不在用了。

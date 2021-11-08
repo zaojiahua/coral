@@ -31,7 +31,7 @@ class Handler():
     standard_list = []
 
     skip_retry_list = ["end_point_with_icon", "end_point_with_icon_template_match", "end_point_with_changed",
-                       "end_point_with_fps_lost"]
+                       "end_point_with_fps_lost","initiative_remove_interference"]
 
     def __init__(self, *args, **kwargs):
         self._model = kwargs.get("model", Dummy_model(False, 0, setup_logger(f'dummy', 'dummy.log')))

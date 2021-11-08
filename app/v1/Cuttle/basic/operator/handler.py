@@ -43,6 +43,7 @@ class Handler():
         self.handler_timeout = self.kwargs.get('timeout') or DEFAULT_TIMEOUT
         self.str_handler_timeout = self.kwargs.get('timeout') or ADB_DEFAULT_TIMEOUT
         self.extra_result = {}
+        self.optional_input_image = self.kwargs.get('optional_input_image') or 0
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):

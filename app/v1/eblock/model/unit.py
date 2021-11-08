@@ -115,6 +115,7 @@ class Unit(BaseModel):
     unit_list_index = models.IntegerField()
     pictures = OwnerList(to=str)
     unit_work_path = models.CharField()
+    optionalInputImage = models.IntegerField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures')
 
@@ -205,6 +206,8 @@ class Unit(BaseModel):
                 sending_data['t_guard'] = self.tGuard
             if assist_device_ident:
                 sending_data["assist_device_serial_number"] = assist_device_ident
+            if self.optionalInputImage:
+                sending_data['optional_input_image'] = self.optionalInputImage
             logger.info(f"unit:{sending_data}")
             try:
                 for i in range(3):

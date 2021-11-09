@@ -51,12 +51,14 @@ class FeatureCompareMixin:
         return 1
 
     def identify_icon_point(self, input_img, icon_img, height=None, width=None):
+        # 有要求小图标不能过小，否则即使能匹配到一些，特征点也太小
         l = self.shape_identify(input_img, icon_img)
         if len(l) < 4:
             self._model.logger.error(f"Too few feature points：{len(l)}")
             raise IconTooWeek
             # return 2010
         self._model.logger.info(f" icon feature number:{len(l)}")
+        # 对得到的goodmatch 再进行4分类的聚类，取数目最多的那个类型。
         code, centroids = FeatureCompareMixin.kmeans_clustering(l, 4)
         max_centro = Counter(code).most_common(1)[0][0]
         return centroids[max_centro]
@@ -114,6 +116,9 @@ class FeatureCompareMixin:
         :param inputImg: 图片
         :return: 关键点，描述子
         """
+        # 这块的几个参数完全决定了surf的得到的key point的个数
+        # hessian矩阵阈值主要做限制，特征金字塔的层数个数限制效果，upright为true代表不考虑旋转不变性
+        # extended =TRUE 实验中对效果有明显改善，建议后续调整非必要不要去掉
         surf = cv2.xfeatures2d.SURF_create(hessianThreshold=50, nOctaves=4, nOctaveLayers=3, extended=True,
                                            upright=True)  # 初始化surf特征
         kp, des = surf.detectAndCompute(input_img, None)  # 提取关键点和描述符
@@ -135,12 +140,17 @@ class FeatureCompareMixin:
         return code, centroids
 
     def shape_identify(self, input_img, icon_img):
+        # 先对refer图标和待识别大图分别进行surf计算，得到特征点和对应的描述符
         kp1, des1 = self.feature_detection_by_surf(input_img)
         kp2, des2 = self.feature_detection_by_surf(icon_img)
         if len(kp1) < 4 or len(kp2) < 4:
+            # 特征点小于4个无论能不能匹配上，后面都无法聚类了，所以直接抛异常
             if isinstance(self._model.logger, logging.Logger):
                 self._model.logger.error("Too few key points are detected on the picture to be compared.")
             raise IconTooWeek
+        # 再对得到特征点进行flann匹配，只留下能匹配的点
+        # （一般大图片有很多很多特征点，但小图标特征点比较少，只留下大小图片能匹配的特征点，既大图片上图标的点）
+        # 如果大图上没有小图标，这个good_match结果就很小了
         good_match = self.fast_feature_matching_by_flann(des1, des2, 0.5)
         response = self.print_list(kp1, good_match) if good_match else []
         return response

@@ -58,6 +58,7 @@ class DefaultMixin(object):
                 opt_type = 'trapezoid_slide'
             else:
                 opt_type = "sliding"
+        # 下面这堆主要支持机械臂去点击一些固定操作（已经做的adb unit），写的有点难看，有时间可以改成dict的配置形式
         elif "input keyevent 4" in raw_commend:
             opt_type = "back"
             pix_points = 0

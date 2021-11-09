@@ -1,3 +1,4 @@
+import copy
 import os
 import shutil
 import subprocess
@@ -114,6 +115,7 @@ class Unit(BaseModel):
     unit_list_index = models.IntegerField()
     pictures = OwnerList(to=str)
     unit_work_path = models.CharField()
+    optionalInputImage = models.IntegerField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures')
 
@@ -204,6 +206,8 @@ class Unit(BaseModel):
                 sending_data['t_guard'] = self.tGuard
             if assist_device_ident:
                 sending_data["assist_device_serial_number"] = assist_device_ident
+            if self.optionalInputImage:
+                sending_data['optional_input_image'] = self.optionalInputImage
             logger.info(f"unit:{sending_data}")
             try:
                 for i in range(3):
@@ -215,7 +219,9 @@ class Unit(BaseModel):
                         break
                 else:
                     # 三次Tguard后unit结果设置为1
-                    self.detail.update({"result": 1})
+                    result = copy.deepcopy(self.detail)
+                    result.update({"result": 1})
+                    self.detail = result
             except DetectNoResponse as e:
                 self.detail = {"result": e.error_code}
                 raise e

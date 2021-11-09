@@ -106,8 +106,15 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return 0 if len(feature_point_list) >= threshold - (1 - data.get("threshold", 0.99)) * icon_rate else 1
 
     def words_prepare(self, exec_content, key):
+        # 输入图片不是必须的
+        exec_content['optional_input_image'] = self.optional_input_image
         data = self._validate(exec_content, schema=ImageBasicSchemaCompatible)
         words_list = exec_content.get(key).split(",")
+        if self.optional_input_image == 1 and not data.get('exist_input_im'):
+            with Complex_Center(**self.kwargs) as ocr_obj:
+                ocr_obj.snap_shot()
+                self.image = ocr_obj.default_pic_path
+
         path = self._crop_image_and_save(self.image, data.get("areas")[0])
         return words_list, path
 

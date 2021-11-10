@@ -23,6 +23,7 @@ class ColorMixin(object):
             b_required, g_required, r_required = self.get_color_by_position(data)
 
         input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0]).astype(np.int32)
+        self._save_crop_image(data.get('input_im'), input_crop)
         b_input, g_input, r_input = cv2.split(input_crop)
         result = self._color_judge(b_input, b_required, g_input, g_required, r_input, r_required, data)
         return result
@@ -56,6 +57,7 @@ class ColorMixin(object):
             b, g, r = self.get_color_by_position(data)
 
         input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0])
+        self._save_crop_image(data.get('input_im'), input_crop)
         th = (1 - data.get("threshold", 0.99)) * color_threshold
         lower_bgr = np.array([b - th, g - th, r - th])
         upper_bgr = np.array([b + th, g + th, r + th])

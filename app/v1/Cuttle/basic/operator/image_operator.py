@@ -205,12 +205,14 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def _crop_image_and_save(self, image_path, area, mark=''):
         # 在上一个方法的基础上，把结果保存到返回的路径中去
         src = self._crop_image(image_path, area)
+        return self._save_crop_image(image_path, src, mark)
+
+    def _save_crop_image(self, image_path, src, mark=''):
         if src is not None:
             unit_work_path = self.kwargs.get("work_path") if self.kwargs.get("work_path") else os.path.dirname(
                 image_path)
             pic_name = ".".join(image_path.split(os.sep)[-1].split(".")[:-1])
             new_path = os.path.join(unit_work_path, pic_name + mark + "-crop.png")
-            # new_path = ".".join(image_path.split(".")[:-1]) + mark + "-crop.jpg"
             cv2.imwrite(new_path, src)
             return new_path
 

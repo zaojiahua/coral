@@ -6,7 +6,7 @@ from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
 
 class UnitSchema(BaseSchema):
     key = fields.Integer(required=True)
-    timeout = fields.Integer(missing=DEFAULT_TIMEOUT)
+    timeout = fields.Integer()
     execCmdDict = fields.Dict(required=True)
     execModName = fields.Str(required=True)
     jobUnitName = fields.Str()

@@ -40,6 +40,7 @@ class ColorMixin(object):
         src_refer = cv2.imread(data.get("refer_im"))
         position_list = data.get("position").strip().split(' ')
         if float(position_list[1]) <= 1 and float(position_list[0]) <= 1:
+            # 位置换为绝对坐标
             h, w = src_refer.shape[:2]
             position_list = [w * float(position_list[0]), h * float(position_list[1])]
         b, g, r = check_color_by_position(src_refer, int(float(position_list[1])), int(float(position_list[0])))
@@ -58,10 +59,13 @@ class ColorMixin(object):
         th = (1 - data.get("threshold", 0.99)) * color_threshold
         lower_bgr = np.array([b - th, g - th, r - th])
         upper_bgr = np.array([b + th, g + th, r + th])
+        # 根据rgb的上下限来二值化，超过边界的值会自动截断，既把指定颜色设置白色，其他都变黑
         binaryzation = cv2.inRange(input_crop, lower_bgr, upper_bgr)
         words_list = exec_content.get("requiredWords").split(",")
         path = os.path.join(self.kwargs.get("work_path"), f"ocr-{random.random()}.png")
         cv2.imwrite(path, binaryzation)
+        # 拿上面生成的二值化图片去识别问题，除了指定颜色其他都换为黑色了
+        # （这儿有一种bug，就是选了白色背底色，其他彩色文字变成黑色之后，黑白依旧可以看出来）
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             response = ocr_obj.get_result()
         identify_words_list = [item.get("text").strip().strip(strip_str) for item in response]

@@ -62,8 +62,10 @@ class ChineseMixin(object):
             for index, coor_tuple in enumerate(coor_tuple_list):
                 ocr_obj.set_xy(*coor_tuple)
                 if index == len(coor_tuple_list) - 1:
+                    # 在最后一个键盘敲后回到初始位置
                     ocr_obj.point(ignore_sleep=True)
                 else:
+                    # 敲击过程中每次敲击后不回位
                     ocr_obj.point(ignore_sleep=True, ignore_arm_reset=True)
             # 再通过ocr的方式截图-识别-找到需要输入的词并点击
             if CORAL_TYPE >= 5: # 5型柜拿照片速度太快，要等待1.5秒至机械臂撤回等待位，避免遮挡点击出的文字

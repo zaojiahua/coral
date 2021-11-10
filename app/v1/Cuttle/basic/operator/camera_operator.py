@@ -50,6 +50,7 @@ from collections import deque
 
 
 def camera_start_2(camera_id, device_object):
+    # 这个是试验时期留下的代码，用来适配usb接口的小摄像头，目前都是用海康的摄像头，这个函数没在使用
     # usb摄像头
     cap = cv2.VideoCapture(camera_id)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
@@ -73,7 +74,7 @@ def camera_start_3(camera_id, device_object, **kwargs):
     camera_dq_dict[device_object.pk] = dq
     redis_client.set("g_bExit", "0")
     response = camera_init_HK(**kwargs)
-    print("half done  has camera?",device_object.has_camera)
+    print("half done  has camera?", device_object.has_camera)
     camera_start_HK(dq, *response, device_object)
 
 
@@ -96,15 +97,15 @@ def camera_init_HK(**kwargs):
     if kwargs.get("init") is None:
         CamObj.MV_CC_SetIntValue("OffsetY", 0)
         CamObj.MV_CC_SetIntValue("OffsetX", 0)
-        CamObj.MV_CC_SetEnumValue("ADCBitDepth",2)
-        CamObj.MV_CC_SetEnumValue("PixelFormat",0x01080009)
-        CamObj.MV_CC_SetEnumValue("BalanceWhiteAuto",0)
-        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector",0)
-        CamObj.MV_CC_SetIntValue("BalanceRatio",1100)
-        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector",1)
-        CamObj.MV_CC_SetIntValue("BalanceRatio",950)
-        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector",2)
-        CamObj.MV_CC_SetIntValue("BalanceRatio",1850)
+        CamObj.MV_CC_SetEnumValue("ADCBitDepth", 2)
+        CamObj.MV_CC_SetEnumValue("PixelFormat", 0x01080009)
+        CamObj.MV_CC_SetEnumValue("BalanceWhiteAuto", 0)
+        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector", 0)
+        CamObj.MV_CC_SetIntValue("BalanceRatio", 1100)
+        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector", 1)
+        CamObj.MV_CC_SetIntValue("BalanceRatio", 950)
+        CamObj.MV_CC_SetEnumValue("BalanceRatioSelector", 2)
+        CamObj.MV_CC_SetIntValue("BalanceRatio", 1850)
         for key in camera_params_240:
             if isinstance(key[1], int):
                 check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
@@ -129,11 +130,15 @@ def camera_init_HK(**kwargs):
 
 
 def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
+    # 这个是海康摄像头持续获取图片的方法，原理还是用ctypes模块调用.dll或者.so文件中的变量
     cam_obj = CamObjList[-1]
     while (device_object.has_camera):
+        # 这个一个轮询的请求，5毫秒timeout，去获取图片
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
         if ret == 0:
             # a = time.time()
+            # 当摄像头有最新照片后，创建一个stConvertParam的结构体去获取实际图片和图片信息，
+            # pDstBuffer这个指针指向真实图片数据的缓存
             nRGBSize = stFrameInfo.nWidth * stFrameInfo.nHeight * 3
             stConvertParam = MV_CC_PIXEL_CONVERT_PARAM()
             memset(byref(stConvertParam), 0, sizeof(stConvertParam))
@@ -147,13 +152,15 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
             stConvertParam.pDstBuffer = content
             stConvertParam.nDstBufferSize = nRGBSize
             ret = cam_obj.MV_CC_ConvertPixelType(stConvertParam)
+            # 得到图片做最简单处理就放入deque,这块不要做旋转等操作，否则跟不上240帧的获取速度
             image = np.asarray(content, dtype="uint8")
-            image = image.reshape((stFrameInfo.nHeight,stFrameInfo.nWidth,3))
+            image = image.reshape((stFrameInfo.nHeight, stFrameInfo.nWidth, 3))
             dq.append(image)
             # print(time.time() - a)
             time.sleep(0.001)
         else:
             continue
+            # 退出时停止获取 销毁句柄
         if redis_client.get("g_bExit") == "1":
             cam_obj.MV_CC_StopGrabbing()
             cam_obj.MV_CC_CloseDevice()
@@ -171,6 +178,7 @@ def check_result(func, *args):
 
 class CameraHandler(Handler):
     Function = collections.namedtuple("Function", ["condition", "function", "regex"])
+    # 这个Function namedtuple是用做adb的结果后处理，根据结果对应匹配后处理函数，最后一个是带入函数的参数
     function_list = [
         Function("shell screencap", "snap_shot", ""),
         Function("shell screenrecord", "get_video", re.compile("--time-limit (.*?) ")),

@@ -6,6 +6,7 @@ from functools import wraps, partial, singledispatch
 from app.config.log import REQUEST_LOG_TIME_STATISTICS
 from app.v1.Cuttle.basic.setting import handler_config
 
+# 这个文件主要涵盖了整个项目用的装饰器，有一些可能已经被换掉了
 
 def async_timeout(timeout=20):
     # 限制函数最大执行时间的装饰器

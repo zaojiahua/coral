@@ -19,6 +19,8 @@ from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_threshold, i
 
 
 class TestMixin(object):
+    # 这个文件完全就是其他方法的copy或者直接引用，只用于页面的检测按钮工作
+    # 请新加时尽量保持和实际方法所用所有参数都一致，以保障测试的有效性
     def test_icon_exist(self, exec_content, clear=True):
         data = IconTestSchema().load(exec_content)
         threshold = icon_threshold if CORAL_TYPE < 5 else icon_threshold_camera

@@ -17,3 +17,4 @@ class RDS(BaseModel):
     last_node = models.CharField()
     is_use_result_unit = models.BooleanField()
     job_assessment_value = models.CharField()
+    switch_times = OwnerList(to=dict)

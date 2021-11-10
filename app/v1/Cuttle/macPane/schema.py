@@ -65,8 +65,7 @@ class PaneSchema(Schema):
         else:
             jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
                            "execCmdList": [
-                               f"adb -s {device_obj.connect_number} shell screencap -p /sdcard/{picture_name}",
-                               f"adb -s {device_obj.connect_number} pull /sdcard/{picture_name} {image_path}"
+                               f"adb -s {device_obj.connect_number} exec-out screencap -p > {image_path}"
                            ],
                            "device_label": device_label})
             snap_shot_result = UnitFactory().create("AdbHandler", jsdata)

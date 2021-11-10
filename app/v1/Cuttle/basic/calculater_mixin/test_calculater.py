@@ -131,6 +131,7 @@ class TestMixin(object):
         data = OcrTestSchema().load(exec_content)
         pic_path = self._crop_image_and_save(data.get("input_image"), data.get("areas")[0]) if data.get(
             "areas") else data.get("input_image")
+        print(pic_path,os.path.exists(pic_path))
         if data.get("ocr_choice") == "2":
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
                                ip=f"http://{OCR_IP}:8090")

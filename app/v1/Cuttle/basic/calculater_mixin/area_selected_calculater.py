@@ -21,16 +21,17 @@ class AreaSelectedMixin(object):
     def has_icon_area_selected(self, exec_content) -> int:
         # 判断所选择区域内有指定图标
         # 确认图标存在-2
-        data = self._validate(exec_content, ImageAreaSchema)
+        data = self._wrapper_validate(exec_content, ImageAreaSchema)
         # 按照选区先裁剪参考图片-->裁成icon
         feature_refer = self._crop_image(data.get("refer_im"), data.get("areas")[0])
         # 按照选区裁剪输入图片 -->裁成一个大范围
-        image_crop = self._crop_image(data.get("input_im"), data.get("crop_areas")[0])
+        image_crop_path = self._crop_image_and_save(data.get("input_im"), data.get("crop_areas")[0])
         # 得到特征点的列表
-        file_name = data.get('input_im').split("\\")[-1]
-        path = os.path.join(self.kwargs.get("work_path"), f"crop-icon_exist1-{file_name}")
-        cv2.imwrite(path, image_crop)
-        feature_point_list = self.shape_identify(image_crop, feature_refer)
+        # file_name = data.get('input_im').split("\\")[-1]
+        # path = os.path.join(self.kwargs.get("work_path"), f"crop-icon_exist1-{file_name}")
+        # cv2.imwrite(path, image_crop)
+
+        feature_point_list = self.shape_identify(cv2.imread(image_crop_path), feature_refer)
         from app.v1.device_common.device_model import Device
         # 此处的判定为根据区分1234型柜和5型柜，取不同的标准值
         threshold = icon_threshold if Device(pk=self._model.pk).has_camera == False else icon_threshold_camera
@@ -65,20 +66,21 @@ class AreaSelectedMixin(object):
         # 截图变化对比
         data = self._validate(exec_content, ImageRealtimeSchema)
         # 两张传入的图，都按同一个areas裁剪，得到两个图的src
-        input_im_2 = self._crop_image(data.get("input_im_2"), data.get("areas")[0])
-        input_im = self._crop_image(data.get("input_im"), data.get("areas")[0])
+        input_im_2_path = self._crop_image_and_save(data.get("input_im_2"), data.get("areas")[0])
+        input_im_path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         # 直接对比两张图的rgb均值
-        return self.numpy_array(input_im, input_im_2, threshold_set(data.get("threshold", 0.99)))
+        return self.numpy_array(cv2.imread(input_im_path), cv2.imread(input_im_2_path),
+                                threshold_set(data.get("threshold", 0.99)))
 
     def has_icon_template_match(self, exec_content) -> int:
         # 确认图标存在-1
-        data = self._validate(exec_content, ImageAreaSchema)
+        data = self._wrapper_validate(exec_content, ImageAreaSchema)
         template = self._crop_image(data.get("refer_im"), data.get("areas")[0])
-        target = self._crop_image(data.get("input_im"), data.get("crop_areas")[0])
-        file_name = data.get('input_im').split("\\")[-1]
-        path = os.path.join(self.kwargs.get("work_path"), f"crop-icon_exist2-{file_name}")
-        cv2.imwrite(path, target)
-        result = self.template_match(target, template)
+        target_path = self._crop_image_and_save(data.get("input_im"), data.get("crop_areas")[0])
+        # file_name = data.get('input_im').split(os.sep)[-1]
+        # path = os.path.join(self.kwargs.get("work_path"), f"crop-icon_exist2-{file_name}")
+        # cv2.imwrite(path, target)
+        result = self.template_match(cv2.imread(target_path), template)
         return 0 if result == True else 1
 
     def smart_icon_long_press(self, content) -> int:
@@ -114,8 +116,6 @@ class AreaSelectedMixin(object):
         result = cv2.matchTemplate(target, template, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         return max_val
-
-
 
     # ----------------------------------------文字相关-----------------------------------------------------
     def crop_input_picture_record_position(self, data, ocr_obj, config_name):

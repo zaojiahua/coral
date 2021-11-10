@@ -13,6 +13,7 @@ from app.v1.eblock.model.eblock import Eblock
 from app.v1.eblock.model.macro_replace import MacroHandler
 from app.v1.eblock.model.unit import Unit
 from app.v1.eblock.validators.tboardSchema import EblockSchema, UnitSchema
+from app.v1.eblock.model.bounced_words import BouncedWords
 
 eblock_schema = EblockSchema()
 
@@ -66,6 +67,35 @@ class UnitView(MethodView):
             deal_dir_file(device_vm.base_path)
 
         return unit.detail, 200
+
+
+class BouncedWordsView(MethodView):
+
+    def post(self):
+        request_data = request.get_json()
+
+        # add new bounced words
+        bounced_words = BouncedWords.first()
+        new_words = bounced_words.words
+        for w_k, w_v in request_data.items():
+            new_words[w_k] = w_v
+        bounced_words.words = new_words
+
+        return bounced_words.words, 200
+
+    def delete(self):
+        # 删除的时候遍历id
+        request_data = request.get_json()
+
+        # delete bounced words
+        bounced_words = BouncedWords.first()
+        current_bounced_words = bounced_words.words
+        for delete_key in request_data:
+            if str(delete_key) in current_bounced_words:
+                del current_bounced_words[str(delete_key)]
+        bounced_words.words = current_bounced_words
+
+        return bounced_words.words, 200
 
 
 # --------------------------For Internal calls-------------------------------

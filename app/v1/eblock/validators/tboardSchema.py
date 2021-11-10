@@ -17,6 +17,8 @@ class UnitSchema(BaseSchema):
     ocrChoice = fields.Integer()
     tGuard = fields.Integer()
     device_label = fields.Str()
+    # 如果有这个字段，代表没有输入图片的时候，现截图一张
+    optionalInputImage = fields.Integer()
 
 
 class UnitListSchema(BaseSchema):

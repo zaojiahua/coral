@@ -38,6 +38,7 @@ END_TYPE = "end"
 SUCCESS_TYPE = "success"
 FAILED_TYPE = "fail"
 START_TYPE = "start"
+ABNORMAL_TYPE = "Abnormal"
 
 # unit setting
 RESULT_TYPE = "#3AFFF3"  # 结果unit的标示
@@ -45,6 +46,7 @@ RESULT_TYPE = "#3AFFF3"  # 结果unit的标示
 # job exec result
 SUCCESS = 0
 FAILED = 1
+ABNORMAL = -111
 
 # unit category
 ADBC_TYPE = "ADBC"

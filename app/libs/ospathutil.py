@@ -21,7 +21,6 @@ def deal_dir_file(path):
 
 
 def makedirs_new_folders(path):
-    print(path)
     if os.path.exists(path):
         for filename in os.listdir(path):
             file_path = os.path.join(path, filename)

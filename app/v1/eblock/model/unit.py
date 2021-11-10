@@ -1,5 +1,7 @@
+import copy
 import os
 import shutil
+import subprocess
 import time
 from functools import lru_cache
 
@@ -8,7 +10,7 @@ from astra import models
 from func_timeout import func_set_timeout
 
 from app.config.ip import ADB_TYPE
-from app.config.setting import Bugreport_file_name
+from app.config.setting import Bugreport_file_name, PICTURE_COMPRESS_RATIO
 from app.config.url import device_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
@@ -20,6 +22,7 @@ from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.eblock.config.leadin import PROCESSER_LIST
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
 from app.v1.eblock.model.macro_replace import MacroHandler
+from app.execption.outer.error_code.imgtool import DetectNoResponse
 
 
 def get_assist_device_ident(device_label, assist_device_serial_number):
@@ -112,6 +115,7 @@ class Unit(BaseModel):
     unit_list_index = models.IntegerField()
     pictures = OwnerList(to=str)
     unit_work_path = models.CharField()
+    optionalInputImage = models.IntegerField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures')
 
@@ -127,7 +131,6 @@ class Unit(BaseModel):
         if not os.path.exists(self.unit_work_path):
             os.makedirs(self.unit_work_path)
 
-        @func_set_timeout(timeout=self.timeout if self.timeout else DEFAULT_TIMEOUT)
         def _inner_func():
             # 默认保存bugreport.zip 根据2021/7/2客户需求，储存并下载zip文件
             save_list = [Bugreport_file_name]
@@ -145,6 +148,7 @@ class Unit(BaseModel):
                                                                   device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
+                        self.detail = {"result": ex.error_code}
                         return
                     if save_file:
                         save_list.append(save_file)
@@ -181,6 +185,7 @@ class Unit(BaseModel):
                                                                 device_label=self.device_label)
                     except EblockCannotFindFile as ex:  # 解释失败,不记录结果
                         logger.error(f"unit replace fail {ex}")
+                        self.detail = {"result": ex.error_code}
                         return
                     if save_file:
                         save_list.append(save_file)
@@ -194,12 +199,15 @@ class Unit(BaseModel):
                 sending_data["test_running"] = True
             sending_data["work_path"] = self.unit_work_path
             sending_data["device_label"] = self.device_label
+            sending_data['timeout'] = self.timeout
             if self.ocrChoice:
                 sending_data["ocr_choice"] = self.ocrChoice
             if self.tGuard:
                 sending_data['t_guard'] = self.tGuard
             if assist_device_ident:
                 sending_data["assist_device_serial_number"] = assist_device_ident
+            if self.optionalInputImage:
+                sending_data['optional_input_image'] = self.optionalInputImage
             logger.info(f"unit:{sending_data}")
             try:
                 for i in range(3):
@@ -211,7 +219,12 @@ class Unit(BaseModel):
                         break
                 else:
                     # 三次Tguard后unit结果设置为1
-                    self.detail.update({"result": 1})
+                    result = copy.deepcopy(self.detail)
+                    result.update({"result": 1})
+                    self.detail = result
+            except DetectNoResponse as e:
+                self.detail = {"result": e.error_code}
+                raise e
             except Exception as e:
                 logger.debug(f'unit 不正常结束 {e}')
                 if isinstance(e, APIException):
@@ -258,18 +271,42 @@ class Unit(BaseModel):
             target_read_path = os.path.join(handler.work_path, file)
             # 普通unit产生的图片可能会被下一个unit使用，因此只能copy
             if file in save_list:
-                if not os.path.exists(target_read_path):
-                    shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
+                # 循环执行用例的时候，文件名是相同的，需要进行覆盖
+                shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
                 if not os.path.exists(target_path):
                     shutil.copyfile(os.path.join(self.unit_work_path, file), target_path)
-                    self.pictures.lpush(target_name)
-            elif file.startswith("ocr-") or file.startswith("crop-"):
+                    if Bugreport_file_name not in target_name:
+                        self.pictures.lpush(target_name)
+            elif file.startswith("ocr-") or file.startswith("crop-") or file.endswith("-crop.png") or file.endswith(
+                    "-Tguard.png"):
                 # 复合型unit产生的图片只有自己会使用，因此move即可
                 shutil.move(os.path.join(self.unit_work_path, file), target_path)
                 self.pictures.lpush(target_name)
             else:
                 # 其他情况下复制到公共读的目录 比如txt文件等 其他unit需要用到
                 shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
+
+            # 针对结果为0的unit，进行rds图片的压缩，为了减小体积
+            if self.detail.get("result") == 0:
+                if os.path.exists(target_path):
+                    # 针对png图片进行压缩
+                    if target_path.endswith('png'):
+                        # 先缩放
+                        origin_pic = cv2.imread(target_path, cv2.IMREAD_COLOR)
+                        if origin_pic is not None:
+                            origin_size = origin_pic.shape
+                            new_size = (
+                                int(origin_size[1] * PICTURE_COMPRESS_RATIO),
+                                int(origin_size[0] * PICTURE_COMPRESS_RATIO))
+                            compress_pic = cv2.resize(origin_pic, new_size)
+                            cv2.imwrite(target_path, compress_pic)
+                            # 后压缩
+                            self.pngquant_compress(target_path)
+
+    @staticmethod
+    def pngquant_compress(fp):
+        command = f'pngquant {fp} -f --quality 100-100'
+        subprocess.run(command, shell=True)
 
     @staticmethod
     def remove_duplicate_pic(path):
@@ -280,12 +317,13 @@ class Unit(BaseModel):
             similar_file_2 = os.path.join(path, file_name[:-5] + ".png")
             if file_name.endswith("crop") and (os.path.exists(similar_file) or os.path.exists(similar_file_2)):
                 src_crop = cv2.imread(os.path.join(path, file))
-                src = cv2.imread(os.path.join(path,file_name[:-5] + ".jpg"))
-                src_2 = cv2.imread(os.path.join(path,file_name[:-5] + ".png"))
+                src = cv2.imread(os.path.join(path, file_name[:-5] + ".jpg"))
+                src_2 = cv2.imread(os.path.join(path, file_name[:-5] + ".png"))
                 src = src if src is not None else src_2
                 # 名称前缀相同，且图片尺寸相同则认为是没经过裁剪
                 if src_crop.shape == src.shape:
                     try:
-                        os.remove(os.path.join(path,file))
+                        os.remove(os.path.join(path, file))
+                        print("delete one pic。。。")
                     except FileNotFoundError:
-                        print("un able to find similar file to delete")
+                        print("unable to find similar file to delete")

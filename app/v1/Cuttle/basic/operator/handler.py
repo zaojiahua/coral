@@ -2,13 +2,18 @@ import collections
 import copy
 import re
 import time
+import traceback
 
+import func_timeout
+from func_timeout import func_set_timeout
 from marshmallow import ValidationError
 
 from app.execption.outer.error_code.adb import UnitBusy, NoContent
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result
+from app.execption.outer.error_code.imgtool import DetectNoResponse
+from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
 Standard = collections.namedtuple("Standard", ["mark", "code"])
@@ -26,7 +31,7 @@ class Handler():
     standard_list = []
 
     skip_retry_list = ["end_point_with_icon", "end_point_with_icon_template_match", "end_point_with_changed",
-                       "end_point_with_fps_lost"]
+                       "end_point_with_fps_lost","initiative_remove_interference"]
 
     def __init__(self, *args, **kwargs):
         self._model = kwargs.get("model", Dummy_model(False, 0, setup_logger(f'dummy', 'dummy.log')))
@@ -35,7 +40,10 @@ class Handler():
         self.exec_content = content.copy() if content is not None else None
         self.timeout = 40
         self.kwargs = kwargs
+        self.handler_timeout = self.kwargs.get('timeout') or DEFAULT_TIMEOUT
+        self.str_handler_timeout = self.kwargs.get('timeout') or ADB_DEFAULT_TIMEOUT
         self.extra_result = {}
+        self.optional_input_image = self.kwargs.get('optional_input_image') or 0
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -88,13 +96,32 @@ class Handler():
 
     @method_dispatch
     def do(self, exec_content, **kwargs):
-        # 具体执行方法，这部分处理不是字符串的unit
-        return self.func(exec_content, **kwargs)
+        @func_set_timeout(timeout=self.handler_timeout)
+        def _inner_func():
+            # 具体执行方法，这部分处理不是字符串的unit
+            return self.func(exec_content, **kwargs)
+
+        return self.retry_timeout_func(_inner_func)
 
     @do.register(str)
     def _(self, exec_content, **kwargs):
         # 处理content为字符串的unit
-        return self.str_func(exec_content, **kwargs)
+        @func_set_timeout(timeout=self.str_handler_timeout)
+        def _inner_func():
+            return self.str_func(exec_content, **kwargs)
+
+        return self.retry_timeout_func(_inner_func)
+
+    @staticmethod
+    def retry_timeout_func(func, max_retry_time=3):
+        retry_time = 0
+        while retry_time < max_retry_time:
+            try:
+                return func()
+            except func_timeout.exceptions.FunctionTimedOut as e:
+                retry_time += 1
+                if retry_time == max_retry_time:
+                    raise e
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:
@@ -108,8 +135,11 @@ class Handler():
                         response = getattr(self, abnormal.method)(result, self.kwargs.get("t_guard"))
                         if response == 0 and funcname not in self.skip_retry_list:
                             return 666
+                    except DetectNoResponse as e:
+                        raise e
                     except Exception as e:
                         self._model.logger.error(f'tGuard error: {str(e)}')
+                        traceback.print_exc()
                     return abnormal.code
         result = result if isinstance(result, int) else 0
         return result
@@ -150,8 +180,8 @@ class Handler():
             from app.v1.device_common.device_model import Device
             w = Device(pk=self._model.pk).device_width * x
             h = Device(pk=self._model.pk).device_height * y
-            self.exec_content = self.exec_content.replace(str(x), str(w))
-            self.exec_content = self.exec_content.replace(str(y), str(h))
+            self.exec_content = self.exec_content.replace(result.group(1), str(w), 1)
+            self.exec_content = self.exec_content.replace(result.group(2), str(h), 1)
         return normal_result
 
     def _relative_point(self):
@@ -163,8 +193,8 @@ class Handler():
             from app.v1.device_common.device_model import Device
             w = Device(pk=self._model.pk).device_width * x
             h = Device(pk=self._model.pk).device_height * y
-            self.exec_content = self.exec_content.replace(str(x), str(w))
-            self.exec_content = self.exec_content.replace(str(y), str(h))
+            self.exec_content = self.exec_content.replace(result.group(1), str(w), 1)
+            self.exec_content = self.exec_content.replace(result.group(2), str(h), 1)
         return normal_result
 
     def _relative_swipe(self):
@@ -182,10 +212,10 @@ class Handler():
             h1 = Device(pk=self._model.pk).device_height * y1
             w2 = Device(pk=self._model.pk).device_width * x2
             h2 = Device(pk=self._model.pk).device_height * y2
-            self.exec_content = self.exec_content.replace(result.group(1), str(w1))
-            self.exec_content = self.exec_content.replace(result.group(2), str(h1))
-            self.exec_content = self.exec_content.replace(result.group(3), str(w2))
-            self.exec_content = self.exec_content.replace(result.group(4), str(h2))
+            self.exec_content = self.exec_content.replace(result.group(1), str(w1), 1)
+            self.exec_content = self.exec_content.replace(result.group(2), str(h1), 1)
+            self.exec_content = self.exec_content.replace(result.group(3), str(w2), 1)
+            self.exec_content = self.exec_content.replace(result.group(4), str(h2), 1)
 
         return normal_result
 

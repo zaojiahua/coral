@@ -133,7 +133,7 @@ class PerformanceCenter(object):
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.move_flag = False
                 break
-            if number >= CameraMax / 2:
+            if number >= CameraMax:
                 self.result = {"start_point": self.start_number + self.bias, "end_point": number,
                                "job_duration": max(round((number - self.start_number) * 1 / FpsMax, 3), 0),
                                "time_per_unit": round(1 / FpsMax, 4),

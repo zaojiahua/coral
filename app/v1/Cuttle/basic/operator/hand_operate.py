@@ -11,7 +11,8 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time
+    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
+    arm_move_position
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -231,7 +232,7 @@ class HandHandler(Handler, DefaultMixin):
         if float(sleep_time) > 0:
             time.sleep(float(sleep_time) + wait_bias)
         if move:
-            self.reset_hand(hand_reset_orders="G01 X0Y35Z0F3000 \r\n")
+            self.reset_hand(hand_reset_orders=arm_move_position)
         hand_serial_obj_dict.get(self._model.pk).recv()
         self.ignore_reset = True
         return 0
@@ -328,7 +329,7 @@ class HandHandler(Handler, DefaultMixin):
         end_x, end_y = end_point
         # 连续滑动保证动作无偏差
         from app.v1.Cuttle.basic.setting import last_swipe_end_point
-        th = 15 if CORAL_TYPE < 5 else 1
+        th = 15 if CORAL_TYPE < 4 else 1
         if np.abs(start_x - last_swipe_end_point[0]) < th and np.abs(start_y - last_swipe_end_point[1]) < th:
             start_x, start_y = last_swipe_end_point
         last_swipe_end_point[0] = end_x

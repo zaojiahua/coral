@@ -42,8 +42,8 @@ class DoorKeeper(object):
         s_id = self.get_device_connect_id(multi=False)
         dev_info_dict = self.get_device_info(s_id, kwargs)
         logger.info(f"[get device info] device info dict :{dev_info_dict}")
+        self.open_wifi_service(num=f"-s {s_id}")
         if ADB_TYPE == 0:
-            self.open_wifi_service(num=f"-s {s_id}")
             self.adb_cmd_obj.run_cmd_to_get_result(f"adb connect {dev_info_dict.get('ip_address')}")
             res = bind_spec_ip(dev_info_dict.get("ip_address"), dev_info_dict["device_label"])
             # if res != 0:
@@ -86,7 +86,10 @@ class DoorKeeper(object):
         id_list = []
         for i in adb_response.split("\n")[1:]:
             item = i.split(" ")[0]
-            descriptor = i.split(" ")[7]
+            try:
+                descriptor = i.split(" ")[7]
+            except IndexError:
+                descriptor = ""
             if not "." in item and not "emulator" in item and "no" != descriptor:
                 id_list.append(item.strip().strip("\r\t"))
         return id_list
@@ -103,9 +106,16 @@ class DoorKeeper(object):
         # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
         kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
         kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        # kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + "-" + self.get_default_name()
         kwargs["device_label"] = "M-" + kwargs.get("phone_model_name")
-        kwargs["manufacturer"] = kwargs["android_version"] = kwargs["rom_version"] = kwargs["cpu_name"] = kwargs[
+        try:
+            response = request(url=phone_model_url, params={"fields": "manufacturer.manufacturer_name",
+                                                            "phone_model_name": kwargs.get("phone_model_name")},
+                               filter_unique_key=True)
+            kwargs["manufacturer"] = response.get("manufacturer").get("manufacturer_name")
+        except RequestException:
+            kwargs["manufacturer"] = "Manual_device"
+        kwargs["rom_version"] = "Manual_"+kwargs["manufacturer"]
+        kwargs["android_version"] =  kwargs["cpu_name"] = kwargs[
             "cpu_id"] = "Manual_device"
         kwargs["ip_address"] = "0.0.0.0"
         kwargs["auto_test"] = False
@@ -154,7 +164,7 @@ class DoorKeeper(object):
         if rootable:
             self.is_device_remountable(num)
         wifi_response = self.set_adb_wifi_property_internal(rootable, num)
-        if wifi_response != 0:
+        if wifi_response != 0 and ADB_TYPE == 0:
             logger.error("Failed to set adb wifi property.")
             raise DeviceCannotSetprop
         return 0
@@ -189,8 +199,7 @@ class DoorKeeper(object):
         ret_dict = {
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
                 f"adb -s {s_id} shell getprop ro.build.version.release"),
-            "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
-                f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(), "device_width": screen_size[0],
+            "device_width": screen_size[0],
             "device_height": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}
         ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         ret_dict.update(device_info_fict)
@@ -199,7 +208,7 @@ class DoorKeeper(object):
     def get_device_connect_id(self, multi=False):
         # 获取adb连接的所有设备，并与已经注册过的设备取差集，得到唯一待注册设备，差集为0或大于1都抛异常
         adb_response = self.adb_cmd_obj.run_cmd_to_get_result("adb -d devices -l", 12)
-        if "device usb" not in adb_response and "device product" not in adb_response:
+        if "device usb" not in adb_response and "device product" not in adb_response and "device transport_id" not in adb_response:
             logger.info("[get device info]: no device found")
             raise DeviceNotInUsb  # no device found
         device_id_list = self.get_connected_device_list(adb_response)
@@ -238,9 +247,10 @@ class DoorKeeper(object):
         ret_dict = {"phone_model_name": productName,
                     "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(
                         f"adb -s {s_id} shell getprop ro.board.platform"),
+                    "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
+                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(),
                     "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
-                    "ip_address": self.get_dev_ip_address_internal(
-                        f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0'}
+                    "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}")}
         ret_dict["device_label"] = (old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
         self._check_device_already_in_cabinet(ret_dict["device_label"])
         # rom version数据不同类型手机可能藏在不同的地方，oppo已知型号要去拿color_os+版本， mi的直接拿ro.build.version.incremental
@@ -415,7 +425,7 @@ class DoorKeeper(object):
         return device_name
 
     def get_dev_ip_address_internal(self, num):
-        ret_ip_address = ""
+        ret_ip_address = "0.0.0.0"
         # ip_route "10.80.6.0/24 dev wlan0  proto kernel  scope link  src 10.80.6.153"
         ip_route = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell ip route")
         result = re.findall(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", ip_route)

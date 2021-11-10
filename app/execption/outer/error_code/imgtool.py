@@ -94,15 +94,18 @@ class EndPointWrongFormat(APIException):
     code = 400
     description = "press and swipe end point get wrong format"
 
+
 class SwipeAndFindWordsFail(APIException):
     error_code = 2012
     code = 400
     description = "can not find required words until swipe to the end"
 
+
 class ColorPositionCrossMax(APIException):
     error_code = 2013
     code = 400
     description = "color position exceed max border"
+
 
 class RecordWordsFindNoWords(APIException):
     """
@@ -112,10 +115,12 @@ class RecordWordsFindNoWords(APIException):
     code = 400
     description = "record-words unit can not find any words in crop-picture"
 
+
 class CannotFindRecentVideoOrImage(APIException):
     error_code = 2015
     code = 400
     description = "can not find recent video or Imgae in 300s"
+
 
 class WrongEndPoint(APIException):
     """
@@ -125,6 +130,7 @@ class WrongEndPoint(APIException):
     code = 400
     description = "find wrong end point in performance"
 
+
 class VideoEndPointNotFound(APIException):
     """
     性能测试中，没有发现结束帧
@@ -133,15 +139,18 @@ class VideoEndPointNotFound(APIException):
     code = 400
     description = "can not find end point in video"
 
+
 class FpsLostWrongValue(APIException):
     error_code = 2018
     code = 400
     description = "fps lost only support 60 90 120"
 
+
 class CameraNotResponse(APIException):
     error_code = 2019
     code = 400
     description = "camera can not receive picture"
+
 
 class PerformanceNotStart(APIException):
     """
@@ -151,9 +160,14 @@ class PerformanceNotStart(APIException):
     code = 400
     description = "performance not start"
 
+
 class IconBiggerThanField(APIException):
     error_code = 2021
     code = 400
     description = "icon bigger than field"
 
 
+class DetectNoResponse(APIException):
+    error_code = 2022
+    code = 400
+    description = "catch serious exception"

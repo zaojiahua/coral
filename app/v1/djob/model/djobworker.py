@@ -38,8 +38,10 @@ class DJobWorker(BaseModel):
             self.using_djob.run_job_with_flow_execute_mode()
             # 执行完成，调用dut，推送djob到 DJobWorker
             self.callback()
+            self.logger.info("callback finished ")
 
             self.using_djob.remove()
+            self.logger.info("djob_process finished  now start next djob")
 
     def callback(self):
         if self.using_djob.tboard_id:

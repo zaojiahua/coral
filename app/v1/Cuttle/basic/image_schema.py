@@ -22,6 +22,26 @@ def verify_format(str):
         raise ValidationError('color coordinate should be digit')
 
 
+def verify_input_image(data):
+    optional_input_image = data.get('optional_input_image')
+    try:
+        exist_input_im = os.path.split(data['input_im'])[1]
+    except Exception:
+        exist_input_im = False
+
+    data['exist_input_im'] = exist_input_im
+    if not optional_input_image or (optional_input_image and exist_input_im):
+        input_img_file = data.get('input_im')
+        if not input_img_file:
+            raise ValidationError('path not exist')
+        else:
+            verify_exist(input_img_file)
+            verify_image(input_img_file)
+    else:
+        data['input_im'] = None
+    return data
+
+
 def verify_not_relative_coor(str):
     coor_list = str.strip().split(" ")
     try:
@@ -83,7 +103,7 @@ class ImageOriginalSchema(Schema):
 
 
 class ImageBasicSchema(ImageOriginalSchema):
-    input_im = fields.String(required=True, data_key="inputImgFile", validate=(verify_exist, verify_image))
+    input_im = fields.String(required=False, data_key="inputImgFile")
     output_path = fields.String(data_key="outputPath")
 
 
@@ -92,6 +112,7 @@ class ImageBasicSchemaCompatible(ImageBasicSchema):
 
     @post_load()
     def explain(self, data, **kwargs):
+        data = verify_input_image(data)
         return load_config_file_v1(data)
 
 
@@ -134,7 +155,7 @@ class ImageMainColorSchema(ImageColorSchema):
 class ImageColorRelativePositionBaseSchema(Schema):
     refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
     config = fields.String(required=True, data_key="configFile")
-    input_im = fields.String(required=True, data_key="inputImgFile", validate=(verify_exist, verify_image))
+    input_im = fields.String(required=False, data_key="inputImgFile")
     output_path = fields.String(data_key="outputPath")
 
     class Meta:
@@ -142,6 +163,7 @@ class ImageColorRelativePositionBaseSchema(Schema):
 
     @post_load()
     def explain(self, data, **kwargs):
+        data = verify_input_image(data)
         return load_config_file_v1(data)
 
 
@@ -156,6 +178,8 @@ class ImageAreaSchema(ImageSchema):
 
     @post_load()
     def explain(self, data, **kwargs):
+        data = verify_input_image(data)
+
         crop_area_path = data.get("area_config")
         data = super().explain(data, **kwargs)
         try:

@@ -16,7 +16,7 @@ from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
 from app.v1.Cuttle.basic.common_utli import threshold_set, get_file_name
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, ImageBasicSchemaCompatible, \
-    ImageSchemaCompatible
+    ImageSchemaCompatible, ImageAreaSchema
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate, serious_words
 from app.v1.eblock.model.bounced_words import BouncedWords
@@ -105,21 +105,31 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
             f"feature point number:{len(feature_point_list)},threshold:{threshold - (1 - data.get('threshold', 0.99)) * icon_rate}")
         return 0 if len(feature_point_list) >= threshold - (1 - data.get("threshold", 0.99)) * icon_rate else 1
 
-    def words_prepare(self, exec_content, key):
+    def _wrapper_validate(self, exec_content, schema):
         # 输入图片不是必须的
         exec_content['optional_input_image'] = self.optional_input_image
-        data = self._validate(exec_content, schema=ImageBasicSchemaCompatible)
-        words_list = exec_content.get(key).split(",")
+        data = self._validate(exec_content, schema)
+        self.snap_shot_now(data)
+        del data['optional_input_image']
+        return data
+
+    def snap_shot_now(self, data):
         if self.optional_input_image == 1 and not data.get('exist_input_im'):
             with Complex_Center(**self.kwargs) as ocr_obj:
                 ocr_obj.snap_shot()
                 self.image = ocr_obj.default_pic_path
+                data['input_im'] = self.image
+
+    def words_prepare(self, exec_content, key):
+        # 输入图片不是必须的
+        data = self._wrapper_validate(exec_content, ImageBasicSchemaCompatible)
+        words_list = exec_content.get(key).split(",")
 
         path = self._crop_image_and_save(self.image, data.get("areas")[0])
         return words_list, path
 
     def record_words(self, exec_content) -> int:
-        data = self._validate(exec_content, ImageSchemaCompatible)
+        data = self._wrapper_validate(exec_content, ImageSchemaCompatible)
         path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             self.image = path

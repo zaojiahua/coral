@@ -82,6 +82,8 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
     def run(self):
         while self.keepRun:
             try:
+                # 这个方法是在系统启动时候做的，主要分三步，都是做的准备工作。
+                # 第一步从reef获取设备列表+用例列表/用例属性 + 所有相关rds数据
                 self.device_id_list = self.get_all_device()
                 self.job_feature_list = self.get_job_info(**(self._default_dict["job_para"]))
                 if not self.job_feature_list:
@@ -90,7 +92,9 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
                 self.job_label_list = [job.get("job_label") for job in self.job_feature_list]
                 rds_data = self.get_rds(**self._default_dict["rdsPara"], tboard__author_id=self.user_id_exclude)
                 self.logger.debug("stew init ---1  get rds/job/device info success")
+                # 第二步 计算设备*用例的 一个方形矩阵，记录了每个设备对应每个用的得分
                 self.similarity_matrix = self.calculate_matrix(rds_data, self.job_feature_list)
+                # 第三步 计算所有用例的特征维度向量，用来给没有运行过的用例打分
                 self.job_feature_df = self.form_job_feature_matrix(self.job_feature_list)
                 self.logger.debug("stew init ---2  get similarity_matrix/job_feature_df info success")
                 self.deal_with_multi_item(self.job_feature_df.loc[:, self._muti_item_name].values, self._muti_item_name)
@@ -105,6 +109,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
                 time.sleep(86400)
 
     def form_job_feature_matrix(self, job_feature_list):
+        # 把job的特征（目前只有用例作者，测试用途这两维度的特征），组合成 用例*特征的 dataframe
         """
         :param job_feature_list: job attribute get from reef
         :return: df with index of device_label and columns of all feature in featureNameList
@@ -188,6 +193,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
             return [], []
 
     def calculate_matrix(self, rds_data_list, job_feature_list):
+        # 这个方法就是遍历所有的rds，分别计算每个rds所应有的分数，并加到对应的矩阵格子里
         # todo modify this function for adding job-lifetime and deltT into matrix
         """
         :return: with shape of (device_num * job_num)
@@ -211,6 +217,8 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
         return matrix
 
     def cal_time_weight(self, job_first_use_time, job_last_using_time, rds_create_time):
+        # 这个方法是给每个rds打分的主要计算方法，主要根据rds使用时间/创建时间 等数据计算得到分数，有点借鉴新闻行业一个新闻的重要度的计算概念
+        # 引入了用例距今使用时间，和用例生命周期两个属性
         # 目前这个函数为人工设定的参数
         k = 1  # auto set this k&a when we have feedback data
         a = 4
@@ -232,6 +240,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
             job_list.sort(key=lambda x: x[1], reverse=True)
             return job_list
         if reduction:
+            # 开启降维模式，目前没有走这个分支。
             self.logger.info("start to reduction by SVD method due to the similarity matrix is too big")
             svdMatrix = self.get_svd_matrix(data_matrix)
             job_list = []
@@ -240,6 +249,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
                 job_list.append((jobIndex, score))
         else:
             job_list = []
+            # 遍历所有没有打过分的job，并根据job特征矩阵的相似度计算出没有打过分的用例的分
             for jobIndex in unrated_job_index_list:
                 if all(data_matrix[:, jobIndex] == 0):  # cold boot
                     score = self.cal_sim_by_feature(self.job_feature_df, jobIndex, self.similarity_matrix.T,
@@ -305,6 +315,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
 
     @staticmethod
     def cal_sim(vector_1, vector_2, method="cos_sim"):
+        # 计算向量相似的方法，目前使用的是默认的余弦相似度
         if method == "corr_coef":
             return 0.5 + 0.5 * np.corrcoef(vector_1, vector_2)[0][1]
         elif method == "cos_sim":
@@ -325,6 +336,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
         return round(score / keep_n, 3)
 
     def deal_with_multi_item(self, feature_list, feature_name):
+        #  测试用途有很多选项，且可以多选，这种数据无法算相似度，所以这块把他拆解成have_xxx 并用1/0标识 这个用例的测试用途有没有涵盖到这个标签
         """
         :param feature_list: 2d-ndarray
         after change:
@@ -343,6 +355,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
         self.job_feature_df = self.job_feature_df.drop(feature_name, axis=1)
 
     def deal_with_str_item(self, series, colunm_name):
+        # 作者这个特征不能多选，所以直接做label-encoding 根据数量多少又分别用了factorize/get_dummies 方法
         """
         after change:
                                                     author  ...  have_Calendar    have_camera ....
@@ -358,6 +371,7 @@ class SimilarityMatrixMonitor(DataCollectMonitor):
         self.job_feature_df = self.job_feature_df.drop(colunm_name, axis=1)
 
     def fill_in_blank_with_mode(self, series):
+        # 把空值的位置用众数填充，因为是字符串所以用出现最多的填充。
         if len(series[series.isnull()].values) > 0:
             self.logger.warning(f"find blank feature fill in with mode,{series}")
             series = series.copy()

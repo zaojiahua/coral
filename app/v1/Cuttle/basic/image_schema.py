@@ -42,6 +42,20 @@ def verify_input_image(data):
     return data
 
 
+def verify_crop_area(data):
+    crop_area_path = data.get("area_config")
+    try:
+        with open(crop_area_path, "r") as json_file:
+            json_data = json.load(json_file)
+            areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
+                     "area" + str(i) in json_data.keys()]
+        data["crop_areas"] = areas if areas != [] else [[0, 0, 1, 1]]
+        return data
+    except (FileNotFoundError, TypeError):
+        data["crop_areas"] = [[0, 0, 1, 1]]
+        return data
+
+
 def verify_not_relative_coor(str):
     coor_list = str.strip().split(" ")
     try:
@@ -179,23 +193,18 @@ class ImageAreaSchema(ImageSchema):
     @post_load()
     def explain(self, data, **kwargs):
         data = verify_input_image(data)
-
-        crop_area_path = data.get("area_config")
         data = super().explain(data, **kwargs)
-        try:
-            with open(crop_area_path, "r") as json_file:
-                json_data = json.load(json_file)
-                areas = [json_data["area" + str(i)] for i in range(1, len(json_data.keys())) if
-                         "area" + str(i) in json_data.keys()]
-            data["crop_areas"] = areas if areas != [] else [[0, 0, 1, 1]]
-            return data
-        except (FileNotFoundError,TypeError):
-            data["crop_areas"] = [[0, 0, 1, 1]]
-            return data
+        return verify_crop_area(data)
 
 
-class ImageAreaWithoutInputSchema(ImageAreaSchema):
+class ImageAreaWithoutInputSchema(ImageSchema):
+    area_config = fields.String(required=False, data_key="configArea")
     input_im = fields.String(required=False, data_key="inputImgFile")
+
+    @post_load()
+    def explain(self, data, **kwargs):
+        data = super().explain(data, **kwargs)
+        return verify_crop_area(data)
 
 
 class VideoBaseSchema(Schema):

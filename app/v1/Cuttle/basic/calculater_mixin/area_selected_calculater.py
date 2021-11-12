@@ -21,7 +21,7 @@ class AreaSelectedMixin(object):
     def has_icon_area_selected(self, exec_content) -> int:
         # 判断所选择区域内有指定图标
         # 确认图标存在-2
-        data = self._validate(exec_content, ImageAreaSchema)
+        data = self._wrapper_validate(exec_content, ImageAreaSchema)
         # 按照选区先裁剪参考图片-->裁成icon
         feature_refer = self._crop_image(data.get("refer_im"), data.get("areas")[0])
         # 按照选区裁剪输入图片 -->裁成一个大范围
@@ -74,7 +74,7 @@ class AreaSelectedMixin(object):
 
     def has_icon_template_match(self, exec_content) -> int:
         # 确认图标存在-1
-        data = self._validate(exec_content, ImageAreaSchema)
+        data = self._wrapper_validate(exec_content, ImageAreaSchema)
         template = self._crop_image(data.get("refer_im"), data.get("areas")[0])
         target_path = self._crop_image_and_save(data.get("input_im"), data.get("crop_areas")[0])
         # file_name = data.get('input_im').split(os.sep)[-1]

@@ -16,13 +16,14 @@ class ColorMixin(object):
     def is_excepted_color(self, exec_content) -> int:
         # 判断所选区域颜色与设置相同
         if exec_content.get('color') is not None:
-            data = self._validate(exec_content, ImageColorSchema)
+            data = self._wrapper_validate(exec_content, ImageColorSchema)
             r_required, g_required, b_required = data.get("color").split(",")
         else:
-            data = self._validate(exec_content, ImageColorPostionSchema)
+            data = self._wrapper_validate(exec_content, ImageColorPostionSchema)
             b_required, g_required, r_required = self.get_color_by_position(data)
 
         input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0]).astype(np.int32)
+        self._save_crop_image(data.get('input_im'), input_crop)
         b_input, g_input, r_input = cv2.split(input_crop)
         result = self._color_judge(b_input, b_required, g_input, g_required, r_input, r_required, data)
         return result
@@ -49,13 +50,14 @@ class ColorMixin(object):
     def _is_color_words(self, exec_content):
         # 兼容旧的
         if exec_content.get('color') is not None:
-            data = self._validate(exec_content, ImageColorSchema)
+            data = self._wrapper_validate(exec_content, ImageColorSchema)
             r, g, b = (int(i) for i in data.get("color").split(","))
         else:
-            data = self._validate(exec_content, ImageColorPostionSchema)
+            data = self._wrapper_validate(exec_content, ImageColorPostionSchema)
             b, g, r = self.get_color_by_position(data)
 
         input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0])
+        self._save_crop_image(data.get('input_im'), input_crop)
         th = (1 - data.get("threshold", 0.99)) * color_threshold
         lower_bgr = np.array([b - th, g - th, r - th])
         upper_bgr = np.array([b + th, g + th, r + th])
@@ -73,7 +75,7 @@ class ColorMixin(object):
 
     def is_excepted_color_in_relative_words_position(self, exec_content):
         # 根据文字+偏移量确定要判断颜色的位置，根据referPic+position确认标准rgb值
-        data = self._validate(exec_content, ImageColorRelativePositionSchema)
+        data = self._wrapper_validate(exec_content, ImageColorRelativePositionSchema)
         input_crop_path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         refer_b, refer_g, refer_r = self.get_color_by_position(data)
 

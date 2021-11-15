@@ -1,3 +1,5 @@
+from redis_init import redis_client
+
 hand_serial_obj_dict = {}
 hand_used_list = []
 camera_dq_dict = {}
@@ -70,3 +72,34 @@ handler_config = {
 strip_str = '<>[]{}/",.\n、'
 # 特征词
 serious_words = ['没有响应', '无响应']
+
+adb_cmd_prefix = "adb "
+KILL_SERVER = "kill-server"
+START_SERVER = "start-server"
+SERVER_OPERATE_LOCK = 'server_operate_lock'
+NORMAL_OPERATE_LOCK = 'normal_lock'
+
+get_lock = '''
+local is_exist = redis.call("GET", KEYS[1])
+if is_exist then
+    return 1
+else
+    redis.call("SET", ARGV[1], ARGV[2])
+    return 0
+end
+'''
+unlock = '''
+local random_value = redis.call("GET", KEYS[1])
+if random_value == ARGV[1] then
+    return redis.call("DEL", KEYS[1])
+else
+    return 0
+end
+'''
+del_lock = '''
+return redis.call("DEL", KEYS[1])
+'''
+
+get_lock_cmd = redis_client.register_script(get_lock)
+unlock_cmd = redis_client.register_script(unlock)
+del_lock_cmd = redis_client.register_script(del_lock)

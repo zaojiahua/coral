@@ -129,7 +129,7 @@ class Handler():
                 return _inner_func()
             except func_timeout.exceptions.FunctionTimedOut as e:
                 # 超时以后需要删除lock
-                if kwargs['lock_type']:
+                if kwargs.get('lock_type'):
                     unlock_cmd(keys=[kwargs['lock_type']], args=[kwargs['random_value']])
                 raise e
 

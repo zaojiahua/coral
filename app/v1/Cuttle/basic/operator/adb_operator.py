@@ -1,5 +1,4 @@
 import os
-import random
 import re
 import shutil
 import subprocess
@@ -73,7 +72,7 @@ class AdbHandler(Handler, ChineseMixin):
         # 有俩种类型的锁，俩种类型的操作互斥，一个是adb server start 或者是 kill的，另一个是其他类的
         target_lock = kwargs.get('target_lock')
         lock_type = kwargs.get('lock_type')
-        random_value = random.random()
+        random_value = kwargs.get('random_value')
         while True:
             if target_lock and lock_type:
                 is_lock = get_lock_cmd(keys=[target_lock], args=[lock_type, random_value])

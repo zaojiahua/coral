@@ -96,10 +96,6 @@ else
     return 0
 end
 '''
-del_lock = '''
-return redis.call("DEL", KEYS[1])
-'''
 
 get_lock_cmd = redis_client.register_script(get_lock)
 unlock_cmd = redis_client.register_script(unlock)
-del_lock_cmd = redis_client.register_script(del_lock)

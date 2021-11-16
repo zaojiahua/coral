@@ -3,6 +3,7 @@ import copy
 import re
 import time
 import traceback
+import random
 
 import func_timeout
 from func_timeout import func_set_timeout
@@ -11,9 +12,11 @@ from marshmallow import ValidationError
 from app.execption.outer.error_code.adb import UnitBusy, NoContent
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
-from app.v1.Cuttle.basic.setting import normal_result
+from app.v1.Cuttle.basic.setting import normal_result, KILL_SERVER, START_SERVER, SERVER_OPERATE_LOCK, \
+    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
+from app.config.ip import ADB_TYPE
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
 Standard = collections.namedtuple("Standard", ["mark", "code"])
@@ -110,7 +113,27 @@ class Handler():
         def _inner_func():
             return self.str_func(exec_content, **kwargs)
 
-        return self.retry_timeout_func(_inner_func)
+        # 俩种类型的指令互斥
+        if ADB_TYPE == 1:
+            random_value = random.random()
+            kwargs['random_value'] = random_value
+            if exec_content == (adb_cmd_prefix + KILL_SERVER) or exec_content == (adb_cmd_prefix + START_SERVER):
+                kwargs['target_lock'] = NORMAL_OPERATE_LOCK
+                kwargs['lock_type'] = SERVER_OPERATE_LOCK
+            else:
+                kwargs['target_lock'] = SERVER_OPERATE_LOCK
+                kwargs['lock_type'] = NORMAL_OPERATE_LOCK
+
+        def _inner_lock_func():
+            try:
+                return _inner_func()
+            except func_timeout.exceptions.FunctionTimedOut as e:
+                # 超时以后需要删除lock
+                if kwargs['lock_type']:
+                    unlock_cmd(keys=[kwargs['lock_type']], args=[kwargs['random_value']])
+                raise e
+
+        return self.retry_timeout_func(_inner_lock_func)
 
     @staticmethod
     def retry_timeout_func(func, max_retry_time=3):

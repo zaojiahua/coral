@@ -113,6 +113,10 @@ class AreaSelectedMixin(object):
         # 此方法后续变动需要合并上面那个方法中去。
         if target.shape[0] < template.shape[0] or target.shape[1] < template.shape[1]:
             raise IconBiggerThanField
+        # 这块用了归一化的相关系数做，因为实验出的效果还挺好，如果有需求也可以变更这块的算法，但最好用带Normed的 否则不好统一比较
+        # 详见官方文档
+        # https://docs.opencv.org/3.4.2/df/dfb/group__imgproc__object.html#gga3a7850640f1fe1f58fe91a2d7583695dac6677e2af5e0fae82cc5339bfaef5038
+        # 关于几个算法的区别可以参考这个：https://stackoverflow.com/questions/55469431/what-does-the-tm-ccorr-and-tm-ccoeff-in-opencv-mean
         result = cv2.matchTemplate(target, template, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         return max_val

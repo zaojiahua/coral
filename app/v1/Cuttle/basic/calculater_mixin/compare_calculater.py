@@ -11,6 +11,7 @@ from app.execption.outer.error_code.imgtool import IconTooWeek
 class FeatureCompareMixin:
     # 之前的代码，合并到一个混入内继续兼容
     def hist(self, refer_im, input_im, threshold):
+        # 直方图进行比较的方法，现在没有在用了
         refer_im_hist = self.get_img_hist(refer_im)
         input_im_hist = self.get_img_hist(input_im)
         # d max value is 1(same), min value is 0(different)
@@ -21,6 +22,8 @@ class FeatureCompareMixin:
         return 0
 
     def surf(self, refer_img, input_img, threshold):
+        # 判定图标存在的方法  分为两步，第一步用surf分别求两个图的keypoint 和descriptor
+        # 第二步是flann取得这些特征点能匹配上的部分，并与阈值做对比  这个方法只看是否存在，不查存在的位置
         kp1, des1 = self.feature_detection_by_surf(refer_img)  # 提取关键点和描述符
         kp2, des2 = self.feature_detection_by_surf(input_img)
         if len(kp1) < 5 or len(kp2) < 5:
@@ -33,6 +36,7 @@ class FeatureCompareMixin:
         return 0
 
     def numpy_array(self, refer_im, input_im, threshold):
+        # 简单的用图片rgb三个通道的均值做比较，暂没有加上方差
         refer_im, input_im = self.image_size_help(refer_im, input_im)
         refer_im_np = refer_im.astype(np.int32)
         input_im_np = input_im.astype(np.int32)
@@ -58,7 +62,7 @@ class FeatureCompareMixin:
             raise IconTooWeek
             # return 2010
         self._model.logger.info(f" icon feature number:{len(l)}")
-        # 对得到的goodmatch 再进行4分类的聚类，取数目最多的那个类型。
+        # 对得到的goodmatch 再进行4分类的聚类，取数目最多的那个类型的位置，就是求得的图标的位置。
         code, centroids = FeatureCompareMixin.kmeans_clustering(l, 4)
         max_centro = Counter(code).most_common(1)[0][0]
         return centroids[max_centro]
@@ -74,11 +78,13 @@ class FeatureCompareMixin:
 
     @classmethod
     def get_img_hist(cls, im):
+        # 直方图计算放方法，计算图片的像素直方图分布，这块用的是256/32个bin，三通道分别算
         # im: np_array
         image = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
 
         # extract a 3D RGB color histogram from the image,using 8 bins per channel, normalize, and update the index
         img_hist = cv2.calcHist([image], [0, 1, 2], None, [32, 32, 32], [0, 256, 0, 256, 0, 256])
+        # 这是做一下归一化
         img_hist = cv2.normalize(img_hist, img_hist).flatten()
 
         return img_hist
@@ -128,6 +134,7 @@ class FeatureCompareMixin:
 
     @staticmethod
     def kmeans_clustering(obs, k):
+        # 使用kmeans的一个聚类方法，用scipy提供的api
         """
         kmeans聚类算法
         :param obs:待聚合数组

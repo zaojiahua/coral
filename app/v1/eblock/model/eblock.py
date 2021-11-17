@@ -2,7 +2,7 @@ import func_timeout
 from astra import models
 
 from app.config.ip import ADB_TYPE
-from app.execption.outer.error_code.eblock import EblockTimeOut, EblockEarlyStop
+from app.execption.outer.error_code.eblock import UnitTimeOut, EblockEarlyStop
 from app.libs.extension.field import OwnerList
 from app.libs.extension.model import BaseModel
 from app.libs.log import setup_logger
@@ -53,7 +53,7 @@ class Eblock(BaseModel):
         if exc_tb:
             if exc_type == func_timeout.exceptions.FunctionTimedOut:
                 self.logger.warning("!!!---- unit timeout happen --- !!!!")
-                raise EblockTimeOut
+                raise UnitTimeOut
             else:
                 self.logger.error(f"unknow exception happend:{exc_type},{exc_val}")
                 return_val = False

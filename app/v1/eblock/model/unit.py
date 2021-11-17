@@ -327,3 +327,5 @@ class Unit(BaseModel):
                         print("delete one pic。。。")
                     except FileNotFoundError:
                         print("unable to find similar file to delete")
+                    except Exception as e:
+                        print('移除相似文件遇到其他异常', e)

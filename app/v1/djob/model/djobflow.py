@@ -342,7 +342,9 @@ class DJobFlow(BaseModel):
 
         if switch_node_dict.setdefault(job_node.node_key, 0) >= job_node.max_time:
             # 如果任务执行循环是else分支会造成死循环，需要避免,因此采用向上抛出异常
-            raise JobMaxRetryCycleException()
+            # raise JobMaxRetryCycleException()
+            # 超过最大的循环次数，走else分支
+            score = 'else'
         else:
             switch_node_dict[job_node.node_key] += 1
 

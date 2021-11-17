@@ -17,11 +17,11 @@ class EblockCannotFindFile(APIException):
     description = 'eblock can not find a input file'
 
 
-class EblockTimeOut(APIException):
+class UnitTimeOut(APIException):
     """
     unit执行时间超过最大限制
     """
-    error_code = 7003
+    error_code = -7003
     code = 400
     description = 'eblock time out'
 

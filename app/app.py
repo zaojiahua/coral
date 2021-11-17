@@ -6,13 +6,11 @@ from flask import Flask
 from flask_cors import CORS
 
 from app.config.setting import EXPOSE_HEADERS, SERVER_INIT
-from app.libs.log import logger_init
 from app.v1.Cuttle.basic.url import basic
 from app.v1.Cuttle.boxSvc.url import resource
 from app.v1.Cuttle.macPane.init import pane_init
 from app.v1.Cuttle.macPane.url import pane
 from app.v1.Cuttle.paneDoor.url import door
-from app.v1.device_common.device_manager import device_manager_loop
 from app.v1.djob.views import djob_router
 from app.v1.eblock.url import eblock
 from app.v1.log_view import log
@@ -74,12 +72,13 @@ def create_app():
 
     register_extensions(app)
 
-    logger_init()
+    # logger_init()
 
     server_init_inside()
 
-    t = threading.Thread(target=device_manager_loop)
-    t.start()
+    # 主要用来debug 不涉及到业务逻辑
+    # t = threading.Thread(target=device_manager_loop)
+    # t.start()
 
     return app
 

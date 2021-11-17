@@ -50,7 +50,7 @@ class Complex_Center(object):
         # 僚机mode为0，其他除了5型柜也都为0
         self.mode = 0 if (kwargs.get("assist_device_serial_number") is not None or (
                 device.has_arm is False and device.has_camera is False)) else 1
-        self.logger = setup_logger(f'coral-ocr', f'coral-ocr.log')
+        self.logger = setup_logger(f'{device_label}', f'{device_label}.log')
         # 存很多辅助信息
         self.kwargs = kwargs
         # 上下裁剪的补偿，用于文字点击时，先裁剪掉上半屏幕（防止同样字干扰），再从结果中加回offset得到真实坐标。

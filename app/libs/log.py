@@ -1,52 +1,42 @@
 import logging
 import os
+import datetime
 
-from app.config.log import NETWORK_LOG_NAME, REQUEST_LOG_TIME_STATISTICS, JOB_DOWNLOAD
-from app.config.setting import LOG_FORMAT, LOG_TO_CONSOLE, LOG_TO_FILE, LOG_ENABLED, LOGGER_OBJ_DICT, TBOARD_LOG_NAME, \
-    TOTAL_LOG_NAME, DJOB_LOG_NAME, IMG_LOG_NAME, LOG_DIR, DOOR_LOG_NAME, PANE_LOG_NAME
+from app.config.setting import LOG_FORMAT, LOG_TO_CONSOLE, LOG_TO_FILE, LOGGER_OBJ_DICT, \
+    LOG_DIR, CRITICAL_HOUR
 from app.libs.ospathutil import asure_path_exist
 
 
-def setup_logger(logger_name, log_file, level=logging.DEBUG
-                 , log_path=os.path.join(LOG_DIR, "log")):
-    if LOGGER_OBJ_DICT.get(logger_name):
-        return LOGGER_OBJ_DICT.get(logger_name)
+# 不同的手机，不同的天数放到一个log文件中，方便查看
+def setup_logger(logger_name, log_file, level=logging.DEBUG, log_path=os.path.join(LOG_DIR, "log")):
+    last_time = LOGGER_OBJ_DICT.get(logger_name, {}).get('last_time')
+    now = datetime.datetime.now()
+    critical_time = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=CRITICAL_HOUR)
+    if last_time is None or (now > critical_time > last_time):
+        log_path = os.path.join(log_path, now.strftime('%Y_%m_%d'))
+        asure_path_exist(log_path)
 
-    asure_path_exist(log_path)
+        log_file_path = os.path.join(log_path, log_file)
 
-    log_file_path = os.path.join(log_path, log_file)
+        log_obj = logging.getLogger(logger_name)
 
-    log_obj = logging.getLogger(logger_name)
+        formatter = logging.Formatter(LOG_FORMAT)
 
-    formatter = logging.Formatter(LOG_FORMAT)
+        file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
+        file_handler.setFormatter(formatter)
 
-    file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
-    file_handler.setFormatter(formatter)
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
 
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
+        log_obj.setLevel(level)
 
-    log_obj.setLevel(level)
+        if LOG_TO_CONSOLE:
+            log_obj.addHandler(stream_handler)
+        if LOG_TO_FILE:
+            log_obj.addHandler(file_handler)
 
-    if LOG_TO_CONSOLE:
-        log_obj.addHandler(stream_handler)
-    if LOG_TO_FILE:
-        log_obj.addHandler(file_handler)
+        LOGGER_OBJ_DICT[logger_name] = {'log': log_obj, 'last_time': now}
 
-    LOGGER_OBJ_DICT[logger_name] = log_obj
-
-    return log_obj
-
-
-def logger_init():
-    # server init exec
-    if LOG_ENABLED:
-        setup_logger(TBOARD_LOG_NAME, r'tboard.log')
-        setup_logger(DJOB_LOG_NAME, r'djob.log')
-        setup_logger(TOTAL_LOG_NAME, r'total.log')
-        setup_logger(IMG_LOG_NAME, r'imgTool.log')
-        setup_logger(DOOR_LOG_NAME, r'pane_door.log')
-        setup_logger(PANE_LOG_NAME, r'pane.log')
-        setup_logger(NETWORK_LOG_NAME, r'network.log')
-        setup_logger(REQUEST_LOG_TIME_STATISTICS, r'request_log_time_statistics.log')
-        setup_logger(JOB_DOWNLOAD, r'job_download.log')
+        return log_obj
+    else:
+        return LOGGER_OBJ_DICT.get(logger_name).get('log')

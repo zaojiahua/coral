@@ -43,7 +43,7 @@ class Eblock(BaseModel):
 
             self.handler = MacroHandler(**kwargs)
 
-            self.logger = setup_logger(f'eblock{self.device_id}', f'eblock-{self.device_id}.log')
+            self.logger = setup_logger(f'{self.device_id}', f'{self.device_id}.log')
 
     def __enter__(self):
         return self

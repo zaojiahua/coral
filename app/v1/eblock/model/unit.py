@@ -321,7 +321,7 @@ class Unit(BaseModel):
                 src_2 = cv2.imread(os.path.join(path, file_name[:-5] + ".png"))
                 src = src if src is not None else src_2
                 # 名称前缀相同，且图片尺寸相同则认为是没经过裁剪
-                if src_crop.shape == src.shape:
+                if src_crop is not None and src is not None and src_crop.shape == src.shape:
                     try:
                         os.remove(os.path.join(path, file))
                         print("delete one pic。。。")

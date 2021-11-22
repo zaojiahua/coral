@@ -271,6 +271,3 @@ class AideMonitor(object):
                 if count >= 20:
                     stop_specific_device(self.device_object.device_label)
         return 1
-if __name__ == '__main__':
-    json = battery_data_transform
-    battery_data_transform()

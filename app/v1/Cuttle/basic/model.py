@@ -3,6 +3,7 @@ from astra import models
 from app.libs.extension.model import BaseModel
 from app.libs.log import setup_logger
 
+
 # 这部分现在起到的作用比较少，打log时候还会用到。
 class AdbDevice(BaseModel):
     is_connected = models.BooleanField()
@@ -11,7 +12,7 @@ class AdbDevice(BaseModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = setup_logger(f'adb-server{self.pk}', f'adb-server-{self.pk}.log')
+        self.logger = setup_logger(f'{self.pk}', f'{self.pk}.log')
         self.is_busy = False
 
 
@@ -20,6 +21,6 @@ class HandDevice(BaseModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = setup_logger(f'hand-server{self.pk}', f'hand-server-{self.pk}.log')
+        self.logger = setup_logger(f'{self.pk}', f'{self.pk}.log')
         self.is_busy = False
 

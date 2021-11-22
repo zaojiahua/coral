@@ -90,7 +90,7 @@ class DJobFlow(BaseModel):
 
     def init_logger(self):
         if self.device_label:  # 如果Djob 中没有device_label attr ，写入总的 djob.log
-            self.logger = setup_logger(f"djob-{self.device_label}", f"djob-{self.device_label}.log")
+            self.logger = setup_logger(f"{self.device_label}", f"{self.device_label}.log")
 
     @property
     def temper_changes(self):
@@ -342,7 +342,9 @@ class DJobFlow(BaseModel):
 
         if switch_node_dict.setdefault(job_node.node_key, 0) >= job_node.max_time:
             # 如果任务执行循环是else分支会造成死循环，需要避免,因此采用向上抛出异常
-            raise JobMaxRetryCycleException()
+            # raise JobMaxRetryCycleException()
+            # 超过最大的循环次数，走else分支
+            score = 'else'
         else:
             switch_node_dict[job_node.node_key] += 1
 

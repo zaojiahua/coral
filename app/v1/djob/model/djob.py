@@ -59,7 +59,7 @@ class DJob(BaseModel):
 
     def init_logger(self):
         if self.device_label:  # 如果Djob 中没有device_label attr ，写入总的 djob.log
-            self.logger = setup_logger(f"djob-{self.device_label}", f"djob-{self.device_label}.log")
+            self.logger = setup_logger(f"{self.device_label}", f"{self.device_label}.log")
 
     def run_job_with_flow_execute_mode(self):
 

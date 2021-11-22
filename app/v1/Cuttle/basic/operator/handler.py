@@ -17,6 +17,7 @@ from app.v1.Cuttle.basic.setting import normal_result, KILL_SERVER, START_SERVER
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 from app.config.ip import ADB_TYPE
+from app.execption.outer.error_code.eblock import UnitTimeOut
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
 Standard = collections.namedtuple("Standard", ["mark", "code"])
@@ -92,6 +93,9 @@ class Handler():
                 return {"result": self._error_dict[list(e.messages.keys())[0]]}
             except KeyError:
                 return {"result": -10000}
+        except func_timeout.exceptions.FunctionTimedOut:
+            return {'result': UnitTimeOut.error_code}
+
         response = {"result": self.after_execute(result, self.func.__name__)}
         if self.extra_result:
             response.update(self.extra_result)
@@ -135,14 +139,14 @@ class Handler():
 
         return self.retry_timeout_func(_inner_lock_func)
 
-    @staticmethod
-    def retry_timeout_func(func, max_retry_time=3):
+    def retry_timeout_func(self, func, max_retry_time=3):
         retry_time = 0
         while retry_time < max_retry_time:
             try:
                 return func()
             except func_timeout.exceptions.FunctionTimedOut as e:
                 retry_time += 1
+                self._model.logger.error(f'超时重试: {retry_time}')
                 if retry_time == max_retry_time:
                     raise e
 

@@ -49,7 +49,7 @@ class UnitFactory(object):
         # 先实例化一个对应的model
         model = self.model_dict.get(handler_type, Dummy_model)
         pk = input_data.get("device_label")
-        model_obj = model(is_busy=False, pk=pk, logger=setup_logger(f'{handler_type}-{pk}', f'{handler_type}-{pk}.log'))
+        model_obj = model(is_busy=False, pk=pk, logger=setup_logger(f'{pk}', f'{pk}.log'))
         # 此处，会根据handler_type(是个字符串)实例化一个对应的handler（eg:AdbHandler,ImageHandler），并把刚刚的model，
         # 和执行中unit的信息（input_data）传入handler的构造函数，并显示的调用execute方法。
         return eval(handler_type)(model=model_obj, many=isinstance(input_data.get('execCmdList'), list),

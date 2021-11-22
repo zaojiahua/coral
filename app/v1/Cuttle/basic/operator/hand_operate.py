@@ -104,7 +104,9 @@ class HandHandler(Handler, DefaultMixin):
     def long_press(self, start_point, swipe_time=SWIPE_TIME, **kwargs):
         # 长按
         long_click_orders = self.__single_click_order(start_point[0])
-        hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2], wait=True, wait_time=self.speed)
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(long_click_orders[:2],
+                                                                 other_orders=[long_click_orders[-1]],
+                                                                 wait=True, wait_time=self.speed)
         time.sleep(wait_time)
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
@@ -192,7 +194,9 @@ class HandHandler(Handler, DefaultMixin):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
         click_orders = self.__single_click_order(self.calculate((device_obj.menu_x, device_obj.menu_y)))
-        hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders[:2], wait=True)
+        hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders[:2],
+                                                                 other_orders=[click_orders[-1]],
+                                                                 wait=True)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time)
         return result

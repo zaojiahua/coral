@@ -18,6 +18,7 @@ from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 from app.config.ip import ADB_TYPE
 from app.execption.outer.error_code.eblock import UnitTimeOut
+from app.execption.outer.error_code.djob import ImageIsNoneException
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
 Standard = collections.namedtuple("Standard", ["mark", "code"])
@@ -95,6 +96,8 @@ class Handler():
                 return {"result": -10000}
         except func_timeout.exceptions.FunctionTimedOut:
             return {'result': UnitTimeOut.error_code}
+        except ImageIsNoneException as e:
+            return {'result': e.error_code}
 
         response = {"result": self.after_execute(result, self.func.__name__)}
         if self.extra_result:

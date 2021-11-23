@@ -20,6 +20,7 @@ from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, Imag
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate, serious_words
 from app.v1.eblock.model.bounced_words import BouncedWords
+from app.execption.outer.error_code.djob import ImageIsNoneException
 
 VideoSearchPosition = 0.5
 
@@ -189,6 +190,10 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         # 常用方法，根据area裁剪输入路径下的图片，并返回图片内容矩阵
         try:
             image = cv2.imread(image_path)
+            # 没有输入图片
+            if image is None:
+                raise ImageIsNoneException()
+
             if area == [0, 0, 1, 1]:
                 return image
             if area[3] == area[2] == 0.99999 and area[0] == area[0] == 0:

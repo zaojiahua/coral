@@ -91,3 +91,12 @@ class InnerJobNotAssociated(APIException):
     code = 400
     error_code = 4009
     description = 'inner job not associated'
+
+
+class ImageIsNoneException(APIException):
+    """
+    图片为空，可能原因是要测试的软件不允许截图，请检查
+    """
+    code = 400
+    error_code = 4010
+    description = 'image is none exception'

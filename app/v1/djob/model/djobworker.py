@@ -14,7 +14,7 @@ class DJobWorker(BaseModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = setup_logger(f"djob-{self.device_label}", f"djob-{self.device_label}.log")
+        self.logger = setup_logger(f"{self.device_label}", f"{self.device_label}.log")
 
     @property
     def device_label(self):

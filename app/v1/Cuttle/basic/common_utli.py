@@ -57,6 +57,8 @@ def blur_match(identify_words_list, words_list):
 def judge_pic_same(path_1, path_2):
     src_1 = cv2.imread(path_1)
     src_2 = cv2.imread(path_2)
+    if (src_1 is not None and src_2 is not None and src_1.shape != src_2.shape) or src_1 is None or src_2 is None:
+        return False
     difference = cv2.subtract(src_1, src_2)
     return np.count_nonzero(difference) < (src_1.shape[0] * src_1.shape[1]) / 2000
 

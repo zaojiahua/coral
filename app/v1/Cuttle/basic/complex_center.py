@@ -17,7 +17,7 @@ from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec, get_file_name
 from app.v1.Cuttle.basic.setting import chinese_ingore, icon_min_template, icon_min_template_camera, \
-    light_pyramid_setting
+    light_pyramid_setting, SCREENCAP_CMD
 from app.v1.eblock.config.setting import BUG_REPORT_TIMEOUT
 
 
@@ -313,7 +313,7 @@ class Complex_Center(object):
     @handler_switcher
     def snap_shot(self, **kwargs):
         cmd_list = [
-            f"exec-out screencap -p > {self.default_pic_path}"
+            f"{SCREENCAP_CMD} {self.default_pic_path}"
         ]
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
         from app.v1.device_common.device_model import Device

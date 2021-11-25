@@ -279,8 +279,12 @@ class Unit(BaseModel):
                         self.pictures.lpush(target_name)
             elif file.startswith("ocr-") or file.startswith("crop-") or file.endswith("-crop.png") or file.endswith(
                     "-Tguard.png"):
-                # 复合型unit产生的图片只有自己会使用，因此move即可
-                shutil.move(os.path.join(self.unit_work_path, file), target_path)
+                # 在windows平台的时候，如果图片是空，执行这个指令的时候会报错
+                try:
+                    # 复合型unit产生的图片只有自己会使用，因此move即可
+                    shutil.move(os.path.join(self.unit_work_path, file), target_path)
+                except Exception:
+                    pass
                 self.pictures.lpush(target_name)
             else:
                 # 其他情况下复制到公共读的目录 比如txt文件等 其他unit需要用到

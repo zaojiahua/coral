@@ -99,3 +99,6 @@ end
 
 get_lock_cmd = redis_client.register_script(get_lock)
 unlock_cmd = redis_client.register_script(unlock)
+
+SCREENCAP_CMD = 'exec-out screencap -p >'
+

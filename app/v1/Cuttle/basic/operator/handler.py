@@ -5,6 +5,7 @@ import time
 import traceback
 import random
 
+import cv2
 import func_timeout
 from func_timeout import func_set_timeout
 from marshmallow import ValidationError
@@ -13,7 +14,7 @@ from app.execption.outer.error_code.adb import UnitBusy, NoContent
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result, KILL_SERVER, START_SERVER, SERVER_OPERATE_LOCK, \
-    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd
+    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 from app.config.ip import ADB_TYPE
@@ -176,6 +177,13 @@ class Handler():
 
     @after_execute.register(str)
     def _(self, result, funcname):
+        # 针对特殊的指令查看执行结果，比如截图查看是否截图成功
+        if SCREENCAP_CMD in self.exec_content:
+            pic_path = self.exec_content[self.exec_content.find(SCREENCAP_CMD) + len(SCREENCAP_CMD):].strip()
+            # 获取到的图片可能是空
+            if cv2.imread(pic_path) is None:
+                raise ImageIsNoneException
+
         # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
         if funcname not in self.skip_list:
             for abnormal in self.process_list:

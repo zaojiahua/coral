@@ -57,7 +57,9 @@ class HandSerial:
         return 0
 
     def write(self, content):
+        print('before-写入机械臂：', content)
         if content == "<SLEEP>":
             time.sleep(0.8)
             return ""
+        print('写入机械臂：', self.ser, content)
         return self.ser.write(content.encode())

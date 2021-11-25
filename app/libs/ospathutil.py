@@ -44,10 +44,20 @@ def makedirs_new_folder(path, timeout=5):
     return path
 
 
-def file_rename_from_path(path, prefix):
+def get_picture_create_time(filepath):
+    timestamp = time.strftime('%Y-%m-%d %H_%M_%S',
+                              time.localtime(os.path.getctime(filepath)))
+    return timestamp
+
+
+def file_rename_from_path(path, prefix, add_timestamp=False):
     for _file_name in os.listdir(path):
         _file_path = os.path.join(path, _file_name)
-        os.rename(_file_path, os.path.join(path, f"{prefix}_{_file_name}"))
+        if add_timestamp:
+            timestamp = get_picture_create_time(os.path.join(path, _file_name)) + ' '
+        else:
+            timestamp = ''
+        os.rename(_file_path, os.path.join(path, f"{timestamp}{prefix}_{_file_name}"))
 
 
 if __name__ == '__main__':

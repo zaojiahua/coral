@@ -23,6 +23,7 @@ from app.v1.eblock.config.leadin import PROCESSER_LIST
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
 from app.v1.eblock.model.macro_replace import MacroHandler
 from app.execption.outer.error_code.imgtool import DetectNoResponse
+from app.libs.ospathutil import get_picture_create_time
 
 
 def get_assist_device_ident(device_label, assist_device_serial_number):
@@ -114,10 +115,11 @@ class Unit(BaseModel):
     tGuard = models.IntegerField()
     unit_list_index = models.IntegerField()
     pictures = OwnerList(to=str)
+    timestamps = OwnerList(to=str)
     unit_work_path = models.CharField()
     optionalInputImage = models.IntegerField()
 
-    load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures')
+    load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures', 'timestamps')
 
     def __init__(self, pk=None, **kwargs):
         super().__init__(pk, **kwargs)
@@ -234,25 +236,11 @@ class Unit(BaseModel):
             finally:
                 self.copy_save_file(save_list, handler)
 
-            # def _replace(item_iter,saving_container):
-            #     save_list = []
-            #     for item in item_iter:
-            #         try:
-            #             value = saving_container.get(item) if isinstance(saving_container,dict) else item
-            #             replaced_cmd, save_file = handler.replace(value, assist_device_ident=assist_device_ident)
-            #         except EblockCannotFindFile as ex:  # 解释失败,不记录结果
-            #             logger.error(f"unit replace fail {ex}")
-            #             return
-            #         if save_file:
-            #             save_list.append(save_file)
-            #         if replaced_cmd and isinstance(saving_container, dict):
-            #             if isinstance(saving_container, dict):
-            #                 saving_container[item] = replaced_cmd
-            #             else:
-            #                 saving_container.append(replaced_cmd)
-            #     return save_list,saving_container
-
         return _inner_func()
+
+    def save_picture_info(self, target_name, target_path):
+        self.pictures.lpush(target_name)
+        self.timestamps.lpush(get_picture_create_time(target_path))
 
     def copy_save_file(self, save_list, handler: MacroHandler):
         """
@@ -276,7 +264,7 @@ class Unit(BaseModel):
                 if not os.path.exists(target_path):
                     shutil.copyfile(os.path.join(self.unit_work_path, file), target_path)
                     if Bugreport_file_name not in target_name:
-                        self.pictures.lpush(target_name)
+                        self.save_picture_info(target_name, target_path)
             elif file.startswith("ocr-") or file.startswith("crop-") or file.endswith("-crop.png") or file.endswith(
                     "-Tguard.png"):
                 # 在windows平台的时候，如果图片是空，执行这个指令的时候会报错
@@ -285,7 +273,7 @@ class Unit(BaseModel):
                     shutil.move(os.path.join(self.unit_work_path, file), target_path)
                 except Exception:
                     pass
-                self.pictures.lpush(target_name)
+                self.save_picture_info(target_name, target_path)
             else:
                 # 其他情况下复制到公共读的目录 比如txt文件等 其他unit需要用到
                 shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)

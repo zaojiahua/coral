@@ -1,3 +1,5 @@
+import time
+
 from astra import models
 
 from app.libs.extension.field import OwnerList, OwnerForeignKey
@@ -25,6 +27,8 @@ class DJobWorker(BaseModel):
         # if self.djob_list.llen() >= DJOB_QUEUE_MAX_LENGTH:
         #     return {"status": "djob_manager queue is full"}
 
+        # 这里延迟1s添加，否则的话俩个djob开始的时间可能一样，导致rds推送不过去，因为rds需要保证同一台设备，同一个用例，开始时间三者唯一
+        time.sleep(1)
         self.djob_list.lpush(djob)
         self.logger.info("(DJobWorker) add new DJob to wait list")
 

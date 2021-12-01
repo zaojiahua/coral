@@ -1,9 +1,5 @@
 import logging
-import os
-import platform
-import random
 import re
-import subprocess
 import sys
 import threading
 import time
@@ -23,11 +19,11 @@ from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevi
 from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.setting import hand_used_list
-from app.v1.Cuttle.macPane.init import get_tty_device_number
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
 from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
+from app.libs.adbutil import AdbCommand, get_room_version
 
 logger = logging.getLogger(DOOR_LOG_NAME)
 
@@ -141,7 +137,7 @@ class DoorKeeper(object):
             raise DeviceNotInUsb
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=device_label)
-        room_version = self.get_room_version(s_id)
+        room_version = get_room_version(s_id)
         android_version = self.adb_cmd_obj.run_cmd_to_get_result(
             f"adb -s {s_id} shell getprop ro.build.version.release")
         manufacturer = self.adb_cmd_obj.run_cmd_to_get_result(
@@ -254,7 +250,7 @@ class DoorKeeper(object):
         ret_dict["device_label"] = (old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
         self._check_device_already_in_cabinet(ret_dict["device_label"])
         # rom version数据不同类型手机可能藏在不同的地方，oppo已知型号要去拿color_os+版本， mi的直接拿ro.build.version.incremental
-        ret_dict["rom_version"] = self.get_room_version(s_id)
+        ret_dict["rom_version"] = get_room_version(s_id)
 
         # 判定是否为未见过的机型，是-->手机内获取机型信息   否-->从reef缓存机型信息
         phone_model_info_dict, status = self.is_new_phone_model(productName)
@@ -264,15 +260,6 @@ class DoorKeeper(object):
             ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         logger.info(f"[get device info] device info dict :{ret_dict}")
         return ret_dict
-
-    def get_room_version(self, s_id):
-        color_os = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.opporom")
-        rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.ota")
-        if len(rom_version) == 0:
-            rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.id")
-        rom_version = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
-            self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.incremental")
-        return rom_version
 
     def get_assis_device(self):
         s_id = self.get_device_connect_id(multi=False)
@@ -447,103 +434,3 @@ class DoorKeeper(object):
         if len(ret_size_list) == 0:
             raise DeviceWmSizeFail
         return ret_size_list
-
-
-class AdbCommand(object):
-    def __init__(self):
-        if sys.platform.startswith("win"):
-            self.adbCmdPrefix = "adb "
-        else:
-            self.adbCmdPrefix = "~/bin/adb "
-        self.subproc = None
-
-    def make_one_cmd(self, *commands):
-        command_string = self.adbCmdPrefix
-        for c in commands:
-            command_string += (" " + c)
-        return command_string
-
-    def run_cmd(self, one_adb_cmd_string, expect_result="", retry=1, timeout=3):
-        for r in range(0, retry):
-            if 0 == self.run_cmd_internal(one_adb_cmd_string, expect_result, timeout):
-                return 0
-        return 1
-
-    def run_cmd_to_get_result(self, one_cmd_string, timeout=3):
-        logger.debug("runCmdToGetResult : " + one_cmd_string + ", timeout: " + str(timeout))
-        run_thread = ShellCmdThread(one_cmd_string)
-        run_thread.start()
-        result = ""
-        for r in range(timeout * 4):
-            time.sleep(0.2)
-            if run_thread.is_finished():
-                result = run_thread.get_result()
-                # run_thread = ShellCmdThread(one_cmd_string)
-                # run_thread.start()
-                logger.debug("adbCmd run get result: " + str(result))
-                break
-        if not run_thread.is_finished():
-            run_thread.terminate_thread()
-        return result
-
-    def run_cmd_internal(self, one_cmd_string, expect_result, timeout):
-        logger.debug("adbCmd run: " + one_cmd_string + ", expect: " + expect_result + ", timeout: " + str(timeout))
-        run_thread = ShellCmdThread(one_cmd_string)
-        run_thread.start()
-        result = ""
-        for r in range(timeout * 2):
-            time.sleep(0.5)
-            if run_thread.is_finished():
-                result = run_thread.get_result()
-                logger.debug("adbCmd run get result: " + str(result))
-                break
-        if not run_thread.is_finished():
-            run_thread.terminate_thread()
-            return -1
-        if (len(expect_result) > 0) and (expect_result in result):
-            return 0
-        return 1
-
-    def fix_command(self):
-        logger.warning("receive problem of device offline, try to kill adb server")
-        self.subproc = subprocess.Popen("adb kill-server", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.subproc.wait()
-        self.subproc = subprocess.Popen("adb start-server", shell=True, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT)
-        self.subproc.wait()
-        self.subproc = subprocess.Popen("adb root", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.subproc.wait()
-        self.subproc = subprocess.Popen("adb remount", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.subproc.wait()
-
-
-class ShellCmdThread(threading.Thread):
-    def __init__(self, one_cmd_string):
-        threading.Thread.__init__(self)
-        self.isExeDone = False
-        self.oneCmdString = one_cmd_string
-        self.exeResult = ""
-        self.subproc = None
-
-    def run(self):
-        self.isExeDone = False
-        logger.debug("exeThread running " + self.oneCmdString + os.linesep)
-        self.subproc = subprocess.Popen(self.oneCmdString, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        restr = self.subproc.communicate()[0]
-        self.exeResult = restr.strip().decode()
-        logger.debug("ShellCmdThread run end return " + self.exeResult + os.linesep)
-        self.isExeDone = True
-
-    def is_finished(self):
-        return self.isExeDone
-
-    def get_result(self):
-        return self.exeResult
-
-    def terminate_thread(self):
-        if (not self.isExeDone) and (self.subproc is not None):
-            try:
-                self.subproc.terminate()
-            except Exception as e:
-                logger.error("Got exception in ShellCmdThread-terminateThread: " + str(e))
-        return 0

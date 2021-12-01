@@ -7,6 +7,7 @@ from app.config.log import TBOARD_LOG_NAME
 from app.execption.outer.error_code.tboard import CreateTboardError
 from app.v1.tboard.validators.tboardSchema import TboardSchema, TboardJobPrioritySchema
 from app.v1.tboard.views import tborad_router
+from app.libs.log import setup_logger
 
 """
 {
@@ -23,11 +24,11 @@ from app.v1.tboard.views import tborad_router
     board_name:Str 
 }
 """
-logger = logging.getLogger(TBOARD_LOG_NAME)
 
 
 @tborad_router.route('/insert_tboard/', methods=['POST'])
 def insert_tboard():
+    logger = setup_logger(TBOARD_LOG_NAME, f'{TBOARD_LOG_NAME}.log')
     logger.info(f"【Tboard】 receive a tboard from post request {request.json}")
     return insert_tboard_inner(**request.json)
 

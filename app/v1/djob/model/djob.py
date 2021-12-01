@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime
 from typing import List
 
@@ -13,6 +14,8 @@ from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.djob.config.setting import SINGLE_SPLIT
 from app.v1.djob.model.djobflow import DJobFlow
+from app.libs.adbutil import get_room_version
+from app.config.ip import ADB_TYPE
 
 """
 inner job 只有一个 job flow
@@ -167,7 +170,16 @@ class DJob(BaseModel):
         device_cache = Device(self.device_label)
         if device_cache.is_exist():
             json_data["phone_model"] = device_cache.phone_model_name
+            # rom version变化的时候，这里可能没有更新，所以进行实时的获取
             json_data["rom_version"] = device_cache.rom_version
+
+            # 版本号有可能获取不到
+            rom_version = get_room_version(device_cache.ip_address if ADB_TYPE == 0 else (self.device_label.split("---")[-1]))
+            if re.match(r'^[0-9][0-9\.]+[0-9]$', rom_version) is not None:
+                json_data['rom_version_const'] = rom_version
+            else:
+                json_data['rom_version_const'] = None
+            self.logger.info(f'获取到的rom_version_const版本号是：{json_data["rom_version_const"]}')
 
         try:
             result = request(method="POST", json=json_data, url=rds_create_or_update_url)

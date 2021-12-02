@@ -6,7 +6,7 @@ import time
 import threading
 
 from app.config.log import DOOR_LOG_NAME
-from libs.log import setup_logger
+from app.libs.log import setup_logger
 
 
 class AdbCommand(object):

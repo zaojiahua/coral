@@ -10,11 +10,11 @@ import func_timeout
 from func_timeout import func_set_timeout
 from marshmallow import ValidationError
 
-from app.execption.outer.error_code.adb import UnitBusy, NoContent
+from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersionFail
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result, KILL_SERVER, START_SERVER, SERVER_OPERATE_LOCK, \
-    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD
+    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 from app.config.ip import ADB_TYPE
@@ -183,6 +183,19 @@ class Handler():
             # 获取到的图片可能是空
             if cv2.imread(pic_path) is None:
                 raise ImageIsNoneException
+        if FIND_APP_VERSION in self.exec_content:
+            def raise_find_app_exception():
+                exception = FindAppVersionFail()
+                exception.extra_result = self.extra_result
+                raise exception
+            try:
+                self.extra_result['package_name'] = re.findall(r'((?:\w+\.)+\w+)', self.exec_content)[0]
+                self.extra_result['app_version'] = result.replace(FIND_APP_VERSION + '=', '').strip()
+                if re.match(r'^[0-9][0-9\.]+[0-9]$', self.extra_result['app_version']) is None:
+                    self.extra_result['app_version'] = None
+                    raise FindAppVersionFail
+            except Exception:
+                raise_find_app_exception()
 
         # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
         if funcname not in self.skip_list:
@@ -267,6 +280,7 @@ class ListHandler(Handler):
 
     def execute(self, **kwargs):
         flag = 0
+        result = None
         for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
             try:
                 self.child.exec_content = single_cmd
@@ -278,6 +292,11 @@ class ListHandler(Handler):
                 continue
         return_value = {"result": 0} if flag == 0 else {"result": flag}
         self.after_unit()
+        if result is not None:
+            # 把额外的数据写入进去
+            for k, v in result.items():
+                if k != 'result':
+                    return_value[k] = v
         return return_value
 
     def after_unit(self):

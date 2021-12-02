@@ -230,7 +230,11 @@ class Unit(BaseModel):
             except Exception as e:
                 logger.debug(f'unit 不正常结束 {e}')
                 if isinstance(e, APIException):
-                    self.detail = {"result": e.error_code}
+                    detail = {"result": e.error_code}
+                    if hasattr(e, 'extra_result'):
+                        for k, v in e.extra_result.items():
+                            detail[k] = v
+                    self.detail = detail
                 else:
                     raise e
             finally:

@@ -87,3 +87,12 @@ class ArmNorEnough(APIException):
     error_code = 1011
     code = 400
     description = "  Not enough arm! You need to logout one device first"
+
+
+class FindAppVersionFail(APIException):
+    """
+    获取APP版本失败，可能原因是手机没有安装此APP或者ADB连接断开
+    """
+    error_code = 1012
+    code = 400
+    description = "获取APP版本失败，可能原因是手机没有安装此APP或者ADB连接断开"

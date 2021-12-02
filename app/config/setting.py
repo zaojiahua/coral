@@ -1,5 +1,6 @@
 import os
 import platform
+import sys
 
 from .ip import *
 from .post import *
@@ -71,3 +72,7 @@ Bugreport_file_name = "bugreport.zip"
 
 PICTURE_COMPRESS_RATIO = 0.5
 
+if sys.platform.startswith("win"):
+    find_command = "findstr"
+else:
+    find_command = "grep"

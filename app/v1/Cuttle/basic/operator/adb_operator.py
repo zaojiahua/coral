@@ -21,11 +21,9 @@ from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 if sys.platform.startswith("win"):
     coding = "utf-8"
     mark = "\r\n"
-    find_command = "findstr"
 else:
     coding = "utf-8"
     mark = "\n"
-    find_command = "grep"
 
 
 class AdbHandler(Handler, ChineseMixin):

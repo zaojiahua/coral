@@ -437,15 +437,21 @@ class DoorKeeper(object):
         # 获取设备分辨率 eg 1080*2160
         ret_size_list = []
         tmp_str = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell wm size", timeout=5)
-        tmp_list = tmp_str.split("Physical size: ")
-        if len(tmp_list) > 1:
-            tmp_str = tmp_list[1]
-            tmp_list = tmp_str.split("x")
-            if len(tmp_list) > 1:
-                ret_size_list.append(int(tmp_list[0]))
-                ret_size_list.append(int(tmp_list[1]))
-        if len(ret_size_list) == 0:
+        override_size = re.findall(r'Override size:\s+([0-9]+)x([0-9]+)', tmp_str)
+        physical_size = re.findall(r'Physical size:\s+([0-9]+)x([0-9]+)', tmp_str)
+        if len(override_size) > 0 and len(override_size[0]) == 2:
+            target_size = override_size
+        elif len(physical_size) > 0 and len(physical_size[0]) == 2:
+            target_size = physical_size
+        else:
+            target_size = None
+
+        if target_size is not None:
+            ret_size_list.append(int(target_size[0][0]))
+            ret_size_list.append(int(target_size[0][1]))
+        else:
             raise DeviceWmSizeFail
+
         return ret_size_list
 
 

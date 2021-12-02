@@ -51,7 +51,8 @@ class DJob(BaseModel):
     picture_count = models.IntegerField()  # 记录性能测试记录的总图片
     url_prefix = models.CharField()  # 记录性能测试存图的url前缀
     time_per_unit = OwnerFloatField()  # 记录性能测试存图单位时间
-    rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit","lose_frame_point"]
+    rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit",
+                     "lose_frame_point"]
     # 特殊特征的rds提取和标识
     rds_feature_list = ['filter']
 
@@ -72,7 +73,8 @@ class DJob(BaseModel):
             for flow_index, flow_id in enumerate(self.job_flows_order):
                 self.current_djob_flow = DJobFlow(flow_id=flow_id, device_label=self.device_label,
                                                   job_label=self.job_label, source=self.source,
-                                                  tboard_path=self.tboard_path, flow_name=self.job_flows_name[flow_index])
+                                                  tboard_path=self.tboard_path,
+                                                  flow_name=self.job_flows_name[flow_index])
                 self.djob_flow_list.rpush(self.current_djob_flow)
 
                 self.current_djob_flow.run_single_flow()
@@ -149,21 +151,32 @@ class DJob(BaseModel):
         # 性能测试用例的测试时间的数据的保存
         for key in self.rds_info_list:
             if getattr(self, key):
-                json_data[key] = getattr(self,key)
+                json_data[key] = getattr(self, key)
         if len(rds_result) != 0:
-            if int(self.job_assessment_value) == 0:
-                # 如果job执行成功，删除pictures
-                def delete_picture(eblock):
-                    for unit_list in eblock.get('all_unit_list', []):
-                        for unit in unit_list.get('units', []):
+            app_info = []
+
+            def process_unit(eblock):
+                for unit_list in eblock.get('all_unit_list', []):
+                    for unit in unit_list.get('units', []):
+                        # 如果job执行成功，删除pictures
+                        if int(self.job_assessment_value) == 0:
                             unit['pictures'] = []
-                for job_flow in rds_result:
-                    for eblock in job_flow.get('eblock_list', []):
-                        if 'eblock_list' in eblock:
-                            for inner_eblock in eblock.get('eblock_list', []):
-                                delete_picture(inner_eblock)
-                        else:
-                            delete_picture(eblock)
+                        # 写入APP INFO的信息
+                        if unit.get('detail', {}).get('package_name') is not None:
+                            app_info.append({'package_name': unit.get('detail').get('package_name'),
+                                             'app_version': unit.get('detail').get('app_version')})
+
+            for job_flow in rds_result:
+                for eblock in job_flow.get('eblock_list', []):
+                    if 'eblock_list' in eblock:
+                        for inner_eblock in eblock.get('eblock_list', []):
+                            process_unit(inner_eblock)
+                    else:
+                        process_unit(eblock)
+
+            if len(app_info) > 0:
+                json_data['app_info'] = json.dumps(app_info)
+
             json_data["rds_dict"] = json.dumps(rds_result)  # type  str
         from app.v1.device_common.device_model import Device
 
@@ -174,12 +187,11 @@ class DJob(BaseModel):
             json_data["rom_version"] = device_cache.rom_version
 
             # 版本号有可能获取不到
-            rom_version = get_room_version(device_cache.ip_address if ADB_TYPE == 0 else (self.device_label.split("---")[-1]))
+            rom_version = get_room_version(
+                device_cache.ip_address if ADB_TYPE == 0 else (self.device_label.split("---")[-1]))
             if re.match(r'^[0-9][0-9\.]+[0-9]$', rom_version) is not None:
                 json_data['rom_version_const'] = rom_version
-            else:
-                json_data['rom_version_const'] = None
-            self.logger.info(f'获取到的rom_version_const版本号是：{json_data["rom_version_const"]}')
+                self.logger.info(f'获取到的rom_version_const版本号是：{json_data["rom_version_const"]}')
 
         try:
             result = request(method="POST", json=json_data, url=rds_create_or_update_url)

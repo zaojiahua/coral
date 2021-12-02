@@ -14,7 +14,7 @@ from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersi
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result, KILL_SERVER, START_SERVER, SERVER_OPERATE_LOCK, \
-    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION
+    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 from app.config.ip import ADB_TYPE
@@ -189,7 +189,10 @@ class Handler():
                 exception.extra_result = self.extra_result
                 raise exception
             try:
-                self.extra_result['package_name'] = re.findall(r'((?:\w+\.)+\w+)', self.exec_content)[0]
+                # self.extra_result['package_name'] = re.findall(r'((?:\w+\.)+\w+)',
+                # self.exec_content[self.exec_content.find('shell'):])[0]
+                self.extra_result['package_name'] = self.exec_content[self.exec_content.find(PM_DUMP) + len(PM_DUMP):
+                                                                      self.exec_content.find('|')].strip()
                 self.extra_result['app_version'] = result.replace(FIND_APP_VERSION + '=', '').strip()
                 if re.match(r'^[0-9][0-9\.]+[0-9]$', self.extra_result['app_version']) is None:
                     self.extra_result['app_version'] = None

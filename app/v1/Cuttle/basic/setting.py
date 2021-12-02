@@ -102,4 +102,5 @@ unlock_cmd = redis_client.register_script(unlock)
 
 SCREENCAP_CMD = 'exec-out screencap -p >'
 FIND_APP_VERSION = 'versionName'
+PM_DUMP = 'pm dump'
 

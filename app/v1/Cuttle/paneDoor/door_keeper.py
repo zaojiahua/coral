@@ -152,7 +152,7 @@ class DoorKeeper(object):
             raise AdbConnectFail()
 
         self.open_wifi_service(f"-s {s_id}")
-        return {'ip_address': ip, 'room_version': room_version, 'device_label': device_label,
+        return {'ip_address': ip, 'rom_version': room_version, 'device_label': device_label,
                 'manufacturer': manufacturer, 'android_version': android_version}
 
     def update_device_info(self, request_data):

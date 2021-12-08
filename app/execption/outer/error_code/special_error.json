@@ -11,9 +11,6 @@
     "error_code": -2,
     "description": "adb protocol fault"
   },{
-    "error_code": -3,
-    "description": "device not found，多见设备没连/连错wifi"
-  },{
     "error_code": -5,
     "description": "device offline"
   },{

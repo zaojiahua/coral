@@ -5,12 +5,11 @@ from werkzeug.exceptions import HTTPException
 class APIException(HTTPException):
     code = 500
     description = 'sorry, we made a mistake (*￣︶￣)!'
-    error_code = 999
+    error_code = 500
 
     def __init__(self, description=None, code=None, error_code=None,
                  headers=None):
-        if code:
-            self.code = code
+        self.code = 200
         if error_code:
             self.error_code = error_code
         if description:

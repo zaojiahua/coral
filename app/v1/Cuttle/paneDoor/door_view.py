@@ -17,10 +17,12 @@ class GetDevice(DeviceBase):
         respnse_body = self.door_keeper.get_device_info_compatibility()
         return jsonify(respnse_body), 200
 
+
 class GetAssisDevice(DeviceBase):
     def get(self):
         respnse_body = self.door_keeper.get_assis_device()
         return jsonify(respnse_body), 200
+
 
 class SetAssisDevice(DeviceBase):
     def post(self):
@@ -28,12 +30,14 @@ class SetAssisDevice(DeviceBase):
         self.door_keeper.set_assis_device(**data)
         return jsonify({"state": "DONE"}), 200
 
+
 class SetDevice(DeviceBase):
     def post(self):
         data = request.get_json()
         # todo validate data first
         self.door_keeper.authorize_device(**data)
         return jsonify({"state": "DONE"}), 200
+
 
 class SetDeviceManual(DeviceBase):
     "phone_model_name, device_width, device_height, screen_size, device_name, x_border, y_border"
@@ -52,22 +56,21 @@ class GetMutiDevice(DeviceBase):
         respnse_body = self.door_keeper.get_device_connect_id(multi=True)
         return jsonify({"total_device_number": len(respnse_body)}), 200
 
+
 class SetMutiDevice(DeviceBase):
     def post(self):
         data = request.get_json()
         res = self.door_keeper.muti_register(data.get("deviceName"))
         return jsonify(res), 200
 
+
 class OpenPort(DeviceBase):
     def post(self):
-        if ADB_TYPE == 1:
-            return jsonify({"state": "adb serial do not need reconnect"}), 200
-        if request.get_json() is not None and 0 == self.door_keeper.reconnect_device(request.get_json().get("cpu_id")):
-            return jsonify({"state": "DONE"}), 200
-        else:
-            return jsonify({"state": "Fail"}), 400
+        ret_data = self.door_keeper.reconnect_device(request.get_json().get("cpu_id"))
+        return jsonify(dict(error_code=0, data=ret_data))
 
 
-
-
-
+class UpdateDeviceInfo(DeviceBase):
+    def post(self):
+        ret_data = self.door_keeper.update_device_info(request.get_json())
+        return jsonify(dict(error_code=0, data=ret_data))

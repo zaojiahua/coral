@@ -20,7 +20,6 @@ from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.eblock.config.leadin import PROCESSER_LIST
-from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
 from app.v1.eblock.model.macro_replace import MacroHandler
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.libs.ospathutil import get_picture_create_time
@@ -126,6 +125,9 @@ class Unit(BaseModel):
         self.unit_work_path = str(time.time())
 
     def process_unit(self, logger, handler: MacroHandler, **kwargs):
+        from app.v1.device_common.device_model import Device
+        Device(pk=self.device_label).is_device_error()
+
         assist_device_ident = get_assist_device_ident(self.device_label,
                                                       self.assistDevice) if self.assistDevice else None
 

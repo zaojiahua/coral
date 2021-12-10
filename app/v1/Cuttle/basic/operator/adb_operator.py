@@ -9,7 +9,7 @@ from datetime import datetime
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name
-from app.config.url import battery_url
+from app.config.url import battery_url, device_url
 from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
@@ -41,8 +41,8 @@ class AdbHandler(Handler, ChineseMixin):
         Abnormal("battery mark", "save_battery", 0),
         Abnormal("cpu", "save_cpu_info", 0),
         Abnormal("battery fail mark", "_get_battery_detail", 0),
-        Abnormal(f"generating {Bugreport_file_name}", "_get_zipfile", 0) #pulling bug_report.zip
-    #     adb: device failed to take a zipped bugreport: Bugreport read terminated abnormally
+        Abnormal(f"generating {Bugreport_file_name}", "_get_zipfile", 0)  # pulling bug_report.zip
+        #     adb: device failed to take a zipped bugreport: Bugreport read terminated abnormally
     ]
     before_match_rules = {
         # 根据cmd中内容，执行对应的预处理方法
@@ -51,11 +51,9 @@ class AdbHandler(Handler, ChineseMixin):
         "input swipe": "_relative_swipe",
         "G01": "_ignore_unsupported_commend"
     }
-    NoSleepList = ["screencap -p ","pull /sdcard/","shell rm"]
+    NoSleepList = ["screencap -p ", "pull /sdcard/", "shell rm"]
 
     def before_execute(self, *args, **kwargs):
-        if self._model.is_connected == False:
-            self.reconnect()
         for key, value in self.before_match_rules.items():
             if key in self.exec_content:
                 return getattr(self, value)()
@@ -108,29 +106,30 @@ class AdbHandler(Handler, ChineseMixin):
                 # 有线模式下无论主僚机都做kill&start处理 其他线程也在使用adb server，这里kill掉的话，会导致其他unit执行失败
                 self.do(adb_cmd_prefix + KILL_SERVER)
                 self.do(adb_cmd_prefix + START_SERVER)
-                self._model.is_connected = True
-                self._model.disconnect_times += 1
-                return 0
-            if self.kwargs.get("assist_device_serial_number"):
-                # 无线模式下主僚机分别取对应的ip进行重连
-                device_ip = self.kwargs.get("assist_device_serial_number")
             else:
-                from app.v1.device_common.device_model import Device
-                device_ip = Device(pk=self._model.pk).ip_address
-            if len(device_ip) < 2:
-                return -1
-            self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
-            self.str_func(adb_cmd_prefix + "-s " + device_ip + " tcpip 5555")
-            self.str_func(adb_cmd_prefix + "connect " + device_ip + ":5555")
-            self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
-            self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
-            self._model.is_connected = True
+                if self.kwargs.get("assist_device_serial_number"):
+                    # 无线模式下主僚机分别取对应的ip进行重连
+                    device_ip = self.kwargs.get("assist_device_serial_number")
+                else:
+                    from app.v1.device_common.device_model import Device
+                    device_ip = Device(pk=self._model.pk).ip_address
+                if len(device_ip) < 2:
+                    return -1
+                self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
+                self.str_func(adb_cmd_prefix + "-s " + device_ip + " tcpip 5555")
+                self.str_func(adb_cmd_prefix + "connect " + device_ip + ":5555")
+                self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
+                self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
+
+            # 如果有连续3次发生连接不上的异常，则判定为error状态
             self._model.disconnect_times += 1
+            self._model.logger.info(f"disconnect_times:{self._model.disconnect_times}")
             if self._model.disconnect_times >= adb_disconnect_threshold:
-                pass  # todo send reef to set device disconnect
-            return 0
-        else:
-            return 0
+                from app.v1.device_common.device_model import DeviceStatus
+                self._model.status = DeviceStatus.ERROR
+                self._model.logger.warning(f"设备状态变成error")
+                # request(method="PATCH", url=f'{device_url}{self._model.id}', json={"status": DeviceStatus.ERROR})
+        return 0
 
     def disconnect(self, ip=None):
         if ADB_TYPE == 1:
@@ -138,8 +137,6 @@ class AdbHandler(Handler, ChineseMixin):
         from app.v1.device_common.device_model import Device
         device_ip = Device(pk=self._model.pk).ip_address if ip is None else ip
         self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
-        if hasattr(self._model, "is_connected"):
-            self._model.is_connected = False
         return 0
 
     def _compatible_sleep(self, exec_content):

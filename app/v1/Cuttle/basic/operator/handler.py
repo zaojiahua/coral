@@ -14,7 +14,7 @@ from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersi
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result, KILL_SERVER, START_SERVER, SERVER_OPERATE_LOCK, \
-    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP
+    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, adb_disconnect_threshold
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 from app.config.ip import ADB_TYPE
@@ -82,6 +82,10 @@ class Handler():
         self._model.is_busy = False
 
     def execute(self, **kwargs) -> dict:
+        # 如果被测试设备断开，则终止unit的执行
+        if self._model.pk != 0:
+            self._model.is_device_error()
+
         # 默认执行方法，使用self.func，去执行self.exec_content中内容。
         # 返回 {"result":int}  也可能多出其他项目eg： {"result": 0, "point_x": float(point_x), "point_y": float(point_y)}
         (skip, result) = self.before_execute()
@@ -177,6 +181,26 @@ class Handler():
 
     @after_execute.register(str)
     def _(self, result, funcname):
+        before_disconnect_times = self._model.disconnect_times
+
+        ret = 0
+        # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
+        if funcname not in self.skip_list:
+            for abnormal in self.process_list:
+                if isinstance(abnormal.mark, str) and abnormal.mark in result:
+                    getattr(self, abnormal.method)(result)
+                    ret = abnormal.code
+                    break
+            for standard in self.standard_list:
+                if standard.mark == result:
+                    ret = standard.code
+                    break
+
+        # 如果异常次数没有增加，说明本次连接正常，数据清零。注意有些指令可能不是adb指令，比如等待x秒
+        if self._model.disconnect_times == before_disconnect_times and \
+                before_disconnect_times < adb_disconnect_threshold and 'adb' in self.exec_content:
+            self._model.disconnect_times = 0
+
         # 针对特殊的指令查看执行结果，比如截图查看是否截图成功
         if SCREENCAP_CMD in self.exec_content:
             pic_path = self.exec_content[self.exec_content.find(SCREENCAP_CMD) + len(SCREENCAP_CMD):].strip()
@@ -188,11 +212,13 @@ class Handler():
                 exception = FindAppVersionFail()
                 exception.extra_result = self.extra_result
                 raise exception
+
             try:
                 # self.extra_result['package_name'] = re.findall(r'((?:\w+\.)+\w+)',
                 # self.exec_content[self.exec_content.find('shell'):])[0]
-                self.extra_result['package_name'] = self.exec_content[self.exec_content.find(PM_DUMP) + len(PM_DUMP):
-                                                                      self.exec_content.find('|')].strip()
+                self.extra_result['package_name'] = self.exec_content[
+                                                    self.exec_content.find(PM_DUMP) + len(PM_DUMP):
+                                                    self.exec_content.find('|')].strip()
                 self.extra_result['app_version'] = result.replace(FIND_APP_VERSION + '=', '').strip()
                 if re.match(r'^[0-9][0-9\.]+[0-9]$', self.extra_result['app_version']) is None:
                     self.extra_result['app_version'] = None
@@ -200,16 +226,7 @@ class Handler():
             except Exception:
                 raise_find_app_exception()
 
-        # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
-        if funcname not in self.skip_list:
-            for abnormal in self.process_list:
-                if isinstance(abnormal.mark, str) and abnormal.mark in result:
-                    getattr(self, abnormal.method)(result)
-                    return abnormal.code
-            for standard in self.standard_list:
-                if standard.mark == result:
-                    return standard.code
-        return 0
+        return ret
 
     def before_execute(self, **kwargs):
         # 默认的前置处理方法，根据functionName找到对应方法

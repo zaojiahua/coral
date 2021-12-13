@@ -126,9 +126,8 @@ class AdbHandler(Handler, ChineseMixin):
             self._model.logger.info(f"disconnect_times:{self._model.disconnect_times}")
             if self._model.disconnect_times >= adb_disconnect_threshold:
                 from app.v1.device_common.device_model import DeviceStatus
-                self._model.status = DeviceStatus.ERROR
+                self._model.update_device_status(DeviceStatus.ERROR)
                 self._model.logger.warning(f"设备状态变成error")
-                # request(method="PATCH", url=f'{device_url}{self._model.id}', json={"status": DeviceStatus.ERROR})
         return 0
 
     def disconnect(self, ip=None):

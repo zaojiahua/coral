@@ -152,6 +152,14 @@ class DoorKeeper(object):
             raise AdbConnectFail()
 
         self.open_wifi_service(f"-s {s_id}")
+
+        # 如果是在error状态下点击重连，重连成功以后设置为idle状态
+        from app.v1.device_common.device_model import Device, DeviceStatus
+        device_obj = Device(pk=device_label)
+        device_info = request(url=f'{device_url}{device_obj.id}')
+        if device_info.get('status') == DeviceStatus.ERROR:
+            device_obj.update_device_status(DeviceStatus.IDLE)
+
         return {'ip_address': ip, 'rom_version': room_version, 'device_label': device_label,
                 'manufacturer': manufacturer, 'android_version': android_version}
 

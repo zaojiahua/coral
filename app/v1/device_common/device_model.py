@@ -3,7 +3,7 @@ import time
 from astra import models
 
 from app.config.ip import ADB_TYPE
-from app.config.url import device_create_update_url
+from app.config.url import device_create_update_url, device_url
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
@@ -328,3 +328,7 @@ class Device(BaseModel):
     def is_device_error(self):
         if self.status == DeviceStatus.ERROR:
             raise DeviceStatusError()
+
+    def update_device_status(self, status):
+        request(method="PATCH", url=f'{device_url}{self.id}', json={"status": status})
+        self.status = status

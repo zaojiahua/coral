@@ -330,5 +330,5 @@ class Device(BaseModel):
             raise DeviceStatusError()
 
     def update_device_status(self, status):
-        request(method="PATCH", url=f'{device_url}{self.id}', json={"status": status})
+        request(method="PATCH", url=f'{device_url}{self.id}/', json={"status": status})
         self.status = status

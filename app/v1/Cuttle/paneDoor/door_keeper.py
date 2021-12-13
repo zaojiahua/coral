@@ -21,7 +21,7 @@ from app.libs.http_client import request
 from app.v1.Cuttle.basic.setting import hand_used_list
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
-from app.v1.device_common.device_model import Device
+from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
 from app.libs.adbutil import AdbCommand, get_room_version
 
@@ -48,6 +48,8 @@ class DoorKeeper(object):
             self.is_device_rootable(num=f"-s {s_id}")
         if CORAL_TYPE > 2:
             self.set_arm_or_camera(CORAL_TYPE, dev_info_dict["device_label"])
+        # 设备注册成功的话，设置状态为idle
+        dev_info_dict['status'] = DeviceStatus.IDLE
         self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"),
                                    dev_info_dict)  # now report dev_info_dict to reef directly
         logger.info(f"set device success")
@@ -159,6 +161,7 @@ class DoorKeeper(object):
         device_info = request(url=f'{device_url}{device_obj.id}')
         if device_info.get('status') == DeviceStatus.ERROR:
             device_obj.update_device_status(DeviceStatus.IDLE)
+            device_obj.disconnect_times = 0
 
         return {'ip_address': ip, 'rom_version': room_version, 'device_label': device_label,
                 'manufacturer': manufacturer, 'android_version': android_version}

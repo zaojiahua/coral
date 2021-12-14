@@ -45,7 +45,7 @@ def makedirs_new_folder(path, timeout=5):
 
 
 def get_picture_create_time(filepath):
-    timestamp = time.strftime('%Y-%m-%d %H_%M_%S',
+    timestamp = time.strftime('%Y-%m-%d %H:%M:%S',
                               time.localtime(os.path.getctime(filepath)))
     return timestamp
 

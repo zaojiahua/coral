@@ -60,13 +60,20 @@ class Dut(BaseModel):
 
     def start_dut(self):
         if self.exist():  # 停止dut 会在callback之前完成，停止dut会删除 dut instance,因此callback 不应进行
-            current_job_label = self.next_job_label
-            if current_job_label is None:  # singal device's job finished
-                logger.info(f"dut ({self.pk}) finished and remove")
-                self.remove_dut()  # 完成后移除
+            from app.v1.device_common.device_model import Device, DeviceStatus
+            device = Device(pk=self.device_label)
+            if device.status == DeviceStatus.ERROR:
+                self.remove_dut()
             else:
-                result_dict, *_ = self.send_djob()
-                self.djob_pk = result_dict.get("pk")
+                current_job_label = self.next_job_label
+                if current_job_label is None:  # singal device's job finished
+                    logger.info(f"dut ({self.pk}) finished and remove")
+                    self.remove_dut()  # 完成后移除
+                    # 这里设置状态为idle
+                    device.update_device_status(DeviceStatus.IDLE)
+                else:
+                    result_dict, *_ = self.send_djob()
+                    self.djob_pk = result_dict.get("pk")
 
     def remove_dut(self):
         self.remove()

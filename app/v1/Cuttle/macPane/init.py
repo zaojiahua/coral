@@ -15,7 +15,7 @@ from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.setting import hand_used_list
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
-from app.v1.device_common.device_model import Device
+from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
 
 key_parameter_list = ["camera", "robot_arm"]
@@ -64,11 +64,18 @@ def send_device_leave_to_reef(device, logger):
 
 
 def recover_device(executer, logger):
-    param = {"status__in": "ReefList[idle{%,%}busy]",
+    param = {"status__in": "ReefList[idle{%,%}busy{%,%}error{%,%}occupied]",
              "cabinet_id": HOST_IP.split(".")[-1],
-             "fields": "id,auto_test,device_name,device_width,cpu_id,device_height,ip_address,tempport,tempport.port,powerport,powerport.port,device_label,android_version,android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name,phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer,phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name,rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera,paneslot.paneview.id,paneslot.paneview.robot_arm"}
+             "fields": "id,auto_test,device_name,device_width,cpu_id,device_height,ip_address,status,"
+                       "tempport,tempport.port,powerport,powerport.port,device_label,android_version,"
+                       "android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name,"
+                       "phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer,"
+                       "phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name,"
+                       "rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera,"
+                       "paneslot.paneview.id,paneslot.paneview.robot_arm"}
     res = request(url=device_url, params=param)
     for device_dict in res.get("devices"):
+        print('获取到的设备信息有：', device_dict.get('device_label'))
         device_obj = Device(pk=device_dict.get("device_label"))
         device_obj.update_attr(**device_dict)
         try:
@@ -88,12 +95,13 @@ def recover_device(executer, logger):
             print(repr(e))
             pass
         # start a loop for each device when recover+
-        recover_root(device_obj.device_label, device_obj.connect_number)
+        if device_obj.status != DeviceStatus.ERROR:
+            recover_root(device_obj.device_label, device_obj.connect_number)
         aide_monitor_instance = AideMonitor(device_obj)
         t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(device_dict.get("device_label"))
         t.start()
-        if CORAL_TYPE!= 5:
+        if CORAL_TYPE != 5:
             executer.submit(device_obj.start_device_async_loop, aide_monitor_instance)
 
 

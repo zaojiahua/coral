@@ -3,20 +3,27 @@ import time
 from astra import models
 
 from app.config.ip import ADB_TYPE
-from app.config.url import device_create_update_url
+from app.config.url import device_create_update_url, device_url
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
-from app.v1.Cuttle.basic.operator.handler import Dummy_model
-from app.v1.Cuttle.basic.setting import camera_w, camera_h
 from app.v1.Cuttle.boxSvc.box_views import get_port_temperature
 from app.v1.device_common.device_manager import add_device_thread_status, remove_device_thread_status
 from app.v1.device_common.setting import key_map_position, default_key_map_position
 from app.v1.djob import DJobWorker
 from app.v1.stew.model.aide_monitor import send_battery_check
 from app.v1.tboard.model.dut import Dut
-from redis_init import redis_client
+from app.execption.outer.error_code.djob import DeviceStatusError
+
+
+# 设备状态
+class DeviceStatus(object):
+    IDLE = 'idle'
+    BUSY = 'busy'
+    OCCUPIED = 'occupied'
+    OFFLINE = 'offline'
+    ERROR = 'error'
 
 
 class Device(BaseModel):
@@ -70,6 +77,10 @@ class Device(BaseModel):
     assis_1 = models.CharField()
     assis_2 = models.CharField()
     assis_3 = models.CharField()
+    # 代表设备状态
+    status = models.CharField()
+    # 代表重连次数
+    disconnect_times = models.IntegerField()
 
     float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2"]
 
@@ -271,7 +282,7 @@ class Device(BaseModel):
         self.logger.warning(f"remove device info ")
         remove_device_thread_status(self.device_label)
         if self.ip_address != "0.0.0.0":
-            h = AdbHandler(model=Dummy_model(False, self.device_label, self.logger))
+            h = AdbHandler(model=self)
             h.disconnect()
         self.remove()
         self.flag = False
@@ -282,14 +293,17 @@ class Device(BaseModel):
         # ------------------------Loop------------------------
         add_device_thread_status(self.device_label)
         while self.flag:
+            time.sleep(2)
             # first priority do single djob
             try:
                 if Dut.all(device_label=self.device_label):
                     DJobWorker(self.device_label).djob_process()
                 # second send aitester's job
                 elif self.auto_test:
+                    # 上边的if不用加，因为add的地方进行了限制，如果加了的话，可能导致已经add，但是却没有执行的bug。
+                    if self.status == DeviceStatus.ERROR:
+                        continue
                     aide_monitor_instance.start_job_recommend()
-                time.sleep(2)
             except Exception as e:
                 self.logger.exception(f"Exception in sequence_loop: {repr(e)}")
                 self.logger.error(f"Exception in sequence_loop: {repr(e)}")
@@ -298,13 +312,23 @@ class Device(BaseModel):
     def start_device_async_loop(self, aide_monitor_instance):
         # start battery auto-charging and temp auto-management asynchronously
         while self.flag:
+            time.sleep(2)
+            if self.status == DeviceStatus.ERROR:
+                continue
             try:
                 if self.power_port:
                     aide_monitor_instance.start_battery_management()
                 if self.temp_port_list.smembers():
                     get_port_temperature(self.temp_port_list.smembers())
                 send_battery_check(self.device_label, self.connect_number)
-                time.sleep(2)
             except Exception as e:
                 self.logger.error(f"Exception in async_loop: {repr(e)}")
         self.logger.warning(f"--flag changed--：{self.flag}")
+
+    def is_device_error(self):
+        if self.status == DeviceStatus.ERROR:
+            raise DeviceStatusError()
+
+    def update_device_status(self, status):
+        request(method="PATCH", url=f'{device_url}{self.id}/', json={"status": status})
+        self.status = status

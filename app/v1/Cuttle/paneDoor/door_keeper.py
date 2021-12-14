@@ -14,14 +14,14 @@ from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url, device_update_url
-from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevice, DeviceChanged, DeviceCannotSetprop, \
-    DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough
+from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevice, DeviceCannotSetprop, \
+    DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough, AdbConnectFail
 from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.setting import hand_used_list
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
-from app.v1.device_common.device_model import Device
+from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
 from app.libs.adbutil import AdbCommand, get_room_version
 
@@ -48,6 +48,8 @@ class DoorKeeper(object):
             self.is_device_rootable(num=f"-s {s_id}")
         if CORAL_TYPE > 2:
             self.set_arm_or_camera(CORAL_TYPE, dev_info_dict["device_label"])
+        # 设备注册成功的话，设置状态为idle
+        dev_info_dict['status'] = DeviceStatus.IDLE
         self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"),
                                    dev_info_dict)  # now report dev_info_dict to reef directly
         logger.info(f"set device success")
@@ -127,33 +129,63 @@ class DoorKeeper(object):
 
         return dev_info_dict
 
+    # 支持ADB有线 ADB无线 以及各类型机柜
     def reconnect_device(self, device_label):
         # 设备重连，只做获取最新ip和开启5555端口的操作
-        if device_label is None or len(device_label) < 1:
-            return -1
+        if device_label is None or len(device_label) < 1 or CORAL_TYPE >= 5:
+            raise AdbConnectFail()
+
         s_id = device_label.split("---")[-1]
-        ip = self.get_dev_ip_address_internal(f"-s {s_id}")
-        if ip == "":
-            raise DeviceNotInUsb
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=device_label)
+        if ADB_TYPE == 1:
+            ip = '0.0.0.0'
+        else:
+            ip = self.get_dev_ip_address_internal(f"-s {s_id}")
+            if ip == "":
+                raise AdbConnectFail()
+
         room_version = get_room_version(s_id)
         android_version = self.adb_cmd_obj.run_cmd_to_get_result(
             f"adb -s {s_id} shell getprop ro.build.version.release")
         manufacturer = self.adb_cmd_obj.run_cmd_to_get_result(
             f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize()
+
+        not_found = 'not found'
+        if not_found in room_version or not_found in android_version or not_found in manufacturer:
+            raise AdbConnectFail()
+
+        self.open_wifi_service(f"-s {s_id}")
+
+        # 如果是在error状态下点击重连，重连成功以后设置为idle状态
+        from app.v1.device_common.device_model import Device, DeviceStatus
+        device_obj = Device(pk=device_label)
+        device_info = request(url=f'{device_url}{device_obj.id}')
+        if device_info.get('status') == DeviceStatus.ERROR:
+            device_obj.update_device_status(DeviceStatus.IDLE)
+            device_obj.disconnect_times = 0
+
+        return {'ip_address': ip, 'rom_version': room_version, 'device_label': device_label,
+                'manufacturer': manufacturer, 'android_version': android_version}
+
+    def update_device_info(self, request_data):
+        device_label = request_data.get('device_label')
+        ip = request_data.get('ip_address')
+        rom_version = request_data.get('rom_version')
+        android_version = request_data.get('android_version')
+        manufacturer = request_data.get('manufacturer')
         res = request(method="POST", url=device_update_url,
                       json={"ip_address": ip,
-                            "rom_version": room_version,
+                            "rom_version": rom_version,
                             "device_label": device_label,
-                            "manufacturer": manufacturer,
+                            "manufacturer": request_data.get('manufacturer'),
                             "android_version": android_version})
+        logger.info(f"response from reef: {res}")
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=device_label)
         device_obj.ip_address = ip
         device_obj.android_version = android_version
         device_obj.manufacturer = manufacturer
-        device_obj.rom_version = room_version
-        logger.info(f"response from reef: {res}")
-        return self.open_wifi_service(f"-s {s_id}")
+        device_obj.rom_version = rom_version
+        return 0
 
     def open_wifi_service(self, num="-d"):
         rootable = self.is_device_rootable(num)
@@ -162,7 +194,7 @@ class DoorKeeper(object):
         wifi_response = self.set_adb_wifi_property_internal(rootable, num)
         if wifi_response != 0 and ADB_TYPE == 0:
             logger.error("Failed to set adb wifi property.")
-            raise DeviceCannotSetprop
+            raise DeviceCannotSetprop()
         return 0
 
     def muti_register(self, device_name):

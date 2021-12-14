@@ -10,7 +10,7 @@ from app.config.setting import JOB_SYN_RESOURCE_DIR
 from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url, upload_rds_zip_file_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import JobExecBodyException, JobExecUnknownException, \
-    JobMaxRetryCycleException, InnerJobNotAssociated
+    InnerJobNotAssociated, DeviceStatusError
 from app.execption.outer.error_code.eblock import EblockEarlyStop
 from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, DictField, OwnerList, OwnerForeignKey, \
     OwnerFloatField
@@ -123,6 +123,8 @@ class DJobFlow(BaseModel):
             self.rds.job_assessment_value = self.job_assessment_value
             self.rds.finish = True
             self.rds.flow_name = self.flow_name
+        except DeviceStatusError as ex:
+            self.fake_rds(ex, '')
         except Exception as ex:
             self.logger.exception(f" run single djob exception: {ex}")
             error_traceback = traceback.format_exc()

@@ -2,17 +2,12 @@ import traceback
 
 from flask import request, jsonify
 
-from flask.views import MethodView
-
-from app.libs.log import setup_logger
-from app.v1.Cuttle.basic.model import HandDevice, AdbDevice
 # 下面5条不可去掉,因为是要靠eval实例化的类
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import CameraHandler
 from app.v1.Cuttle.basic.operator.complex_operator import ComplexHandler
 from app.v1.Cuttle.basic.operator.hand_operate import HandHandler
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
-from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 
 # 每一个相同的底层unit都有6种情况：
@@ -32,24 +27,18 @@ from app.v1.Cuttle.basic.url import basic
 
 
 class UnitFactory(object):
-    model_dict = {
-        "HandHandler": HandDevice,
-        "AdbHandler": AdbDevice,
-        "ComplexHandler": AdbDevice,
-    }
-
     def __new__(cls, *args, **kwargs):
         # 确保自己为单例对象
         if not hasattr(cls, "instance"):
             cls.instance = super().__new__(cls)
         return cls.instance
 
-    def create(self, handler_type, input_data) -> dict:
+    @staticmethod
+    def create(handler_type, input_data) -> dict:
         # 所有unit的入口文件
-        # 先实例化一个对应的model
-        model = self.model_dict.get(handler_type, Dummy_model)
         pk = input_data.get("device_label")
-        model_obj = model(is_busy=False, pk=pk, logger=setup_logger(f'{pk}', f'{pk}.log'))
+        from app.v1.device_common.device_model import Device
+        model_obj = Device(pk=pk)
         # 此处，会根据handler_type(是个字符串)实例化一个对应的handler（eg:AdbHandler,ImageHandler），并把刚刚的model，
         # 和执行中unit的信息（input_data）传入handler的构造函数，并显示的调用execute方法。
         return eval(handler_type)(model=model_obj, many=isinstance(input_data.get('execCmdList'), list),
@@ -60,7 +49,7 @@ class UnitFactory(object):
 @basic.route('/icon_test/', methods=['POST'])
 def test_icon_exist():
     try:
-        image_handler = ImageHandler(model=Dummy_model, many=False)
+        image_handler = ImageHandler(many=False)
         return jsonify(image_handler.test_icon_exist(request.files)), 200
     except Exception as e:
         return jsonify({"status": repr(e)}), 400
@@ -69,7 +58,7 @@ def test_icon_exist():
 @basic.route('/icon_test_fixed/', methods=['POST'])
 def test_icon_exist_fixed():
     try:
-        image_handler = ImageHandler(model=Dummy_model, many=False)
+        image_handler = ImageHandler(many=False)
         return jsonify(image_handler.test_icon_exist_fixed(request.files)), 200
     except Exception as e:
         return jsonify({"status": repr(e)}), 400
@@ -77,14 +66,14 @@ def test_icon_exist_fixed():
 
 @basic.route('/icon_test_position/', methods=['POST'])
 def test_position():
-    image_handler = ImageHandler(model=Dummy_model, many=False)
+    image_handler = ImageHandler(many=False)
     response = image_handler.test_icon_position(request.files)
     return jsonify(response), 200
 
 
 @basic.route('/icon_test_position_fixed/', methods=['POST'])
 def test_position_fixed():
-    image_handler = ImageHandler(model=Dummy_model, many=False)
+    image_handler = ImageHandler(many=False)
     response = image_handler.test_icon_position_fixed(request.files)
     return jsonify(response), 200
 
@@ -92,7 +81,7 @@ def test_position_fixed():
 @basic.route('/ocr_test/', methods=['POST'])
 def ocr_test():
     try:
-        image_handler = ImageHandler(model=Dummy_model, many=False)
+        image_handler = ImageHandler(many=False)
         request_params = {}
         request_params.update(request.files)
         request_params.update(request.form.to_dict())

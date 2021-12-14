@@ -118,7 +118,7 @@ class Unit(BaseModel):
     unit_work_path = models.CharField()
     optionalInputImage = models.IntegerField()
 
-    load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures', 'timestamps')
+    load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures', 'timestamps', 'assistDevice')
 
     def __init__(self, pk=None, **kwargs):
         super().__init__(pk, **kwargs)

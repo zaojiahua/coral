@@ -393,14 +393,12 @@ class DJobFlow(BaseModel):
                 # 修改rds中保存的图片名称
                 new_picture = []
                 picture = unit.pictures.rpop()
-                timestamp = unit.timestamps.rpop()
                 while picture is not None:
                     if self.source == DJOB:
                         picture = self.inner_job_prefix_name + '_' + picture
-                    picture = timestamp + ' ' + self.flow_prefix_name + '_' + picture
+                    picture = self.flow_prefix_name + '_' + picture
                     new_picture.append(picture)
                     picture = unit.pictures.rpop()
-                    timestamp = unit.timestamps.rpop()
                 for pictures in new_picture:
                     unit.pictures.lpush(pictures)
 
@@ -476,7 +474,7 @@ class DJobFlow(BaseModel):
         if self.source == DJOB:
             file_rename_from_path(self.device.rds_data_path, self.inner_job_prefix_name)
 
-        file_rename_from_path(self.device.rds_data_path, self.flow_prefix_name, True)
+        file_rename_from_path(self.device.rds_data_path, self.flow_prefix_name)
 
         for file_name in os.listdir(self.device.rds_data_path):
             file_path = os.path.join(self.device.rds_data_path, file_name)

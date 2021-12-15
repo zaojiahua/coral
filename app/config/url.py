@@ -4,6 +4,7 @@ tboard_post_url = "/api/v1/coral/create_tboard/"
 insert_tboard_url = "/api/v1/coral/insert_tboard/"
 tboard_id_url = "/api/v1/coral/end_tboard/{}/"
 tboard_url = "/api/v1/cedar/tboard/{}"
+tboard_release_busy_device = '/api/v1/coral/release_busy_device/'
 
 # ==================================rds=======================================
 

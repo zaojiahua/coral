@@ -334,3 +334,4 @@ class Device(BaseModel):
     def update_device_status(self, status):
         request(method="PATCH", url=f'{device_url}{self.id}/', json={"status": status})
         self.status = status
+        self.logger.debug(f'*************** url: {device_url}{self.id}/, status:{status}')

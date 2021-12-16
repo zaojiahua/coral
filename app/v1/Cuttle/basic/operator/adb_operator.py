@@ -125,6 +125,8 @@ class AdbHandler(Handler, ChineseMixin):
             # 如果有连续3次发生连接不上的异常，则判定为error状态
             self._model.disconnect_times += 1
             self._model.logger.info(f"disconnect_times:{self._model.disconnect_times}")
+            if self._model.disconnect_times == 1:
+                self._model.disconnect_times_timestamp.ltrim(1, 0)
             self._model.disconnect_times_timestamp.rpush(int(time.time()))
             # 次数和时间双保险
             if self._model.disconnect_times >= adb_disconnect_threshold and \

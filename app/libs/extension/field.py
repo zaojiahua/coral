@@ -9,7 +9,7 @@ from app.libs.extension.validators import DictValidatorMixin, OwnerDateTimeValid
 class OwnerList(BaseCollectionTypeValidatorMixin, List):
     _write_operation = ('linsert', 'lpop', 'lpush',
                         'lpushx', 'lset', 'rpop',
-                        'rpoplpush', 'rpush', 'rpushx',)
+                        'rpoplpush', 'rpush', 'rpushx', 'ltrim')
 
     # https://www.zhihu.com/question/44015086
     def __getitem__(self, item):

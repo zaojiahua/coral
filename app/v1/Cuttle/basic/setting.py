@@ -104,3 +104,5 @@ SCREENCAP_CMD = 'exec-out screencap -p >'
 FIND_APP_VERSION = 'versionName'
 PM_DUMP = 'pm dump'
 
+DEVICE_DETECT_ERROR_MAX_TIME = 5 * 60
+

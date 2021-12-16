@@ -15,9 +15,9 @@ from app.v1.djob import DJobWorker
 from app.v1.stew.model.aide_monitor import send_battery_check
 from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
+from app.libs.extension.field import OwnerList
 
 
-# 设备状态
 class DeviceStatus(object):
     IDLE = 'idle'
     BUSY = 'busy'
@@ -81,6 +81,8 @@ class Device(BaseModel):
     status = models.CharField()
     # 代表重连次数
     disconnect_times = models.IntegerField()
+    # 代表每次重连发生的时间
+    disconnect_times_timestamp = OwnerList(to=int)
 
     float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2"]
 

@@ -15,7 +15,7 @@ from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, KILL_SERVER, START_SERVER, get_lock_cmd, unlock_cmd, \
-    adb_cmd_prefix
+    adb_cmd_prefix, DEVICE_DETECT_ERROR_MAX_TIME
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 
 if sys.platform.startswith("win"):
@@ -30,6 +30,7 @@ class AdbHandler(Handler, ChineseMixin):
     discharging_mark_list = ["Discharging", "Not charging"]
     process_list = [
         # mark 为str 因为adb func 返回str
+        Abnormal(mark="error: closed", method="reconnect", code=-7),
         Abnormal(mark="restarting adbd as root", method="reconnect", code=-6),
         Abnormal("device offline", "reconnect", -5),
         #  此处windows和linux 有较多区别，windows下不能保证完全正常运行
@@ -124,7 +125,11 @@ class AdbHandler(Handler, ChineseMixin):
             # 如果有连续3次发生连接不上的异常，则判定为error状态
             self._model.disconnect_times += 1
             self._model.logger.info(f"disconnect_times:{self._model.disconnect_times}")
-            if self._model.disconnect_times >= adb_disconnect_threshold:
+            self._model.disconnect_times_timestamp.rpush(int(time.time()))
+            # 次数和时间双保险
+            if self._model.disconnect_times >= adb_disconnect_threshold and \
+                    self._model.disconnect_times_timestamp[-1] - self._model.disconnect_times_timestamp[0] > \
+                    DEVICE_DETECT_ERROR_MAX_TIME:
                 from app.v1.device_common.device_model import DeviceStatus
                 self._model.update_device_status(DeviceStatus.ERROR)
                 self._model.logger.warning(f"设备状态变成error")

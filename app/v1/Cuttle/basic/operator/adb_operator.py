@@ -7,6 +7,8 @@ import time
 from ast import literal_eval
 from datetime import datetime
 
+from func_timeout import func_set_timeout
+
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name
 from app.config.url import battery_url, device_url
@@ -17,6 +19,7 @@ from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, KILL_SERVER, START_SERVER, get_lock_cmd, unlock_cmd, \
     adb_cmd_prefix, DEVICE_DETECT_ERROR_MAX_TIME
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
+from app.v1.eblock.config.setting import ADB_DEFAULT_TIMEOUT
 
 if sys.platform.startswith("win"):
     coding = "utf-8"
@@ -200,6 +203,7 @@ class AdbHandler(Handler, ChineseMixin):
         if os.path.exists(f"./{Bugreport_file_name}"):
             shutil.move(f"./{Bugreport_file_name}", self.kwargs.get("work_path"))
 
+    @func_set_timeout(timeout=ADB_DEFAULT_TIMEOUT)
     def _get_battery_detail(self, *args):
         from app.v1.device_common.device_model import Device
         device_ip = Device(pk=self._model.pk).connect_number

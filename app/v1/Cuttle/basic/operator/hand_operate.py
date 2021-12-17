@@ -126,8 +126,8 @@ class HandHandler(Handler, DefaultMixin):
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         # ensure low speed swipe can end with true-time(get sleep time according to swipe distance and speed)
         if swipe_speed < 2000:
-            distance = np.hypot(point[1][0] - point[0][0], point[1][1] - point[0][1]) * 50
-            time.sleep((distance / self.speed) + 0.5)
+            # distance = np.hypot(point[1][0] - point[0][0], point[1][1] - point[0][1]) * 50
+            time.sleep(self.speed + 0.5)
         return result
 
     def trapezoid_slide(self, point, **kwargs):

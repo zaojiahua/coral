@@ -111,15 +111,21 @@ class HandHandler(Handler, DefaultMixin):
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def sliding(self, point, swipe_time=SWIPE_TIME, **kwargs):
-        # 滑动，self.speed是滑动速度
-        sliding_order = self.__sliding_order(point[0], point[1], self.speed)
+        # # 滑动，self.speed是滑动速度
+        # 2021.12.17 滑动，self.speed是滑动时间
+        swipe_distance = np.hypot(point[1][0] - point[0][0], point[1][1] - point[0][1])
+        cal_swipe_speed = swipe_distance / (self.speed * 0.00002)
+        swipe_speed = cal_swipe_speed if cal_swipe_speed < 10000 else 10000
+
+        sliding_order = self.__sliding_order(point[0], point[1], swipe_speed)
         hand_serial_obj_dict.get(self._model.pk).send_list_order(sliding_order)
         # time.sleep(wait_time)
-        if self.speed == 10000:
+        if swipe_speed == 10000:
             self.ignore_reset = True
+
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         # ensure low speed swipe can end with true-time(get sleep time according to swipe distance and speed)
-        if self.speed < 2000:
+        if swipe_speed < 2000:
             distance = np.hypot(point[1][0] - point[0][0], point[1][1] - point[0][1]) * 50
             time.sleep((distance / self.speed) + 0.5)
         return result

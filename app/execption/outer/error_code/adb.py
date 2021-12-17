@@ -14,7 +14,7 @@ class NoMoreThanOneDevice(APIException):
 class DeviceNotInUsb(APIException):
     error_code = 1001
     code = 400
-    description = "DO YOU FORGET CONNECT DEVICE? or Your device already in other cabinet"
+    description = "无法连接设备。请检查设备是否连接注册线、USB调试是否打开。"
 
 
 class DeviceChanged(APIException):
@@ -50,7 +50,7 @@ class DeviceWmSizeFail(APIException):
 class DeviceAlreadyInCabinet(APIException):
     error_code = 1007
     code = 400
-    description = "need to logout device in this or other cabinet first"
+    description = "设备已存在于当前系统中，请检查。"
 
 
 class UnitBusy(APIException):

@@ -239,11 +239,15 @@ class DoorKeeper(object):
         if "device usb" not in adb_response and "device product" not in adb_response and "device transport_id" not in adb_response:
             logger.info("[get device info]: no device found")
             raise DeviceNotInUsb  # no device found
+
         device_id_list = self.get_connected_device_list(adb_response)
         device_exist_id_list = self.get_already_connected_device_id_list()
         register_id_list = list(set(device_id_list).difference(set(device_exist_id_list)))
-        if len(register_id_list) == 0:
+        if len(device_id_list) == 0:
             raise DeviceNotInUsb
+
+        if len(device_id_list) > 0 and len(register_id_list) == 0:
+            raise DeviceAlreadyInCabinet(f'设备（{device_id_list[0]}）已存在于当前系统中，请检查。')
         if not multi:
             if len(register_id_list) > 1:
                 raise NoMoreThanOneDevice

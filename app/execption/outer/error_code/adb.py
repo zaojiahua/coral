@@ -8,7 +8,7 @@ from app.execption.outer.error import APIException
 class NoMoreThanOneDevice(APIException):
     error_code = 1000
     code = 400
-    description = 'single device register only allow one device in usb'
+    description = '注册设备时，主机上只能连接一台未注册的设备。'
 
 
 class DeviceNotInUsb(APIException):

@@ -10,6 +10,7 @@ from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
 from app.execption.outer.error_code.eblock import EblockCannotFindFile, MaroUnrecognition
 from app.v1.Cuttle.basic.setting import arm_default
+from app.config.setting import find_command
 
 adb_data_path = "<adbOutPath>"
 block_index = "<blockIndex>"
@@ -31,6 +32,7 @@ RotateInit = "<RotateInit>"
 RotateUp = '<RotateUp>'
 Resource = "<Acc_"
 Phone = "<Sim_"
+pipe_command = "<FindCommand>"
 
 job_editor_logo = "Tmach"
 
@@ -172,6 +174,8 @@ class MacroHandler(object):
             script = f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}"
             cmd = cmd.replace(adb_tool_prefix, script)
             cmd = self._adb_cmd_prefix + " " + cmd
+        if pipe_command in cmd:
+            cmd = cmd.replace(pipe_command, find_command)
         return cmd, save_file
 
     def set_sim_value(self, cmd, d_params, sim_number):

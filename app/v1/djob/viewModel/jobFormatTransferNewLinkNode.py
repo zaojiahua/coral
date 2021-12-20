@@ -45,7 +45,8 @@ class JobFormatTransform:
                 blockDict = dict(
                     blockName=nodeDict.get('text'),
                     checkDicFile=nodeDict.get('fileName'),
-                    nodeType='switch'
+                    nodeType='switch',
+                    maxTime=nodeDict.get('maxTime', 5)
                 )
                 SwitchNextKeyDict = self.findSwitchNextKeyDict(originaldata['linkDataArray'], nodeDict['key'])
                 for k, v in SwitchNextKeyDict.items():
@@ -179,6 +180,8 @@ class JobFormatTransform:
                         return 'fail'
                     elif nodeDict['text'] == 'Success':
                         return 'success'
+                    elif nodeDict['text'] == 'Abnormal':
+                        return 'Abnormal'
 
     def isEnd(self, blockKey, nodeDataArray):
         existEnd = False

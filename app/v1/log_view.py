@@ -8,7 +8,7 @@ from app.libs.logresponse import log_response
 
 log = Blueprint('log', __name__)
 
-
+# 这个是cedar admin页面进去才能看到的系统日志页面，现在基本上没在用，但页面上目前还能正常访问。
 class LogView(MethodView):
     def get(self):
         param_dict = request.args

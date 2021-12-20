@@ -2,6 +2,7 @@ import os
 import random
 from datetime import datetime, timedelta
 
+import func_timeout
 import numpy
 
 from app.config.setting import PROJECT_SIBLING_DIR
@@ -19,22 +20,26 @@ from app.v1.tboard.views.stop_specific_device import stop_specific_device
 
 @execute_limit(60)
 def send_battery_check(device_label, device_ip):
-    # 此处只负责下发检测电量的adb指令，在adb operator里会根据结果解析具体电量数据。
-    work_path = os.path.join(PROJECT_SIBLING_DIR, "Pacific", device_label, "djobBattery", )
-    if not os.path.exists(work_path):
-        os.makedirs(work_path)
-    cmd_list = [
-        #  todo 等产品确认编辑用例通信方式有线/无线
-        f"adb  -s {device_ip} shell cat sys/class/power_supply/battery/capacity sys/class/power_supply/battery/status && echo battery mark || echo battery fail mark",
-        # f'adb  -s {device_ip}:5555 shell dumpsys battery > {os.path.join(work_path,"battery.dat")}',
-        # f"adb -s {device_ip}:5555 shell echo battery"
-    ]
-    # f'adb  -s {device_ip}:5555 shell dumpsys batterystats >> {os.path.join(work_path,"battery.dat")}']
-    jsdata = {}
-    jsdata["ip_address"] = device_ip
-    jsdata["device_label"] = device_label
-    jsdata["execCmdList"] = cmd_list
-    UnitFactory().create("AdbHandler", jsdata)
+    try:
+        # 此处只负责下发检测电量的adb指令，在adb operator里会根据结果解析具体电量数据。
+        work_path = os.path.join(PROJECT_SIBLING_DIR, "Pacific", device_label, "djobBattery", )
+        if not os.path.exists(work_path):
+            os.makedirs(work_path)
+        cmd_list = [
+            #  todo 等产品确认编辑用例通信方式有线/无线
+            f"adb  -s {device_ip} shell cat sys/class/power_supply/battery/capacity sys/class/power_supply/battery/status && echo battery mark || echo battery fail mark",
+            # f'adb  -s {device_ip}:5555 shell dumpsys battery > {os.path.join(work_path,"battery.dat")}',
+            # f"adb -s {device_ip} shell sleep 12"
+        ]
+        # f'adb  -s {device_ip}:5555 shell dumpsys batterystats >> {os.path.join(work_path,"battery.dat")}']
+        jsdata = {}
+        jsdata["ip_address"] = device_ip
+        jsdata["device_label"] = device_label
+        jsdata["execCmdList"] = cmd_list
+        UnitFactory().create("AdbHandler", jsdata)
+    except func_timeout.exceptions.FunctionTimedOut as e:
+        pass
+
     return 0
 
 
@@ -266,6 +271,3 @@ class AideMonitor(object):
                 if count >= 20:
                     stop_specific_device(self.device_object.device_label)
         return 1
-if __name__ == '__main__':
-    json = battery_data_transform
-    battery_data_transform()

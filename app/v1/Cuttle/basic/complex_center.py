@@ -17,7 +17,8 @@ from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec, get_file_name
 from app.v1.Cuttle.basic.setting import chinese_ingore, icon_min_template, icon_min_template_camera, \
-    light_pyramid_setting
+    light_pyramid_setting, SCREENCAP_CMD
+from app.v1.eblock.config.setting import BUG_REPORT_TIMEOUT
 
 
 class Complex_Center(object):
@@ -33,21 +34,23 @@ class Complex_Center(object):
         # _pic_path 存实例化时传入的图（很可能没有）
         self._pic_path = inputImgFile
         # 如果传入的图为正式格式，就往work_path复制一份，用以最后上传至rds 的结果图片
-        if type(inputImgFile) == str and inputImgFile.split(".")[-1].upper() in ["PNG", "JPG", "JPEG", "GIF", "TIF"]:
-            shutil.copy(inputImgFile, os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png"))
+        # if type(inputImgFile) == str and inputImgFile.split(".")[-1].upper() in ["PNG", "JPG", "JPEG", "GIF", "TIF"]:
+        #     shutil.copy(inputImgFile, os.path.join(work_path, f"ocr-{str(random.random())[:7]}-InputCopy.png"))
         # ocr 要查找的文字
         self._searching_word = requiredWords
         # 找到文字后的偏移量
         self.x_shift, self.y_shift = self._shift(xyShift)
         # 这个图用来执行时 当场截图存放
         self.default_pic_path = os.path.join(work_path, f"ocr-{str(random.random())[:7]}.png")
+        self.work_path = work_path
         self.result = 0
+        self.ocr_result = None
         from app.v1.device_common.device_model import Device
         device = Device(pk=device_label)
         # 僚机mode为0，其他除了5型柜也都为0
         self.mode = 0 if (kwargs.get("assist_device_serial_number") is not None or (
                 device.has_arm is False and device.has_camera is False)) else 1
-        self.logger = setup_logger(f'coral-ocr', f'coral-ocr.log')
+        self.logger = setup_logger(f'{device_label}', f'{device_label}.log')
         # 存很多辅助信息
         self.kwargs = kwargs
         # 上下裁剪的补偿，用于文字点击时，先裁剪掉上半屏幕（防止同样字干扰），再从结果中加回offset得到真实坐标。
@@ -97,7 +100,7 @@ class Complex_Center(object):
         return float(result.get("cx")), float(result.get("cy"))
 
     def get_result(self, parse_function=default_parse_response.__func__):
-        # ocr 识别的方法
+        # ocr 识别的方法,传递要识别的文字，做精确匹配。
         # ocr请求最多retry3次
         for i in range(3):
             # 如果有文字的话，文字要传递给ocr服务，找文字位置，没有文字的话是识别所有的文字再做判断
@@ -114,10 +117,12 @@ class Complex_Center(object):
                     rpic_path = self.default_pic_path if self.default_pic_path is not None else self._pic_path
                     self.cal_realy_xy(pic_x, pic_y, rpic_path)
                     self.result = 0
+                    self.ocr_result = response.get('result')
                     break
                 # 需要return所有识别出所有文字的结果。
                 else:
                     self.result = response.get('result')
+                    self.ocr_result = response.get('result')
                     return self.result
             # ocr 找不到对应文字情况，抛异常，会被exit中捕获把结果设置为1
             elif response.get("status") == "not found":
@@ -130,7 +135,7 @@ class Complex_Center(object):
             raise OcrRetryTooManyTimes(description=f"ocr response:{response}")
 
     def get_result_ignore_speed(self):
-        # 与上面的方法有一些区别，
+        # 与上面的方法有一些区别，不传递要识别的文字，拿到所有的文字结果，用来做in的判定
         for i in range(3):
             pic_path = self.default_pic_path if self._pic_path == None else self._pic_path
             response = self._ocr_request(pic_path=pic_path)
@@ -308,9 +313,7 @@ class Complex_Center(object):
     @handler_switcher
     def snap_shot(self, **kwargs):
         cmd_list = [
-            f"shell rm /sdcard/snap.png",
-            f"shell screencap -p /sdcard/snap.png",
-            f"pull /sdcard/snap.png {self.default_pic_path}"
+            f"{SCREENCAP_CMD} {self.default_pic_path}"
         ]
         request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
         from app.v1.device_common.device_model import Device
@@ -320,6 +323,18 @@ class Complex_Center(object):
             raise ComplexSnapShotFail(error_code=self.result,
                                       description=str(self.result))
         self.logger.debug("snap-shot in smart ocr finished ")
+
+    @handler_switcher
+    def bug_report(self, **kwargs):
+        from app.v1.device_common.device_model import Device
+        device = Device(pk=self.device_label)
+        if not device.has_camera:
+            cmd_list = [
+                f"bugreport {self.work_path}bugreport.zip"
+            ]
+            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, BUG_REPORT_TIMEOUT)
+            handler_exec(request_body, kwargs.get("handler")[0])
+            self.logger.debug("bug report finished ")
 
     def picture_crop(self):
         src = cv2.imread(self.default_pic_path)

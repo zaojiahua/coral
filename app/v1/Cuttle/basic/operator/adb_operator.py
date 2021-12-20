@@ -14,18 +14,16 @@ from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
-from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, normal_result
+from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, KILL_SERVER, START_SERVER, get_lock_cmd, unlock_cmd, \
+    adb_cmd_prefix
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 
-adb_cmd_prefix = "adb "
 if sys.platform.startswith("win"):
     coding = "utf-8"
     mark = "\r\n"
-    find_command = "findstr"
 else:
     coding = "utf-8"
     mark = "\n"
-    find_command = "grep"
 
 
 class AdbHandler(Handler, ChineseMixin):
@@ -68,29 +66,48 @@ class AdbHandler(Handler, ChineseMixin):
         self._model.logger.debug(f"adb input:{exec_content}")
         if len(exec_content) == 0:
             return ""
-        sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        restr = sub_proc.communicate()[0]
-        no_sleep = False
-        for cmd in self.NoSleepList:
-            if cmd in exec_content:
-                no_sleep = True
-                break
-        if not no_sleep:
+
+        # 有俩种类型的锁，俩种类型的操作互斥，一个是adb server start 或者是 kill的，另一个是其他类的
+        target_lock = kwargs.get('target_lock')
+        lock_type = kwargs.get('lock_type')
+        random_value = kwargs.get('random_value')
+        while True:
+            if target_lock and lock_type:
+                is_lock = get_lock_cmd(keys=[target_lock], args=[lock_type, random_value])
+                self._model.logger.debug(f"锁状态：{is_lock}")
+            else:
+                is_lock = 0
+
+            if not is_lock:
+                sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                restr = sub_proc.communicate()[0]
+                no_sleep = False
+                for cmd in self.NoSleepList:
+                    if cmd in exec_content:
+                        no_sleep = True
+                        break
+                if not no_sleep:
+                    time.sleep(1)
+                try:
+                    execute_result = restr.strip().decode(coding)
+                except UnicodeDecodeError:
+                    execute_result = restr.strip().decode("gbk")
+                    print("cmd to exec:", exec_content, "decode error happened")
+                finally:
+                    if lock_type:
+                        unlock_cmd(keys=[lock_type], args=[random_value])
+                    break
             time.sleep(1)
-        try:
-            execute_result = restr.strip().decode(coding)
-        except UnicodeDecodeError:
-            execute_result = restr.strip().decode("gbk")
-            print("cmd to exec:", exec_content, "decode error happened")
+
         self._model.logger.debug(f"adb response:{execute_result}")
         return execute_result
 
     def reconnect(self, *args):
         if CORAL_TYPE < 5:
             if ADB_TYPE == 1:
-                # 有线模式下无论主僚机都做kill&start处理
-                self.str_func(adb_cmd_prefix + "kill-server")
-                self.str_func(adb_cmd_prefix + "start-server")
+                # 有线模式下无论主僚机都做kill&start处理 其他线程也在使用adb server，这里kill掉的话，会导致其他unit执行失败
+                self.do(adb_cmd_prefix + KILL_SERVER)
+                self.do(adb_cmd_prefix + START_SERVER)
                 self._model.is_connected = True
                 self._model.disconnect_times += 1
                 return 0

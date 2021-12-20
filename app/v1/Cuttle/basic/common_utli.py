@@ -9,7 +9,7 @@ def get_file_name(path):
     return ".".join(path.split(".")[:-1])
 
 
-def adb_unit_maker(cmd_list, device_label, connect_number):
+def adb_unit_maker(cmd_list, device_label, connect_number, timeout=None):
     # 由于新增僚机adb有线连接可能，需要将原有复合unit内所有adb部分增加前置层
     # 缓存内僚机存储形式确定好之后需要对应修改此方法
     from app.v1.device_common.device_model import Device
@@ -19,6 +19,8 @@ def adb_unit_maker(cmd_list, device_label, connect_number):
         "device_label": device_label,
         "execCmdList": [f"adb -s {connect_number} {cmd}" if "<sleep>" not in cmd else cmd for cmd in cmd_list]
     }
+    if timeout is not None:
+        request_body['timeout'] = timeout
     return request_body
 
 
@@ -55,6 +57,8 @@ def blur_match(identify_words_list, words_list):
 def judge_pic_same(path_1, path_2):
     src_1 = cv2.imread(path_1)
     src_2 = cv2.imread(path_2)
+    if (src_1 is not None and src_2 is not None and src_1.shape != src_2.shape) or src_1 is None or src_2 is None:
+        return False
     difference = cv2.subtract(src_1, src_2)
     return np.count_nonzero(difference) < (src_1.shape[0] * src_1.shape[1]) / 2000
 

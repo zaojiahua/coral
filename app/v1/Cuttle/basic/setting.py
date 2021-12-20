@@ -1,3 +1,5 @@
+from redis_init import redis_client
+
 hand_serial_obj_dict = {}
 hand_used_list = []
 camera_dq_dict = {}
@@ -28,6 +30,7 @@ wait_bias = 1.1  # 从发给旋转机械臂-到触碰到开关键的时间补偿
 adb_disconnect_threshold = 15
 arm_default = "G01 X0Y33Z0F5000 \r\n"
 arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
+arm_move_position = 'G01 X0Y33Z0F3000 \r\n'
 last_swipe_end_point = [0, 0]
 
 color_threshold = 4000
@@ -63,10 +66,41 @@ handler_config = {
     "point": ("AdbHandler", "HandHandler"),
     "long_press": ("AdbHandler", "HandHandler"),
     "swipe": ("AdbHandler", "HandHandler"),
-    "snap_shot": ("AdbHandler", "CameraHandler")
+    "snap_shot": ("AdbHandler", "CameraHandler"),
+    'bug_report': ('AdbHandler',)
 }
 strip_str = '<>[]{}/",.\n、'
-# imageTool排除干扰词
-bounced_words = ["确定", "同意", "同意并继续", "同意并使用", "暂不开启", "允许", "好的", "开始", "继续", "我知道了",
-                 "跳过", "以后再说", "仅使用期间允许", "仅在使用中允许", "本次运行允许", "始终允许", "下一步", "暂不升级", "不了，谢谢", "不了谢谢", "知道了", "不开启",
-                 "仅在使用此应用时允许"]
+# 特征词
+serious_words = ['没有响应', '无响应']
+
+adb_cmd_prefix = "adb "
+KILL_SERVER = "kill-server"
+START_SERVER = "start-server"
+SERVER_OPERATE_LOCK = 'server_operate_lock'
+NORMAL_OPERATE_LOCK = 'normal_lock'
+
+get_lock = '''
+local is_exist = redis.call("GET", KEYS[1])
+if is_exist then
+    return 1
+else
+    redis.call("SET", ARGV[1], ARGV[2])
+    return 0
+end
+'''
+unlock = '''
+local random_value = redis.call("GET", KEYS[1])
+if random_value == ARGV[1] then
+    return redis.call("DEL", KEYS[1])
+else
+    return 0
+end
+'''
+
+get_lock_cmd = redis_client.register_script(get_lock)
+unlock_cmd = redis_client.register_script(unlock)
+
+SCREENCAP_CMD = 'exec-out screencap -p >'
+FIND_APP_VERSION = 'versionName'
+PM_DUMP = 'pm dump'
+

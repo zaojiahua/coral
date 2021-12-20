@@ -75,7 +75,7 @@ class Device(BaseModel):
 
     def __init__(self, *args, **kwargs):
         super(Device, self).__init__(*args, **kwargs)
-        self.logger = setup_logger(f'device{self.pk}', f'device-{self.pk}.log')
+        self.logger = setup_logger(f'{self.pk}', f'{self.pk}.log')
         self.flag = True
 
     def __repr__(self):

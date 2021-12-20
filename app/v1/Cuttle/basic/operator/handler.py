@@ -2,13 +2,24 @@ import collections
 import copy
 import re
 import time
+import traceback
+import random
 
+import cv2
+import func_timeout
+from func_timeout import func_set_timeout
 from marshmallow import ValidationError
 
-from app.execption.outer.error_code.adb import UnitBusy, NoContent
+from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersionFail
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
-from app.v1.Cuttle.basic.setting import normal_result
+from app.v1.Cuttle.basic.setting import normal_result, KILL_SERVER, START_SERVER, SERVER_OPERATE_LOCK, \
+    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP
+from app.execption.outer.error_code.imgtool import DetectNoResponse
+from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
+from app.config.ip import ADB_TYPE
+from app.execption.outer.error_code.eblock import UnitTimeOut
+from app.execption.outer.error_code.djob import ImageIsNoneException
 
 Abnormal = collections.namedtuple("Abnormal", ["mark", "method", "code"])
 Standard = collections.namedtuple("Standard", ["mark", "code"])
@@ -26,7 +37,7 @@ class Handler():
     standard_list = []
 
     skip_retry_list = ["end_point_with_icon", "end_point_with_icon_template_match", "end_point_with_changed",
-                       "end_point_with_fps_lost"]
+                       "end_point_with_fps_lost","initiative_remove_interference"]
 
     def __init__(self, *args, **kwargs):
         self._model = kwargs.get("model", Dummy_model(False, 0, setup_logger(f'dummy', 'dummy.log')))
@@ -35,7 +46,10 @@ class Handler():
         self.exec_content = content.copy() if content is not None else None
         self.timeout = 40
         self.kwargs = kwargs
+        self.handler_timeout = self.kwargs.get('timeout') or DEFAULT_TIMEOUT
+        self.str_handler_timeout = self.kwargs.get('timeout') or ADB_DEFAULT_TIMEOUT
         self.extra_result = {}
+        self.optional_input_image = self.kwargs.get('optional_input_image') or 0
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -81,6 +95,11 @@ class Handler():
                 return {"result": self._error_dict[list(e.messages.keys())[0]]}
             except KeyError:
                 return {"result": -10000}
+        except func_timeout.exceptions.FunctionTimedOut:
+            return {'result': UnitTimeOut.error_code}
+        except ImageIsNoneException as e:
+            return {'result': e.error_code}
+
         response = {"result": self.after_execute(result, self.func.__name__)}
         if self.extra_result:
             response.update(self.extra_result)
@@ -88,13 +107,52 @@ class Handler():
 
     @method_dispatch
     def do(self, exec_content, **kwargs):
-        # 具体执行方法，这部分处理不是字符串的unit
-        return self.func(exec_content, **kwargs)
+        @func_set_timeout(timeout=self.handler_timeout)
+        def _inner_func():
+            # 具体执行方法，这部分处理不是字符串的unit
+            return self.func(exec_content, **kwargs)
+
+        return self.retry_timeout_func(_inner_func)
 
     @do.register(str)
     def _(self, exec_content, **kwargs):
         # 处理content为字符串的unit
-        return self.str_func(exec_content, **kwargs)
+        @func_set_timeout(timeout=self.str_handler_timeout)
+        def _inner_func():
+            return self.str_func(exec_content, **kwargs)
+
+        # 俩种类型的指令互斥
+        if ADB_TYPE == 1:
+            random_value = random.random()
+            kwargs['random_value'] = random_value
+            if exec_content == (adb_cmd_prefix + KILL_SERVER) or exec_content == (adb_cmd_prefix + START_SERVER):
+                kwargs['target_lock'] = NORMAL_OPERATE_LOCK
+                kwargs['lock_type'] = SERVER_OPERATE_LOCK
+            else:
+                kwargs['target_lock'] = SERVER_OPERATE_LOCK
+                kwargs['lock_type'] = NORMAL_OPERATE_LOCK
+
+        def _inner_lock_func():
+            try:
+                return _inner_func()
+            except func_timeout.exceptions.FunctionTimedOut as e:
+                # 超时以后需要删除lock
+                if kwargs.get('lock_type'):
+                    unlock_cmd(keys=[kwargs['lock_type']], args=[kwargs['random_value']])
+                raise e
+
+        return self.retry_timeout_func(_inner_lock_func)
+
+    def retry_timeout_func(self, func, max_retry_time=3):
+        retry_time = 0
+        while retry_time < max_retry_time:
+            try:
+                return func()
+            except func_timeout.exceptions.FunctionTimedOut as e:
+                retry_time += 1
+                self._model.logger.error(f'超时重试: {retry_time}')
+                if retry_time == max_retry_time:
+                    raise e
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:
@@ -108,14 +166,40 @@ class Handler():
                         response = getattr(self, abnormal.method)(result, self.kwargs.get("t_guard"))
                         if response == 0 and funcname not in self.skip_retry_list:
                             return 666
+                    except DetectNoResponse as e:
+                        raise e
                     except Exception as e:
                         self._model.logger.error(f'tGuard error: {str(e)}')
+                        traceback.print_exc()
                     return abnormal.code
         result = result if isinstance(result, int) else 0
         return result
 
     @after_execute.register(str)
     def _(self, result, funcname):
+        # 针对特殊的指令查看执行结果，比如截图查看是否截图成功
+        if SCREENCAP_CMD in self.exec_content:
+            pic_path = self.exec_content[self.exec_content.find(SCREENCAP_CMD) + len(SCREENCAP_CMD):].strip()
+            # 获取到的图片可能是空
+            if cv2.imread(pic_path) is None:
+                raise ImageIsNoneException
+        if FIND_APP_VERSION in self.exec_content:
+            def raise_find_app_exception():
+                exception = FindAppVersionFail()
+                exception.extra_result = self.extra_result
+                raise exception
+            try:
+                # self.extra_result['package_name'] = re.findall(r'((?:\w+\.)+\w+)',
+                # self.exec_content[self.exec_content.find('shell'):])[0]
+                self.extra_result['package_name'] = self.exec_content[self.exec_content.find(PM_DUMP) + len(PM_DUMP):
+                                                                      self.exec_content.find('|')].strip()
+                self.extra_result['app_version'] = result.replace(FIND_APP_VERSION + '=', '').strip()
+                if re.match(r'^[0-9][0-9\.]+[0-9]$', self.extra_result['app_version']) is None:
+                    self.extra_result['app_version'] = None
+                    raise FindAppVersionFail
+            except Exception:
+                raise_find_app_exception()
+
         # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
         if funcname not in self.skip_list:
             for abnormal in self.process_list:
@@ -150,8 +234,8 @@ class Handler():
             from app.v1.device_common.device_model import Device
             w = Device(pk=self._model.pk).device_width * x
             h = Device(pk=self._model.pk).device_height * y
-            self.exec_content = self.exec_content.replace(str(x), str(w))
-            self.exec_content = self.exec_content.replace(str(y), str(h))
+            self.exec_content = self.exec_content.replace(result.group(1), str(w), 1)
+            self.exec_content = self.exec_content.replace(result.group(2), str(h), 1)
         return normal_result
 
     def _relative_point(self):
@@ -163,8 +247,8 @@ class Handler():
             from app.v1.device_common.device_model import Device
             w = Device(pk=self._model.pk).device_width * x
             h = Device(pk=self._model.pk).device_height * y
-            self.exec_content = self.exec_content.replace(str(x), str(w))
-            self.exec_content = self.exec_content.replace(str(y), str(h))
+            self.exec_content = self.exec_content.replace(result.group(1), str(w), 1)
+            self.exec_content = self.exec_content.replace(result.group(2), str(h), 1)
         return normal_result
 
     def _relative_swipe(self):
@@ -182,10 +266,10 @@ class Handler():
             h1 = Device(pk=self._model.pk).device_height * y1
             w2 = Device(pk=self._model.pk).device_width * x2
             h2 = Device(pk=self._model.pk).device_height * y2
-            self.exec_content = self.exec_content.replace(result.group(1), str(w1))
-            self.exec_content = self.exec_content.replace(result.group(2), str(h1))
-            self.exec_content = self.exec_content.replace(result.group(3), str(w2))
-            self.exec_content = self.exec_content.replace(result.group(4), str(h2))
+            self.exec_content = self.exec_content.replace(result.group(1), str(w1), 1)
+            self.exec_content = self.exec_content.replace(result.group(2), str(h1), 1)
+            self.exec_content = self.exec_content.replace(result.group(3), str(w2), 1)
+            self.exec_content = self.exec_content.replace(result.group(4), str(h2), 1)
 
         return normal_result
 
@@ -199,6 +283,7 @@ class ListHandler(Handler):
 
     def execute(self, **kwargs):
         flag = 0
+        result = None
         for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
             try:
                 self.child.exec_content = single_cmd
@@ -210,6 +295,11 @@ class ListHandler(Handler):
                 continue
         return_value = {"result": 0} if flag == 0 else {"result": flag}
         self.after_unit()
+        if result is not None:
+            # 把额外的数据写入进去
+            for k, v in result.items():
+                if k != 'result':
+                    return_value[k] = v
         return return_value
 
     def after_unit(self):

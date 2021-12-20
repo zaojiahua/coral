@@ -74,7 +74,7 @@ class Dut(BaseModel):
 
     def check_tboard_finish(self):
         try:
-            lock.acquire()
+            lock.acquire(timeout=20.0)
             tboard = getattr(self, "parent", None)
             if tboard is None:
                 logger.error(f"dut {self.device_label} not belonging to any tboard")

@@ -19,6 +19,8 @@ from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_threshold, i
 
 
 class TestMixin(object):
+    # 这个文件完全就是其他方法的copy或者直接引用，只用于页面的检测按钮工作
+    # 请新加时尽量保持和实际方法所用所有参数都一致，以保障测试的有效性
     def test_icon_exist(self, exec_content, clear=True):
         data = IconTestSchema().load(exec_content)
         threshold = icon_threshold if CORAL_TYPE < 5 else icon_threshold_camera
@@ -131,6 +133,7 @@ class TestMixin(object):
         data = OcrTestSchema().load(exec_content)
         pic_path = self._crop_image_and_save(data.get("input_image"), data.get("areas")[0]) if data.get(
             "areas") else data.get("input_image")
+        print(pic_path,os.path.exists(pic_path))
         if data.get("ocr_choice") == "2":
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
                                ip=f"http://{OCR_IP}:8090")

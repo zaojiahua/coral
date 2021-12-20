@@ -19,7 +19,8 @@ from app.libs.http_client import request, request_file
 from app.libs.log import setup_logger
 from app.libs.ospathutil import file_rename_from_path
 from app.v1.djob.config.setting import NORMAL_TYPE, SWITCH_TYPE, END_TYPE, FAILED_TYPE, ADBC_TYPE, TEMPER_TYPE, \
-    IMGTOOL_TYPE, SUCCESS_TYPE, SUCCESS, FAILED, INNER_DJOB_TYPE, DJOB, COMPLEX_TYPE, ERROR_FILE_DIR
+    IMGTOOL_TYPE, SUCCESS_TYPE, SUCCESS, FAILED, INNER_DJOB_TYPE, DJOB, COMPLEX_TYPE, ERROR_FILE_DIR, ABNORMAL_TYPE, \
+    ABNORMAL
 from app.v1.djob.model.device import DjobDevice
 from app.v1.djob.model.job import Job
 from app.v1.djob.model.joblink import JobLink
@@ -29,6 +30,7 @@ from app.v1.djob.viewModel.device import DeviceViewModel
 from app.v1.djob.viewModel.job import JobViewModel
 from app.v1.eblock.model.eblock import Eblock
 from app.v1.eblock.views.eblock import insert_eblock, stop_eblock
+from app.execption.outer.error_code.imgtool import DetectNoResponse
 
 
 class DJobFlow(BaseModel):
@@ -51,6 +53,7 @@ class DJobFlow(BaseModel):
     status = OwnerBooleanHash()  # False 执行未完成  True 执行完成
     exec_node_index = models.IntegerField()  # 当前执行的node 节点的index
     recent_adb_wrong_code = models.IntegerField()  # 获取当前block 最后一条错误的adbc 指令的code default 为 0 表示没有错误
+    block_recent_adb_wrong_code = models.IntegerField()
     recent_img_res_list = OwnerList(
         to=int)  # 栈结构rpush,rpop 记录当前 normal 中img_tool结果，recent_img_res_list的结果会被switch or end 消耗
     recent_img_rpop_list = OwnerList(to=int)  # 栈结构 rpush,rpop  记录 被switch消耗的 recent_img_res_list的结果，用于end 结果收集
@@ -72,11 +75,14 @@ class DJobFlow(BaseModel):
     current_eblock = OwnerForeignKey(to=Eblock)  # 当前正在执行的eblock
     # 当前的jobflow当做inner job的时候（也就是是其他job_flow的一个block），需要在rds中存储这个字段
     block_name_as_inner_job = models.CharField()
+    filter = models.CharField()  # 发生了严重错误 比如某些APP没有响应
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.logger = None
         self.init_logger()
+        # 记录switch node的引用
+        self.switch_node_ref = {}
 
         # 修改推送到rds的文件名时候的用
         self.inner_job_prefix_name = f"(inner_{self.inner_job_index})"
@@ -84,7 +90,7 @@ class DJobFlow(BaseModel):
 
     def init_logger(self):
         if self.device_label:  # 如果Djob 中没有device_label attr ，写入总的 djob.log
-            self.logger = setup_logger(f"djob-{self.device_label}", f"djob-{self.device_label}.log")
+            self.logger = setup_logger(f"{self.device_label}", f"{self.device_label}.log")
 
     @property
     def temper_changes(self):
@@ -110,6 +116,13 @@ class DJobFlow(BaseModel):
             self.execute()
         except EblockEarlyStop:
             self.logger.info(f" djobflow ({self.device_label} {self.job_label} {self.flow_id}) be stopped")
+        except DetectNoResponse:
+            # 没有响应，设置特殊的结果以及字段
+            self.job_assessment_value = 1
+            self.filter = 'serious'
+            self.rds.job_assessment_value = self.job_assessment_value
+            self.rds.finish = True
+            self.rds.flow_name = self.flow_name
         except Exception as ex:
             self.logger.exception(f" run single djob exception: {ex}")
             error_traceback = traceback.format_exc()
@@ -183,6 +196,17 @@ class DJobFlow(BaseModel):
         self.rds.block_name = self.block_name_as_inner_job
         self.end_time = datetime.now()
         self.status = True
+        # 写入循环执行的次数
+        self.log_switch_time()
+
+    def log_switch_time(self):
+        # 写入循环执行的次数
+        for key, execute_time in self.switch_node_dict.items():
+            # 执行次数大于1代表是循环
+            if int(execute_time) > 1:
+                job_node = self.switch_node_ref[key]
+                self.rds.switch_times.rpush(
+                    {'time': execute_time, 'name': job_node.block_name, 'max_time': job_node.max_time})
 
     def computed_result(self):
         last_node = self.rds.last_node
@@ -194,6 +218,10 @@ class DJobFlow(BaseModel):
 
         elif last_node == FAILED_TYPE:
             return FAILED
+        elif last_node == ABNORMAL_TYPE:
+            result_code = self.djob_result()
+            result_code = ABNORMAL if result_code in [0, 1] else result_code
+            return result_code
         else:
             raise JobExecBodyException(description=f"job {self.job_label} exec failed:  last exec node is {last_node}")
 
@@ -201,7 +229,6 @@ class DJobFlow(BaseModel):
         job_node = JobNode(node_key, node_dict)
 
         self.rds.last_node = job_node.node_type
-
         if job_node.node_type == NORMAL_TYPE:
             self.exec_node_index += 1
             self._execute_normal(job_node)
@@ -215,7 +242,7 @@ class DJobFlow(BaseModel):
         elif job_node.node_type == SWITCH_TYPE:
             next_node_dict = self._execute_switch(job_node)
 
-        elif job_node.node_type in [END_TYPE, SUCCESS_TYPE, FAILED_TYPE]:
+        elif job_node.node_type in [END_TYPE, SUCCESS_TYPE, FAILED_TYPE, ABNORMAL_TYPE]:
             return
         else:
             raise JobExecBodyException(description=f"invalid node type :{job_node.node_type}")
@@ -257,21 +284,23 @@ class DJobFlow(BaseModel):
         dJob_flow.execute()
         self.recent_img_res_list = None
         self.recent_img_rpop_list = None
+        self.block_recent_adb_wrong_code = 0
         self.recent_img_res_list.rpush(int(dJob_flow.job_assessment_value))
         self.rds.eblock_list.rpush(dJob_flow.rds.json())
 
     def _execute_normal(self, job_node):
 
-        self._insert_exec_block(job_node)
-
-        if self.current_eblock:
-            self._eblock_return_data_parse(self.current_eblock)
-            block_rds = self.current_eblock.json()
-            if self.recent_img_res_list and len(self.recent_img_res_list) > 0:
-                block_result = self.recent_img_res_list[-1]
-                block_rds['value'] = block_result
-            self.rds.eblock_list.rpush(block_rds)
-            self.current_eblock.remove()
+        try:
+            self._insert_exec_block(job_node)
+        finally:
+            if self.current_eblock:
+                self._eblock_return_data_parse(self.current_eblock)
+                block_rds = self.current_eblock.json()
+                if self.recent_img_res_list and len(self.recent_img_res_list) > 0:
+                    score = self._get_score(False)
+                    block_rds['value'] = int(score)
+                self.rds.eblock_list.rpush(block_rds)
+                self.current_eblock.remove()
 
     def _insert_exec_block(self, job_node):
         """
@@ -305,28 +334,44 @@ class DJobFlow(BaseModel):
         return insert_eblock(json_data)
 
     def _execute_switch(self, job_node):
+        # 记录引用
+        if self.switch_node_ref.get(job_node.node_key, None) is None:
+            self.switch_node_ref[job_node.node_key] = job_node
+
         switch_node_dict = self.switch_node_dict
 
-        if switch_node_dict.setdefault(job_node.node_key, 0) >= 5:
+        if switch_node_dict.setdefault(job_node.node_key, 0) >= job_node.max_time:
             # 如果任务执行循环是else分支会造成死循环，需要避免,因此采用向上抛出异常
-            raise JobMaxRetryCycleException()
+            # raise JobMaxRetryCycleException()
+            # 超过最大的循环次数，走else分支
+            score = 'else'
         else:
             switch_node_dict[job_node.node_key] += 1
 
-            if len(self.recent_img_res_list):
-                score = self.recent_img_res_list.rpop()  # 最左边的最新
-                self.recent_img_rpop_list.rpush(score)  # 最右边的最新被遗弃的
-                if score == 1 and self.recent_adb_wrong_code:
-                    score = self.recent_adb_wrong_code
-
-                score = str(score)
-            else:
-                score = "else"
+            score = self._get_score()
         next_switch_dict = self.job.link_dict.get(job_node.node_key)
         next_node_dict = next_switch_dict[score] if score in next_switch_dict.keys() else next_switch_dict["else"]
 
         self.switch_node_dict = switch_node_dict
         return next_node_dict
+
+    # 获取block的执行结果，根据该结果执行Switch分支
+    def _get_score(self, is_switch=True):
+        if len(self.recent_img_res_list):
+            if is_switch:
+                score = self.recent_img_res_list.rpop()  # 最左边的最新
+                self.recent_img_rpop_list.rpush(score)  # 最右边的最新被遗弃的
+            else:
+                score = self.recent_img_res_list[-1]
+
+            if score == 1 and self.block_recent_adb_wrong_code:
+                score = self.block_recent_adb_wrong_code
+            score = str(score)
+        else:
+            score = "else"
+
+        self.logger.info(f" switch 最后的计算结果是： {score}) .........")
+        return score
 
     def _eblock_return_data_parse(self, eblock):
         """
@@ -340,6 +385,7 @@ class DJobFlow(BaseModel):
                          "lose_frame_point"]
         self.recent_img_res_list = None  # 每一个block 产生的结果会覆盖recent_img_res_list
         self.recent_img_rpop_list = None
+        self.block_recent_adb_wrong_code = 0
 
         for unit_list in eblock.all_unit_list:
             for unit in unit_list.units:
@@ -368,6 +414,7 @@ class DJobFlow(BaseModel):
                 if unit.execModName == ADBC_TYPE:
                     if result is not None and result < 0:
                         self.recent_adb_wrong_code = result
+                        self.block_recent_adb_wrong_code = result
 
                 elif unit.execModName == IMGTOOL_TYPE or unit.execModName == COMPLEX_TYPE:
                     if result is not None:
@@ -411,6 +458,8 @@ class DJobFlow(BaseModel):
         self.rds.job_assessment_value = self.job_assessment_value
         self.rds.is_error = True
         self.rds.error_msg = error_traceback
+        # 写入循环执行的次数
+        self.log_switch_time()
 
     def push_log_and_pic(self, base_data: dict, job_assessment_value, **kwargs):
         """

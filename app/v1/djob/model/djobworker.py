@@ -1,3 +1,5 @@
+import time
+
 from astra import models
 
 from app.libs.extension.field import OwnerList, OwnerForeignKey
@@ -14,7 +16,7 @@ class DJobWorker(BaseModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = setup_logger(f"djob-{self.device_label}", f"djob-{self.device_label}.log")
+        self.logger = setup_logger(f"{self.device_label}", f"{self.device_label}.log")
 
     @property
     def device_label(self):
@@ -25,6 +27,8 @@ class DJobWorker(BaseModel):
         # if self.djob_list.llen() >= DJOB_QUEUE_MAX_LENGTH:
         #     return {"status": "djob_manager queue is full"}
 
+        # 这里延迟1s添加，否则的话俩个djob开始的时间可能一样，导致rds推送不过去，因为rds需要保证同一台设备，同一个用例，开始时间三者唯一
+        time.sleep(1)
         self.djob_list.lpush(djob)
         self.logger.info("(DJobWorker) add new DJob to wait list")
 
@@ -38,8 +42,10 @@ class DJobWorker(BaseModel):
             self.using_djob.run_job_with_flow_execute_mode()
             # 执行完成，调用dut，推送djob到 DJobWorker
             self.callback()
+            self.logger.info("callback finished ")
 
             self.using_djob.remove()
+            self.logger.info("djob_process finished  now start next djob")
 
     def callback(self):
         if self.using_djob.tboard_id:

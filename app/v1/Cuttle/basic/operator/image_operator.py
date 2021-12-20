@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from app.execption.outer.error_code.imgtool import OcrParseFail, RecordWordsFindNoWords, \
-    IconTooWeek
+    IconTooWeek, DetectNoResponse
 from app.v1.Cuttle.basic.calculater_mixin.area_selected_calculater import AreaSelectedMixin
 from app.v1.Cuttle.basic.calculater_mixin.color_calculate import ColorMixin
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin
@@ -16,9 +16,11 @@ from app.v1.Cuttle.basic.calculater_mixin.test_calculater import TestMixin
 from app.v1.Cuttle.basic.common_utli import threshold_set, get_file_name
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageSchema, ImageBasicSchema, ImageBasicSchemaCompatible, \
-    ImageSchemaCompatible
+    ImageSchemaCompatible, ImageAreaSchema
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
-from app.v1.Cuttle.basic.setting import bounced_words, icon_threshold, icon_threshold_camera, icon_rate
+from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate, serious_words
+from app.v1.eblock.model.bounced_words import BouncedWords
+from app.execption.outer.error_code.djob import ImageIsNoneException
 
 VideoSearchPosition = 0.5
 
@@ -104,16 +106,31 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
             f"feature point number:{len(feature_point_list)},threshold:{threshold - (1 - data.get('threshold', 0.99)) * icon_rate}")
         return 0 if len(feature_point_list) >= threshold - (1 - data.get("threshold", 0.99)) * icon_rate else 1
 
+    def _wrapper_validate(self, exec_content, schema):
+        # 输入图片不是必须的
+        exec_content['optional_input_image'] = self.optional_input_image
+        data = self._validate(exec_content, schema)
+        self.snap_shot_now(data)
+        del data['optional_input_image']
+        return data
+
+    def snap_shot_now(self, data):
+        if self.optional_input_image == 1 and not data.get('exist_input_im'):
+            with Complex_Center(**self.kwargs) as ocr_obj:
+                ocr_obj.snap_shot()
+                self.image = ocr_obj.default_pic_path
+                data['input_im'] = self.image
+
     def words_prepare(self, exec_content, key):
-        data = self._validate(exec_content, schema=ImageBasicSchemaCompatible)
+        # 输入图片不是必须的
+        data = self._wrapper_validate(exec_content, ImageBasicSchemaCompatible)
         words_list = exec_content.get(key).split(",")
-        input = self._crop_image(self.image, data.get("areas")[0])
-        path = os.path.join(self.kwargs.get("work_path"), f"ocr-{random.random()}.png")
-        cv2.imwrite(path, input)
+
+        path = self._crop_image_and_save(self.image, data.get("areas")[0])
         return words_list, path
 
     def record_words(self, exec_content) -> int:
-        data = self._validate(exec_content, ImageSchemaCompatible)
+        data = self._wrapper_validate(exec_content, ImageSchemaCompatible)
         path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             self.image = path
@@ -127,15 +144,20 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def clear(self, result, t_guard):
         if t_guard is None or t_guard == 1:
             with Complex_Center(**self.kwargs) as ocr_obj:
-                if not hasattr(self, "image") or self.image is None:
-                    ocr_obj.snap_shot()
-                else:
-                    ocr_obj.default_pic_path = self.image
+                ocr_obj.snap_shot()
                 ocr_obj.get_result(parse_function=self._parse_function)
                 if ocr_obj.result == 0:
                     ocr_obj.point()
-                shutil.move(ocr_obj.default_pic_path, get_file_name(ocr_obj.default_pic_path) + '-Tguard.png')
-                return ocr_obj.result
+
+                # 检测无响应的情况
+                if self.detect_no_response(ocr_obj.ocr_result):
+                    ocr_obj.bug_report()
+                    raise DetectNoResponse
+
+            pic_name = ".".join(ocr_obj.default_pic_path.split(os.sep)[-1].split(".")[:-1])
+            new_path = os.path.join(self.kwargs.get("work_path"), pic_name + "-Tguard.png")
+            shutil.move(ocr_obj.default_pic_path, new_path)
+            return ocr_obj.result
 
     #   -------------辅助函数---------
     def _validate(self, exec_content, schema):
@@ -144,7 +166,19 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         return data
 
     @staticmethod
+    def detect_no_response(result_list):
+        bounced_words = BouncedWords.first().words.values()
+        print(f"干扰词是：", bounced_words)
+        for i in result_list:
+            for word in serious_words:
+                if word in i.get('text'):
+                    return True
+        return False
+
+    @staticmethod
     def _parse_function(result_list):
+        bounced_words = BouncedWords.first().words.values()
+        print(f"干扰词是：", bounced_words)
         for i in result_list:
             for word in bounced_words:
                 if word == i.get("text"):
@@ -156,6 +190,10 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         # 常用方法，根据area裁剪输入路径下的图片，并返回图片内容矩阵
         try:
             image = cv2.imread(image_path)
+            # 没有输入图片
+            if image is None:
+                raise ImageIsNoneException()
+
             if area == [0, 0, 1, 1]:
                 return image
             if area[3] == area[2] == 0.99999 and area[0] == area[0] == 0:
@@ -172,8 +210,14 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def _crop_image_and_save(self, image_path, area, mark=''):
         # 在上一个方法的基础上，把结果保存到返回的路径中去
         src = self._crop_image(image_path, area)
+        return self._save_crop_image(image_path, src, mark)
+
+    def _save_crop_image(self, image_path, src, mark=''):
         if src is not None:
-            new_path = ".".join(image_path.split(".")[:-1]) + mark + "-crop.jpg"
+            unit_work_path = self.kwargs.get("work_path") if self.kwargs.get("work_path") else os.path.dirname(
+                image_path)
+            pic_name = ".".join(image_path.split(os.sep)[-1].split(".")[:-1])
+            new_path = os.path.join(unit_work_path, pic_name + mark + "-crop.png")
             cv2.imwrite(new_path, src)
             return new_path
 

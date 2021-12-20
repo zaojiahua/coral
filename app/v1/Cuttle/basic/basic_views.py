@@ -1,3 +1,5 @@
+import traceback
+
 from flask import request, jsonify
 
 from flask.views import MethodView
@@ -47,7 +49,7 @@ class UnitFactory(object):
         # 先实例化一个对应的model
         model = self.model_dict.get(handler_type, Dummy_model)
         pk = input_data.get("device_label")
-        model_obj = model(is_busy=False, pk=pk, logger=setup_logger(f'{handler_type}-{pk}', f'{handler_type}-{pk}.log'))
+        model_obj = model(is_busy=False, pk=pk, logger=setup_logger(f'{pk}', f'{pk}.log'))
         # 此处，会根据handler_type(是个字符串)实例化一个对应的handler（eg:AdbHandler,ImageHandler），并把刚刚的model，
         # 和执行中unit的信息（input_data）传入handler的构造函数，并显示的调用execute方法。
         return eval(handler_type)(model=model_obj, many=isinstance(input_data.get('execCmdList'), list),
@@ -96,4 +98,5 @@ def ocr_test():
         request_params.update(request.form.to_dict())
         return jsonify(image_handler.test_ocr_result(request_params)), 200
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"status": repr(e)}), 400

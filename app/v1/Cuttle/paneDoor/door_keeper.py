@@ -1,9 +1,5 @@
 import logging
-import os
-import platform
-import random
 import re
-import subprocess
 import sys
 import threading
 import time
@@ -18,16 +14,16 @@ from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url, device_update_url
-from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevice, DeviceChanged, DeviceCannotSetprop, \
-    DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough
+from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevice, DeviceCannotSetprop, \
+    DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough, AdbConnectFail
 from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.setting import hand_used_list
-from app.v1.Cuttle.macPane.init import get_tty_device_number
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
 from app.v1.device_common.device_model import Device
 from app.v1.stew.model.aide_monitor import AideMonitor
+from app.libs.adbutil import AdbCommand, get_room_version
 
 logger = logging.getLogger(DOOR_LOG_NAME)
 
@@ -42,8 +38,8 @@ class DoorKeeper(object):
         s_id = self.get_device_connect_id(multi=False)
         dev_info_dict = self.get_device_info(s_id, kwargs)
         logger.info(f"[get device info] device info dict :{dev_info_dict}")
+        self.open_wifi_service(num=f"-s {s_id}")
         if ADB_TYPE == 0:
-            self.open_wifi_service(num=f"-s {s_id}")
             self.adb_cmd_obj.run_cmd_to_get_result(f"adb connect {dev_info_dict.get('ip_address')}")
             res = bind_spec_ip(dev_info_dict.get("ip_address"), dev_info_dict["device_label"])
             # if res != 0:
@@ -86,7 +82,10 @@ class DoorKeeper(object):
         id_list = []
         for i in adb_response.split("\n")[1:]:
             item = i.split(" ")[0]
-            descriptor = i.split(" ")[7]
+            try:
+                descriptor = i.split(" ")[7]
+            except IndexError:
+                descriptor = ""
             if not "." in item and not "emulator" in item and "no" != descriptor:
                 id_list.append(item.strip().strip("\r\t"))
         return id_list
@@ -103,9 +102,16 @@ class DoorKeeper(object):
         # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
         kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
         kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        # kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + "-" + self.get_default_name()
         kwargs["device_label"] = "M-" + kwargs.get("phone_model_name")
-        kwargs["manufacturer"] = kwargs["android_version"] = kwargs["rom_version"] = kwargs["cpu_name"] = kwargs[
+        try:
+            response = request(url=phone_model_url, params={"fields": "manufacturer.manufacturer_name",
+                                                            "phone_model_name": kwargs.get("phone_model_name")},
+                               filter_unique_key=True)
+            kwargs["manufacturer"] = response.get("manufacturer").get("manufacturer_name")
+        except RequestException:
+            kwargs["manufacturer"] = "Manual_device"
+        kwargs["rom_version"] = "Manual_"+kwargs["manufacturer"]
+        kwargs["android_version"] =  kwargs["cpu_name"] = kwargs[
             "cpu_id"] = "Manual_device"
         kwargs["ip_address"] = "0.0.0.0"
         kwargs["auto_test"] = False
@@ -121,42 +127,63 @@ class DoorKeeper(object):
 
         return dev_info_dict
 
+    # 支持ADB有线 ADB无线 以及各类型机柜
     def reconnect_device(self, device_label):
         # 设备重连，只做获取最新ip和开启5555端口的操作
-        if device_label is None or len(device_label) < 1:
-            return -1
+        if device_label is None or len(device_label) < 1 or CORAL_TYPE >= 5:
+            raise AdbConnectFail()
+
         s_id = device_label.split("---")[-1]
-        ip = self.get_dev_ip_address_internal(f"-s {s_id}")
-        if ip == "":
-            raise DeviceNotInUsb
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=device_label)
-        room_version = self.get_room_version(s_id)
+        if ADB_TYPE == 1:
+            ip = '0.0.0.0'
+        else:
+            ip = self.get_dev_ip_address_internal(f"-s {s_id}")
+            if ip == "":
+                raise AdbConnectFail()
+
+        room_version = get_room_version(s_id)
         android_version = self.adb_cmd_obj.run_cmd_to_get_result(
             f"adb -s {s_id} shell getprop ro.build.version.release")
         manufacturer = self.adb_cmd_obj.run_cmd_to_get_result(
             f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize()
+
+        not_found = 'not found'
+        if not_found in room_version or not_found in android_version or not_found in manufacturer:
+            raise AdbConnectFail()
+
+        self.open_wifi_service(f"-s {s_id}")
+        return {'ip_address': ip, 'rom_version': room_version, 'device_label': device_label,
+                'manufacturer': manufacturer, 'android_version': android_version}
+
+    def update_device_info(self, request_data):
+        device_label = request_data.get('device_label')
+        ip = request_data.get('ip_address')
+        rom_version = request_data.get('rom_version')
+        android_version = request_data.get('android_version')
+        manufacturer = request_data.get('manufacturer')
         res = request(method="POST", url=device_update_url,
                       json={"ip_address": ip,
-                            "rom_version": room_version,
+                            "rom_version": rom_version,
                             "device_label": device_label,
-                            "manufacturer": manufacturer,
+                            "manufacturer": request_data.get('manufacturer'),
                             "android_version": android_version})
+        logger.info(f"response from reef: {res}")
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=device_label)
         device_obj.ip_address = ip
         device_obj.android_version = android_version
         device_obj.manufacturer = manufacturer
-        device_obj.rom_version = room_version
-        logger.info(f"response from reef: {res}")
-        return self.open_wifi_service(f"-s {s_id}")
+        device_obj.rom_version = rom_version
+        return 0
 
     def open_wifi_service(self, num="-d"):
         rootable = self.is_device_rootable(num)
         if rootable:
             self.is_device_remountable(num)
         wifi_response = self.set_adb_wifi_property_internal(rootable, num)
-        if wifi_response != 0:
+        if wifi_response != 0 and ADB_TYPE == 0:
             logger.error("Failed to set adb wifi property.")
-            raise DeviceCannotSetprop
+            raise DeviceCannotSetprop()
         return 0
 
     def muti_register(self, device_name):
@@ -189,8 +216,7 @@ class DoorKeeper(object):
         ret_dict = {
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
                 f"adb -s {s_id} shell getprop ro.build.version.release"),
-            "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
-                f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(), "device_width": screen_size[0],
+            "device_width": screen_size[0],
             "device_height": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}
         ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         ret_dict.update(device_info_fict)
@@ -199,7 +225,7 @@ class DoorKeeper(object):
     def get_device_connect_id(self, multi=False):
         # 获取adb连接的所有设备，并与已经注册过的设备取差集，得到唯一待注册设备，差集为0或大于1都抛异常
         adb_response = self.adb_cmd_obj.run_cmd_to_get_result("adb -d devices -l", 12)
-        if "device usb" not in adb_response and "device product" not in adb_response:
+        if "device usb" not in adb_response and "device product" not in adb_response and "device transport_id" not in adb_response:
             logger.info("[get device info]: no device found")
             raise DeviceNotInUsb  # no device found
         device_id_list = self.get_connected_device_list(adb_response)
@@ -238,13 +264,14 @@ class DoorKeeper(object):
         ret_dict = {"phone_model_name": productName,
                     "cpu_name": self.adb_cmd_obj.run_cmd_to_get_result(
                         f"adb -s {s_id} shell getprop ro.board.platform"),
+                    "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
+                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(),
                     "cpu_id": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
-                    "ip_address": self.get_dev_ip_address_internal(
-                        f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0'}
+                    "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}")}
         ret_dict["device_label"] = (old_phone_model + "---" + ret_dict["cpu_name"] + "---" + ret_dict["cpu_id"])
         self._check_device_already_in_cabinet(ret_dict["device_label"])
         # rom version数据不同类型手机可能藏在不同的地方，oppo已知型号要去拿color_os+版本， mi的直接拿ro.build.version.incremental
-        ret_dict["rom_version"] = self.get_room_version(s_id)
+        ret_dict["rom_version"] = get_room_version(s_id)
 
         # 判定是否为未见过的机型，是-->手机内获取机型信息   否-->从reef缓存机型信息
         phone_model_info_dict, status = self.is_new_phone_model(productName)
@@ -254,15 +281,6 @@ class DoorKeeper(object):
             ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         logger.info(f"[get device info] device info dict :{ret_dict}")
         return ret_dict
-
-    def get_room_version(self, s_id):
-        color_os = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.opporom")
-        rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.ota")
-        if len(rom_version) == 0:
-            rom_version = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.display.id")
-        rom_version = color_os + "_" + rom_version if rom_version is not "" and color_os is not "" else \
-            self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.version.incremental")
-        return rom_version
 
     def get_assis_device(self):
         s_id = self.get_device_connect_id(multi=False)
@@ -415,7 +433,7 @@ class DoorKeeper(object):
         return device_name
 
     def get_dev_ip_address_internal(self, num):
-        ret_ip_address = ""
+        ret_ip_address = "0.0.0.0"
         # ip_route "10.80.6.0/24 dev wlan0  proto kernel  scope link  src 10.80.6.153"
         ip_route = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell ip route")
         result = re.findall(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", ip_route)
@@ -427,113 +445,19 @@ class DoorKeeper(object):
         # 获取设备分辨率 eg 1080*2160
         ret_size_list = []
         tmp_str = self.adb_cmd_obj.run_cmd_to_get_result(f"adb {num} shell wm size", timeout=5)
-        tmp_list = tmp_str.split("Physical size: ")
-        if len(tmp_list) > 1:
-            tmp_str = tmp_list[1]
-            tmp_list = tmp_str.split("x")
-            if len(tmp_list) > 1:
-                ret_size_list.append(int(tmp_list[0]))
-                ret_size_list.append(int(tmp_list[1]))
-        if len(ret_size_list) == 0:
-            raise DeviceWmSizeFail
-        return ret_size_list
-
-
-class AdbCommand(object):
-    def __init__(self):
-        if sys.platform.startswith("win"):
-            self.adbCmdPrefix = "adb "
+        override_size = re.findall(r'Override size:\s+([0-9]+)x([0-9]+)', tmp_str)
+        physical_size = re.findall(r'Physical size:\s+([0-9]+)x([0-9]+)', tmp_str)
+        if len(override_size) > 0 and len(override_size[0]) == 2:
+            target_size = override_size
+        elif len(physical_size) > 0 and len(physical_size[0]) == 2:
+            target_size = physical_size
         else:
-            self.adbCmdPrefix = "~/bin/adb "
-        self.subproc = None
+            target_size = None
 
-    def make_one_cmd(self, *commands):
-        command_string = self.adbCmdPrefix
-        for c in commands:
-            command_string += (" " + c)
-        return command_string
+        if target_size is not None:
+            ret_size_list.append(int(target_size[0][0]))
+            ret_size_list.append(int(target_size[0][1]))
+        else:
+            raise DeviceWmSizeFail
 
-    def run_cmd(self, one_adb_cmd_string, expect_result="", retry=1, timeout=3):
-        for r in range(0, retry):
-            if 0 == self.run_cmd_internal(one_adb_cmd_string, expect_result, timeout):
-                return 0
-        return 1
-
-    def run_cmd_to_get_result(self, one_cmd_string, timeout=3):
-        logger.debug("runCmdToGetResult : " + one_cmd_string + ", timeout: " + str(timeout))
-        run_thread = ShellCmdThread(one_cmd_string)
-        run_thread.start()
-        result = ""
-        for r in range(timeout * 4):
-            time.sleep(0.2)
-            if run_thread.is_finished():
-                result = run_thread.get_result()
-                # run_thread = ShellCmdThread(one_cmd_string)
-                # run_thread.start()
-                logger.debug("adbCmd run get result: " + str(result))
-                break
-        if not run_thread.is_finished():
-            run_thread.terminate_thread()
-        return result
-
-    def run_cmd_internal(self, one_cmd_string, expect_result, timeout):
-        logger.debug("adbCmd run: " + one_cmd_string + ", expect: " + expect_result + ", timeout: " + str(timeout))
-        run_thread = ShellCmdThread(one_cmd_string)
-        run_thread.start()
-        result = ""
-        for r in range(timeout * 2):
-            time.sleep(0.5)
-            if run_thread.is_finished():
-                result = run_thread.get_result()
-                logger.debug("adbCmd run get result: " + str(result))
-                break
-        if not run_thread.is_finished():
-            run_thread.terminate_thread()
-            return -1
-        if (len(expect_result) > 0) and (expect_result in result):
-            return 0
-        return 1
-
-    def fix_command(self):
-        logger.warning("receive problem of device offline, try to kill adb server")
-        self.subproc = subprocess.Popen("adb kill-server", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.subproc.wait()
-        self.subproc = subprocess.Popen("adb start-server", shell=True, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT)
-        self.subproc.wait()
-        self.subproc = subprocess.Popen("adb root", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.subproc.wait()
-        self.subproc = subprocess.Popen("adb remount", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.subproc.wait()
-
-
-class ShellCmdThread(threading.Thread):
-    def __init__(self, one_cmd_string):
-        threading.Thread.__init__(self)
-        self.isExeDone = False
-        self.oneCmdString = one_cmd_string
-        self.exeResult = ""
-        self.subproc = None
-
-    def run(self):
-        self.isExeDone = False
-        logger.debug("exeThread running " + self.oneCmdString + os.linesep)
-        self.subproc = subprocess.Popen(self.oneCmdString, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        restr = self.subproc.communicate()[0]
-        self.exeResult = restr.strip().decode()
-        logger.debug("ShellCmdThread run end return " + self.exeResult + os.linesep)
-        self.isExeDone = True
-
-    def is_finished(self):
-        return self.isExeDone
-
-    def get_result(self):
-        return self.exeResult
-
-    def terminate_thread(self):
-        if (not self.isExeDone) and (self.subproc is not None):
-            try:
-                self.subproc.terminate()
-            except Exception as e:
-                logger.error("Got exception in ShellCmdThread-terminateThread: " + str(e))
-        return 0
+        return ret_size_list

@@ -27,6 +27,9 @@ class HandSerial:
             for g_order in g_orders:
                 self.write(g_order)
             time.sleep(float(kwargs.get("wait_time", 2000)) / 1000)
+            other_orders = kwargs.get('other_orders', [])
+            for o_order in other_orders:
+                self.write(o_order)
             self.write(deviate_order)
             return 0
         elif kwargs.get("ignore_reset") or CORAL_TYPE < 5:
@@ -54,7 +57,9 @@ class HandSerial:
         return 0
 
     def write(self, content):
+        print('before-写入机械臂：', content)
         if content == "<SLEEP>":
             time.sleep(0.8)
             return ""
+        print('写入机械臂：', self.ser, content)
         return self.ser.write(content.encode())

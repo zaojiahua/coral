@@ -1,5 +1,8 @@
+import time
+
 import pypinyin
 
+from app.config.setting import CORAL_TYPE
 from app.execption.outer.error_code.adb import PinyinTransferFail
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 
@@ -56,10 +59,17 @@ class ChineseMixin(object):
         ocr_choice.update(self.kwargs)
         with Complex_Center(**ocr_choice, requiredWords=words) as ocr_obj:
             # 先依次敲击9宫格键盘，输入内容
-            for coor_tuple in coor_tuple_list:
+            for index, coor_tuple in enumerate(coor_tuple_list):
                 ocr_obj.set_xy(*coor_tuple)
-                ocr_obj.point(ignore_sleep=True, ignore_arm_reset=True)
+                if index == len(coor_tuple_list) - 1:
+                    # 在最后一个键盘敲后回到初始位置
+                    ocr_obj.point(ignore_sleep=True)
+                else:
+                    # 敲击过程中每次敲击后不回位
+                    ocr_obj.point(ignore_sleep=True, ignore_arm_reset=True)
             # 再通过ocr的方式截图-识别-找到需要输入的词并点击
+            if CORAL_TYPE >= 5: # 5型柜拿照片速度太快，要等待1.5秒至机械臂撤回等待位，避免遮挡点击出的文字
+                time.sleep(1.5)
             ocr_obj.snap_shot()
             ocr_obj.picture_crop()
             ocr_obj.get_result()

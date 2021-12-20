@@ -11,9 +11,6 @@
     "error_code": -2,
     "description": "adb protocol fault"
   },{
-    "error_code": -3,
-    "description": "device not found，多见设备没连/连错wifi"
-  },{
     "error_code": -5,
     "description": "device offline"
   },{
@@ -60,5 +57,8 @@
     {
     "error_code": -10000,
     "description": "用例中unit key缺失"
+  },{
+    "error_code": -30,
+    "description": "截图变化对比unit中第二张图片不存在"
   }
 ]

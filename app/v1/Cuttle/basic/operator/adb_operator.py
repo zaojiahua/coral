@@ -6,6 +6,7 @@ import sys
 import time
 from ast import literal_eval
 from datetime import datetime
+from threading import Lock
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name
@@ -24,6 +25,8 @@ if sys.platform.startswith("win"):
 else:
     coding = "utf-8"
     mark = "\n"
+
+lock = Lock()
 
 
 class AdbHandler(Handler, ChineseMixin):
@@ -80,6 +83,8 @@ class AdbHandler(Handler, ChineseMixin):
 
             if not is_lock:
                 if exec_content == (adb_cmd_prefix + RESTART_SERVER):
+                    # restart server 本身也应该是互斥的，否则会出现端口占用等异常
+                    lock.acquire(timeout=10)
                     try:
                         for cmd in [adb_cmd_prefix + KILL_SERVER, adb_cmd_prefix + START_SERVER]:
                             sub_proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
@@ -90,6 +95,7 @@ class AdbHandler(Handler, ChineseMixin):
                     finally:
                         if lock_type:
                             unlock_cmd(keys=[lock_type], args=[random_value])
+                        lock.release()
                         break
                 else:
                     sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

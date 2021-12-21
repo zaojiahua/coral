@@ -13,8 +13,8 @@ from marshmallow import ValidationError
 from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersionFail
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
-from app.v1.Cuttle.basic.setting import normal_result, KILL_SERVER, START_SERVER, SERVER_OPERATE_LOCK, \
-    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP
+from app.v1.Cuttle.basic.setting import normal_result, SERVER_OPERATE_LOCK, \
+    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, RESTART_SERVER
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 from app.config.ip import ADB_TYPE
@@ -125,7 +125,7 @@ class Handler():
         if ADB_TYPE == 1:
             random_value = random.random()
             kwargs['random_value'] = random_value
-            if exec_content == (adb_cmd_prefix + KILL_SERVER) or exec_content == (adb_cmd_prefix + START_SERVER):
+            if exec_content == (adb_cmd_prefix + RESTART_SERVER):
                 kwargs['target_lock'] = NORMAL_OPERATE_LOCK
                 kwargs['lock_type'] = SERVER_OPERATE_LOCK
             else:

@@ -76,6 +76,8 @@ serious_words = ['没有响应', '无响应']
 adb_cmd_prefix = "adb "
 KILL_SERVER = "kill-server"
 START_SERVER = "start-server"
+# 本来没有这条指令 但是为了让skill-server start-server作为一个原子操作，做一个这样的指令
+RESTART_SERVER = 'restart-server'
 SERVER_OPERATE_LOCK = 'server_operate_lock'
 NORMAL_OPERATE_LOCK = 'normal_lock'
 

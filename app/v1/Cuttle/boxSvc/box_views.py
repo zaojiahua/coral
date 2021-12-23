@@ -95,7 +95,10 @@ class CheckPort(MethodView):
             )
             response = send_order(power_box_obj.ip, power_box_obj.port, check_status_order, power_box_obj.method)
             port_status = parse_rev_data(port, response, power_box_obj.init_status)
-            return jsonify(port_status), 200
+            if port_status:
+                return jsonify({"status": "on"}), 200
+            else:
+                return jsonify({"status": "off"}), 200
         except Exception as e:
             return jsonify({"status": f"connection with power box fail :{repr(e)}"}), 400
 
@@ -180,7 +183,7 @@ def parse_rev_data(port, rev_data, init_status, num=8):
         s_8 = n_8.zfill(8)
         s = str(s_8) + str(s8)
 
-    portState = int(s[num -  int(port[-2:])])
+    portState = int(s[num - int(port[-2:])])
     if init_status is True:
         status = True if (portState == 0) else False
     else:

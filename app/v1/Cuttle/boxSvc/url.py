@@ -21,4 +21,4 @@ resource.add_url_rule('/power_action', view_func=SetPort.as_view("power_action")
 # 每次添加后都会自动遍历验证盒子内所有路（一般16路）端口正常工作，并返回可用的端口名称list
 resource.add_url_rule('/box', view_func=BoxManagement.as_view("change_power_box"))
 resource.add_url_rule('/box/<string:name>', view_func=BoxManagement.as_view("remove_power"))
-resource.add_url_rule('/check_power', view_func=CheckPort.as_view("check_port_status"))
+resource.add_url_rule('/power_check', view_func=CheckPort.as_view("check_port_status"))

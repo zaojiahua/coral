@@ -4,6 +4,7 @@ from flask import jsonify, request
 from flask.views import MethodView
 
 from app.libs.functools import execute_limit
+from app.execption.outer.error_code.box import ConnectPowerFail
 from app.v1.Cuttle.boxSvc import box_setting
 from app.v1.Cuttle.boxSvc.box_models import Box
 from app.v1.Cuttle.boxSvc.request_sender import send_order, send_temper_to_reef
@@ -69,8 +70,8 @@ class SetPort(MethodView):
                 return jsonify(response), 200
             else:
                 return jsonify({"status": "fail"}), 400
-        except Exception as e:
-            return jsonify({"status": f"connection with power box fail :{repr(e)}"}), 400
+        except ConnectPowerFail:
+            raise ConnectPowerFail
 
 
 class CheckPort(MethodView):
@@ -99,8 +100,8 @@ class CheckPort(MethodView):
                 return jsonify({"status": "on"}), 200
             else:
                 return jsonify({"status": "off"}), 200
-        except Exception as e:
-            return jsonify({"status": f"connection with power box fail :{repr(e)}"}), 400
+        except ConnectPowerFail:
+            raise ConnectPowerFail
 
 
 def on_or_off_singal_port(params_dict):
@@ -153,34 +154,26 @@ def hexToBinary(hexNumber):
     decNumber = int(str(hexNumber), 16)
     # 2. dec to bin
     binNumber = bin(decNumber)
-    return binNumber
+    n = binNumber[2:]
+    s = n.zfill(8)
+    return s
 
 
 def parse_rev_data(port, rev_data, init_status, num=8):
     """
     :param port: 继电器充电口编号
-    :param rev_data: 发送检查充电口状态指令后收到的回复数据
+    :param rev_data: 发送检查充电口状态指令后收到的回复数据  eg: fe01017ee1bc
     :param init_status: 继电器通电后的初始状态
     :param num: 继电器的充电口数量，目前只支持8路和16路
     :return: True -- ON, False -- OFF
     """
     if num == 8:
-        startResult = rev_data[6:8]
-        binResult = hexToBinary(startResult)
-        n = binResult[2:]
-        s = n.zfill(8)
+        s = hexToBinary(rev_data[6:8])
     else:
         # s8 - before 8 ports state[0-7]
-        bef8PortState = rev_data[6:8]
-        binResult = hexToBinary(bef8PortState)
-        n8 = binResult[2:]
-        s8 = n8.zfill(8)
-
         # s_8 - after 8 ports state[8-15]
-        after8PortState = rev_data[8:10]
-        binResult = hexToBinary(after8PortState)
-        n_8 = binResult[2:]
-        s_8 = n_8.zfill(8)
+        s8 = hexToBinary(rev_data[6:8])
+        s_8 = hexToBinary(rev_data[8:10])
         s = str(s_8) + str(s8)
 
     portState = int(s[num - int(port[-2:])])

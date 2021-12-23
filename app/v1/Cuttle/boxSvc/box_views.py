@@ -54,19 +54,48 @@ class BoxManagement(MethodView):
         #                 Device(pk= device_label).power_port = None
 
 
-class Port(MethodView):
+class SetPort(MethodView):
     """
-    开关单个port，iput：{"port:"PA-01","action":"on"}
+    开关单个port，input：{"port:"PA-01","action":"on"}
     """
 
     def post(self):
+
         params_dict = request.get_json()
         try:
+            params_dict['action'] = True if params_dict['action'] == 'off' else False
             response = on_or_off_singal_port(params_dict)
             if response:
                 return jsonify(response), 200
             else:
                 return jsonify({"status": "fail"}), 400
+        except Exception as e:
+            return jsonify({"status": f"connection with power box fail :{repr(e)}"}), 400
+
+
+class CheckPort(MethodView):
+    """
+    检查单个继电器状态
+    """
+
+    def post(self):
+        """
+        只支持8路继电器和16路继电器查询
+        """
+        port = request.get_json()['port']
+        try:
+            port_list = port.split("-")
+            port_list.pop()
+            power_box_obj = Box(pk="-".join(port_list))
+            if not power_box_obj.ip:
+                return False
+            check_status_order = box_setting.check_power_order[power_box_obj.total_number]
+            power_box_obj.logger.info(
+                f"port: {port} -- check order: {check_status_order}"
+            )
+            response = send_order(power_box_obj.ip, power_box_obj.port, check_status_order, power_box_obj.method)
+            port_status = parse_rev_data(port, response, power_box_obj.init_status)
+            return jsonify(port_status), 200
         except Exception as e:
             return jsonify({"status": f"connection with power box fail :{repr(e)}"}), 400
 
@@ -114,3 +143,46 @@ def get_port_temperature(port_list):
         box_obj.logger.debug(f"check one times temperature:{temperature} at port :{port}")
     result = send_temper_to_reef(data_list)
     return 0
+
+
+def hexToBinary(hexNumber):
+    # 1. hex to dec
+    decNumber = int(str(hexNumber), 16)
+    # 2. dec to bin
+    binNumber = bin(decNumber)
+    return binNumber
+
+
+def parse_rev_data(port, rev_data, init_status, num=8):
+    """
+    :param port: 继电器充电口编号
+    :param rev_data: 发送检查充电口状态指令后收到的回复数据
+    :param init_status: 继电器通电后的初始状态
+    :param num: 继电器的充电口数量，目前只支持8路和16路
+    :return: True -- ON, False -- OFF
+    """
+    if num == 8:
+        startResult = rev_data[6:8]
+        binResult = hexToBinary(startResult)
+        n = binResult[2:]
+        s = n.zfill(8)
+    else:
+        # s8 - before 8 ports state[0-7]
+        bef8PortState = rev_data[6:8]
+        binResult = hexToBinary(bef8PortState)
+        n8 = binResult[2:]
+        s8 = n8.zfill(8)
+
+        # s_8 - after 8 ports state[8-15]
+        after8PortState = rev_data[8:10]
+        binResult = hexToBinary(after8PortState)
+        n_8 = binResult[2:]
+        s_8 = n_8.zfill(8)
+        s = str(s_8) + str(s8)
+
+    portState = int(s[num -  int(port[-2:])])
+    if init_status is True:
+        status = True if (portState == 0) else False
+    else:
+        status = True if (portState == 1) else False
+    return status

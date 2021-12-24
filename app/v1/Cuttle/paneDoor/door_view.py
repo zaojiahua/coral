@@ -36,7 +36,7 @@ class SetDevice(DeviceBase):
         data = request.get_json()
         # todo validate data first
         self.door_keeper.authorize_device(**data)
-        return jsonify({"state": "DONE"}), 200
+        return jsonify({"error_code": 0}), 200
 
 
 class SetDeviceManual(DeviceBase):
@@ -45,8 +45,8 @@ class SetDeviceManual(DeviceBase):
         try:
             data = request.get_json()
             self.door_keeper.authorize_device_manually(**data)
-            return jsonify({"state": "DONE"}), 200
-        except (AttributeError,ValueError) as e:
+            return jsonify({"error_code": 0}), 200
+        except (AttributeError, ValueError) as e:
             print(repr(e))
             return jsonify({"state": "Fail"}), 400
 

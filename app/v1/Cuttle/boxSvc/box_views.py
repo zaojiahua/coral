@@ -177,8 +177,5 @@ def parse_rev_data(port, rev_data, init_status, num=8):
         s = str(s_8) + str(s8)
 
     portState = int(s[num - int(port[-2:])])
-    if init_status is True:
-        status = True if (portState == 0) else False
-    else:
-        status = True if (portState == 1) else False
+    status = bool(portState) ^ init_status
     return status

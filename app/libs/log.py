@@ -13,6 +13,13 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG, log_path=os.path.jo
     now = datetime.datetime.now()
     critical_time = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=CRITICAL_HOUR)
     if last_time is None or (now > critical_time > last_time):
+        # 先移除所有的handler
+        old_log_obj = LOGGER_OBJ_DICT.get(logger_name, {}).get('log')
+        if old_log_obj is not None:
+            for h in old_log_obj.handlers:
+                old_log_obj.removeHandler(h)
+            del old_log_obj
+
         log_path = os.path.join(log_path, now.strftime('%Y_%m_%d'))
         asure_path_exist(log_path)
 

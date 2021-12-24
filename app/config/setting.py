@@ -76,3 +76,5 @@ if sys.platform.startswith("win"):
     find_command = "findstr"
 else:
     find_command = "grep"
+
+ERROR_CODE_FILE = 'error_code.csv'

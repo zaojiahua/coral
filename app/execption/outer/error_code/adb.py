@@ -86,7 +86,7 @@ class ArmNorEnough(APIException):
     """
     error_code = 1011
     code = 400
-    description = "  Not enough arm! You need to logout one device first"
+    description = "添加失败！该机柜中已有1台设备，请先将其移除。"
 
 
 class FindAppVersionFail(APIException):

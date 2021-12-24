@@ -1,0 +1,140 @@
+code,name,type,description,Solution
+-10000,,unit结果,用例中unit key缺失。可能是没有拿到unit需要的截图/文件,"1.首先检查unit参数填写完整无误
+2.查看unit是否需要配合的截图/文件。
+如需要，去检查提供截图/文件的unit名称是否正确、截图/文件是否存在
+如不需要，查看当前unit的"
+-7003,UnitTimeOut,unit结果,unit执行时间超过最大限制,"1.Tcab-1检查设备当时网络
+2.Tcab-2/3/4检查连线
+3.如该unit在当前用例中原本就需要较长时间，有能力可在用例中修改rawunit中的timeout至合适值
+4.仍未解决请上报"
+-2000,,unit结果,can not find required words when use color judgment by words shift。unit【颜色确认_根据文字偏移位置】无法找到需要文字,"1.请查看运行时的截图是否是预期截图。如是预期截图请用对应的OCR测试文字。
+2.找到文字请上报，找不到文字建议尝试其他unit"
+-32,,job结果,job执行没有生成结果,大部分情况是用例编辑时没有指定结果unit，且执行分支的终点end前接的inner或block没有结果。
+-30,,unit结果,截图变化对比unit中第二张图片不存在,"1.请检查用例中【截图变化对比】unit的第二个【输入图片名称】item名称是否正确
+2.请检查运行过程中第二个【输入图片名称】item用到的截图是否正常获取
+3.仍有问题请上报"
+-27,,unit结果,推送文件unit格式有误,
+-26,,unit结果,job unit内缺失范围选择文件--检查job,请检查该unit是否缺失必须的选区
+-25,,unit结果,1<surf <4 图标识别所圈特征过弱,请尝试将图标的范围圈大一点或尝试其他方法
+-24,,unit结果,job 判定unit缺失参考图片 --检查job,请检查该unit中是否缺失参考图片
+-23,,unit结果,job 判定unit缺失input文件截图丢失,"1.检查该unit中的input文件截图名称
+2.检查设备内存是否已满
+3.非上述问题请上报"
+-22,,unit结果,job unit内缺失config文件，检查是否丢文件,"1.检查该unit中的选区是否丢失
+2.检查该unit对应的选区依赖文件是否丢失"
+-19,,unit结果,无法找到中间文件（job前序缺少坐标等文件输出）,可能是过时的
+-16,,unit结果,job内有无法识别的宏，--检查job内容,检查job中的宏输入是否正确：可能是过时的
+-9,,unit结果,Do not have rotate arm in rotate arm 's unit运行旋转机械臂unit时未找到旋转机械臂,"1.检查运行该unit的设备所在机柜是否有旋转机械臂
+2.仍有问题请上报"
+-8,,unit结果,adb commend exec failADB指令执行失败,请上报
+-7,,unit结果,unable to connet device，无法连接设备。,"1.检查下设备当时是否关机
+2.检查设备的USB调试是否打开
+3.Tcab-1检查设备是否连接到了正确的网络；其他测试柜类型检查设备是否连线，连线是否损坏
+4.Tcab-1检查设备实际IP与页面上IP是否一致
+5.以上都没问题尝试重新连接看看是否解决
+6.仍未解决请上报"
+-5,,unit结果,device offline设备离线,"1.检查下设备当时是否关机
+2.检查设备的USB调试是否打开
+3.Tcab-1检查设备是否连接到了正确的网络；其他测试柜类型检查设备是否连线，连线是否损坏
+4.Tcab-1检查设备实际IP与页面上IP是否一致
+5.以上都没问题尝试重新连接看看是否解决
+6.仍未解决请上报"
+-3,AdbConnectFail,unit结果,device not found，多见设备没连/连错wifi,"1.检查下设备当时是否关机
+2.检查设备的USB调试是否打开
+3.Tcab-1检查设备是否连接到了正确的网络；其他测试柜类型检查设备是否连线，连线是否损坏
+4.Tcab-1检查设备实际IP与页面上IP是否一致
+5.以上都没问题尝试重新连接看看是否解决
+6.仍未解决请上报"
+-2,,unit结果,adb protocol fault？adb协议故障,"1.检查下设备当时是否关机
+2.检查设备的USB调试是否打开
+3.Tcab-1检查设备是否连接到了正确的网络；其他测试柜类型检查设备是否连线，连线是否损坏
+4.Tcab-1检查设备实际IP与页面上IP是否一致
+5.以上都没问题尝试重新连接看看是否解决
+6.仍未解决请上报"
+0,,unit结果,任务执行成功,
+1,,unit结果,任务执行失败,
+500,APIException,服务端异常,"sorry, we made a mistake (*￣︶￣)!",请上报
+600,Success,服务端异常,ok,
+601,DeleteSuccess,服务端异常,delete ok删除成功,
+602,ServerError,服务端异常,服务端异常,
+603,ClientTypeError,服务端异常,client is invalid客户端无效,
+604,ParameterException,服务端异常,invalid parameter参数无效,
+605,NotFound,服务端异常,the resource are not found O__O...无法找到该资源,
+606,AuthFailed,服务端异常,authorization failed,
+607,Forbidden,服务端异常,"forbidden, not in scope",
+608,RequestException,服务端异常,服务内部发送请求异常,
+609,RecvHttpException,服务端异常,服务接受请求异常,
+1000,NoMoreThanOneDevice,设备相关问题,single device register only allow one device in usb,
+1001,DeviceNotInUsb,设备相关问题,DO YOU FORGET CONNECT DEVICE? or Your device already in other cabinet,
+1002,DeviceChanged,设备相关问题,usb-device changed during registration,
+1003,DeviceCannotSetprop,设备相关问题,can not open 5555 port in devcie,
+1004,DeviceRegisterInterrupt,设备相关问题,"part of device finished registration, others fail",
+1005,DeviceBindFail,设备相关问题,bind/unbind device ip address in router fail,
+1006,DeviceWmSizeFail,设备相关问题,do you connect a phone which is shut down?,
+1007,DeviceAlreadyInCabinet,设备相关问题,need to logout device in this or other cabinet first,
+1008,UnitBusy,设备相关问题,adb指令长时间无响应，adb busy,
+1009,NoContent,设备相关问题,需要执行的adb语句没有内容,
+1010,PinyinTransferFail,设备相关问题,无法识别的拼音字母,
+1011,ArmNorEnough,设备相关问题,一个机柜同时只能存在一个可用设备，需要先注销已有设备，再进行注册,
+1012,FindAppVersionFail,设备相关问题,获取APP版本失败，可能原因是手机没有安装此APP或者ADB连接断开,
+2001,OcrRetryTooManyTimes,图像相关,ocr服务没有响应,
+2002,OcrParseFail,图像相关,no required word in ocr's result（OCR识别结果中没有需要的文字）,
+2003,OcrWorkPathNotFound,图像相关,ocr图片路径下没有图片，可能原因是设备存储空间已满,
+2004,ComplexSnapShotFail,图像相关,复合unit内，截图失败,
+2005,ClearBouncedOK,图像相关,"T-gard处理干扰(已知弹窗),多(3)次处理后未解决",
+2006,NotFindBouncedWords,图像相关,compared error but not find any Bounced Words,可能是过时的
+2007,NotFindIcon,图像相关,can not find icon找不到图标,
+2008,VideoStartPointNotFound,图像相关,性能分析过程中，没有找到起始标志点,
+2009,OcrShiftWrongFormat,图像相关,复合unit内，偏移量格式错误，多见与多一个空格或写成小数,
+2010,IconTooWeek,图像相关,复合unit内，选区的图标特征过弱，特征点小于4个,
+2011,EndPointWrongFormat,图像相关,复合unit内，偏移量格式错误，多见与多一个空格或写成小数,
+2012,SwipeAndFindWordsFail,图像相关,can not find required words until swipe to the end滑动到最后仍然无法找到需要的文字,
+2013,ColorPositionCrossMax,图像相关,color position exceed max border颜色位置超出边界,
+2014,RecordWordsFindNoWords,图像相关,文字记录unit 不能在截图的选区中发现任何文字,
+2015,CannotFindRecentVideoOrImage,图像相关,can not find recent video or Imgae in 300s在300s内无法找到最近的图片和视频,
+2016,WrongEndPoint,图像相关,性能测试中，终止点识别错误，提前误识别出结果,
+2017,VideoEndPointNotFound,图像相关,性能测试中，没有发现结束帧,
+2018,FpsLostWrongValue,图像相关,fps lost only support 60 90 120丢帧仅支持60、90、120,
+2019,CameraNotResponse,图像相关,camera can not receive picture相机无法获取到图片,
+2020,PerformanceNotStart,图像相关,性能分析过程中，front set fail（设置终点失败）,
+2021,IconBiggerThanField,图像相关,icon bigger than field图标大于识别区域,
+2022,DetectNoResponse,图像相关,catch serious exception捕捉到严重异常,
+3000,MethodNotAllow,机械臂相关问题,hands method is not allow机械臂使用的方法不允许,
+3001,CrossMax,机械臂相关问题,机械臂移动超出范围,
+3002,CoordinateWrongFormat,机械臂相关问题,需要机械臂执行的用例指令非支持的格式,
+3003,KeyPositionUsedBeforesSet,机械臂相关问题,在未设置关键点（返回，菜单，主页，电源，音量）在摄像头位置的情况下，使用到机械臂去点击关键点,
+3004,SerialLostConnection,机械臂相关问题,Arm Serial lost connection机械臂接口失去连接,
+4000,AssistDeviceOrderError,job相关问题,主机的僚机编号只能是[1，2，3],
+4001,AssistDeviceNotFind,job相关问题,主设备没有相应僚机编号的僚机设备,"1.查看设备绑定的僚机编号
+2.查看用例以及用例中的inner的unit用到的僚机编号与设备绑定的僚机编号是否对应
+3.如对应仍有4001报错请上报"
+4002,JobMaxRetryCycleException,job相关问题,任务执行循环超过最大次数,
+4003,InnerJobUnedited,job相关问题,inner job未编辑,
+4004,RemoveJobException,job相关问题,remove djob exception移除djob异常,
+4005,FloderFailToDeleteException,job相关问题,文件不能被删除的异常,
+4006,JobExecBodyException,job相关问题,jobbody 解析失败，格式错误,
+4007,JobExecUnknownException,job相关问题,任务执行过程中未知错误,
+4008,JobFlowNotFound,job相关问题,任务执行的罗辑流程图缺失,
+4009,InnerJobNotAssociated,job相关问题,inner job 虽然在流程图里有指明，但是并未真正关联。\n 执行时没有inner job，执行失败。建议打开job重新保存。,
+4010,ImageIsNoneException,job相关问题,图片为空，可能原因是要测试的软件不允许截图，请检查,
+5000,NoSrc,相机相关,摄像头在执行拉取图片指令前缺少截图命令,
+5001,NoArm,相机相关,arm id not found找不到机械臂ID,
+5002,NoCamera,相机相关,camera id not found找不到相机ID,
+5003,ArmReInit,相机相关,do not send init request twice不要发送2次初始化请求,
+5004,RemoveBeforeAdd,相机相关,remove request must after add移除请求必须在添加请求之后,
+5005,CameraInitFail,相机相关,HK camera init fail集成相机失败,
+5006,PerformancePicNotFound,相机相关,performance picture path not found无法找到性能测试路径,
+6000,GetResourceFail,AI-Tester相关,"sorry, we made a mistake (*￣︶￣)!",
+7001,EblockEarlyStop,block有关问题,eblock is asked for stop while doing a block运行block过程中请求中止,
+7002,EblockCannotFindFile,block有关问题,eblock can not find a input fileblock获取不到输入文件,
+7004,MaroUnrecognition,block有关问题,find unknow Maro？Macro,
+7005,EblockResourceMacroWrongFormat,block有关问题,eblock find wrong type of resource macroblock发现错误的附加资源宏类型,
+7006,DeviceNeedResource,block有关问题,use resource before assign to device or input wrong。设备未绑定用例中用到的宏资源，或宏资源格式不对,"1.检查用例中用到的宏资源输入格式是否正确
+2.检查设备是否已绑定用例中宏用到的附加资源
+3.如用例宏资源与设备绑定的附加资源对应，确报错7006，请上报产品"
+7007,DeviceNeedRelativeAssisDevice,block有关问题,set resource Macro to assis-device but no relative device find设置了僚机的宏资源但是无法找到僚机,
+7008,AssisDeviceNotHaveMainDevie,block有关问题,device in wrong status设备处于错误的状态,
+8001,TboardNotExist,Tboard的问题,tboard not exist （tboard 不存在）,
+8002,TboardStopping,Tboard的问题,tboard in a stop state（tboard 处于停止状态）,
+8003,CreateTboardError,Tboard的问题,create tboard error（创建tboard错误）,
+8004,DutNotExist,Tboard的问题,Dut not exist（Dut 不存在）,

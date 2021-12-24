@@ -1,7 +1,7 @@
 from app.execption.outer.error_code.total import NotFound
 
 """
-定义的错误码范围(8000 ~ 8999)
+定义的错误码范围(8000 ~ 8599)
 """
 
 

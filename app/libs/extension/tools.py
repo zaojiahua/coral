@@ -30,7 +30,7 @@ def convert_to_html(result, title):
         index = index + 1
     df = pd.DataFrame(d)
     df = df[title]
-    h = df.to_html(index=False)
+    h = df.to_html(index=False, escape=False)
     return h
 
 

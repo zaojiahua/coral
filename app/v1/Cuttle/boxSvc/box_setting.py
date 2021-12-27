@@ -54,3 +54,7 @@ check_temperature_order = {
     "15": 'FE04000E00014406',
     "16": 'FE04000F000115C6'
 }
+check_power_order = {
+    8: "FE010000000829C3",
+    16: "FE010000001029C9",
+}

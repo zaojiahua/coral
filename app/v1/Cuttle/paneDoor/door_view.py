@@ -15,13 +15,13 @@ class DeviceBase(MethodView):
 class GetDevice(DeviceBase):
     def get(self):
         respnse_body = self.door_keeper.get_device_info_compatibility()
-        return jsonify(respnse_body), 200
+        return jsonify(dict(error_code=0, data=respnse_body))
 
 
 class GetAssisDevice(DeviceBase):
     def get(self):
         respnse_body = self.door_keeper.get_assis_device()
-        return jsonify(respnse_body), 200
+        return jsonify(dict(error_code=0, data=respnse_body))
 
 
 class SetAssisDevice(DeviceBase):

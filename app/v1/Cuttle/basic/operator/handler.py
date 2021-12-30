@@ -51,6 +51,7 @@ class Handler():
         self.str_handler_timeout = self.kwargs.get('timeout') or ADB_DEFAULT_TIMEOUT
         self.extra_result = {}
         self.optional_input_image = self.kwargs.get('optional_input_image') or 0
+        self.horizontal_screen = self.kwargs.get('horizontal_screen', False)
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -243,6 +244,16 @@ class Handler():
         # 真实执行函数，需要在继承类中指定，adb中返回str，其他返回int
         pass
 
+    def _get_screen_point(self, x, y, horizontal_screen):
+        from app.v1.device_common.device_model import Device
+        if not horizontal_screen:
+            w = Device(pk=self._model.pk).device_width * x
+            h = Device(pk=self._model.pk).device_height * y
+        else:
+            w = Device(pk=self._model.pk).device_height * x
+            h = Device(pk=self._model.pk).device_width * y
+        return w, h
+
     def _relative_double_point(self):
         regex = re.compile("double_point([\d.]*?) ([\d.]*)")
         result = re.search(regex, self.exec_content)
@@ -262,9 +273,7 @@ class Handler():
         x = float(result.group(1))
         y = float(result.group(2))
         if any((0 < x < 1, 0 < y < 1)):
-            from app.v1.device_common.device_model import Device
-            w = Device(pk=self._model.pk).device_width * x
-            h = Device(pk=self._model.pk).device_height * y
+            w, h = self._get_screen_point(x, y, self.horizontal_screen)
             self.exec_content = self.exec_content.replace(result.group(1), str(w), 1)
             self.exec_content = self.exec_content.replace(result.group(2), str(h), 1)
         return normal_result
@@ -279,11 +288,8 @@ class Handler():
         x2 = float(result.group(3))
         y2 = float(result.group(4))
         if any((0 < x1 < 1, 0 < y2 < 1, 0 < x2 < 1, 0 < y2 < 1)):
-            from app.v1.device_common.device_model import Device
-            w1 = Device(pk=self._model.pk).device_width * x1
-            h1 = Device(pk=self._model.pk).device_height * y1
-            w2 = Device(pk=self._model.pk).device_width * x2
-            h2 = Device(pk=self._model.pk).device_height * y2
+            w1, h1 = self._get_screen_point(x1, y1, self.horizontal_screen)
+            w2, h2 = self._get_screen_point(x2, y2, self.horizontal_screen)
             self.exec_content = self.exec_content.replace(result.group(1), str(w1), 1)
             self.exec_content = self.exec_content.replace(result.group(2), str(h1), 1)
             self.exec_content = self.exec_content.replace(result.group(3), str(w2), 1)

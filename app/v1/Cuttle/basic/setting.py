@@ -12,6 +12,7 @@ HAND_MAX_X = 315
 HAND_MAX_Y = 245
 Z_START = 0
 # Z_DOWN = -3.5   tianjing setting
+# Z_DOWN = -12   # 商米Tcab-5型柜夹具参数
 Z_DOWN = -27
 Z_UP = 0
 MOVE_SPEED = 15000
@@ -19,6 +20,7 @@ SWIPE_TIME = 1
 # 梯形滑动连带的比例
 trapezoid = 0.9
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
+# m_location = [38, 26]  # 商米Tcab-5型柜夹具参数
 m_location = [38, 13]
 wait_time = 1
 icon_threshold = 30

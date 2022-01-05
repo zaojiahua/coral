@@ -133,6 +133,12 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
     # 这个是海康摄像头持续获取图片的方法，原理还是用ctypes模块调用.dll或者.so文件中的变量
     cam_obj = CamObjList[-1]
     while (device_object.has_camera):
+        if redis_client.get("g_bExit") == "1":
+            cam_obj.MV_CC_StopGrabbing()
+            cam_obj.MV_CC_CloseDevice()
+            cam_obj.MV_CC_DestroyHandle()
+            print("stop camera finished..[Debug]")
+            break
         # 这个一个轮询的请求，5毫秒timeout，去获取图片
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), nPayloadSize, stFrameInfo, 5)
         if ret == 0:
@@ -161,12 +167,6 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
         else:
             continue
             # 退出时停止获取 销毁句柄
-        if redis_client.get("g_bExit") == "1":
-            cam_obj.MV_CC_StopGrabbing()
-            cam_obj.MV_CC_CloseDevice()
-            cam_obj.MV_CC_DestroyHandle()
-            print("stop camera finished..[Debug]")
-            break
 
 
 def check_result(func, *args):

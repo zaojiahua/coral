@@ -48,11 +48,13 @@ class TBoard(BaseModel):
             # 从项目同级目录job_resource下获取幸运的job zipfile解压到运行目录 self.tboard_path
             for job in jobs:
                 job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job['job_label']}.zip")
+                logger.info(job_msg_name)
                 with zipfile.ZipFile(job_msg_name, 'r') as zip_ref:
                     zip_ref.extractall(os.path.join(self.tboard_path, job["job_label"]))
                 if job.get("inner_job", []):
                     for inner_job in job["inner_job"]:
                         job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{inner_job['job_label']}.zip")
+                        logger.info(job_msg_name)
                         with zipfile.ZipFile(job_msg_name, 'r') as zip_ref:
                             zip_ref.extractall(os.path.join(self.tboard_path, inner_job["job_label"]))
 

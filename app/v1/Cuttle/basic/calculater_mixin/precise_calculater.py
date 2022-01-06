@@ -12,6 +12,7 @@ class PreciseMixin(object):
         # 此处不传递words给ocr service，避免不确定长度文字对结果的限制（会稍微影响速度）
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             response = ocr_obj.get_result()
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         identify_words_list = [item.get("text").strip().strip('"[]<>\,.\n') for item in response]
         if is_blur:
             response = blur_match(identify_words_list, required_words_list)
@@ -25,6 +26,7 @@ class PreciseMixin(object):
         words_list, path = self.words_prepare(exec_content, "exceptWords")
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             response = ocr_obj.get_result()
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         identify_words_list = [item.get("text").strip('",.\n') for item in response]
         if is_blur:
             for word in words_list:

@@ -23,7 +23,8 @@ class ColorMixin(object):
             b_required, g_required, r_required = self.get_color_by_position(data)
 
         input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0]).astype(np.int32)
-        self._save_crop_image(data.get('input_im'), input_crop)
+        new_path = self._save_crop_image(data.get('input_im'), input_crop)
+        self.extra_result['not_compress_png_list'].append(new_path)
         b_input, g_input, r_input = cv2.split(input_crop)
         result = self._color_judge(b_input, b_required, g_input, g_required, r_input, r_required, data)
         return result
@@ -70,6 +71,7 @@ class ColorMixin(object):
         # （这儿有一种bug，就是选了白色背底色，其他彩色文字变成黑色之后，黑白依旧可以看出来）
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             response = ocr_obj.get_result()
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         identify_words_list = [item.get("text").strip().strip(strip_str) for item in response]
         return identify_words_list, words_list
 
@@ -87,6 +89,7 @@ class ColorMixin(object):
             getattr(ocr_obj, match_function)()
             x = ocr_obj.cx + ocr_obj.x_shift
             y = ocr_obj.cy + ocr_obj.y_shift
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         if type(ocr_obj.result) == int and ocr_obj.result != 0:
             return -2000
         b, g, r = check_color_by_position(cv2.imread(input_crop_path), y, x)

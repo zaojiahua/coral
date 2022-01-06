@@ -135,6 +135,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             self.image = path
             result = ocr_obj.get_result()
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             if not isinstance(result, list) or len(result) == 0:
                 raise RecordWordsFindNoWords
             words = result[0].get("text")

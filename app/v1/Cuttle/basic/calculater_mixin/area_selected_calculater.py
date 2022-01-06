@@ -158,6 +158,7 @@ class AreaSelectedMixin(object):
             ocr_obj.add_bias(x0, y0)
             # 做点击动作
             ocr_obj.point()
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         return ocr_obj.result
 
     def smart_ocr_long_press(self, content) -> int:
@@ -170,6 +171,7 @@ class AreaSelectedMixin(object):
             getattr(ocr_obj, match_function)()
             ocr_obj.add_bias(x0, y0)
             ocr_obj.long_press()
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         return ocr_obj.result
 
     # -------------------------------------旧方法，已经重写或移除，但已经编辑过的用例还需要支持，所有移入统一位置，不做更新--------------------------------

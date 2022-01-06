@@ -49,7 +49,7 @@ class Handler():
         self.kwargs = kwargs
         self.handler_timeout = self.kwargs.get('timeout') or DEFAULT_TIMEOUT
         self.str_handler_timeout = self.kwargs.get('timeout') or ADB_DEFAULT_TIMEOUT
-        self.extra_result = {}
+        self.extra_result = {'not_compress_png_list': []}
         self.optional_input_image = self.kwargs.get('optional_input_image') or 0
         self.horizontal_screen = self.kwargs.get('horizontal_screen', False)
 

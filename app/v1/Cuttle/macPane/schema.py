@@ -98,7 +98,7 @@ class OriginalPicSchema(Schema):
         print("2.set  g_bExit to 1... ")
         redis_client.set("g_bExit", "1")
         # 两个sleep 经验看要保证再1.5s以上，保证相机实际开启并得到第一张图片
-        time.sleep(2)
+        time.sleep(5)
         executer = ThreadPoolExecutor()
         executer.submit(camera_start_3, 1, device_obj)
         time.sleep(3)

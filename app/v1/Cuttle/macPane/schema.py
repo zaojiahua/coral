@@ -69,7 +69,7 @@ class PaneSchema(Schema):
                            ],
                            "device_label": device_label})
             snap_shot_result = UnitFactory().create("AdbHandler", jsdata)
-            if {"result": 0} != snap_shot_result:
+            if 0 != snap_shot_result.get('result'):
                 return jsonify({"status": snap_shot_result}), 400
         try:
             with open(image_path, 'rb') as f:

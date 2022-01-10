@@ -189,7 +189,7 @@ class DJob(BaseModel):
             # 版本号有可能获取不到
             rom_version = get_room_version(
                 device_cache.ip_address if ADB_TYPE == 0 else (self.device_label.split("---")[-1]))
-            if re.match(r'^[0-9][0-9\.]+[0-9]$', rom_version) is not None:
+            if re.match(r'^[0-9a-zA-Z][0-9\.a-zA-Z]+[0-9a-zA-Z]$', rom_version) is not None:
                 json_data['rom_version_const'] = rom_version
                 self.logger.info(f'获取到的rom_version_const版本号是：{json_data["rom_version_const"]}')
 

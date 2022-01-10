@@ -51,7 +51,7 @@ class Handler():
         self.str_handler_timeout = self.kwargs.get('timeout') or ADB_DEFAULT_TIMEOUT
         self.extra_result = {'not_compress_png_list': []}
         self.optional_input_image = self.kwargs.get('optional_input_image') or 0
-        self.horizontal_screen = self.kwargs.get('horizontal_screen', False)
+        self.portrait = self.kwargs.get('portrait', 1)
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -244,9 +244,9 @@ class Handler():
         # 真实执行函数，需要在继承类中指定，adb中返回str，其他返回int
         pass
 
-    def _get_screen_point(self, x, y, horizontal_screen):
+    def _get_screen_point(self, x, y, portrait):
         from app.v1.device_common.device_model import Device
-        if not horizontal_screen:
+        if portrait == 1:
             w = Device(pk=self._model.pk).device_width * x
             h = Device(pk=self._model.pk).device_height * y
         else:
@@ -273,7 +273,7 @@ class Handler():
         x = float(result.group(1))
         y = float(result.group(2))
         if any((0 < x < 1, 0 < y < 1)):
-            w, h = self._get_screen_point(x, y, self.horizontal_screen)
+            w, h = self._get_screen_point(x, y, self.portrait)
             self.exec_content = self.exec_content.replace(result.group(1), str(w), 1)
             self.exec_content = self.exec_content.replace(result.group(2), str(h), 1)
         return normal_result
@@ -288,8 +288,8 @@ class Handler():
         x2 = float(result.group(3))
         y2 = float(result.group(4))
         if any((0 < x1 < 1, 0 < y2 < 1, 0 < x2 < 1, 0 < y2 < 1)):
-            w1, h1 = self._get_screen_point(x1, y1, self.horizontal_screen)
-            w2, h2 = self._get_screen_point(x2, y2, self.horizontal_screen)
+            w1, h1 = self._get_screen_point(x1, y1, self.portrait)
+            w2, h2 = self._get_screen_point(x2, y2, self.portrait)
             self.exec_content = self.exec_content.replace(result.group(1), str(w1), 1)
             self.exec_content = self.exec_content.replace(result.group(2), str(h1), 1)
             self.exec_content = self.exec_content.replace(result.group(3), str(w2), 1)

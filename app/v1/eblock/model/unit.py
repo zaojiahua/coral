@@ -117,6 +117,7 @@ class Unit(BaseModel):
     timestamps = OwnerList(to=str)
     unit_work_path = models.CharField()
     optionalInputImage = models.IntegerField()
+    portrait = models.IntegerField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures', 'timestamps', 'assistDevice')
 
@@ -212,6 +213,8 @@ class Unit(BaseModel):
                 sending_data["assist_device_serial_number"] = assist_device_ident
             if self.optionalInputImage:
                 sending_data['optional_input_image'] = self.optionalInputImage
+            if self.portrait:
+                sending_data['portrait'] = self.portrait
             logger.info(f"unit:{sending_data}")
             try:
                 for i in range(3):

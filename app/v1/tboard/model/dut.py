@@ -98,7 +98,8 @@ class Dut(BaseModel):
         finally:
             lock.release()
 
-    def stop_dut(self):
+    # 代表是否是手动停止的
+    def stop_dut(self, manual_stop=False):
         try:
             logger.debug(f"stop dut--------for {self.device_label}")
             self.stop_djob()
@@ -106,7 +107,9 @@ class Dut(BaseModel):
             logger.error(f"stop djob {self.device_label, self.current_job_label} error :{e}")
         finally:
             self.remove()
-            self.check_tboard_finish()
+            # 手动停止的话，由reef自己判断，防止循环调用
+            if not manual_stop:
+                self.check_tboard_finish()
             logger.info(f"Delete dut device_label {self.device_label} ahead of time")
 
     def stop_djob(self):

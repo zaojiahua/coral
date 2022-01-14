@@ -31,7 +31,7 @@ def remove_tboard_inner(tboard_id):
         all_task = []
         for dut in tboard.dut_list.smembers():
             # 抛异常导致后面的stop_flag不能被设置成True 导致tboard 停止失败，用ThreadPoolExecutor既可以捕获异常还可以提高效率
-            all_task.append(executor.submit(dut.stop_dut))
+            all_task.append(executor.submit(dut.stop_dut, True))
         wait(all_task)
         return DeleteSuccess()
 

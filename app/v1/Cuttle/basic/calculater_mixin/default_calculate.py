@@ -11,9 +11,6 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location, MOVE
 
 class DefaultMixin(object):
     # 主要负责机械臂相关方法和位置的转换计算
-
-
-
     def calculate(self, pix_point):
         # pix_point： 像素坐标
         # return： 实际机械臂移动坐标
@@ -95,7 +92,7 @@ class DefaultMixin(object):
         return exec_content
 
     def transform_pix_point(self, k):
-        if isinstance(k, str) or  isinstance(k, int):
+        if isinstance(k, str) or isinstance(k, int):
             # 旋转机械臂
             return k
         if len(k) != 2 and len(k) != 4:

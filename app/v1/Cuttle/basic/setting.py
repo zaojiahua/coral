@@ -1,6 +1,9 @@
 from redis_init import redis_client
 
+# 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
+rotate_hand_serial_obj_dict = {}
+hand_origin_cmd_prefix = 'Hand'
 hand_used_list = []
 camera_dq_dict = {}
 camera_params = [("Width", 1280), ("Height", 720), ("OffsetY", 200), ("OffsetX", 0)]
@@ -10,6 +13,7 @@ camera_params_240 = [("Width", 1440), ("Height", 1080), ("OffsetY", 0), ("Offset
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
 HAND_MAX_Y = 245
+HAND_MAX_Z = 5
 Z_START = 0
 # Z_DOWN = -3.5   tianjing setting
 # Z_DOWN = -12   # 商米Tcab-5型柜夹具参数
@@ -30,9 +34,12 @@ icon_min_template = 0.005
 icon_min_template_camera = 0.05
 wait_bias = 1.1  # 从发给旋转机械臂-到触碰到开关键的时间补偿
 adb_disconnect_threshold = 3
-arm_default = "G01 X0Y33Z0F5000 \r\n"
+# 和旋转机械臂相关
+arm_default_y = '33'
+arm_default = f"G01 X0Y{arm_default_y}Z0F5000 \r\n"
+arm_move_position = f'G01 X0Y{arm_default_y}Z0F3000 \r\n'
+# 和三轴机械臂相关
 arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
-arm_move_position = 'G01 X0Y33Z0F3000 \r\n'
 last_swipe_end_point = [0, 0]
 
 color_threshold = 4000

@@ -1,6 +1,7 @@
 import logging
 import os
 import csv
+import math
 
 from werkzeug.exceptions import HTTPException
 
@@ -10,7 +11,7 @@ from app.execption.outer.error import APIException
 from app.execption.outer.error_code.total import ServerError, RecvHttpException
 from app.libs.logresponse import LogResponse
 from app.config.ip import CORAL_TYPE
-from app.v1.Cuttle.basic.setting import hand_serial_obj_dict
+from app.v1.Cuttle.basic.setting import rotate_hand_serial_obj_dict
 
 logger = logging.getLogger(TOTAL_LOG_NAME)
 
@@ -101,8 +102,8 @@ def doc():
 
 @app.route('/hand-serial/reset/')
 def hand_serial_reset():
-    if len(hand_serial_obj_dict.values()) > 0 and CORAL_TYPE == 3:
-        hand_serial_obj = list(hand_serial_obj_dict.values())[0]
+    if len(rotate_hand_serial_obj_dict.values()) > 0 and math.floor(CORAL_TYPE) == 3:
+        hand_serial_obj = list( rotate_hand_serial_obj_dict.values())[0]
         hand_serial_obj.send_single_order(f"G01 X0Y0Z0F5000 \r\n")
         hand_serial_obj.recv(buffer_size=200)
 

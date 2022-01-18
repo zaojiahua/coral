@@ -12,7 +12,7 @@ from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
-    arm_move_position
+    arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -43,7 +43,7 @@ def rotate_hand_init(arm_com_id, device_obj, **kwargs):
     # 旋转机械臂初始化
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
-    hand_serial_obj_dict[device_obj.pk] = hand_serial_obj
+    rotate_hand_serial_obj_dict[device_obj.pk] = hand_serial_obj
     hand_reset_orders = [
         "$G \r\n",
         "$x \r\n",
@@ -140,11 +140,15 @@ class HandHandler(Handler, DefaultMixin):
         time.sleep(3.5)  # 因为用力滑动会有惯性,sleep3确保动作执行完成
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
-    def reset_hand(self, hand_reset_orders=arm_wait_position, **kwargs):
+    def reset_hand(self, reset_orders=arm_wait_position, rotate=False, **kwargs):
         # 恢复手臂位置 可能是龙门架也可能是旋转机械臂
-        self._model.logger.info(f"reset hand order:{hand_reset_orders}")
-        hand_serial_obj_dict.get(self._model.pk).send_single_order(hand_reset_orders)
-        hand_serial_obj_dict.get(self._model.pk).recv()
+        self._model.logger.info(f"reset hand order:{reset_orders}")
+        if rotate is True:
+            target_serial_obj_dict = rotate_hand_serial_obj_dict
+        else:
+            target_serial_obj_dict = hand_serial_obj_dict
+        target_serial_obj_dict.get(self._model.pk).send_single_order(reset_orders)
+        target_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time)
         return 0
 
@@ -222,12 +226,22 @@ class HandHandler(Handler, DefaultMixin):
         return position
 
     def str_func(self, commend, **kwargs):
-        # 旋转机械臂执行的方法
         from app.v1.device_common.device_model import Device
         move = False
         sleep_time = 0
-        if Device(pk=self._model.pk).has_rotate_arm is False:
-            return -9
+        rotate = True
+        # 三轴机械臂移动 为了和旋转机械臂区分 加了前缀
+        if commend.startswith(f'{hand_origin_cmd_prefix} G01'):
+            if Device(pk=self._model.pk).has_arm is False:
+                return -10
+            target_hand_serial_obj_dict = hand_serial_obj_dict
+            rotate = False
+            commend = commend.replace(hand_origin_cmd_prefix, '')
+        else:
+            if Device(pk=self._model.pk).has_rotate_arm is False:
+                return -9
+            target_hand_serial_obj_dict = rotate_hand_serial_obj_dict
+        # 默认是旋转机械臂执行的方法
         if '<rotateSleep>' in commend:
             # 长按的等待操作，等待输入的时间+wait_bias时间。
             res = re.search("<rotateSleep>(.*?)$", commend)
@@ -237,13 +251,12 @@ class HandHandler(Handler, DefaultMixin):
             # 归位操作，用于长按电源后归reset位置。
             commend = commend.replace('<move>', "")
             move = True
-        hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
-        # hand_serial_obj_dict.get(self._model.pk).recv()
+        target_hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
         if float(sleep_time) > 0:
             time.sleep(float(sleep_time) + wait_bias)
         if move:
-            self.reset_hand(hand_reset_orders=arm_move_position)
-        hand_serial_obj_dict.get(self._model.pk).recv()
+            self.reset_hand(reset_orders=arm_move_position if rotate else arm_wait_position, rotate=rotate)
+        target_hand_serial_obj_dict.get(self._model.pk).recv()
         self.ignore_reset = True
         return 0
 

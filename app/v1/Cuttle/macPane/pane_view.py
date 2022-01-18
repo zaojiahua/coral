@@ -21,7 +21,7 @@ from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start_3
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
-from app.v1.Cuttle.basic.setting import hand_serial_obj_dict
+from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -118,7 +118,7 @@ class PaneDeleteView(MethodView):
 
     def _reset_arm(self, device_object):
         try:
-            hand_serial_obj = hand_serial_obj_dict[device_object.pk]
+            hand_serial_obj = rotate_hand_serial_obj_dict[device_object.pk]
             hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
             hand_serial_obj.recv(buffer_size=64)
             hand_serial_obj.close()
@@ -164,17 +164,6 @@ class PerformancePictureView(MethodView):
 
 class PaneConfigView(MethodView):
 
-    def post(self):
-        data = request.get_json()
-        executer = ThreadPoolExecutor()
-        if data.get("camera_id") is not None:
-            self.hardware_init(data.get("camera_id"), data.get("device_label"), executer, rotate=False)
-        if data.get("arm_id"):
-            self.hardware_init(data.get("arm_id"), data.get("device_label"), executer, rotate=False)
-        if data.get("rotate_arm_id"):
-            self.hardware_init('rotate', data.get("device_label"), executer, rotate=True)
-        return jsonify({"status": "success"}), 200
-
     def init_bright(self, device_label):
         ip = Device(pk=device_label).ip_address
         cmd = f"adb -s {ip}:5555 shell echo {DEVICE_BRIGHTNESS} >/sys/class/leds/lcd-backlight/brightness"
@@ -188,7 +177,6 @@ class PaneConfigView(MethodView):
 
     @staticmethod
     def hardware_init(port, device_label, executer, rotate=False):
-        port = f'/dev/{port}' if platform.system() == 'Linux' else port
         try:
             device_object = Device(pk=device_label)
             if rotate is True:
@@ -211,16 +199,6 @@ class PaneConfigView(MethodView):
         except TimeoutError:
             print('TimeoutError')
             return 0
-
-    def delete(self):
-        try:
-            device_object = Device(pk=request.get_json().get("device_label"))
-            device_object.has_arm = False
-            device_object.has_camera = False
-            hand_serial_obj_dict.get(request.get_json().get("device_label")).close()
-            return "success", 204
-        except AttributeError:
-            raise RemoveBeforeAdd
 
 
 class PaneBorderView(MethodView):

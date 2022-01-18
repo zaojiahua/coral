@@ -10,7 +10,7 @@ from typing import Dict
 import numpy as np
 
 from app.config.ip import HOST_IP, ADB_TYPE
-from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST
+from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url, device_update_url
@@ -47,7 +47,7 @@ class DoorKeeper(object):
         else:
             self.is_device_rootable(num=f"-s {s_id}")
         if CORAL_TYPE > 2:
-            self.set_arm_or_camera(CORAL_TYPE, dev_info_dict["device_label"])
+            self.set_arm_or_camera(dev_info_dict["device_label"])
         # 设备注册成功的话，设置状态为idle
         dev_info_dict['status'] = DeviceStatus.IDLE
         self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"),
@@ -55,13 +55,9 @@ class DoorKeeper(object):
         logger.info(f"set device success")
         return 0
 
-    def set_arm_or_camera(self, CORAL_TYPE, device_label):
+    def set_arm_or_camera(self, device_label):
         port_list = HARDWARE_MAPPING_LIST.copy()
-        rotate = True if CORAL_TYPE == 3 else False
         executer = ThreadPoolExecutor()
-        # if CORAL_TYPE >= 5:
-        #     for port in port_list:
-        #         PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
         try:
             # 一个机柜只放一台手机限定
             available_port_list = list(set(port_list) ^ set(hand_used_list))
@@ -69,7 +65,7 @@ class DoorKeeper(object):
             if len(available_port_list) == 0:
                 raise ArmNorEnough
             for port in available_port_list:
-                PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
+                PaneConfigView.hardware_init(port, device_label, executer, rotate=(port == rotate_com))
                 hand_used_list.append(port)
         except IndexError:
             raise ArmNorEnough
@@ -119,7 +115,7 @@ class DoorKeeper(object):
         kwargs["auto_test"] = False
         kwargs["device_type"] = "test_box"
         if CORAL_TYPE > 2:
-            self.set_arm_or_camera(CORAL_TYPE, kwargs["device_label"])
+            self.set_arm_or_camera(kwargs["device_label"])
         self.send_dev_info_to_reef(kwargs.pop("device_name"), kwargs, with_monitor=False)
         return 0
 

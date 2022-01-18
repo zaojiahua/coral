@@ -50,22 +50,34 @@ AI_TESTER_INTERVAL = 180
 BATTERY_CHECK_INTERVAL = 420
 # ADB_MAPPING_DICT = {0: ADB_SERVER_1, 1: ADB_SERVER_2, 2: ADB_SERVER_3}
 
-
 DEVICE_BRIGHTNESS = 227
 
 try:
     CORAL_TYPE = CORAL_TYPE
-except  NameError:
+except NameError:
     CORAL_TYPE = 1
 
-arm_com = 'arm' if platform.system() == 'Linux' else'COM9'
+CORAL_TYPE_NAME = {
+    1: 'Tcab_1',
+    2: 'Tcab_2',
+    3: 'Tcab_3',
+    4: 'Tcab_4',
+    5: 'Tcab_5',
+    3.1: 'Tcab_3C',
+    5.1: 'Tcab_5L'
+}
+
+arm_com = os.environ.get('ARM_COM', '/dev/arm')
+rotate_com = os.environ.get('ROTATE_COM', '/dev/rotate')
 
 if CORAL_TYPE == 3:
-    HARDWARE_MAPPING_LIST = ['rotate']
+    HARDWARE_MAPPING_LIST = [rotate_com]
+elif CORAL_TYPE == 3.1:
+    HARDWARE_MAPPING_LIST = [rotate_com, arm_com]
 elif CORAL_TYPE == 4:
     HARDWARE_MAPPING_LIST = [arm_com]
 else:
-    HARDWARE_MAPPING_LIST = ['1',arm_com]
+    HARDWARE_MAPPING_LIST = ['1', arm_com]
 
 
 Bugreport_file_name = "bugreport.zip"

@@ -4,9 +4,10 @@ import re
 import subprocess
 import threading
 import time
+import math
 from concurrent.futures import ThreadPoolExecutor
 
-from app.config.setting import BASE_DIR, HOST_IP, CORAL_TYPE, HARDWARE_MAPPING_LIST
+from app.config.setting import BASE_DIR, HOST_IP, CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com
 from app.config.url import device_url, device_logout, coordinate_url
 from app.execption.outer.error import APIException
 from app.libs.http_client import request
@@ -79,29 +80,27 @@ def recover_device(executer, logger):
         device_obj = Device(pk=device_dict.get("device_label"))
         device_obj.update_attr(**device_dict)
         try:
-            # 再确保恢复属性后恢复testbox相关机械臂和摄像头状态
-            # if device_dict.get("paneslot").get("paneview").get("type") == "test_box":
+            # 1和2类型的柜子，不涉及到其他硬件，3往上的会涉及到其他硬件，所以需要初始化
             if CORAL_TYPE >= 3:
                 executer = ThreadPoolExecutor()
-                # for key in key_parameter_list:
-                #     port = device_dict.get("paneslot").get("paneview").get(key)
                 port_list = HARDWARE_MAPPING_LIST.copy()
-                rotate = True if CORAL_TYPE == 3 else False
                 for port in port_list:
-                    PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer, rotate=rotate)
+                    PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer,
+                                                 rotate=(port == rotate_com))
                     hand_used_list.append(port)
                 set_border(device_dict, device_obj)
         except (AttributeError, APIException) as e:
             print(repr(e))
             pass
-        # start a loop for each device when recover+
+        # 开启执行任务的线程和获取电量信息的线程
         if device_obj.status != DeviceStatus.ERROR:
             recover_root(device_obj.device_label, device_obj.connect_number)
         aide_monitor_instance = AideMonitor(device_obj)
         t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(device_dict.get("device_label"))
         t.start()
-        if CORAL_TYPE != 5:
+        # 5类型的柜子，都没有ADB
+        if math.floor(CORAL_TYPE) != 5:
             executer.submit(device_obj.start_device_async_loop, aide_monitor_instance)
 
 

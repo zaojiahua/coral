@@ -221,9 +221,9 @@ class MacroHandler(object):
                 y = MacroHandler.get_validate_range([0, 100], int(rotate_params[0][1]))
                 z = MacroHandler.get_validate_range([0, 100], int(rotate_params[0][2]))
                 f = MacroHandler.get_validate_range(hand_origin_f_range, int(rotate_params[0][3]))
-                x = x * HAND_MAX_X
-                y = y * HAND_MAX_Y
-                z = z * (HAND_MAX_Z - Z_DOWN) + Z_DOWN
+                x = x / 100 * HAND_MAX_X
+                y = y / 100 * HAND_MAX_Y
+                z = z / 100 * (HAND_MAX_Z - Z_DOWN) + Z_DOWN
                 f = f * 60
                 cmd = re.sub(pattern, f'X{x}Y{y}Z{z}F{f}', cmd)
         return cmd

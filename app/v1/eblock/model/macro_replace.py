@@ -214,8 +214,10 @@ class MacroHandler(object):
                 z = MacroHandler.get_validate_range(rotate_origin_z_range, int(rotate_params[0][2]))
                 f = MacroHandler.get_validate_range(rotate_origin_f_range, int(rotate_params[0][3]))
                 y = y + int(arm_default_y)
+                spend_time = max(abs(x), abs(y), abs(z)) / f
                 f = f * 60
                 cmd = re.sub(pattern, f'X{x}Y{y}Z{z}F{f}', cmd)
+                cmd += f'<rotateSleep>{spend_time}'
             elif cmd.startswith(HandOrigin):
                 x = MacroHandler.get_validate_range([0, 100], int(rotate_params[0][0]))
                 y = MacroHandler.get_validate_range([0, 100], int(rotate_params[0][1]))
@@ -224,8 +226,10 @@ class MacroHandler(object):
                 x = x / 100 * HAND_MAX_X
                 y = -y / 100 * HAND_MAX_Y
                 z = z / 100 * (HAND_MAX_Z - Z_DOWN) + Z_DOWN
+                spend_time = max(x, y, abs(z)) / f
                 f = f * 60
                 cmd = re.sub(pattern, f'X{x}Y{y}Z{z}F{f}', cmd)
+                cmd += f'<rotateSleep>{spend_time}'
         return cmd
 
     def set_sim_value(self, cmd, d_params, sim_number):

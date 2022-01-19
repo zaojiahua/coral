@@ -48,9 +48,6 @@ def handler_switcher(func):
     @wraps(func)
     def wrapper(*args, **kw):
         handler = handler_config.get(func.__name__)
-        # 3c的复合型unit，全部使用adb执行
-        if CORAL_TYPE == 3.1:
-            handler = 'AdbHandler'
         kw.update({"handler": handler})
         return func(*args, **kw)
 

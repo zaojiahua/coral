@@ -127,7 +127,8 @@ class AdbHandler(Handler, ChineseMixin):
         if CORAL_TYPE < 5:
             if ADB_TYPE == 1:
                 # 有线模式下无论主僚机都做kill&start处理 其他线程也在使用adb server，这里kill掉的话，会导致其他unit执行失败
-                self.do(adb_cmd_prefix + RESTART_SERVER)
+                # self.do(adb_cmd_prefix + RESTART_SERVER)
+                pass
             else:
                 if self.kwargs.get("assist_device_serial_number"):
                     # 无线模式下主僚机分别取对应的ip进行重连

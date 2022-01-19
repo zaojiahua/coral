@@ -169,6 +169,9 @@ class Unit(BaseModel):
                     if Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1 and \
                             Device(pk=self.device_label).has_rotate_arm:
                         target = PROCESSER_LIST[0]
+                    elif Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 5 and \
+                            Device(pk=self.device_label).has_rotate_arm:
+                        target = PROCESSER_LIST[1]
                     elif Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1:
                         target = PROCESSER_LIST[1]
                     elif Device(pk=self.device_label).has_camera and cmd_dict.get("have_second_choice", 0) == 2:

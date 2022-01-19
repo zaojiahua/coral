@@ -36,8 +36,8 @@ RotateOrigin = '<RotateOrigin>'
 rotate_origin_x_range = [-90, 90]
 rotate_origin_y_range = [-33, 90]
 rotate_origin_z_range = [-180, 180]
-# 用户写的单位是 毫米/秒 实际需要的单位是 分钟/秒
-rotate_origin_f_range = [600 / 60, 7000 / 60]
+# 用户写的单位是 毫米/秒 实际需要的单位是 毫米/秒
+rotate_origin_f_range = [600 / 60, 9000 / 60]
 # 三轴机械臂原始移动
 HandOrigin = '<HandOrigin>'
 hand_origin_f_range = [600 / 60, 15000 / 60]

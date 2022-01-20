@@ -44,6 +44,7 @@ class Device(BaseModel):
     device_name = models.CharField()
     auto_test = models.BooleanField()
     power_port = models.CharField()
+    # 这里的宽高是分辨率
     device_width = models.IntegerField()
     device_height = models.IntegerField()
     temp_port_list = models.Set()
@@ -52,12 +53,17 @@ class Device(BaseModel):
     y_dpi = models.CharField()
     x_border = models.CharField()
     y_border = models.CharField()
+    # 这里是用户输入的设备实际宽高厚度
+    width = models.IntegerField()
+    height = models.IntegerField()
+    ply = models.IntegerField()
     # attribute that only coral use
     is_bind = models.BooleanField()
     flag = models.BooleanField()
     has_arm = models.BooleanField()
     has_camera = models.BooleanField()
     has_rotate_arm = models.BooleanField()
+    # 设备左上角点和右下角点的坐标（在摄像机模式下）
     x1 = models.CharField()
     y1 = models.CharField()
     x2 = models.CharField()

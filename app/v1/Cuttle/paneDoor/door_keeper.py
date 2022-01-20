@@ -109,8 +109,7 @@ class DoorKeeper(object):
         except RequestException:
             kwargs["manufacturer"] = "Manual_device"
         kwargs["rom_version"] = "Manual_"+kwargs["manufacturer"]
-        kwargs["android_version"] =  kwargs["cpu_name"] = kwargs[
-            "cpu_id"] = "Manual_device"
+        kwargs["android_version"] = kwargs["cpu_name"] = kwargs["cpu_id"] = "Manual_device"
         kwargs["ip_address"] = "0.0.0.0"
         kwargs["auto_test"] = False
         kwargs["device_type"] = "test_box"

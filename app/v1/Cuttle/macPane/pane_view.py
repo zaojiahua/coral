@@ -1,9 +1,10 @@
 import logging
-import platform
+import os.path
+import random
+import shutil
 import subprocess
 import sys
 import traceback
-from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import numpy as np
@@ -14,7 +15,7 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS
-from app.execption.outer.error_code.camera import ArmReInit, NoCamera, RemoveBeforeAdd, PerformancePicNotFound
+from app.execption.outer.error_code.camera import ArmReInit, NoCamera, PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
@@ -22,21 +23,18 @@ from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict
-from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema
+from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
 from app.v1.tboard.views.get_dut_progress import get_dut_progress_inner
 from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
 from redis_init import redis_client
 
-logger = logging.getLogger(PANE_LOG_NAME)
 from concurrent.futures._base import TimeoutError
 import copy
 
-# mapping_dict = {0: ADB_SERVER_1, 1: ADB_SERVER_2, 2: ADB_SERVER_3}
-
-
 ip = copy.copy(HOST_IP)
+logger = logging.getLogger(PANE_LOG_NAME)
 
 
 def pic_push(device_object, pic_name="success.png"):
@@ -262,3 +260,26 @@ class FilePushView(MethodView):
             return jsonify({"status": "ok"}), 200
         except Exception as e:
             return jsonify({"fail": repr(e)}), 400
+
+
+# 测试点击
+class PaneClickTestView(MethodView):
+
+    def post(self):
+        random_dir = str(random.randint(0, 100))
+        if not os.path.exists(random_dir):
+            os.mkdir(random_dir)
+        fs = request.files.getlist('img')
+        for f in fs:
+            f.save(os.path.join(random_dir, f.filename))
+
+        schema = ClickTestSchema()
+        request_data = request.form.to_dict()
+        schema.load(request_data)
+
+        device_obj = Device(pk=request_data.get("device_label"))
+        print(device_obj.width, '&' * 10)
+        print(device_obj.height, '^' * 10)
+
+        shutil.rmtree(random_dir)
+        return jsonify(dict(error_code=0))

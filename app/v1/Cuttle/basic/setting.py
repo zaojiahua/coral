@@ -42,6 +42,7 @@ trapezoid = 0.9
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
 # m_location = [38, 26]  # 商米Tcab-5型柜夹具参数
 m_location = [38, 13]
+m_location_center = [157, 202.5, -34]
 wait_time = 1
 icon_threshold = 30
 icon_threshold_camera = 12

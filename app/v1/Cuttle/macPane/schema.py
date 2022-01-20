@@ -152,3 +152,17 @@ class CoordinateSchema(Schema):
                         Width=(data.get("inside_under_right_x") - data.get("inside_upper_left_x")) // 16 * 16 + w_bias,
                         Height=(data.get("inside_under_right_y") - data.get("inside_upper_left_y")) // 4 * 4 + 4)
         return jsonify({"status": "success"}), 200
+
+
+class ClickTestSchema(Schema):
+    device_label = fields.String(required=True)
+    inside_upper_left_x = fields.Int(required=True)
+    inside_upper_left_y = fields.Int(required=True)
+    inside_under_right_x = fields.Int(required=True)
+    inside_under_right_y = fields.Int(required=True)
+    x = fields.Int(required=True)
+    y = fields.Int(required=True)
+    z = fields.Int(required=True)
+
+    class Meta:
+        unknown = INCLUDE

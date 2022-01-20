@@ -224,7 +224,8 @@ class MacroHandler(object):
                 z = MacroHandler.get_validate_range([0, 100], int(rotate_params[0][2]))
                 f = MacroHandler.get_validate_range(hand_origin_f_range, int(rotate_params[0][3]))
                 x = x / 100 * HAND_MAX_X
-                y = -y / 100 * HAND_MAX_Y
+                # 6 是由于硬件导致的安装误差
+                y = -y / 100 * (HAND_MAX_Y - 6)
                 z = z / 100 * (HAND_MAX_Z - Z_DOWN) + Z_DOWN
                 spend_time = max(x, y, abs(z)) / f
                 f = f * 60

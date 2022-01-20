@@ -5,9 +5,10 @@ from functools import wraps, partial, singledispatch
 
 from app.config.log import REQUEST_LOG_TIME_STATISTICS
 from app.v1.Cuttle.basic.setting import handler_config
+from app.config.setting import CORAL_TYPE
+
 
 # 这个文件主要涵盖了整个项目用的装饰器，有一些可能已经被换掉了
-
 def async_timeout(timeout=20):
     # 限制函数最大执行时间的装饰器
     def decorate(func):
@@ -46,7 +47,8 @@ def handler_switcher(func):
     # 自动根据配置选择handler的装饰器（eg：adb和机械臂之间选择）
     @wraps(func)
     def wrapper(*args, **kw):
-        kw.update({"handler": handler_config.get(func.__name__)})
+        handler = handler_config.get(func.__name__)
+        kw.update({"handler": handler})
         return func(*args, **kw)
 
     return wrapper

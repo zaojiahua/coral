@@ -7,8 +7,24 @@ hand_origin_cmd_prefix = 'Hand'
 hand_used_list = []
 camera_dq_dict = {}
 camera_params = [("Width", 1280), ("Height", 720), ("OffsetY", 200), ("OffsetX", 0)]
-camera_params_240 = [("Width", 1440), ("Height", 1080), ("OffsetY", 0), ("OffsetX", 0), ("AcquisitionFrameRate", 240.0),
-                     ("ExposureTime", 2500.0), ("Gain", 2.5)]
+camera_params_240 = [("Width", 1440),
+                     ("Height", 1080),
+                     ("OffsetY", 0),
+                     ("OffsetX", 0),
+                     ("AcquisitionFrameRate", 240.0),
+                     ("ExposureTime", 2500.0),
+                     ("Gain", 2.5)]
+# 功能测试相机初始化参数
+camera_params_feature = [("Width", 2448),
+                         ("Height", 2048),
+                         ("OffsetY", 0),
+                         ("OffsetX", 0),
+                         ("ExposureTime", 10000.0),
+                         ("Gain", 2.5),
+                         ("AcquisitionFrameRate", 35.0),
+                         ("PixelFormat", 0x0108000A, 'enum')]
+high_exposure_params = [("ExposureTime", 100000.0),
+                        ("Gain", 10)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315

@@ -1,9 +1,10 @@
 import platform
+import math
 
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.setting import g_bExit
 
-if CORAL_TYPE == 5:
+if math.floor(CORAL_TYPE) == 5:
     if platform.system() == 'Linux':
         pass
         from app.v1.Cuttle.basic.MvImport.linux.CameraParams_const import MV_USB_DEVICE, MV_GIGE_DEVICE

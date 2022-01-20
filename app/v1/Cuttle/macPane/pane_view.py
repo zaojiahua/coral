@@ -18,7 +18,7 @@ from app.execption.outer.error_code.camera import ArmReInit, NoCamera, RemoveBef
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
-from app.v1.Cuttle.basic.operator.camera_operator import camera_start_3
+from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict
@@ -182,13 +182,13 @@ class PaneConfigView(MethodView):
             if rotate is True:
                 function, attribute = (rotate_hand_init, "has_rotate_arm")
             elif port.split("/")[-1].isdigit():
-                function, attribute = (camera_start_3, "has_camera")
+                function, attribute = (camera_start, "has_camera")
             else:
                 function, attribute = (hand_init, "has_arm")
             setattr(device_object, attribute, True)
             future = executer.submit(function, port, device_object, init=True)
             exception = future.exception(timeout=2)
-            print(str(exception))
+            print(exception, '*' * 10)
             if "PermissionError" in str(exception):
                 traceback.print_exc()
                 raise ArmReInit

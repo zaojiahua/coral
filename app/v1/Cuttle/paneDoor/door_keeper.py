@@ -425,6 +425,7 @@ class DoorKeeper(object):
         dev_data_dict["id"] = res.get("id") if res.get("id") else 0
         device_object = Device(pk=dev_data_dict["device_label"])
         device_object.update_attr(**dev_data_dict, avoid_push=True)
+        device_object.update_m_location()
         aide_monitor_instance = AideMonitor(device_object)
         t = threading.Thread(target=device_object.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(dev_data_dict["device_label"])

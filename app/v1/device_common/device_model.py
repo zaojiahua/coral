@@ -16,6 +16,8 @@ from app.v1.stew.model.aide_monitor import send_battery_check
 from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
+from app.config.setting import CORAL_TYPE
+from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value
 
 
 class DeviceStatus(object):
@@ -225,27 +227,6 @@ class Device(BaseModel):
                 setattr(self, attr_name, attr_value)
 
     def update_device_border(self, data):
-        # 更换摄像头时，这个函数会发生变化
-        # usb：图片左上 == 手机的左下 == 机械臂的左下
-        # 海康： 图片左上== 手机右上  == 机械臂右上
-        # 海康用1280*720  手机1920*1080
-        # y_border_camera_pixel = (float(data.get("inside_upper_left_x")) - float(data.get("outside_upper_left_x"))) * (
-        #         self.device_height / camera_w)
-        # x_border_camera_pixel = (float(data.get("outside_under_right_y")) - float(data.get("inside_under_right_y"))) * (
-        #         self.device_width / camera_h)
-        # print(y_border_camera_pixel,x_border_camera_pixel)
-        # x_camera_pixel = float(data.get("inside_under_right_y")) - float(data.get("inside_upper_left_y"))
-        # y_camera_pixel = float(data.get("inside_under_right_x")) - float(data.get("inside_upper_left_x"))
-        # if y_border_camera_pixel < 0 or x_border_camera_pixel < 0:
-        #     return -1
-        # x_real = 25.4 * self.device_width / float(self.x_dpi)
-        # y_real = 25.4 * self.device_height / float(self.y_dpi)
-        # print("x_real,y_real:",x_real,y_real)
-        # self.x_border = str(round(x_border_camera_pixel * (x_real / x_camera_pixel), 2))
-        # self.y_border = str(round(y_border_camera_pixel * (y_real / y_camera_pixel), 2))
-        # print("border from camera。。。",self.x_border,self.y_border)
-
-        #
         def cam_pix_to_scr(x, y, width):
             # 把摄像头下的坐标值，先转换成屏幕截图下的对应坐标值
             s_x = int((data.get("inside_under_right_y") - y) * (self.device_height / width))
@@ -262,18 +243,6 @@ class Device(BaseModel):
         self.x2 = str(int(data.get("inside_under_right_x")))
         self.y2 = str(int(data.get("inside_upper_left_y")))
         return 0
-        # usb 像头
-        # y_border = data.get("inside_upper_left_x") - data.get("outside_upper_left_x")
-        # x_border = data.get("inside_upper_left_y") - data.get("outside_upper_left_y")
-        # if y_border < 0 or x_border < 0:
-        #     return -1
-        # self.x_border = str(round(x_border, 2))
-        # self.y_border = str(round(y_border, 2))
-        # self.x1 = str(data.get("inside_upper_left_x"))
-        # self.y1 = str(data.get("inside_upper_left_y"))
-        # self.x2 = str(data.get("inside_under_right_x"))
-        # self.y2 = str(data.get("inside_under_right_y"))
-        # return 0
 
     def to_str(self, number):
         float(number)
@@ -341,3 +310,26 @@ class Device(BaseModel):
         request(method="PATCH", url=f'{device_url}{self.id}/', json={"status": status})
         self.status = status
         self.logger.debug(f'*************** url: {device_url}{self.id}/, status:{status}')
+
+    # 更新5l机柜的m_location信息，没有机械臂对象，所以方法先写到这里
+    def update_m_location(self):
+        if CORAL_TYPE == 5.1:
+            set_global_value('m_location', [m_location_center[0] - self.width / 2,
+                                            m_location_center[1] - self.height / 2,
+                                            m_location_center[2] + self.ply])
+            print('new m_location:', get_global_value('m_location'))
+
+    # 获取5l柜的点击坐标
+    def get_click_position(self, x, y, z=0, roi=None):
+        if roi is None:
+            roi = [self.x1, self.y1, self.x2, self.y2]
+
+        m_location = get_global_value('m_location')
+        # 先计算在相机拍照模式下 要点击的位置在roi的区域
+        x_location_per = (x - roi[0]) / (roi[2] - roi[0])
+        y_location_per = (y - roi[1]) / (roi[3] - roi[1])
+        # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏
+        click_x = m_location[0] + self.width * y_location_per
+        click_y = m_location[1] + self.height * x_location_per
+        click_z = m_location[2] + z
+        return click_x, click_y, click_z

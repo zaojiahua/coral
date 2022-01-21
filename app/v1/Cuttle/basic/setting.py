@@ -88,7 +88,6 @@ light_pyramid_setting_simple = [0.1, 0.2, 0.4, 0.7, 1.3, 1.6, 1.8]
 
 handler_config = {
     # 当复合unit中新增adb方法，需要更新此配置文件，指明其可能性
-
     "point": ("AdbHandler", "HandHandler"),
     "long_press": ("AdbHandler", "HandHandler"),
     "swipe": ("AdbHandler", "HandHandler"),
@@ -134,3 +133,19 @@ PM_DUMP = 'pm dump'
 
 DEVICE_DETECT_ERROR_MAX_TIME = 5 * 60
 
+_global_dict = {}
+
+
+def set_global_value(key, value):
+    """ 定义一个全局变量 """
+    _global_dict[key] = value
+
+
+def get_global_value(key, def_value=None):
+    try:
+        return _global_dict[key]
+    except KeyError:
+        return def_value
+
+
+set_global_value('m_location', m_location)

@@ -22,7 +22,8 @@ from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
-from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict
+from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, m_location, get_global_value, \
+    MOVE_SPEED
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -277,9 +278,25 @@ class PaneClickTestView(MethodView):
         request_data = request.form.to_dict()
         schema.load(request_data)
 
-        device_obj = Device(pk=request_data.get("device_label"))
-        print(device_obj.width, '&' * 10)
-        print(device_obj.height, '^' * 10)
+        device_label = request_data.get("device_label")
+        device_obj = Device(pk=device_label)
+
+        click_x, click_y, click_z = device_obj.get_click_position(int(request_data.get('x')),
+                                                                  int(request_data.get('y')),
+                                                                  int(request_data.get('z')),
+                                                                  [int(request_data.get('inside_upper_left_x')),
+                                                                   int(request_data.get('inside_upper_left_y')),
+                                                                   int(request_data.get('inside_under_right_x')),
+                                                                   int(request_data.get('inside_under_right_y'))])
+        self.click(device_label, click_x, click_y, m_location[2])
 
         shutil.rmtree(random_dir)
         return jsonify(dict(error_code=0))
+
+    @staticmethod
+    def click(device_label, x, y, z):
+        click_orders = ['G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, 0, MOVE_SPEED - 10000),
+                        'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, z, MOVE_SPEED - 10000),
+                        'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, 0, MOVE_SPEED - 10000)]
+        hand_serial_obj_dict.get(device_label).send_list_order(click_orders)
+        hand_serial_obj_dict.get(device_label).recv()

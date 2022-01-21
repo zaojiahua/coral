@@ -56,9 +56,9 @@ class Device(BaseModel):
     x_border = models.CharField()
     y_border = models.CharField()
     # 这里是用户输入的设备实际宽高厚度
-    width = models.IntegerField()
-    height = models.IntegerField()
-    ply = models.IntegerField()
+    width = models.CharField()
+    height = models.CharField()
+    ply = models.CharField()
     # attribute that only coral use
     is_bind = models.BooleanField()
     flag = models.BooleanField()
@@ -92,7 +92,8 @@ class Device(BaseModel):
     # 代表每次重连发生的时间
     disconnect_times_timestamp = OwnerList(to=int)
 
-    float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2"]
+    float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2",
+                  'width', 'height', 'ply']
 
     def __init__(self, *args, **kwargs):
         super(Device, self).__init__(*args, **kwargs)
@@ -202,6 +203,10 @@ class Device(BaseModel):
         self._set_char("x_border", kwargs, "phone_model", "x_border")
         self._set_char("y_border", kwargs, "phone_model", "y_border")
 
+        self._set_char("width", kwargs, "phone_model", "width")
+        self._set_char("height", kwargs, "phone_model", "height")
+        self._set_char("ply", kwargs, "phone_model", "ply")
+
         kwargs["manufacturer"] = kwargs.pop("phone_model").get("manufacturer") if kwargs.get("phone_model") else ""
         self.manufacturer = kwargs.pop("manufacturer").get("manufacturer_name", "") if kwargs.get(
             "manufacturer") else ""
@@ -211,6 +216,7 @@ class Device(BaseModel):
         for attr_name, attr_value in kwargs.items():
             if attr_name in self._astra_fields.keys() and not isinstance(attr_value, list):
                 setattr(self, attr_name, attr_value)
+        self.update_m_location()
 
     def _set_char(self, attr_name, dict, *args):
         try:
@@ -228,6 +234,8 @@ class Device(BaseModel):
 
     def update_device_border(self, data):
         def cam_pix_to_scr(x, y, width):
+            if x is None or y is None:
+                return 0, 0
             # 把摄像头下的坐标值，先转换成屏幕截图下的对应坐标值
             s_x = int((data.get("inside_under_right_y") - y) * (self.device_height / width))
             s_y = int((x - data.get("inside_upper_left_x")) * (self.device_height / width))
@@ -314,22 +322,23 @@ class Device(BaseModel):
     # 更新5l机柜的m_location信息，没有机械臂对象，所以方法先写到这里
     def update_m_location(self):
         if CORAL_TYPE == 5.1:
-            set_global_value('m_location', [m_location_center[0] - self.width / 2,
-                                            m_location_center[1] - self.height / 2,
-                                            m_location_center[2] + self.ply])
+            set_global_value('m_location', [m_location_center[0] - float(self.width) / 2,
+                                            m_location_center[1] - float(self.height) / 2,
+                                            m_location_center[2] + float(self.ply)])
             print('new m_location:', get_global_value('m_location'))
 
     # 获取5l柜的点击坐标
     def get_click_position(self, x, y, z=0, roi=None):
         if roi is None:
-            roi = [self.x1, self.y1, self.x2, self.y2]
+            roi = [float(self.x1), float(self.y1), float(self.x2), float(self.y2)]
 
         m_location = get_global_value('m_location')
-        # 先计算在相机拍照模式下 要点击的位置在roi的区域
+        # 先计算在相机拍照模式下 要点击的位置在roi的区域 计算出的百分比针对的是图片上的左上角点
         x_location_per = (x - roi[0]) / (roi[2] - roi[0])
         y_location_per = (y - roi[1]) / (roi[3] - roi[1])
-        # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏
-        click_x = m_location[0] + self.width * y_location_per
-        click_y = m_location[1] + self.height * x_location_per
+        print('location percent ', x_location_per, y_location_per)
+        # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
+        click_x = m_location[0] + float(self.width) * (1 - y_location_per)
+        click_y = m_location[1] + float(self.height) * x_location_per
         click_z = m_location[2] + z
         return click_x, click_y, click_z

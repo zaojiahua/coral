@@ -288,7 +288,7 @@ class PaneClickTestView(MethodView):
                                                                    int(request_data.get('inside_upper_left_y')),
                                                                    int(request_data.get('inside_under_right_x')),
                                                                    int(request_data.get('inside_under_right_y'))])
-        self.click(device_label, click_x, click_y, m_location[2])
+        self.click(device_label, click_x, click_y, click_z)
 
         shutil.rmtree(random_dir)
         return jsonify(dict(error_code=0))

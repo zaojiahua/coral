@@ -72,6 +72,7 @@ def recover_device(executer, logger):
                        "android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name,"
                        "phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer,"
                        "phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name,"
+                       "phone_model.width,phone_model.height,phone_model.ply,"
                        "rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera,"
                        "paneslot.paneview.id,paneslot.paneview.robot_arm"}
     res = request(url=device_url, params=param)

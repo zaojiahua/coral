@@ -9,14 +9,15 @@ import cv2
 import func_timeout
 import numpy as np
 from func_timeout import func_set_timeout
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from app.execption.outer.error_code.camera import NoSrc, NoCamera, CameraInitFail
-from app.execption.outer.error_code.imgtool import CameraNotResponse
+from app.execption.outer.error_code.camera import NoSrc, CameraInitFail, CameraInUse
 from app.v1.Cuttle.basic.MvImport.HK_import import *
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
-from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, FpsMax, CameraMax, \
+from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, CameraMax, \
     camera_params_240, CamObjList, camera_params_feature, high_exposure_params
+from execption.outer.error_code.imgtool import CameraNotResponse
 from redis_init import redis_client
 
 MoveToPress = 9
@@ -213,6 +214,13 @@ class CameraHandler(Handler):
         Function("exec-out screencap", "screen_shot_and_pull", re.compile("screencap -p > (.*)"))
     ]
 
+    def __init__(self, *args, **kwargs):
+        super(CameraHandler, self).__init__(*args, **kwargs)
+        # 是否获取高曝光图片
+        self.high_exposure = kwargs.get('high_exposure')
+        # 是否获取原始图片，非roi图片
+        self.original = kwargs.get('original')
+
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
         self.exec_content, opt_type = self.grouping(self.exec_content)
@@ -228,20 +236,29 @@ class CameraHandler(Handler):
 
     def snap_shot(self, *args, **kwargs):
         time.sleep(0.5)
-        for i in range(5):
-            try:
-                src = camera_dq_dict.get(self._model.pk)[-1]
-                # src = cv2.imdecode(src, 1)
-                src = np.rot90(src, 3)
-                break
-            except IndexError:
-                time.sleep(0.03)
-                continue
+
+        # 相机正在获取图片的时候 不能再次使用
+        if redis_client.get("g_bExit") == "0":
+            raise CameraInUse()
+
+        image = None
+        executer = ThreadPoolExecutor()
+        future = executer.submit(camera_start, 1, self._model, high_exposure=self.high_exposure)
+        for _ in as_completed([future]):
+            image = camera_dq_dict.get(self._model.pk)[-1]
+            if not self.original:
+                image = self.get_roi(image)
+                image = np.rot90(image, 3)
+
         try:
-            self.src = src
+            self.src = image
         except UnboundLocalError:
             raise CameraNotResponse
+
         return 0
+
+    def get_roi(self, src):
+        return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
 
     def move(self, *args, **kwargs):
         if hasattr(self, "src"):

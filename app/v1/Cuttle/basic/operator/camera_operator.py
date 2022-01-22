@@ -243,23 +243,6 @@ class CameraHandler(Handler):
             raise CameraNotResponse
         return 0
 
-    # def get_video(self, *args, **kwargs):
-    #     time_sleep = args[0]
-    #     max_save_time = CameraMax / FpsMax
-    #     pic_count = float(time_sleep) * FpsMax if float(time_sleep) < max_save_time else CameraMax
-    #     self.video_src = deque()
-    #     camera_dq_dict.get(self._model.pk).clear()
-    #     # 留出0.5s余量，保证取够图片
-    #     print("获取一段视频....", float(time_sleep) + 0.5)
-    #     time.sleep(float(time_sleep) + 0.5)
-    #     a = time.time()
-    #     print("总图片数：", pic_count, "现有：", len(camera_dq_dict.get(self._model.pk)))
-    #     temp_list = [camera_dq_dict.get(self._model.pk).popleft() for i in range(int(pic_count))]
-    #     for i in temp_list:
-    #         self.video_src.append(self.get_roi(self._model.pk, cv2.imdecode(i, 1)))
-    #     print("copy&decode&wrap  pic time:", time.time() - a)
-    #     return 0
-
     def move(self, *args, **kwargs):
         if hasattr(self, "src"):
             cv2.imwrite(args[0], self.src)
@@ -286,42 +269,6 @@ class CameraHandler(Handler):
 
     def ignore(self, *arg, **kwargs):
         return 0
-
-    @staticmethod
-    def get_roi(device_label, src):
-        # 截取出手机屏幕位置（要求不能转90度以上）
-        try:
-            # gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
-            # ret, binary = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)
-            # image, contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            # box_list = []
-            # for contour in contours:
-            #     rect = cv2.minAreaRect(contour[:, 0, :])
-            #     box = cv2.boxPoints(rect)
-            #     area = int(rect[1][1]) * int(rect[1][0])
-            #     if area <= 5000:
-            #         continue
-            #     box_list.append((box, area))
-            # box_list.sort(key=lambda x: x[1], reverse=True)
-            # point = np.float32(box_list[0][0])
-            # print("point:", point)
-            # # todo  use these code when coor finished
-            from app.v1.device_common.device_model import Device
-            dev_obj = Device(device_label)
-            point = np.float32([[float(dev_obj.x1), float(dev_obj.y2)], [float(dev_obj.x1), float(dev_obj.y1)],
-                                [float(dev_obj.x2), float(dev_obj.y1)], [float(dev_obj.x2), float(dev_obj.y2)]])
-            weight = np.hypot(np.array(point[0][0] - point[1][0]), np.array(point[0][1] - point[1][1]))
-            height = np.hypot(np.array(point[1][0] - point[2][0]), np.array(point[1][1] - point[2][1]))
-            if weight < height:
-                after = np.float32([[weight, 0], [0, 0], [0, height], [weight, height]])
-                after_transform = cv2.getPerspectiveTransform(point, after)
-                return cv2.warpPerspective(src, after_transform, (weight, height))
-            else:
-                after_transform = cv2.getPerspectiveTransform(point, np.float32(
-                    [[height, 0], [height, weight], [0, weight], [0, 0]]))
-                return cv2.warpPerspective(src, after_transform, (height, weight))
-        except IndexError as e:
-            return np.zeros((1280, 720))
 
 
 if __name__ == '__main__':

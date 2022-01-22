@@ -68,7 +68,7 @@ class OriginalPicSchema(Schema):
     def make_sure(self, data, **kwargs):
         path = "original.png"
         device_obj = Device(pk=data.get("device_label"))
-        ret_code = device_obj.get_snapshot(path, data.get('high_exposure'))
+        ret_code = device_obj.get_snapshot(path, data.get('high_exposure'), True)
 
         if ret_code == 0:
             f = open(path, "rb")

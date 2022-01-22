@@ -22,7 +22,7 @@ from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value
 from app.v1.Cuttle.basic.basic_views import UnitFactory
-from app.v1.Cuttle.basic.operator.camera_operator import camera_start
+from app.v1.Cuttle.basic.operator.camera_operator import camera_start, CameraHandler
 from app.execption.outer.error_code.camera import CameraInUse
 from redis_init import redis_client
 
@@ -254,9 +254,9 @@ class Device(BaseModel):
         self.home_x, self.home_y = cam_pix_to_scr(data.get("desktop_x"), data.get("desktop_y"), width)
         # 下面是之前的代码  好像没用了.....
         self.x1 = str(int(data.get("inside_upper_left_x")))
-        self.y1 = str(int(data.get("inside_under_right_y")))
+        self.y1 = str(int(data.get("inside_upper_left_y")))
         self.x2 = str(int(data.get("inside_under_right_x")))
-        self.y2 = str(int(data.get("inside_upper_left_y")))
+        self.y2 = str(int(data.get("inside_under_right_y")))
         return 0
 
     def to_str(self, number):
@@ -351,7 +351,7 @@ class Device(BaseModel):
         return click_x, click_y, click_z
 
     # 将截图获取统一到这里
-    def get_snapshot(self, image_path, high_exposure=False):
+    def get_snapshot(self, image_path, high_exposure=False, original=False):
         if self.has_camera:
             # 相机正在获取图片的时候 不能再次使用
             if redis_client.get("g_bExit") == "0":
@@ -361,8 +361,10 @@ class Device(BaseModel):
             future = executer.submit(camera_start, 1, self, high_exposure=high_exposure)
             for _ in as_completed([future]):
                 from app.v1.Cuttle.basic.setting import camera_dq_dict
-                src = camera_dq_dict.get(self.device_label)[-1]
-                image = np.rot90(src, 3)
+                image = camera_dq_dict.get(self.device_label)[-1]
+                if not original:
+                    image = self.get_roi(image)
+                    image = np.rot90(image, 3)
                 cv2.imwrite(image_path, image)
             return 0
         else:
@@ -372,3 +374,6 @@ class Device(BaseModel):
             snap_shot_result = UnitFactory().create("AdbHandler", jsdata)
             if 0 != snap_shot_result.get('result'):
                 return snap_shot_result
+
+    def get_roi(self, src):
+        return src[int(self.y1):int(self.y2), int(self.x1):int(self.x2)]

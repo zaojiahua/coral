@@ -1,6 +1,9 @@
 import time
 
+import numpy as np
+import cv2
 from astra import models
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.config.ip import ADB_TYPE
 from app.config.url import device_create_update_url, device_url
@@ -18,6 +21,10 @@ from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value
+from app.v1.Cuttle.basic.basic_views import UnitFactory
+from app.v1.Cuttle.basic.operator.camera_operator import camera_start
+from app.execption.outer.error_code.camera import CameraInUse
+from redis_init import redis_client
 
 
 class DeviceStatus(object):
@@ -346,3 +353,26 @@ class Device(BaseModel):
         click_y = m_location[1] + float(self.height) * x_location_per
         click_z = m_location[2] + z
         return click_x, click_y, click_z
+
+    # 将截图获取统一到这里
+    def get_snapshot(self, image_path, high_exposure=False):
+        if self.has_camera:
+            # 相机正在获取图片的时候 不能再次使用
+            if redis_client.get("g_bExit") == "0":
+                raise CameraInUse()
+
+            executer = ThreadPoolExecutor()
+            future = executer.submit(camera_start, 1, self, high_exposure=high_exposure)
+            for _ in as_completed([future]):
+                from app.v1.Cuttle.basic.setting import camera_dq_dict
+                src = camera_dq_dict.get(self.device_label)[-1]
+                image = np.rot90(src, 3)
+                cv2.imwrite(image_path, image)
+            return 0
+        else:
+            jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
+                           "execCmdList": [f"adb -s {self.connect_number} exec-out screencap -p > {image_path}"],
+                           "device_label": self.device_label})
+            snap_shot_result = UnitFactory().create("AdbHandler", jsdata)
+            if 0 != snap_shot_result.get('result'):
+                return snap_shot_result

@@ -2,19 +2,15 @@ import os
 import re
 import threading
 import time
-import numpy as np
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 
-import cv2
 from flask import Response, jsonify
-from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE, validates_schema
+from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE
 
 from app.config.setting import PROJECT_SIBLING_DIR
-from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 
 from app.v1.device_common.device_model import Device
-from app.execption.outer.error_code.camera import CameraInUse
 from redis_init import redis_client
 
 
@@ -35,7 +31,6 @@ class PaneSchema(Schema):
     @post_load
     def make_sure(self, data, **kwargs):
         picture_name = data.get("picture_name")
-        # device_ip = data.get("device_ip")
         device_label = data.get("device_label")
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=device_label)
@@ -45,42 +40,21 @@ class PaneSchema(Schema):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         image_path = os.path.join(folder_path, picture_name)
-        # 禁止adb 有线模式下的editor 流程暂时不启用，有线模式下暂时允许通过有线截图
-        # if ADB_TYPE == 1:
-        #     src = Image.new("RGB", (300, 600), (255, 255, 255))
-        #     src = np.array(src)
-        #     cv2.putText(src, "Please edit on a wireless device", (0, 200), cv2.FONT_HERSHEY_SIMPLEX,
-        #                 0.55, (0, 0, 0), 1, cv2.LINE_AA)
-        #     cv2.imwrite(image_path, src)
-        #     with open(image_path, 'rb') as f:
-        #         image = f.read()
-        #         return Response(image, mimetype="image/jpeg")
 
-        if device_obj.has_camera:
-            from app.v1.Cuttle.basic.setting import camera_dq_dict
-            src = camera_dq_dict.get(device_label).pop()
-            # image = cv2.imdecode(src, 1)
-            image = np.rot90(src, 3)
-            # src = CameraHandler.get_roi(device_label, image)
-            cv2.imwrite(image_path, image)
+        # 返回的数据格式需要和异常时候的统一
+        ret_code = device_obj.get_snapshot(image_path)
+        if ret_code == 0:
+            try:
+                with open(image_path, 'rb') as f:
+                    image = f.read()
+                    resp = Response(image, mimetype="image/jpeg")
+                    return resp
+            except Exception as e:
+                print(repr(e))
+            finally:
+                os.remove(image_path)
         else:
-            jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
-                           "execCmdList": [
-                               f"adb -s {device_obj.connect_number} exec-out screencap -p > {image_path}"
-                           ],
-                           "device_label": device_label})
-            snap_shot_result = UnitFactory().create("AdbHandler", jsdata)
-            if 0 != snap_shot_result.get('result'):
-                return jsonify({"status": snap_shot_result}), 400
-        try:
-            with open(image_path, 'rb') as f:
-                image = f.read()
-                resp = Response(image, mimetype="image/jpeg")
-                return resp
-        except Exception as e:
-            print(repr(e))
-        finally:
-            os.remove(image_path)
+            return jsonify({"status": ret_code}), 400
 
 
 class OriginalPicSchema(Schema):
@@ -92,31 +66,14 @@ class OriginalPicSchema(Schema):
 
     @post_load
     def make_sure(self, data, **kwargs):
-        # 相机正在获取图片的时候 不能再次使用
-        if redis_client.get("g_bExit") == "0":
-            raise CameraInUse()
-
         path = "original.png"
         device_obj = Device(pk=data.get("device_label"))
-        executer = ThreadPoolExecutor()
-        future = executer.submit(camera_start, 1, device_obj, high_exposure=data.get('high_exposure'))
-        for _ in as_completed([future]):
-            self.get_snap_shot(data.get("device_label"), path)
+        ret_code = device_obj.get_snapshot(path, data.get('high_exposure'))
+
+        if ret_code == 0:
             f = open(path, "rb")
             image = f.read()
             return Response(image, mimetype="image/jpeg")
-
-    @staticmethod
-    def get_snap_shot(device_label, path):
-        from app.v1.Cuttle.basic.setting import camera_dq_dict
-        src = camera_dq_dict.get(device_label)[-1]
-        # image = cv2.imdecode(src, 1)
-        try:
-            os.remove(path)
-        except FileNotFoundError:
-            pass
-        cv2.imwrite(path, src)
-        return 0
 
 
 class CoordinateSchema(Schema):

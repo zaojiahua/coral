@@ -12,7 +12,8 @@ from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
-    arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix
+    arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, Z_SIDE, \
+    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE__OFFSET_DISTANCE, SIDE_KEY_WIDTH
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -211,9 +212,27 @@ class HandHandler(Handler, DefaultMixin):
         time.sleep(wait_time)
         return result
 
-    def power(self, _, **kwargs):
-        # 按电源键，5#柜规划，还未实现
-        pass
+    def press_side(self, pix_point, **kwargs):
+        # 按压侧边键
+        location = get_global_value('m_location')
+        is_left = False if (pix_point[0] - location[1]) > X_SIDE__OFFSET_DISTANCE else True
+        pix_point[0] = pix_point[0] - SIDE_KEY_WIDTH if is_left else pix_point[0] + SIDE_KEY_WIDTH
+        press_side_order = self.__press_side_order(pix_point, is_left=is_left)
+        hand_serial_obj_dict.get(self._model.pk).send_out_key_order(press_side_order[:3],
+                                                                    others_orders=press_side_order[3:],
+                                                                    wait_time=self.speed)
+        rev = hand_serial_obj_dict.get(self._model.pk).recv()
+        time.sleep(wait_time)
+        return rev
+
+    def press_out_screen(self, pix_point, **kwargs):
+        click_orders = self.__single_click_order(pix_point, z_point=pix_point[2])
+        hand_serial_obj_dict.get(self._model.pk).send_out_key_order(click_orders[:2],
+                                                                    others_orders=[click_orders[-1]],
+                                                                    wait_time=self.speed)
+        result = hand_serial_obj_dict.get(self._model.pk).recv()
+        time.sleep(wait_time)
+        return result
 
     def _find_key_point(self, name):
         from app.v1.device_common.device_model import Device
@@ -277,15 +296,12 @@ class HandHandler(Handler, DefaultMixin):
         return click_orders
 
     @staticmethod
-    def __single_click_order(axis):
-        axis_x, axis_y = axis
-        if axis_x > HAND_MAX_X or axis_y > HAND_MAX_Y:
-            return {"error:Invalid Pix_Point"}
+    def __single_click_order(axis, z_point=Z_DOWN):
         return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN + 5, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis[0], axis[1], z_point + 5, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis[0], axis[1], z_point, MOVE_SPEED),
             # 'G01 Z%dF%d \r\n' % (Z_DOWN, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis[0], axis[1], Z_UP, MOVE_SPEED),
             # 'G01 Z%dF%d \r\n' % (Z_UP, MOVE_SPEED)
         ]
 
@@ -316,7 +332,6 @@ class HandHandler(Handler, DefaultMixin):
 
         ]
 
-    # TODO 滑动起止点是否超过操作台范围
     @staticmethod
     def __sliding_order(start_point, end_point, speed=MOVE_SPEED, normal=True):
         # 点击的起始点
@@ -347,6 +362,7 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
             ]
 
+    @staticmethod
     def _sliding_contious_order(self, start_point, end_point, commend_index, commend_length):
         start_x, start_y = start_point
         end_x, end_y = end_point
@@ -375,6 +391,22 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_START, MOVE_SPEED)
             ]
+
+    @staticmethod
+    def __press_side_order(pix_point, is_left=False):
+        """
+        :param point: 要按压的侧边键坐标 eg：[x,y,z]
+        :param is_left: 是否是左侧边键
+        :return: 返回按压指令集
+        """
+        x_offset = pix_point[0] - X_SIDE_KEY_OFFSET if is_left else pix_point[0] + X_SIDE_KEY_OFFSET
+        return [
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (pix_point[0], pix_point[1], pix_point[2], PRESS_SIDE_KEY_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], PRESS_SIDE_KEY_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, MOVE_SPEED),
+        ]
 
 
 if __name__ == '__main__':

@@ -17,7 +17,7 @@ from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, CameraMax, \
     camera_params_240, CamObjList, camera_params_feature, high_exposure_params
-from execption.outer.error_code.imgtool import CameraNotResponse
+from app.execption.outer.error_code.imgtool import CameraNotResponse
 from redis_init import redis_client
 
 MoveToPress = 9

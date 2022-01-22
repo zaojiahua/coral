@@ -21,6 +21,17 @@ class HandSerial:
     def send_single_order(self, g_order):
         return self.write(g_order)
 
+    def send_out_key_order(self, g_orders, others_orders, wait_time, **kwargs):
+        deviate_order = arm_wait_position
+        for o_order in g_orders:
+            self.write(o_order)
+        if wait_time != 0:
+            time.sleep(wait_time)
+        for other_order in others_orders:
+            self.write(other_order)
+        self.write(deviate_order)
+        return 0
+
     def send_list_order(self, g_orders, **kwargs):
         deviate_order = arm_wait_position
         if kwargs.get("wait"):

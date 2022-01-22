@@ -28,7 +28,8 @@ high_exposure_params = [("ExposureTime", 100000.0),
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
-HAND_MAX_Y = 245
+# HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
+HAND_MAX_Y = 420    # 5L机械臂Y最大行程
 HAND_MAX_Z = 5
 Z_START = 0
 # Z_DOWN = -3.5   tianjing setting
@@ -37,11 +38,17 @@ Z_DOWN = -27
 Z_UP = 0
 MOVE_SPEED = 15000
 SWIPE_TIME = 1
+# 按压侧边键参数
+X_SIDE_KEY_OFFSET = 15
+X_SIDE__OFFSET_DISTANCE = 5
+SIDE_KEY_WIDTH = 1      # 侧边按键的宽度
+PRESS_SIDE_KEY_SPEED = 5000
+Z_SIDE = -30
 # 梯形滑动连带的比例
 trapezoid = 0.9
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
 # m_location = [38, 26]  # 商米Tcab-5型柜夹具参数
-m_location = [38, 13]
+m_location = [38, 13, -35]   # Tcab-5现有夹具m_location
 m_location_center = [157, 202.5, -34]
 wait_time = 1
 icon_threshold = 30

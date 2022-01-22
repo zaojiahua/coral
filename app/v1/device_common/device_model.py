@@ -60,7 +60,7 @@ class Device(BaseModel):
     width = models.CharField()
     height = models.CharField()
     ply = models.CharField()
-    screen_z = None
+    screen_z = models.CharField()
     # 用户在设备地图页配置的所有点
     device_config_point = {}
     # attribute that only coral use
@@ -97,7 +97,7 @@ class Device(BaseModel):
     disconnect_times_timestamp = OwnerList(to=int)
 
     float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2",
-                  'width', 'height', 'ply']
+                  'width', 'height', 'ply', "screen_z"]
 
     def __init__(self, *args, **kwargs):
         super(Device, self).__init__(*args, **kwargs)
@@ -329,7 +329,7 @@ class Device(BaseModel):
             set_global_value('m_location', [m_location_center[0] - float(self.width) / 2,
                                             m_location_center[1] - float(self.height) / 2,
                                             m_location_center[2] + float(self.ply)])
-            self.screen_z = get_global_value('m_location')[2]
+            self.screen_z = str(get_global_value('m_location')[2])
             print('new m_location:', get_global_value('m_location'))
 
     # 获取5l柜的点击坐标
@@ -343,8 +343,8 @@ class Device(BaseModel):
         y_location_per = (y - roi[1]) / (roi[3] - roi[1])
         print('location percent ', x_location_per, y_location_per)
         # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
-        click_x = m_location[0] + float(self.width) * (1 - y_location_per)
-        click_y = m_location[1] + float(self.height) * x_location_per
+        click_x = round((m_location[0] + float(self.width) * (1 - y_location_per)), 2)
+        click_y = round((m_location[1] + float(self.height) * x_location_per), 2)
         click_z = m_location[2] + z
         return click_x, click_y, click_z
 

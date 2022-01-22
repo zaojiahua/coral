@@ -66,6 +66,9 @@ class Device(BaseModel):
     width = models.CharField()
     height = models.CharField()
     ply = models.CharField()
+    screen_z = None
+    # 用户在设备地图页配置的所有点
+    device_config_point = {}
     # attribute that only coral use
     is_bind = models.BooleanField()
     flag = models.BooleanField()
@@ -332,6 +335,7 @@ class Device(BaseModel):
             set_global_value('m_location', [m_location_center[0] - float(self.width) / 2,
                                             m_location_center[1] - float(self.height) / 2,
                                             m_location_center[2] + float(self.ply)])
+            self.screen_z = get_global_value('m_location')[2]
             print('new m_location:', get_global_value('m_location'))
 
     # 获取5l柜的点击坐标

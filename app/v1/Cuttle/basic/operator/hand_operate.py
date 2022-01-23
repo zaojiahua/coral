@@ -164,7 +164,7 @@ class HandHandler(Handler, DefaultMixin):
         # 按返回键，需要在5#型柜 先配置过返回键的位置
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order(self.calculate((device_obj.back_x, device_obj.back_y)))
+        click_orders = self.__single_click_order(self.calculate([device_obj.back_x, device_obj.back_y], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time)
@@ -174,7 +174,7 @@ class HandHandler(Handler, DefaultMixin):
         # 双击返回键  同5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__double_click_order(self.calculate((device_obj.back_x, device_obj.back_y)))
+        click_orders = self.__double_click_order(self.calculate([device_obj.back_x, device_obj.back_y], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time)
@@ -184,7 +184,7 @@ class HandHandler(Handler, DefaultMixin):
         # 点击桌面键 5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order(self.calculate((device_obj.home_x, device_obj.home_y)))
+        click_orders = self.__single_click_order(self.calculate([device_obj.home_x, device_obj.home_y], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time)
@@ -194,7 +194,7 @@ class HandHandler(Handler, DefaultMixin):
         # 点击菜单键 5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order(self.calculate((device_obj.menu_x, device_obj.menu_y)))
+        click_orders = self.__single_click_order(self.calculate([device_obj.menu_x, device_obj.menu_y], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time)
@@ -204,7 +204,7 @@ class HandHandler(Handler, DefaultMixin):
         # 长按菜单键 5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order(self.calculate((device_obj.menu_x, device_obj.menu_y)))
+        click_orders = self.__single_click_order(self.calculate([device_obj.menu_x, device_obj.menu_y], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders[:2],
                                                                  other_orders=[click_orders[-1]],
                                                                  wait=True)

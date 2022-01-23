@@ -221,6 +221,7 @@ class Unit(BaseModel):
                 sending_data['optional_input_image'] = self.optionalInputImage
             if self.portrait:
                 sending_data['portrait'] = self.portrait
+            logger.info(f'target is {target}')
             logger.info(f"unit:{sending_data}")
             try:
                 for i in range(3):

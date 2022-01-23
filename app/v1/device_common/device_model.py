@@ -1,9 +1,10 @@
 import time
+import math
 
 from astra import models
 
-from app.config.ip import ADB_TYPE
-from app.config.url import device_create_update_url, device_url
+from app.config.setting import ADB_TYPE, HOST_IP
+from app.config.url import device_create_update_url, device_url, device_phone_model_coordinate, coordinate_url
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
@@ -107,6 +108,49 @@ class Device(BaseModel):
     def __repr__(self):
         return f"{self.__class__.__name__}_{self.pk}_{self.device_name}_{self.id}"
 
+    # 获取当个设备的信息或者是获取所有设备的信息，所以是静态方法
+    @staticmethod
+    def request_device_info(device_label=None):
+        common_fields = "id,auto_test,device_name,device_width,cpu_id,device_height,ip_address,status," \
+                        "tempport,tempport.port,powerport,powerport.port,device_label,android_version," \
+                        "android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name," \
+                        "phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer," \
+                        "phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name," \
+                        "phone_model.width,phone_model.height,phone_model.ply," \
+                        "rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera," \
+                        "paneslot.paneview.id,paneslot.paneview.robot_arm"
+        if device_label is None:
+            param = {"status__in": "ReefList[idle{%,%}busy{%,%}error{%,%}occupied]",
+                     "cabinet_id": HOST_IP.split(".")[-1],
+                     "fields": common_fields}
+        else:
+            param = {'cabinet_id': HOST_IP.split(".")[-1],
+                     'device_label': device_label,
+                     'fields': common_fields}
+
+        res_device_info = request(url=device_url, params=param)
+
+        # 获取五型柜用户配置的坐标信息
+        if math.floor(CORAL_TYPE) == 5:
+            for device_dict in res_device_info.get("devices"):
+                coors = request(url=device_phone_model_coordinate, params={'phone_model__device': device_dict['id'],
+                                                                           'exclude': 'pk'})
+                for coor in coors.get('phonemodelcustomcoordinate', []):
+                    coor_name = coor['name']
+                    x = coor['x_coordinate']
+                    y = coor['y_coordinate']
+                    z = coor['z_coordinate']
+                    device_obj = Device(pk=device_dict['device_label'])
+                    device_obj.device_config_point[coor_name] = [x, y, z]
+                    if coor_name == '桌面':
+                        device_obj.home_x, device_obj.home_y = x, y
+                    elif coor_name == '返回':
+                        device_obj.back_x, device_obj.back_y = x, y
+                    elif coor_name == '菜单':
+                        device_obj.menu_x, device_obj.menu_y = x, y
+
+        return res_device_info
+
     @property
     def device_height(self):
         return self.pix_height if CORAL_TYPE != 5.1 else (int(self.x2) - int(self.x1))
@@ -177,11 +221,25 @@ class Device(BaseModel):
             if kwargs.get("avoid_push") is not True:
                 request(method="POST", url=device_create_update_url, json=self.data)
             self.flag = True
+            self.set_border(kwargs)
             self.kx1, self.ky1, self.kx2, self.ky2 = self._relative_to_absolute(
                 key_map_position.get(self.phone_model_name, default_key_map_position))
         except Exception as e:
             print(repr(e))
             func(self, **kwargs)  # 4
+
+    def set_border(self, device_dict):
+        if math.floor(CORAL_TYPE) == 5:
+            if device_dict.get("paneslot", {}).get("paneview") is not None:
+                params = {
+                    "pane_view": device_dict.get("paneslot").get("paneview").get("id"),
+                    "phone_model": device_dict.get("phone_model").get("id")
+                }
+                res = request(url=coordinate_url, params=params)
+                if len(res) < 1:
+                    return
+
+                self.update_device_border(res[0])
 
     def _relative_to_absolute(self, coordinate):
         if any((i < 1 for i in coordinate)):
@@ -255,23 +313,12 @@ class Device(BaseModel):
             self.pix_height = device_height
 
     def update_device_border(self, data):
-        def cam_pix_to_scr(x, y, width):
-            if x is None or y is None:
-                return 0, 0
-            # 把摄像头下的坐标值，先转换成屏幕截图下的对应坐标值
-            s_x = int((data.get("inside_under_right_y") - y) * (self.device_height / width))
-            s_y = int((x - data.get("inside_upper_left_x")) * (self.device_height / width))
-            return s_x, s_y
-
-        width = int(data.get("inside_under_right_x") - data.get("inside_upper_left_x"))
-        self.back_x, self.back_y = cam_pix_to_scr(data.get("return_x"), data.get("return_y"), width)
-        self.menu_x, self.menu_y = cam_pix_to_scr(data.get("menu_x"), data.get("menu_y"), width)
-        self.home_x, self.home_y = cam_pix_to_scr(data.get("desktop_x"), data.get("desktop_y"), width)
-        # 下面是之前的代码  好像没用了.....
+        # 设置roi
         self.x1 = str(int(data.get("inside_upper_left_x")))
         self.y1 = str(int(data.get("inside_upper_left_y")))
         self.x2 = str(int(data.get("inside_under_right_x")))
         self.y2 = str(int(data.get("inside_under_right_y")))
+
         return 0
 
     def to_str(self, number):

@@ -13,7 +13,7 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location, MOVE
 
 class DefaultMixin(object):
     # 主要负责机械臂相关方法和位置的转换计算
-    def calculate(self, pix_point):
+    def calculate(self, pix_point, absolute=True):
         # pix_point： 像素坐标
         # return： 实际机械臂移动坐标
         # 如果要改变手机位置判断方法，修改此函数
@@ -36,7 +36,7 @@ class DefaultMixin(object):
             opt_coordinate = list(device.get_click_position(pix_point[0],
                                                             pix_point[1],
                                                             pix_point[2] if len(pix_point) > 2 else 0,
-                                                            absolute=True))
+                                                            absolute=absolute))
 
         if opt_coordinate[0] > HAND_MAX_X or opt_coordinate[1] > HAND_MAX_Y:
             raise CrossMax

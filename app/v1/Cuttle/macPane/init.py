@@ -8,7 +8,7 @@ import math
 from concurrent.futures import ThreadPoolExecutor
 
 from app.config.setting import BASE_DIR, HOST_IP, CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com
-from app.config.url import device_url, device_logout, coordinate_url
+from app.config.url import device_url, device_logout
 from app.execption.outer.error import APIException
 from app.libs.http_client import request
 from app.libs.log import setup_logger
@@ -20,7 +20,6 @@ from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
 
 key_parameter_list = ["camera", "robot_arm"]
-
 
 
 def pane_init():
@@ -65,17 +64,7 @@ def send_device_leave_to_reef(device, logger):
 
 
 def recover_device(executer, logger):
-    param = {"status__in": "ReefList[idle{%,%}busy{%,%}error{%,%}occupied]",
-             "cabinet_id": HOST_IP.split(".")[-1],
-             "fields": "id,auto_test,device_name,device_width,cpu_id,device_height,ip_address,status,"
-                       "tempport,tempport.port,powerport,powerport.port,device_label,android_version,"
-                       "android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name,"
-                       "phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer,"
-                       "phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name,"
-                       "phone_model.width,phone_model.height,phone_model.ply,"
-                       "rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera,"
-                       "paneslot.paneview.id,paneslot.paneview.robot_arm"}
-    res = request(url=device_url, params=param)
+    res = Device.request_device_info()
     for device_dict in res.get("devices"):
         print('获取到的设备信息有：', device_dict.get('device_label'))
         device_obj = Device(pk=device_dict.get("device_label"))
@@ -89,10 +78,10 @@ def recover_device(executer, logger):
                     PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer,
                                                  rotate=(port == rotate_com))
                     hand_used_list.append(port)
-                set_border(device_dict, device_obj)
         except (AttributeError, APIException) as e:
             print(repr(e))
             pass
+
         # 开启执行任务的线程和获取电量信息的线程
         if device_obj.status != DeviceStatus.ERROR:
             recover_root(device_obj.device_label, device_obj.connect_number)
@@ -100,6 +89,7 @@ def recover_device(executer, logger):
         t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(device_dict.get("device_label"))
         t.start()
+
         # 5类型的柜子，都没有ADB
         if math.floor(CORAL_TYPE) != 5:
             executer.submit(device_obj.start_device_async_loop, aide_monitor_instance)
@@ -114,24 +104,6 @@ def recover_root(device_label, connect_num):
     jsdata["device_label"] = device_label
     jsdata["execCmdList"] = cmd_list
     UnitFactory().create("AdbHandler", jsdata)
-
-
-def set_border(device_dict, device_obj):
-    # 没放进paneview时候，这个request会向上抛attribute error，
-    params = {
-        "pane_view": device_dict.get("paneslot").get("paneview").get("id"),
-        "phone_model": device_dict.get("phone_model").get("id")
-    }
-    res = request(url=coordinate_url, params=params)
-    if len(res) <1:
-        return
-    device_obj.update_device_border(res[0])
-    # y_border = (res.get("inside_upper_left_x") - res.get("outside_upper_left_x") + (
-    #         res.get("outside_under_right_x") - res.get("inside_under_right_x"))) / 2
-    # x_border = (res.get("inside_upper_left_y") - res.get("outside_upper_left_y") + (
-    #             res.get("outside_under_right_y") - res.get("inside_under_right_y"))) / 2
-    # device_obj.x_border = x_border
-    # device_obj.y_border = y_border
 
 
 def get_tty_device_number() -> list:

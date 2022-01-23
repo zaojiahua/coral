@@ -112,6 +112,7 @@ class HandHandler(Handler, DefaultMixin):
         return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def sliding(self, point, swipe_time=SWIPE_TIME, **kwargs):
+        print(point, '*&' * 10)
         # # 滑动，self.speed是滑动速度
         # 2021.12.17 滑动，self.speed是滑动时间
         swipe_distance = np.hypot(point[1][0] - point[0][0], point[1][1] - point[0][1])
@@ -335,20 +336,20 @@ class HandHandler(Handler, DefaultMixin):
     @staticmethod
     def __sliding_order(start_point, end_point, speed=MOVE_SPEED, normal=True):
         # 点击的起始点
-        start_x, start_y = start_point
-        end_x, end_y = end_point
-        # 从下往上   [500,800] -> [500, 200]
-        # if (start_x == end_x) and (start_y > end_y):
-        #     end_y = start_x - 40 if (start_y - end_y) > 40 else end_y
+        if len(start_point) == 2:
+            start_x, start_y = start_point
+            end_x, end_y = end_point
+            start_z = Z_DOWN
+        else:
+            start_x, start_y, start_z = start_point
+            end_x, end_y, _ = end_point
         if normal:
             commend_list = [
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN + 5, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN - 1, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z + 5, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z - 1, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, speed),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
             ]
-            # if speed <= 500:
-            #     commend_list.insert(2, "<SLEEP>")
             return commend_list
         else:
             x1 = min(max(start_x - (end_x - start_x) * 10 / np.abs(end_x - start_x) * trapezoid, 0), 120)
@@ -357,15 +358,20 @@ class HandHandler(Handler, DefaultMixin):
             y4 = min(max(end_y + (end_y - start_y) * trapezoid, 0), 150)
             return [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x1, y1, Z_START, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN - 1, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_DOWN + 3, speed),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z - 1, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 3, speed),
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
             ]
 
     @staticmethod
-    def _sliding_contious_order(self, start_point, end_point, commend_index, commend_length):
-        start_x, start_y = start_point
-        end_x, end_y = end_point
+    def _sliding_contious_order(start_point, end_point, commend_index, commend_length):
+        if len(start_point) == 2:
+            start_x, start_y = start_point
+            end_x, end_y = end_point
+            start_z = Z_DOWN
+        else:
+            start_x, start_y, start_z = start_point
+            end_x, end_y, _ = end_point
         # 连续滑动保证动作无偏差
         from app.v1.Cuttle.basic.setting import last_swipe_end_point
         # 在4,5 型号柜1代表毫米，其他型柜15代表像素，所以这里做区分。
@@ -379,7 +385,7 @@ class HandHandler(Handler, DefaultMixin):
         if commend_index == 0:
             return [
                 'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
-                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_DOWN, MOVE_SPEED),
+                'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
                 'G01 X%0.1fY-%0.1fF%d \r\n' % (end_x, end_y, MOVE_SPEED)
             ]
         elif commend_index + 1 != commend_length:  # 后面动作只有滑动

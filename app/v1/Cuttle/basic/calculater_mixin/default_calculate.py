@@ -32,11 +32,15 @@ class DefaultMixin(object):
                 round(window_coordinate[0] + m_location[0], 1),
                 round(window_coordinate[1] + m_location[1], 1)
             ]
+        elif CORAL_TYPE == 5.1:
+            opt_coordinate = list(device.get_click_position(pix_point[0],
+                                                            pix_point[1],
+                                                            pix_point[2] if len(pix_point) > 2 else 0,
+                                                            absolute=True))
 
-        if str(CORAL_TYPE) == "5.1":
-            opt_coordinate = list(device.get_click_position(pix_point[0], pix_point[1], pix_point[2]))
         if opt_coordinate[0] > HAND_MAX_X or opt_coordinate[1] > HAND_MAX_Y:
             raise CrossMax
+
         return opt_coordinate
 
     def grouping(self, raw_commend: str) -> (List[int], str):

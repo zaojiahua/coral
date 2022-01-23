@@ -48,8 +48,8 @@ class Device(BaseModel):
     auto_test = models.BooleanField()
     power_port = models.CharField()
     # 这里的宽高是分辨率
-    device_width = models.IntegerField()
-    device_height = models.IntegerField()
+    pix_width = models.IntegerField()
+    pix_height = models.IntegerField()
     temp_port_list = models.Set()
     monitor_index = models.CharField()
     x_dpi = models.CharField()
@@ -107,6 +107,13 @@ class Device(BaseModel):
     def __repr__(self):
         return f"{self.__class__.__name__}_{self.pk}_{self.device_name}_{self.id}"
 
+    @property
+    def device_height(self):
+        return self.pix_height if CORAL_TYPE != 5.1 else (int(self.x2) - int(self.x1))
+
+    @property
+    def device_width(self):
+        return self.pix_width if CORAL_TYPE != 5.1 else (int(self.y2) - int(self.y1))
 
     @property
     def connect_number(self):
@@ -212,14 +219,15 @@ class Device(BaseModel):
         self._set_char("ply", kwargs, "phone_model", "ply")
 
         kwargs["manufacturer"] = kwargs.pop("phone_model").get("manufacturer") if kwargs.get("phone_model") else ""
-        self.manufacturer = kwargs.pop("manufacturer").get("manufacturer_name", "") if kwargs.get(
-            "manufacturer") else ""
+        self.manufacturer = kwargs.pop("manufacturer").get("manufacturer_name", "") if kwargs.get("manufacturer") else ""
         self.android_version = kwargs.pop("android_version").get("version", "") if kwargs.get("android_version") else ""
         self.rom_version = kwargs.pop("rom_version").get("version", "") if kwargs.get("rom_version") else ""
         self.monitor_index = kwargs.pop("monitor_index")[0].get("port", "") if kwargs.get("monitor_index") else ""
         for attr_name, attr_value in kwargs.items():
             if attr_name in self._astra_fields.keys() and not isinstance(attr_value, list):
                 setattr(self, attr_name, attr_value)
+
+        self._update_pix_width_height(kwargs)
         self.update_m_location()
 
     def _set_char(self, attr_name, dict, *args):
@@ -235,6 +243,16 @@ class Device(BaseModel):
         for attr_name, attr_value in kwargs.items():
             if attr_name in self._astra_fields.keys() and not isinstance(attr_value, list):
                 setattr(self, attr_name, attr_value)
+        self._update_pix_width_height(kwargs)
+
+    # 考虑到相机 像素宽高进行特殊的处理
+    def _update_pix_width_height(self, kwargs):
+        device_width = kwargs.get('device_width')
+        device_height = kwargs.get('device_height')
+        if device_width is not None:
+            self.pix_width = device_width
+        if device_height is not None:
+            self.pix_height = device_height
 
     def update_device_border(self, data):
         def cam_pix_to_scr(x, y, width):
@@ -333,14 +351,19 @@ class Device(BaseModel):
             print('new m_location:', get_global_value('m_location'))
 
     # 获取5l柜的点击坐标
-    def get_click_position(self, x, y, z=0, roi=None):
+    def get_click_position(self, x, y, z=0, roi=None, absolute=False):
         if roi is None:
             roi = [float(self.x1), float(self.y1), float(self.x2), float(self.y2)]
 
         m_location = get_global_value('m_location')
-        # 先计算在相机拍照模式下 要点击的位置在roi的区域 计算出的百分比针对的是图片上的左上角点
-        x_location_per = (x - roi[0]) / (roi[2] - roi[0])
-        y_location_per = (y - roi[1]) / (roi[3] - roi[1])
+        # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
+        if absolute:
+            x_location_per = y / (roi[2] - roi[0])
+            y_location_per = 1 - (x / (roi[3] - roi[1]))
+        else:
+            # 先计算在相机拍照模式下 要点击的位置在roi的区域 计算出的百分比针对的是图片上的左上角点
+            x_location_per = (x - roi[0]) / (roi[2] - roi[0])
+            y_location_per = (y - roi[1]) / (roi[3] - roi[1])
         print('location percent ', x_location_per, y_location_per)
         # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
         click_x = round((m_location[0] + float(self.width) * (1 - y_location_per)), 2)

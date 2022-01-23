@@ -31,7 +31,7 @@ class Complex_Center(object):
     def __init__(self, device_label, requiredWords=None, xyShift="0 0", inputImgFile=None, work_path="", *args,
                  **kwargs):
         self.device_label = device_label
-        # _pic_path 存实例化时传入的图（很可能没有）
+        # _pic_path 存实例化时传入的图（很可能没有） 有裁剪区域的时候，裁剪以后的图也是放到这个地方
         self._pic_path = inputImgFile
         # 如果传入的图为正式格式，就往work_path复制一份，用以最后上传至rds 的结果图片
         # if type(inputImgFile) == str and inputImgFile.split(".")[-1].upper() in ["PNG", "JPG", "JPEG", "GIF", "TIF"]:
@@ -169,7 +169,14 @@ class Complex_Center(object):
     def cal_realy_xy(self, pic_x, pic_y, input_pic_path):
         from app.v1.device_common.device_model import Device
         device = Device(pk=self.device_label)
-        if device.has_camera and device.has_arm:
+        if CORAL_TYPE == 5.1:
+            if self.crop_offset != [0, 0, device.device_width, device.device_height]:
+                # 带有摄像头的中文输入，需要先恢复到整张图上的位置
+                pic_x = int(pic_x + int(self.crop_offset[0]))
+                pic_y = int(pic_y + int(self.crop_offset[1]))
+            self.cx = int(pic_x)
+            self.cy = int(pic_y)
+        elif device.has_camera and device.has_arm:
             # 摄像头识别到的文字位置，需要根据手机屏幕与摄像头照片分辨率换算回实际手机上像素位置，带选区的识别需要在具体方法再做选区内坐标到完整图坐标的变换
             if self.crop_offset != [0, 0, device.device_width, device.device_height]:
                 # 带有摄像头的中文输入，需要先恢复到整张图上的位置

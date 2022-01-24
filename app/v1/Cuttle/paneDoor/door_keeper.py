@@ -34,6 +34,16 @@ class DoorKeeper(object):
         self.today_id = 0
         self.date_mark = None
 
+    def update_door_info(self, request_data):
+        resource_name = request_data.get('resource_name')
+        # 更新设备信息
+        if resource_name == 'device':
+            res = Device.request_device_info()
+            for device_dict in res.get("devices"):
+                print('更新的设备信息有：', device_dict.get('device_label'))
+                device_obj = Device(pk=device_dict.get("device_label"))
+                device_obj.update_attr(**device_dict)
+
     def authorize_device(self, **kwargs):
         s_id = self.get_device_connect_id(multi=False)
         dev_info_dict = self.get_device_info(s_id, kwargs)

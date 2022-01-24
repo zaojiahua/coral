@@ -74,3 +74,12 @@ class UpdateDeviceInfo(DeviceBase):
     def post(self):
         ret_data = self.door_keeper.update_device_info(request.get_json())
         return jsonify(dict(error_code=0, data=ret_data))
+
+
+# 更新机型和硬件设备的通用接口
+class UpdateDoorInfo(DeviceBase):
+    def post(self):
+        data = request.get_json()
+        if data is not None:
+            self.door_keeper.update_door_info(data)
+        return jsonify({"error_code": 0}), 200

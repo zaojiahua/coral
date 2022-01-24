@@ -19,7 +19,7 @@ camera_params_feature = [("Width", 2448),
                          ("Height", 2048),
                          ("OffsetY", 0),
                          ("OffsetX", 0),
-                         ("ExposureTime", 10000.0),
+                         ("ExposureTime", 15000.0),
                          ("Gain", 2.5),
                          ("AcquisitionFrameRate", 35.0),
                          ("PixelFormat", 0x0108000A, 'enum')]

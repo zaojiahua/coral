@@ -47,6 +47,7 @@ class DefaultMixin(object):
         speed = MOVE_SPEED
         raw_commend = self._compatible_sleep(raw_commend)
         pix_points = ""
+        absolute = True
         if "tap" in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
             opt_type = "click"
@@ -80,6 +81,7 @@ class DefaultMixin(object):
             pix_points = 0
         elif "press side" in raw_commend:
             opt_type = "press_side"
+            absolute = False
             # side key是否存在，如果存在，读取坐标，如果不在，抛出异常
             get_side_key = re.search(u"[\u4e00-\u9fa5]+", self.exec_content)
             side_key = get_side_key.group()
@@ -87,6 +89,7 @@ class DefaultMixin(object):
             speed = int(self.exec_content.split(side_key)[1])  # 先将等待时间放在速度参数上
         elif "press out-screen" in raw_commend:
             opt_type = "press_out_screen"
+            absolute = False
             get_out_key = re.search(u"[\u4e00-\u9fa5]+", self.exec_content)
             get_out_key = get_out_key.group()
             pix_points = self.cal_press_pix_point(get_out_key, is_side=False)
@@ -97,7 +100,7 @@ class DefaultMixin(object):
         else:
             pix_points = [float(i) for i in raw_commend.split("double_point")[-1].strip().split(" ")]
             opt_type = "double_click"
-        return pix_points, opt_type, speed
+        return pix_points, opt_type, speed, absolute
 
     def _compatible_sleep(self, exec_content) -> str:
         if "<4ccmd>" in exec_content:
@@ -111,12 +114,12 @@ class DefaultMixin(object):
             raise NoContent
         return exec_content
 
-    def transform_pix_point(self, k):
+    def transform_pix_point(self, k, absolute):
         if isinstance(k, str) or isinstance(k, int):
             # 旋转机械臂
             return k
         if len(k) == 3:
-            return self.calculate(k)
+            return self.calculate(k, absolute)
         if len(k) != 2 and len(k) != 4:
             raise CoordinateWrongFormat
         pix_point = [k] if len(k) == 2 else [k[:2], k[2:]]

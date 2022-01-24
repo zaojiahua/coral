@@ -76,9 +76,9 @@ class HandHandler(Handler, DefaultMixin):
             if key in self.exec_content:
                 getattr(self, value)()
         # 根据adb指令中的关键词dispatch到对应机械臂方法,pix_points为adb模式下的截图中的像素坐标
-        pix_points, opt_type, self.speed = self.grouping(self.exec_content)
+        pix_points, opt_type, self.speed, absolute = self.grouping(self.exec_content)
         # 根据截图中的像素坐标，根据dpi和起始点坐标，换算到物理距离中毫米为单位的坐标
-        self.exec_content = self.transform_pix_point(pix_points)
+        self.exec_content = self.transform_pix_point(pix_points, absolute)
         # 龙门架机械臂self.exec_content是列表（放点击的坐标），所以会找self.func这个方法来执行（写在基类的流程中）
         # 旋转机械臂self.exec_content是字符串命令，所以会找self.str_func这个方法来执行
         self.func = getattr(self, opt_type)

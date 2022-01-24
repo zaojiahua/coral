@@ -135,12 +135,12 @@ class Device(BaseModel):
             for device_dict in res_device_info.get("devices"):
                 coors = request(url=device_phone_model_coordinate, params={'phone_model__device': device_dict['id'],
                                                                            'exclude': 'pk'})
+                device_obj = Device(pk=device_dict['device_label'])
                 for coor in coors.get('phonemodelcustomcoordinate', []):
                     coor_name = coor['name']
                     x = coor['x_coordinate']
                     y = coor['y_coordinate']
                     z = coor['z_coordinate']
-                    device_obj = Device(pk=device_dict['device_label'])
                     device_obj.device_config_point[coor_name] = [x, y, z]
                     if coor_name == '桌面':
                         device_obj.home_x, device_obj.home_y = x, y
@@ -229,8 +229,10 @@ class Device(BaseModel):
             func(self, **kwargs)  # 4
 
     def set_border(self, device_dict):
+        # 设置roi区域
         if math.floor(CORAL_TYPE) == 5:
-            if device_dict.get("paneslot", {}).get("paneview") is not None:
+            if device_dict.get("paneslot") is not None \
+                    and device_dict.get("paneslot").get("paneview") is not None:
                 params = {
                     "pane_view": device_dict.get("paneslot").get("paneview").get("id"),
                     "phone_model": device_dict.get("phone_model").get("id")
@@ -240,6 +242,11 @@ class Device(BaseModel):
                     return
 
                 self.update_device_border(res[0])
+            else:
+                self.x1 = 0
+                self.y1 = 0
+                self.x2 = 0
+                self.y2 = 0
 
     def _relative_to_absolute(self, coordinate):
         if any((i < 1 for i in coordinate)):

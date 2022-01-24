@@ -48,3 +48,9 @@ class SideKeyNotFound(APIException):
     error_code = 3005
     code = 400
     description = 'Press Side Key Not Found'
+
+
+class ExecContentFormatError(APIException):
+    error_code = 3006
+    code = 400
+    description = 'Exec Content Format Error'

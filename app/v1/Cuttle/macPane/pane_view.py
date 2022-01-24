@@ -20,10 +20,10 @@ from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
-from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init
+from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, m_location, get_global_value, \
-    MOVE_SPEED
+    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -288,7 +288,19 @@ class PaneClickTestView(MethodView):
                                                                    int(request_data.get('inside_upper_left_y')),
                                                                    int(request_data.get('inside_under_right_x')),
                                                                    int(request_data.get('inside_under_right_y'))])
-        self.click(device_label, click_x, click_y, click_z)
+        # 判断是否是按压侧边键
+        location = get_global_value("m_location")
+        is_side = False
+        if abs(click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+            is_left_side = True
+            is_side = True
+        if abs(click_x - location[0] - float(device_obj.width)) <= X_SIDE_OFFSET_DISTANCE:
+            is_left_side = False
+            is_side = True
+        if is_side:
+            self.press(device_label, click_x, click_y, click_z, is_left_side)
+        else:
+            self.click(device_label, click_x, click_y, click_z)
 
         shutil.rmtree(random_dir)
         return jsonify(dict(error_code=0))
@@ -300,3 +312,14 @@ class PaneClickTestView(MethodView):
                         'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, 0, MOVE_SPEED - 10000)]
         hand_serial_obj_dict.get(device_label).send_list_order(click_orders)
         hand_serial_obj_dict.get(device_label).recv()
+
+    @staticmethod
+    def press(device_label, x, y, z, is_left):
+        # 生成指令
+        press_orders = HandHandler.press_side_order([x, y, z], is_left=is_left)
+        # 执行指令
+        hand_serial_obj_dict.get(device_label).send_out_key_order(press_orders[:3],
+                                                                  others_orders=press_orders[3:],
+                                                                  wait_time=0)
+        hand_serial_obj_dict.get(device_label).recv()
+

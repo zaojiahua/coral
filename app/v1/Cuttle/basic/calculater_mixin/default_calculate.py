@@ -6,7 +6,8 @@ import re
 import time
 
 from app.config.setting import CORAL_TYPE
-from app.execption.outer.error_code.hands import CrossMax, CoordinateWrongFormat, SideKeyNotFound
+from app.execption.outer.error_code.hands import CrossMax, CoordinateWrongFormat, SideKeyNotFound, \
+    ExecContentFormatError
 from app.execption.outer.error_code.adb import NoContent
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location, MOVE_SPEED, Z_DOWN, get_global_value
 
@@ -83,17 +84,19 @@ class DefaultMixin(object):
             opt_type = "press_side"
             absolute = False
             # side key是否存在，如果存在，读取坐标，如果不在，抛出异常
-            get_side_key = re.search(u"[\u4e00-\u9fa5]+", self.exec_content)
-            side_key = get_side_key.group()
+            get_side_key = self.exec_content.split(" ")
+            if len(get_side_key) != 4: raise ExecContentFormatError
+            side_key = get_side_key[2]
             pix_points = self.cal_press_pix_point(side_key)
-            speed = int(self.exec_content.split(side_key)[1])  # 先将等待时间放在速度参数上
+            speed = int(get_side_key[3])  # 先将等待时间放在速度参数上
         elif "press out-screen" in raw_commend:
             opt_type = "press_out_screen"
             absolute = False
-            get_out_key = re.search(u"[\u4e00-\u9fa5]+", self.exec_content)
-            get_out_key = get_out_key.group()
-            pix_points = self.cal_press_pix_point(get_out_key, is_side=False)
-            speed = int(self.exec_content.split(get_out_key)[1])
+            get_out_key = self.exec_content.split(" ")
+            if len(get_out_key) != 4: raise ExecContentFormatError
+            out_key = get_out_key[2]
+            pix_points = self.cal_press_pix_point(out_key, is_side=False)
+            speed = int(get_out_key[3])
         elif 'G01' in raw_commend:
             pix_points = raw_commend
             opt_type = 'rotate'

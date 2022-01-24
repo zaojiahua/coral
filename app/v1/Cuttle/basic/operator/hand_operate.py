@@ -13,7 +13,7 @@ from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, Z_SIDE, \
-    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE__OFFSET_DISTANCE, SIDE_KEY_WIDTH
+    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, SIDE_KEY_WIDTH
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -216,9 +216,9 @@ class HandHandler(Handler, DefaultMixin):
     def press_side(self, pix_point, **kwargs):
         # 按压侧边键
         location = get_global_value('m_location')
-        is_left = False if (pix_point[0] - location[1]) > X_SIDE__OFFSET_DISTANCE else True
+        is_left = False if (pix_point[0] - location[1]) > X_SIDE_OFFSET_DISTANCE else True
         pix_point[0] = pix_point[0] - SIDE_KEY_WIDTH if is_left else pix_point[0] + SIDE_KEY_WIDTH
-        press_side_order = self.__press_side_order(pix_point, is_left=is_left)
+        press_side_order = self.press_side_order(pix_point, is_left=is_left)
         hand_serial_obj_dict.get(self._model.pk).send_out_key_order(press_side_order[:3],
                                                                     others_orders=press_side_order[3:],
                                                                     wait_time=self.speed)
@@ -399,7 +399,7 @@ class HandHandler(Handler, DefaultMixin):
             ]
 
     @staticmethod
-    def __press_side_order(pix_point, is_left=False):
+    def press_side_order(pix_point, is_left=False):
         """
         :param point: 要按压的侧边键坐标 eg：[x,y,z]
         :param is_left: 是否是左侧边键

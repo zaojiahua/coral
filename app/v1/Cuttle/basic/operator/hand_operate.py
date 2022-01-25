@@ -297,7 +297,9 @@ class HandHandler(Handler, DefaultMixin):
         return click_orders
 
     @staticmethod
-    def __single_click_order(axis, z_point=get_global_value('Z_DOWN')):
+    def __single_click_order(axis, z_point=None):
+        if z_point is None:
+            z_point = get_global_value('Z_DOWN')
         return [
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis[0], axis[1], z_point + 5, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis[0], axis[1], z_point, MOVE_SPEED),

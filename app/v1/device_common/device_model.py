@@ -240,7 +240,7 @@ class Device(BaseModel):
                     "phone_model": device_dict.get("phone_model").get("id")
                 }
                 res = request(url=coordinate_url, params=params)
-                print('pane_view更新的情况是：', res)
+                print('pane_view更新的情况是：', res, params)
                 if len(res) < 1:
                     return
 

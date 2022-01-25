@@ -126,8 +126,9 @@ class AdbHandler(Handler, ChineseMixin):
     def reconnect(self, *args):
         if CORAL_TYPE < 5:
             if ADB_TYPE == 1:
+                pass
                 # 有线模式下无论主僚机都做kill&start处理 其他线程也在使用adb server，这里kill掉的话，会导致其他unit执行失败
-                self.do(adb_cmd_prefix + RESTART_SERVER)
+                # self.do(adb_cmd_prefix + RESTART_SERVER)
             else:
                 if self.kwargs.get("assist_device_serial_number"):
                     # 无线模式下主僚机分别取对应的ip进行重连
@@ -143,9 +144,10 @@ class AdbHandler(Handler, ChineseMixin):
                 self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "root")
                 self.str_func(adb_cmd_prefix + "-s " + device_ip + ":5555 " + "remount")
 
-            # 如果有连续3次发生连接不上的异常，则判定为error状态
-            self._model.disconnect_times += 1
-            self._model.logger.info(f"disconnect_times:{self._model.disconnect_times}")
+            # 如果有连续3次发生连接不上的异常，则判定为error状态 不改变僚机的状态
+            if not self.kwargs.get("assist_device_serial_number"):
+                self._model.disconnect_times += 1
+                self._model.logger.info(f"disconnect_times:{self._model.disconnect_times}")
             if self._model.disconnect_times == 1:
                 self._model.disconnect_times_timestamp.ltrim(1, 0)
             self._model.disconnect_times_timestamp.rpush(int(time.time()))

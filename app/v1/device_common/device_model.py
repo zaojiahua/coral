@@ -1,5 +1,6 @@
 import time
 import math
+import traceback
 
 from astra import models
 
@@ -226,6 +227,7 @@ class Device(BaseModel):
                 key_map_position.get(self.phone_model_name, default_key_map_position))
         except Exception as e:
             print(repr(e))
+            print(traceback.format_exc())
             func(self, **kwargs)  # 4
 
     def set_border(self, device_dict):
@@ -238,6 +240,7 @@ class Device(BaseModel):
                     "phone_model": device_dict.get("phone_model").get("id")
                 }
                 res = request(url=coordinate_url, params=params)
+                print('pane_view更新的情况是：', res)
                 if len(res) < 1:
                     return
 

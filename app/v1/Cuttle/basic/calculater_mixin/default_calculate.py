@@ -9,7 +9,7 @@ from app.config.setting import CORAL_TYPE
 from app.execption.outer.error_code.hands import CrossMax, CoordinateWrongFormat, SideKeyNotFound, \
     ExecContentFormatError
 from app.execption.outer.error_code.adb import NoContent
-from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location, MOVE_SPEED, Z_DOWN, get_global_value
+from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location, MOVE_SPEED
 
 
 class DefaultMixin(object):

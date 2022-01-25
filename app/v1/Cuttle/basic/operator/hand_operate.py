@@ -4,15 +4,15 @@ import time
 import numpy as np
 
 from app.config.setting import CORAL_TYPE
-from app.config.url import device_url, phone_model_url
+from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
-from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_DOWN, Z_UP, MOVE_SPEED, \
+from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
-    arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, Z_SIDE, \
+    arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
     PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, SIDE_KEY_WIDTH
 
 
@@ -297,7 +297,7 @@ class HandHandler(Handler, DefaultMixin):
         return click_orders
 
     @staticmethod
-    def __single_click_order(axis, z_point=Z_DOWN):
+    def __single_click_order(axis, z_point=get_global_value('Z_DOWN')):
         return [
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis[0], axis[1], z_point + 5, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis[0], axis[1], z_point, MOVE_SPEED),
@@ -312,8 +312,8 @@ class HandHandler(Handler, DefaultMixin):
         if axis_x > HAND_MAX_X or axis_y > HAND_MAX_Y:
             return {"error:Invalid Pix_Point"}
         return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN + 5, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, get_global_value('Z_DOWN') + 5, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, get_global_value('Z_DOWN'), MOVE_SPEED),
             # 'G01 Z%dF%d \r\n' % (Z_DOWN, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
             # 'G01 Z%dF%d \r\n' % (Z_UP, MOVE_SPEED)
@@ -325,10 +325,10 @@ class HandHandler(Handler, DefaultMixin):
         if axis_x > HAND_MAX_X or axis_y > HAND_MAX_X:
             return {"error:Invalid axis_Point"}
         return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN + 5, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, get_global_value('Z_DOWN') + 5, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, get_global_value('Z_DOWN'), MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_DOWN, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, get_global_value('Z_DOWN'), MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
 
         ]
@@ -339,7 +339,7 @@ class HandHandler(Handler, DefaultMixin):
         if len(start_point) == 2:
             start_x, start_y = start_point
             end_x, end_y = end_point
-            start_z = Z_DOWN
+            start_z = get_global_value('Z_DOWN')
         else:
             start_x, start_y, start_z = start_point
             end_x, end_y, _ = end_point
@@ -368,7 +368,7 @@ class HandHandler(Handler, DefaultMixin):
         if len(start_point) == 2:
             start_x, start_y = start_point
             end_x, end_y = end_point
-            start_z = Z_DOWN
+            start_z = get_global_value('Z_DOWN')
         else:
             start_x, start_y, start_z = start_point
             end_x, end_y, _ = end_point

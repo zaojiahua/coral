@@ -4,13 +4,13 @@ import time
 
 from app.config.ip import REEF_IP
 from app.config.url import simcard_url, account_url, device_assis_url
-from app.execption.outer.error_code.eblock import EblockCannotFindFile, MaroUnrecognition, \
+from app.execption.outer.error_code.eblock import \
     EblockResourceMacroWrongFormat, DeviceNeedResource, DeviceNeedRelativeAssisDevice, AssisDeviceNotHaveMainDevie
 from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
 from app.execption.outer.error_code.eblock import EblockCannotFindFile, MaroUnrecognition
 from app.v1.Cuttle.basic.setting import arm_default, hand_origin_cmd_prefix, arm_default_y, HAND_MAX_X, HAND_MAX_Y, \
-    HAND_MAX_Z, Z_DOWN
+    HAND_MAX_Z, get_global_value
 from app.config.setting import find_command
 
 adb_data_path = "<adbOutPath>"
@@ -226,7 +226,7 @@ class MacroHandler(object):
                 x = x / 100 * HAND_MAX_X
                 # 6 是由于硬件导致的安装误差
                 y = -y / 100 * (HAND_MAX_Y - 6)
-                z = z / 100 * (HAND_MAX_Z - Z_DOWN) + Z_DOWN
+                z = z / 100 * (HAND_MAX_Z - get_global_value('Z_DOWN')) + get_global_value('Z_DOWN')
                 spend_time = max(x, y, abs(z)) / f
                 f = f * 60
                 cmd = re.sub(pattern, f'X{x}Y{y}Z{z}F{f}', cmd)

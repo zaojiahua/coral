@@ -156,3 +156,4 @@ def get_global_value(key, def_value=None):
 
 
 set_global_value('m_location', m_location)
+set_global_value('Z_DOWN', Z_DOWN)

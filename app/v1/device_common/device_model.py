@@ -406,6 +406,8 @@ class Device(BaseModel):
                                             m_location_center[2] + float(self.ply)])
             self.screen_z = str(get_global_value('m_location')[2])
             print('new m_location:', get_global_value('m_location'))
+            set_global_value('Z_DOWN', get_global_value('m_location')[2])
+            print('new Z_DOWN', get_global_value('Z_DOWN'))
 
     # 获取5l柜的点击坐标
     def get_click_position(self, x, y, z=0, roi=None, absolute=False):

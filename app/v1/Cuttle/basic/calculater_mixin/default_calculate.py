@@ -134,10 +134,6 @@ class DefaultMixin(object):
         if press_key not in device_obj.device_config_point.keys():
             raise SideKeyNotFound
         press_key_point = device_obj.device_config_point[press_key]
-        device_y = {"y1": float(device_obj.y1), "y2": float(device_obj.y2)}
-        if is_side:
-            press_key_point[1] = device_y["y1"] if press_key_point[1] < (
-                    (device_y["y2"] - device_y["y1"]) / 2 + device_y["y1"]) else device_y["y2"]
         return press_key_point
 
 

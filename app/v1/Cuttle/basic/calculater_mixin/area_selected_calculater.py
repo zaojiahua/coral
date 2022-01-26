@@ -10,7 +10,7 @@ from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageAreaSchema, ImageAreaWithoutInputSchema, \
     ImageRealtimeSchema, ImageOnlyConfigCompatible
 from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate, icon_min_template, \
-    icon_min_template_camera, blur_signal
+    icon_min_template_camera
 
 
 class AreaSelectedMixin(object):

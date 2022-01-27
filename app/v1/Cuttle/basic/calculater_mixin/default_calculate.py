@@ -149,8 +149,9 @@ class DefaultMixin(object):
             print("z is false")
             raise CoordinatesNotReasonable
         if (coordinates[0] - min_x) > X_SIDE_OFFSET_DISTANCE or (max_x - coordinates[0]) > X_SIDE_OFFSET_DISTANCE:
-            print("coordinates[0] - min_x: ", coordinates[0] - min_x)
-            print("max_x - coordinates[0]: ", max_x - coordinates[0])
+            print("coordinates[0] - min_x: ", coordinates[0] - min_x)  # 133
+            print("max_x - coordinates[0]: ", max_x - coordinates[0])   # 0.25
+            print((max_x - coordinates[0]) > X_SIDE_OFFSET_DISTANCE)
             raise CoordinatesNotReasonable
         return True
 

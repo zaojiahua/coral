@@ -168,7 +168,7 @@ class HandHandler(Handler, DefaultMixin):
         click_orders = self.__single_click_order(self.calculate([device_obj.back_x, device_obj.back_y], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(wait_time)
+        time.sleep(wait_time * len(click_orders))
         return result
 
     def double_back(self, _, **kwargs):
@@ -178,7 +178,7 @@ class HandHandler(Handler, DefaultMixin):
         click_orders = self.__double_click_order(self.calculate([device_obj.back_x, device_obj.back_y], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(wait_time)
+        time.sleep(wait_time * len(click_orders))
         return result
 
     def home(self, _, **kwargs):
@@ -188,7 +188,7 @@ class HandHandler(Handler, DefaultMixin):
         click_orders = self.__single_click_order(self.calculate([device_obj.home_x, device_obj.home_y], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(wait_time)
+        time.sleep(wait_time * len(click_orders))
         return result
 
     def menu(self, _, **kwargs):
@@ -198,7 +198,7 @@ class HandHandler(Handler, DefaultMixin):
         click_orders = self.__single_click_order(self.calculate([device_obj.menu_x, device_obj.menu_y], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(wait_time)
+        time.sleep(wait_time * len(click_orders))
         return result
 
     def long_press_menu(self, _, **kwargs):
@@ -210,7 +210,7 @@ class HandHandler(Handler, DefaultMixin):
                                                                  other_orders=[click_orders[-1]],
                                                                  wait=True)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(wait_time)
+        time.sleep(wait_time * len(click_orders))
         return result
 
     def press_side(self, pix_point, **kwargs):

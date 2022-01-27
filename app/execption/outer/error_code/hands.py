@@ -54,3 +54,9 @@ class ExecContentFormatError(APIException):
     error_code = 3006
     code = 400
     description = 'Exec Content Format Error'
+
+
+class CoordinatesNotReasonable(APIException):
+    error_code = 3007
+    code = 400
+    description = 'The Side Key Coordinates Should Not be In the Screen'

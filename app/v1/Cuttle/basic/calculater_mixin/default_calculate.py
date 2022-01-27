@@ -6,9 +6,10 @@ import time
 
 from app.config.setting import CORAL_TYPE
 from app.execption.outer.error_code.hands import CrossMax, CoordinateWrongFormat, SideKeyNotFound, \
-    ExecContentFormatError
+    ExecContentFormatError, CoordinatesNotReasonable
 from app.execption.outer.error_code.adb import NoContent
-from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location, MOVE_SPEED
+from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location, MOVE_SPEED, Z_MIN_VALUE, get_global_value, \
+    OFFSET_PIX
 
 
 class DefaultMixin(object):
@@ -133,7 +134,17 @@ class DefaultMixin(object):
         if press_key not in device_obj.device_config_point.keys():
             raise SideKeyNotFound
         press_key_point = device_obj.device_config_point[press_key]
+        if is_side:
+            self.judge_coordinates_reasonable(press_key_point, float(device_obj.y1), float(device_obj.y2))
         return press_key_point
+
+    @staticmethod
+    def judge_coordinates_reasonable(pix_point, device_y1, device_y2):
+        # 判断侧边键坐标是否合理
+        if pix_point[2] < Z_MIN_VALUE:
+            raise CoordinatesNotReasonable
+        if (pix_point[1] - device_y1) > OFFSET_PIX or (device_y2 - pix_point[1]) > OFFSET_PIX:
+            raise CoordinatesNotReasonable
 
 
 class CameraMixin(DefaultMixin):

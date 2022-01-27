@@ -296,9 +296,11 @@ class PaneClickTestView(MethodView):
             DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
                                                       location[0] + float(device_obj.width), location[0], location[2])
             is_side = True
+            print("Is side")
         except Exception as e:
             print("Exception: ", e)
             is_side = False
+            print("Not Side")
 
         print("=="*10)
         print(location)

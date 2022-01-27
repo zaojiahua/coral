@@ -137,6 +137,10 @@ class DefaultMixin(object):
 
     @staticmethod
     def judge_coordinates_reasonable(coordinates, max_x, min_x, min_z):
+        print("==="*10)
+        print(coordinates)
+        print(max_x)
+        print(min_x)
         # 侧边键坐标在屏幕外合理
         if coordinates[0] < min_x or coordinates[0] > max_x:
             return True

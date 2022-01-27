@@ -300,6 +300,10 @@ class PaneClickTestView(MethodView):
             print("Exception: ", e)
             is_side = False
 
+        print("=="*10)
+        print(location)
+        print(click_x)
+        print(device_obj.width)
         if is_side:
             is_left_side = False
             if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:

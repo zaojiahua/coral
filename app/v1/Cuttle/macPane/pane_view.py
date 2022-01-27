@@ -302,7 +302,7 @@ class PaneClickTestView(MethodView):
 
         if is_side:
             is_left_side = False
-            if click_x < location[0] or (click_x - location) <= X_SIDE_OFFSET_DISTANCE:
+            if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
                 is_left_side = True
             self.press(device_label, click_x, click_y, click_z, is_left_side)
         else:

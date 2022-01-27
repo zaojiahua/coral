@@ -141,18 +141,13 @@ class DefaultMixin(object):
         print(coordinates)  # 223
         print(max_x)  # 224
         print(min_x)  # 90
-        # 侧边键坐标在屏幕外合理
-        if coordinates[0] < min_x or coordinates[0] > max_x:
-            return True
         # 如果侧边键坐标在屏幕内，超出一定范围，判断不合理
         if coordinates[2] < (min_z + Z_MIN_VALUE):
-            print("z is false")
             raise CoordinatesNotReasonable
-        if ((coordinates[0] - min_x) > X_SIDE_OFFSET_DISTANCE) or ((max_x - coordinates[0]) > X_SIDE_OFFSET_DISTANCE):
-            print((coordinates[0] - min_x) > X_SIDE_OFFSET_DISTANCE)
-            print("coordinates[0] - min_x: ", coordinates[0] - min_x)  # 133
-            print("max_x - coordinates[0]: ", max_x - coordinates[0])   # 0.25
-            print((max_x - coordinates[0]) > X_SIDE_OFFSET_DISTANCE)
+            # 侧边键坐标在屏幕外合理
+        if coordinates[0] <= min_x or coordinates[0] >= max_x:
+            return True
+        if abs(coordinates[0] - min_x) > X_SIDE_OFFSET_DISTANCE or abs(max_x - coordinates[0]) > X_SIDE_OFFSET_DISTANCE:
             raise CoordinatesNotReasonable
         return True
 

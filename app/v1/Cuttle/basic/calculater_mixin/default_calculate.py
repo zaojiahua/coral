@@ -138,16 +138,19 @@ class DefaultMixin(object):
     @staticmethod
     def judge_coordinates_reasonable(coordinates, max_x, min_x, min_z):
         print("==="*10)
-        print(coordinates)
-        print(max_x)
-        print(min_x)
+        print(coordinates)  # 223
+        print(max_x)  # 224
+        print(min_x)  # 90
         # 侧边键坐标在屏幕外合理
         if coordinates[0] < min_x or coordinates[0] > max_x:
             return True
         # 如果侧边键坐标在屏幕内，超出一定范围，判断不合理
         if coordinates[2] < (min_z + Z_MIN_VALUE):
+            print("z is false")
             raise CoordinatesNotReasonable
         if (coordinates[0] - min_x) > X_SIDE_OFFSET_DISTANCE or (max_x - coordinates[0]) > X_SIDE_OFFSET_DISTANCE:
+            print("coordinates[0] - min_x: ", coordinates[0] - min_x)
+            print("max_x - coordinates[0]: ", max_x - coordinates[0])
             raise CoordinatesNotReasonable
         return True
 

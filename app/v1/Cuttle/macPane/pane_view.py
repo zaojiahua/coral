@@ -21,8 +21,9 @@ from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler
+from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
-from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, m_location, get_global_value, \
+from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
@@ -281,23 +282,28 @@ class PaneClickTestView(MethodView):
         device_label = request_data.get("device_label")
         device_obj = Device(pk=device_label)
 
+        device_point = [int(request_data.get('inside_upper_left_x')),
+                        int(request_data.get('inside_upper_left_y')),
+                        int(request_data.get('inside_under_right_x')),
+                        int(request_data.get('inside_under_right_y'))]
         click_x, click_y, click_z = device_obj.get_click_position(int(request_data.get('x')),
                                                                   int(request_data.get('y')),
                                                                   int(request_data.get('z')),
-                                                                  [int(request_data.get('inside_upper_left_x')),
-                                                                   int(request_data.get('inside_upper_left_y')),
-                                                                   int(request_data.get('inside_under_right_x')),
-                                                                   int(request_data.get('inside_under_right_y'))])
+                                                                  device_point)
         # 判断是否是按压侧边键
         location = get_global_value("m_location")
-        is_side = False
-        if abs(click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
-            is_left_side = True
+        try:
+            DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z], location[0],
+                                                      location[0] + float(device_obj.width), location[2])
             is_side = True
-        if abs(click_x - location[0] - float(device_obj.width)) <= X_SIDE_OFFSET_DISTANCE:
-            is_left_side = False
-            is_side = True
+        except Exception as e:
+            print("Exception: ", e)
+            is_side = False
+
         if is_side:
+            is_left_side = False
+            if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                is_left_side = True
             self.press(device_label, click_x, click_y, click_z, is_left_side)
         else:
             self.click(device_label, click_x, click_y, click_z)
@@ -322,4 +328,3 @@ class PaneClickTestView(MethodView):
                                                                   others_orders=press_orders[3:],
                                                                   wait_time=0)
         hand_serial_obj_dict.get(device_label).recv()
-

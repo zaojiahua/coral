@@ -30,6 +30,7 @@ class HandSerial:
         for other_order in others_orders:
             self.write(other_order)
         self.write(deviate_order)
+        time.sleep(len(g_orders)*1)
         return 0
 
     def send_list_order(self, g_orders, **kwargs):

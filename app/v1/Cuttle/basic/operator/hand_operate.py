@@ -215,7 +215,11 @@ class HandHandler(Handler, DefaultMixin):
 
     def press_side(self, pix_point, **kwargs):
         # 按压侧边键
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=self._model.pk)
         location = get_global_value('m_location')
+        DefaultMixin.judge_coordinates_reasonable(pix_point, location[0], location[0] + float(device_obj.width),
+                                                  location[2])
         is_left = False if (pix_point[0] - location[1]) > X_SIDE_OFFSET_DISTANCE else True
         press_side_order = self.press_side_order(pix_point, is_left=is_left)
         hand_serial_obj_dict.get(self._model.pk).send_out_key_order(press_side_order[:3],

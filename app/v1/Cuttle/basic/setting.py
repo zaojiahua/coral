@@ -41,9 +41,9 @@ SWIPE_TIME = 1
 # 按压侧边键参数
 X_SIDE_KEY_OFFSET = 15
 X_SIDE_OFFSET_DISTANCE = 5
-SIDE_KEY_WIDTH = 1      # 侧边按键的宽度
-PRESS_SIDE_KEY_SPEED = 5000
+PRESS_SIDE_KEY_SPEED = 3000
 Z_SIDE = -30
+Z_MIN_VALUE = -10
 # 梯形滑动连带的比例
 trapezoid = 0.9
 # m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting

@@ -293,8 +293,8 @@ class PaneClickTestView(MethodView):
         # 判断是否是按压侧边键
         location = get_global_value("m_location")
         try:
-            DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z], location[0],
-                                                      location[0] + float(device_obj.width), location[2])
+            DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                      location[0] + float(device_obj.width), location[0], location[2])
             is_side = True
         except Exception as e:
             print("Exception: ", e)

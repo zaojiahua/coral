@@ -77,6 +77,7 @@ class HandHandler(Handler, DefaultMixin):
                 getattr(self, value)()
         # 根据adb指令中的关键词dispatch到对应机械臂方法,pix_points为adb模式下的截图中的像素坐标
         pix_points, opt_type, self.speed, absolute = self.grouping(self.exec_content)
+        print('pix_points', pix_points, '*' * 10)
         # 根据截图中的像素坐标，根据dpi和起始点坐标，换算到物理距离中毫米为单位的坐标
         self.exec_content = self.transform_pix_point(pix_points, absolute)
         # 龙门架机械臂self.exec_content是列表（放点击的坐标），所以会找self.func这个方法来执行（写在基类的流程中）
@@ -218,7 +219,7 @@ class HandHandler(Handler, DefaultMixin):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
         location = get_global_value('m_location')
-        DefaultMixin.judge_coordinates_reasonable(pix_point, location[0], location[0] + float(device_obj.width),
+        DefaultMixin.judge_coordinates_reasonable(pix_point, location[0] + float(device_obj.width), location[0],
                                                   location[2])
         is_left = False if (pix_point[0] - location[1]) > X_SIDE_OFFSET_DISTANCE else True
         press_side_order = self.press_side_order(pix_point, is_left=is_left)

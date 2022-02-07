@@ -186,7 +186,7 @@ class PaneConfigView(MethodView):
             else:
                 function, attribute = (hand_init, "has_arm")
             setattr(device_object, attribute, True)
-            future = executer.submit(function, port, device_object, init=True)
+            future = executer.submit(function, port, device_object, init=True, original=True)
             exception = future.exception(timeout=2)
             print(exception, '*' * 10)
             if "PermissionError" in str(exception):

@@ -7,18 +7,18 @@ hand_origin_cmd_prefix = 'Hand'
 hand_used_list = []
 camera_dq_dict = {}
 camera_params = [("Width", 1280), ("Height", 720), ("OffsetY", 200), ("OffsetX", 0)]
-camera_params_240 = [("Width", 1440),
-                     ("Height", 1080),
-                     ("OffsetY", 0),
+camera_params_240 = [("OffsetY", 0),
                      ("OffsetX", 0),
+                     ("Width", 1440),
+                     ("Height", 1080),
                      ("AcquisitionFrameRate", 240.0),
                      ("ExposureTime", 2500.0),
                      ("Gain", 2.5)]
 # 功能测试相机初始化参数
-camera_params_feature = [("Width", 2448),
-                         ("Height", 2048),
-                         ("OffsetY", 0),
+camera_params_feature = [("OffsetY", 0),
                          ("OffsetX", 0),
+                         ("Width", 2448),
+                         ("Height", 2048),
                          ("ExposureTime", 15000.0),
                          ("Gain", 2.5),
                          ("AcquisitionFrameRate", 35.0),

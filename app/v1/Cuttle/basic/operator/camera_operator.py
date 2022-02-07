@@ -38,7 +38,7 @@ def camera_start(camera_id, device_object, **kwargs):
         # 性能测试相机初始化
         redis_client.set("g_bExit", "0")
         if CORAL_TYPE == 5:
-            response = camera_init_hk(**kwargs)
+            response = camera_init_hk(device_object, **kwargs)
             temporary = kwargs.get('temporary', True)
             print("half done  has camera? ", device_object.has_camera, 'temporary:', temporary)
 
@@ -52,7 +52,7 @@ def camera_start(camera_id, device_object, **kwargs):
         else:
             # 功能测试相机初始化
             kwargs['feature_test'] = True
-            response = camera_init_hk(**kwargs)
+            response = camera_init_hk(device_object, **kwargs)
             print("has camera?", device_object.has_camera)
             camera_start_hk_feature(dq, *response)
     except Exception as e:
@@ -63,7 +63,7 @@ def camera_start(camera_id, device_object, **kwargs):
         raise e
 
 
-def camera_init_hk(**kwargs):
+def camera_init_hk(device_object, **kwargs):
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
     check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
@@ -112,6 +112,18 @@ def camera_init_hk(**kwargs):
     if kwargs.get('high_exposure'):
         for key in high_exposure_params:
             check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
+
+    # 设置roi
+    if not kwargs.get('original'):
+        # 这里的4和16是软件设置的时候，必须是4和16的倍数
+        width = (int(device_object.x2) - int(device_object.x1)) - (int(device_object.x2) - int(device_object.x1)) % 16 + 16
+        offsetx = int(device_object.x1) - int(device_object.x1) % 4
+        height = (int(device_object.y2) - int(device_object.y1)) - (int(device_object.y2) - int(device_object.y1)) % 16 + 16
+        offsety = int(device_object.y1) - int(device_object.y1) % 4
+        check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
+        check_result(CamObj.MV_CC_SetIntValue, 'Height', height)
+        check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offsetx)
+        check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offsety)
 
     check_result(CamObj.MV_CC_StartGrabbing)
 
@@ -243,7 +255,7 @@ class CameraHandler(Handler):
 
         image = None
         executer = ThreadPoolExecutor()
-        future = executer.submit(camera_start, 1, self._model, high_exposure=self.high_exposure)
+        future = executer.submit(camera_start, 1, self._model, high_exposure=self.high_exposure, original=self.original)
         for _ in as_completed([future]):
             image = camera_dq_dict.get(self._model.pk)[-1]
             if not self.original:
@@ -258,7 +270,8 @@ class CameraHandler(Handler):
         return 0
 
     def get_roi(self, src):
-        return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
+        # return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
+        return src
 
     def move(self, *args, **kwargs):
         if hasattr(self, "src"):

@@ -250,6 +250,7 @@ class Device(BaseModel):
                 self.y1 = 0
                 self.x2 = 0
                 self.y2 = 0
+            print('设置的边框是:', self.x1, self.y1, self.x2, self.y2)
 
     def _relative_to_absolute(self, coordinate):
         if any((i < 1 for i in coordinate)):

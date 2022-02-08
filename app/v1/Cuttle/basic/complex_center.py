@@ -19,6 +19,7 @@ from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec, get_fi
 from app.v1.Cuttle.basic.setting import chinese_ingore, icon_min_template, icon_min_template_camera, \
     light_pyramid_setting, SCREENCAP_CMD, SCREENCAP_CMD_EARLY_VERSION, SCREENCAP_CMD_VERSION_THRESHOLD
 from app.v1.eblock.config.setting import BUG_REPORT_TIMEOUT
+from app.execption.outer.error_code.djob import ImageIsNoneException
 
 
 class Complex_Center(object):
@@ -331,7 +332,7 @@ class Complex_Center(object):
         from app.v1.device_common.device_model import Device
         device = Device(pk=self.device_label)
         try:
-            # 低版本截图指令
+            # 低版本截图指令 这里只能获取到主机的版本号 僚机只能try catch
             if int(device.android_version.split('.')[0]) <= SCREENCAP_CMD_VERSION_THRESHOLD:
                 cmd_list = [
                     f"{SCREENCAP_CMD_EARLY_VERSION} {self.default_pic_path}"
@@ -339,8 +340,19 @@ class Complex_Center(object):
         except Exception:
             pass
 
-        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
-        self.result = handler_exec(request_body, kwargs.get("handler")[1 if device.has_camera is True else 0])
+        def screencap(cmd_list, device_label, connect_number):
+            request_body = adb_unit_maker(cmd_list, device_label, connect_number)
+            return handler_exec(request_body, kwargs.get("handler")[1 if device.has_camera is True else 0])
+
+        try:
+            self.result = screencap(cmd_list, self.device_label, self.connect_number)
+        # 尝试使用旧的指令获取
+        except ImageIsNoneException:
+            cmd_list = [
+                f"{SCREENCAP_CMD_EARLY_VERSION} {self.default_pic_path}"
+            ]
+            self.result = screencap(cmd_list, self.device_label, self.connect_number)
+
         if self.result != 0:
             raise ComplexSnapShotFail(error_code=self.result,
                                       description=str(self.result))

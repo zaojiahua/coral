@@ -74,10 +74,13 @@ def camera_init_hk(device_object, **kwargs):
     stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
     check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
 
+    print('open device')
     check_result(CamObj.MV_CC_OpenDevice, 5, 0)
     CamObj.MV_CC_CloseDevice()
+    print('close device')
     # CamObj.MV_CC_DestroyHandle()
     check_result(CamObj.MV_CC_OpenDevice, 5, 0)
+    print('open device')
 
     if kwargs.get('feature_test') is True:
         # 功能测试参数设置
@@ -117,15 +120,18 @@ def camera_init_hk(device_object, **kwargs):
 
     # 设置roi
     if not kwargs.get('original'):
-        # 这里的4和16是软件设置的时候，必须是4和16的倍数
-        width = (int(device_object.x2) - int(device_object.x1)) - (int(device_object.x2) - int(device_object.x1)) % 16 + 16
-        offsetx = int(device_object.x1) - int(device_object.x1) % 4
-        height = (int(device_object.y2) - int(device_object.y1)) - (int(device_object.y2) - int(device_object.y1)) % 16 + 16
-        offsety = int(device_object.y1) - int(device_object.y1) % 4
-        check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
-        check_result(CamObj.MV_CC_SetIntValue, 'Height', height)
-        check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offsetx)
-        check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offsety)
+        if int(device_object.x1) == int(device_object.x2) == 0:
+            pass
+        else:
+            # 这里的4和16是软件设置的时候，必须是4和16的倍数
+            width = (int(device_object.x2) - int(device_object.x1)) - (int(device_object.x2) - int(device_object.x1)) % 16 + 16
+            offsetx = int(device_object.x1) - int(device_object.x1) % 4
+            height = (int(device_object.y2) - int(device_object.y1)) - (int(device_object.y2) - int(device_object.y1)) % 16 + 16
+            offsety = int(device_object.y1) - int(device_object.y1) % 4
+            check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
+            check_result(CamObj.MV_CC_SetIntValue, 'Height', height)
+            check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offsetx)
+            check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offsety)
 
     check_result(CamObj.MV_CC_StartGrabbing)
 

@@ -138,6 +138,9 @@ get_lock_cmd = redis_client.register_script(get_lock)
 unlock_cmd = redis_client.register_script(unlock)
 
 SCREENCAP_CMD = 'exec-out screencap -p >'
+# 兼容更早的Android版本
+SCREENCAP_CMD_EARLY_VERSION = "shell screencap -p | sed 's/\r$//' >"
+SCREENCAP_CMD_VERSION_THRESHOLD = 6
 FIND_APP_VERSION = 'versionName'
 PM_DUMP = 'pm dump'
 

@@ -61,6 +61,8 @@ def camera_start(camera_id, device_object, **kwargs):
     except func_timeout.exceptions.FunctionTimedOut as e:
         print('获取图片超时了！！！')
         raise e
+    finally:
+        redis_client.set("g_bExit", "1")
 
 
 def camera_init_hk(device_object, **kwargs):

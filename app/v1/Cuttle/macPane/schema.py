@@ -68,12 +68,14 @@ class OriginalPicSchema(Schema):
     def make_sure(self, data, **kwargs):
         path = "original.png"
         device_obj = Device(pk=data.get("device_label"))
-        ret_code = device_obj.get_snapshot(path, data.get('high_exposure'), True)
-
-        if ret_code == 0:
-            f = open(path, "rb")
-            image = f.read()
-            return Response(image, mimetype="image/jpeg")
+        try:
+            ret_code = device_obj.get_snapshot(path, data.get('high_exposure'), True)
+            if ret_code == 0:
+                f = open(path, "rb")
+                image = f.read()
+                return Response(image, mimetype="image/jpeg")
+        except Exception as e:
+            return {'description': str(e)}, 400
 
 
 class CoordinateSchema(Schema):

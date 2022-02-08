@@ -1,4 +1,4 @@
-from config.setting import CORAL_TYPE
+from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来

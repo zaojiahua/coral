@@ -66,21 +66,24 @@ def camera_start(camera_id, device_object, **kwargs):
 
 
 def camera_init_hk(device_object, **kwargs):
-    deviceList = MV_CC_DEVICE_INFO_LIST()
-    tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
-    check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
-    CamObj = MvCamera()
-    # index 0--->第一个设备
-    stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
-    check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
+    inited = False
+    if len(CamObjList) > 0:
+        inited = True
+        CamObj = CamObjList[-1]
 
-    print('open device')
-    check_result(CamObj.MV_CC_OpenDevice, 5, 0)
-    CamObj.MV_CC_CloseDevice()
-    print('close device')
-    # CamObj.MV_CC_DestroyHandle()
-    check_result(CamObj.MV_CC_OpenDevice, 5, 0)
-    print('open device')
+    if not inited:
+        deviceList = MV_CC_DEVICE_INFO_LIST()
+        tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
+        check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
+        CamObj = MvCamera()
+        # index 0--->第一个设备
+        stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
+        check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
+
+        check_result(CamObj.MV_CC_OpenDevice, 5, 0)
+        CamObj.MV_CC_CloseDevice()
+        # CamObj.MV_CC_DestroyHandle()
+        check_result(CamObj.MV_CC_OpenDevice, 5, 0)
 
     if kwargs.get('feature_test') is True:
         # 功能测试参数设置
@@ -142,7 +145,9 @@ def camera_init_hk(device_object, **kwargs):
     nPayloadSize = stParam.nCurValue
     data_buf = (c_ubyte * nPayloadSize)()
     stFrameInfo = MV_FRAME_OUT_INFO_EX()
-    CamObjList.append(CamObj)
+
+    if not inited:
+        CamObjList.append(CamObj)
 
     memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
     return data_buf, nPayloadSize, stFrameInfo
@@ -209,10 +214,10 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
 
 def stop_camera(cam_obj):
     cam_obj.MV_CC_StopGrabbing()
-    cam_obj.MV_CC_CloseDevice()
-    cam_obj.MV_CC_DestroyHandle()
+    # cam_obj.MV_CC_CloseDevice()
+    # cam_obj.MV_CC_DestroyHandle()
     # 目前的柜子类型，只有一个相机，所以销毁所有
-    CamObjList.clear()
+    # CamObjList.clear()
     print("stop camera finished..[Debug]")
 
 

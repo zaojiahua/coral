@@ -77,7 +77,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return 2
 
     def press_and_swipe(self, content) -> int:
-        # 未知意义方法，似乎已经没有在使用....
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             self.image = ocr_obj.default_pic_path

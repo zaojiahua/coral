@@ -24,7 +24,9 @@ camera_params_feature = [("OffsetY", 0),
                          ("Gain", 2.5),
                          ("AcquisitionFrameRate", 35.0),
                          ("PixelFormat", 0x0108000A, 'enum')]
-high_exposure_params = [("ExposureTime", 200000.0),
+high_exposure_params = [("ExposureTime", 100000.0),
+                        ("Gain", 10)]
+high_exposure_params_feature = [("ExposureTime", 200000.0),
                         ("Gain", 15)]
 
 # 机械臂完全固定的参数

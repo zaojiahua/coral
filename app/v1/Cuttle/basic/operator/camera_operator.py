@@ -16,7 +16,7 @@ from app.v1.Cuttle.basic.MvImport.HK_import import *
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, CameraMax, \
-    camera_params_240, CamObjList, camera_params_feature, high_exposure_params
+    camera_params_240, CamObjList, camera_params_feature, high_exposure_params, high_exposure_params_feature
 from app.execption.outer.error_code.imgtool import CameraNotResponse
 from redis_init import redis_client
 
@@ -118,8 +118,12 @@ def camera_init_hk(device_object, **kwargs):
                 check_result(CamObj.MV_CC_SetIntValue, key[0], kwargs.get(key[0]))
 
     if kwargs.get('high_exposure'):
-        for key in high_exposure_params:
-            check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
+        if kwargs.get('feature_test') is True:
+            for key in high_exposure_params_feature:
+                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
+        else:
+            for key in high_exposure_params:
+                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
 
     # 设置roi
     if not kwargs.get('original'):

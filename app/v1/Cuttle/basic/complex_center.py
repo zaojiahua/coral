@@ -342,7 +342,8 @@ class Complex_Center(object):
 
         def screencap(cmd_list, device_label, connect_number):
             request_body = adb_unit_maker(cmd_list, device_label, connect_number)
-            return handler_exec(request_body, kwargs.get("handler")[1 if device.has_camera is True else 0])
+            handler_index = 0 if self.mode == 0 else (1 if device.has_camera is True else 0)
+            return handler_exec(request_body, kwargs.get("handler")[handler_index])
 
         try:
             self.result = screencap(cmd_list, self.device_label, self.connect_number)

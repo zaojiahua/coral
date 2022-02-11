@@ -226,7 +226,7 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_out_key_order(press_side_order[:3],
                                                                     others_orders=press_side_order[3:],
                                                                     wait_time=self.speed)
-        rev = hand_serial_obj_dict.get(self._model.pk).recv()
+        rev = hand_serial_obj_dict.get(self._model.pk).recv(buffer_size=64)
         time.sleep(wait_time)
         return rev
 

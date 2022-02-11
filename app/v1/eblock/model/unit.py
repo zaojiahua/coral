@@ -326,11 +326,17 @@ class Unit(BaseModel):
                 src_crop = cv2.imread(os.path.join(path, file))
                 src = cv2.imread(os.path.join(path, file_name[:-5] + ".jpg"))
                 src_2 = cv2.imread(os.path.join(path, file_name[:-5] + ".png"))
+                is_jpg = True if src is not None else False
                 src = src if src is not None else src_2
                 # 名称前缀相同，且图片尺寸相同则认为是没经过裁剪
                 if src_crop is not None and src is not None and src_crop.shape == src.shape:
                     try:
-                        os.remove(os.path.join(path, file))
+                        # 传递给ocr服务器的是crop的图片，这里应该删除原始那张图，保留crop的图片，否则的话，最后rds
+                        # 里边展示的图片并非传递给ocr服务器的图片，保留图片做测试就没有意义了
+                        if is_jpg:
+                            os.remove(os.path.join(path, file_name[:-5] + ".jpg"))
+                        else:
+                            os.remove(os.path.join(path, file_name[:-5] + ".png"))
                         print("delete one pic。。。")
                     except FileNotFoundError:
                         print("unable to find similar file to delete")

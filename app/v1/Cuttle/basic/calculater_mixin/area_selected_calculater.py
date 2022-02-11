@@ -1,4 +1,5 @@
 import os
+import time
 
 import cv2
 import numpy as np
@@ -152,13 +153,13 @@ class AreaSelectedMixin(object):
                 # 没有找到的话，重新截图试试
                 ocr_obj.snap_shot()
             x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             # 执行ocr_obj的对应match方法
             getattr(ocr_obj, match_function)()
             # 把前面算的左上点的绝对坐标加到识别坐标上来。
             ocr_obj.add_bias(x0, y0)
             # 做点击动作
             ocr_obj.point()
-            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         return ocr_obj.result
 
     def smart_ocr_long_press(self, content) -> int:
@@ -168,10 +169,10 @@ class AreaSelectedMixin(object):
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             getattr(ocr_obj, match_function)()
             ocr_obj.add_bias(x0, y0)
             ocr_obj.long_press()
-            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         return ocr_obj.result
 
     # -------------------------------------旧方法，已经重写或移除，但已经编辑过的用例还需要支持，所有移入统一位置，不做更新--------------------------------

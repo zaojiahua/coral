@@ -60,6 +60,7 @@ class HandSerial:
             rev = self.ser.read(buffer_size).decode()
         except SerialException:
             raise
+        print('返回：', rev, '*' * 10)
         if 'ok' in rev or 'unlock' in rev:
             return 0
         return -1

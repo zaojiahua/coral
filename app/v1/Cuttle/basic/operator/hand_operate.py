@@ -302,6 +302,8 @@ class HandHandler(Handler, DefaultMixin):
 
     @staticmethod
     def __single_click_order(axis, z_point=None):
+        if len(axis) == 3:
+            z_point = axis[2]
         if z_point is None:
             z_point = get_global_value('Z_DOWN')
         return [
@@ -327,14 +329,16 @@ class HandHandler(Handler, DefaultMixin):
 
     @staticmethod
     def __double_click_order(axis):
-        axis_x, axis_y = axis
+        axis_x, axis_y, axis_z = axis
         if axis_x > HAND_MAX_X or axis_y > HAND_MAX_X:
             return {"error:Invalid axis_Point"}
+        if axis_z is None:
+            axis_z = get_global_value('Z_DOWN')
         return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, get_global_value('Z_DOWN') + 5, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, get_global_value('Z_DOWN'), MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, axis_z + 5, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, axis_z, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, get_global_value('Z_DOWN'), MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, axis_z, MOVE_SPEED),
             'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (axis_x, axis_y, Z_UP, MOVE_SPEED),
 
         ]

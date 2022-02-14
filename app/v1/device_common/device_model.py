@@ -79,10 +79,13 @@ class Device(BaseModel):
     # 摄像头下多个按键的位置,储存的是屏幕截图中的坐标（paneview设置&重启服务恢复设备时，需要读取数据库中存的摄像头的下坐标值，并换算回截图中的坐标值）
     back_x = models.IntegerField()
     back_y = models.IntegerField()
+    back_z = models.IntegerField()
     home_x = models.IntegerField()
     home_y = models.IntegerField()
+    home_z = models.IntegerField()
     menu_x = models.IntegerField()
     menu_y = models.IntegerField()
+    menu_z = models.IntegerField()
     # 输入键盘的左上点和右下点
     kx1 = models.IntegerField()
     kx2 = models.IntegerField()
@@ -144,11 +147,11 @@ class Device(BaseModel):
                     z = coor['z_coordinate']
                     device_obj.device_config_point[coor_name] = [x, y, z]
                     if coor_name == '桌面':
-                        device_obj.home_x, device_obj.home_y = x, y
+                        device_obj.home_x, device_obj.home_y, device_obj.home_z = x, y, z
                     elif coor_name == '返回':
-                        device_obj.back_x, device_obj.back_y = x, y
+                        device_obj.back_x, device_obj.back_y, device_obj.back_z = x, y, z
                     elif coor_name == '菜单':
-                        device_obj.menu_x, device_obj.menu_y = x, y
+                        device_obj.menu_x, device_obj.menu_y, device_obj.menu_z = x, y, z
 
         return res_device_info
 

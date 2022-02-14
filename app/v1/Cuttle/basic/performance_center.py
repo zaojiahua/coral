@@ -11,6 +11,8 @@ from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
+from app.v1.Cuttle.basic.operator.camera_operator import camera_start
+from redis_init import redis_client
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 
@@ -61,7 +63,7 @@ class PerformanceCenter(object):
         self.back_up_dq.clear()
         executer = ThreadPoolExecutor()
         # 先清空back_up_dq并异步开始记录照片
-        self.move_src_task = executer.submit(self.move_src_to_backup).add_done_callback(executor_callback)
+        executer.submit(self.move_src_to_backup, executer).add_done_callback(executor_callback)
         number = 0
         self.start_number = 0
         # 等异步线程时间，确认back_up_dq已经有了一些照片
@@ -270,8 +272,11 @@ class PerformanceCenter(object):
         pic_compare_2 = pic_compare_2[area[1]:area[3], area[0]:area[2]]
         return number, pic_original, pic_compare_1, pic_compare_2
 
-    def move_src_to_backup(self):
+    def move_src_to_backup(self, executer):
         # 把dq内图片放置到备用dq中去，此方法在起始点判定时异步开始执行，到终止点判定结束退出
+        # 开启相机
+        from app.v1.device_common.device_model import Device
+        executer.submit(camera_start, 1, Device(pk=self.device_id), temporary=False, original=False)
         self.move_flag = True
         from app.v1.Cuttle.basic.setting import camera_dq_dict
         camera_dq_dict.get(self.device_id).clear()
@@ -285,6 +290,7 @@ class PerformanceCenter(object):
             except IndexError as e:
                 # 向备份Q中放置过快,超过摄像头读取速度，需要等待1,2帧时间
                 time.sleep(2 / FpsMax)
+        redis_client.set('g_bExit', 1)
         # 找到结束点后再继续保存最多40张:
         if not hasattr(self, "end_number"):
             return 0

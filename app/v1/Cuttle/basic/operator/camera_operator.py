@@ -32,7 +32,7 @@ def camera_start(camera_id, device_object, **kwargs):
         # 先销毁
         if camera_dq_dict.get(device_object.pk) is not None:
             del camera_dq_dict[device_object.pk]
-        # 为了保证后续操作的统一性，讲图片统一放到队列中
+        # 为了保证后续操作的统一性，将图片统一放到队列中
         dq = deque(maxlen=CameraMax)
         camera_dq_dict[device_object.pk] = dq
         # 性能测试相机初始化
@@ -48,7 +48,7 @@ def camera_start(camera_id, device_object, **kwargs):
                     return camera_start_hk(dq, *response, temporary=temporary)
                 _inner_func()
             else:
-                camera_start_hk(dq, *response)
+                camera_start_hk(dq, *response, temporary=temporary)
         else:
             # 功能测试相机初始化
             kwargs['feature_test'] = True

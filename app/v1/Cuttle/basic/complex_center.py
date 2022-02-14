@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import random
 import shutil
@@ -170,7 +171,7 @@ class Complex_Center(object):
     def cal_realy_xy(self, pic_x, pic_y, input_pic_path):
         from app.v1.device_common.device_model import Device
         device = Device(pk=self.device_label)
-        if CORAL_TYPE == 5.1:
+        if math.floor(CORAL_TYPE) == 5:
             if self.crop_offset != [0, 0, device.device_width, device.device_height]:
                 # 带有摄像头的中文输入，需要先恢复到整张图上的位置
                 pic_x = int(pic_x + int(self.crop_offset[0]))

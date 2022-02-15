@@ -144,6 +144,7 @@ class PerformanceCenter(object):
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": self.end_number + 39,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+                time.sleep(39 / FpsMax)
                 self.move_flag = False
                 break
             if number >= CameraMax:
@@ -274,12 +275,12 @@ class PerformanceCenter(object):
 
     def move_src_to_backup(self, executer):
         # 把dq内图片放置到备用dq中去，此方法在起始点判定时异步开始执行，到终止点判定结束退出
-        # 开启相机
-        from app.v1.device_common.device_model import Device
-        executer.submit(camera_start, 1, Device(pk=self.device_id), temporary=False, original=False)
         self.move_flag = True
         from app.v1.Cuttle.basic.setting import camera_dq_dict
         camera_dq_dict.get(self.device_id).clear()
+        # 开启相机
+        from app.v1.device_common.device_model import Device
+        executer.submit(camera_start, 1, Device(pk=self.device_id), temporary=False, original=False)
         time.sleep(2 / FpsMax)  # 确保dq里至少一张照片
         while self.move_flag: # 这个move_flag会被start点和end点更改状态，从而这个线程跳出while循环
             try:
@@ -290,6 +291,7 @@ class PerformanceCenter(object):
             except IndexError as e:
                 # 向备份Q中放置过快,超过摄像头读取速度，需要等待1,2帧时间
                 time.sleep(2 / FpsMax)
+        # 关闭相机
         redis_client.set('g_bExit', 1)
         # 找到结束点后再继续保存最多40张:
         if not hasattr(self, "end_number"):

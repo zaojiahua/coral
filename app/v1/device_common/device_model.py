@@ -409,7 +409,7 @@ class Device(BaseModel):
                                             m_location_center[1] - float(self.height) / 2,
                                             m_location_center[2] + float(self.ply)])
         else:
-            set_global_value('m_location', [m_location[0], m_location[1], m_location[2] + float(self.ply)])
+            set_global_value('m_location', [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
         self.screen_z = str(get_global_value('m_location')[2])
         print('new m_location:', get_global_value('m_location'))
         set_global_value('Z_DOWN', get_global_value('m_location')[2])

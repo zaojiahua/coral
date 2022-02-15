@@ -105,6 +105,10 @@ class Handler():
             return {'result': UnitTimeOut.error_code}
         except ImageIsNoneException as e:
             return {'result': e.error_code}
+        except Exception as e:
+            if self.extra_result:
+                e.extra_result = self.extra_result
+            raise e
 
         response = {"result": self.after_execute(result, self.func.__name__)}
         if self.extra_result:

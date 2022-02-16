@@ -333,22 +333,11 @@ class DoorKeeper(object):
         return ret_dict
 
     def set_assis_device(self, **kwargs):
-        # {
-        #     "serial_number": "1231234",
-        #     "ip_address": "127.0.0.6",
-        #     "order": 1,
-        #     "is_active": true,
-        #     "devices": [
-        #         1
-        #     ]
-        # }
         if ADB_TYPE == 0:
             self.open_wifi_service(f"-s {kwargs.get('serial_number')}")
         kwargs["is_active"] = True
         res = request(method="POST", url=device_assis_create_update_url, json=kwargs)
         logger.info(f"response from reef: {res}")
-        # device_object = Device(pk=kwargs["device_label"])
-        # setattr(device_object, "assis_" + kwargs.get("order"), kwargs.get("ip_address"))
         return 0
 
     def is_new_phone_model(self, phone_model) -> (Dict, bool):

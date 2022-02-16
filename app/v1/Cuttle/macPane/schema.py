@@ -44,7 +44,7 @@ class PaneSchema(Schema):
             os.makedirs(folder_path)
         image_path = os.path.join(folder_path, picture_name)
 
-        assist_device_ident = get_assist_device_ident(self.device_label, assist_device) \
+        assist_device_ident = get_assist_device_ident(device_label, assist_device) \
             if assist_device is not None else None
 
         # 返回的数据格式需要和异常时候的统一

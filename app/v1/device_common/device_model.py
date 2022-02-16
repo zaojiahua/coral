@@ -115,12 +115,13 @@ class Device(BaseModel):
     # 获取当个设备的信息或者是获取所有设备的信息，所以是静态方法
     @staticmethod
     def request_device_info(device_label=None):
-        common_fields = "id,auto_test,device_name,device_width,cpu_id,device_height,ip_address,status," \
+        common_fields = "id,auto_test,device_name,cpu_id,ip_address,status," \
                         "tempport,tempport.port,powerport,powerport.port,device_label,android_version," \
                         "android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name," \
                         "phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer," \
                         "phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name," \
                         "phone_model.width,phone_model.height,phone_model.ply," \
+                        "phone_model.width_resolution,phone_model.height_resolution," \
                         "rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera," \
                         "paneslot.paneview.id,paneslot.paneview.robot_arm"
         if device_label is None:
@@ -319,8 +320,8 @@ class Device(BaseModel):
 
     # 考虑到相机 像素宽高进行特殊的处理
     def _update_pix_width_height(self, kwargs):
-        device_width = kwargs.get('device_width')
-        device_height = kwargs.get('device_height')
+        device_width = kwargs.get('width_resolution')
+        device_height = kwargs.get('height_resolution')
         if device_width is not None:
             self.pix_width = device_width
         if device_height is not None:

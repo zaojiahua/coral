@@ -437,9 +437,10 @@ class Device(BaseModel):
         return click_x, click_y, click_z
 
     # 将截图获取统一到这里
-    def get_snapshot(self, image_path, high_exposure=False, original=False):
+    def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None):
         jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
-                       "execCmdList": [f"adb -s {self.connect_number} exec-out screencap -p > {image_path}"],
+                       "execCmdList": [f"adb -s {connect_number if connect_number is not None else self.connect_number} "
+                                       f"exec-out screencap -p > {image_path}"],
                        "device_label": self.device_label,
                        'high_exposure': high_exposure,
                        'original': original})

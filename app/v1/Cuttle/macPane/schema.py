@@ -12,6 +12,7 @@ from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 
 from app.v1.device_common.device_model import Device
 from redis_init import redis_client
+from app.v1.eblock.model.unit import get_assist_device_ident
 
 
 def validate_ip(ip):
@@ -27,11 +28,13 @@ class PaneSchema(Schema):
     picture_name = fields.String(missing="snap.png")
     device_label = fields.String(required=True)
     device_ip = fields.String(required=True, validate=validate_ip)
+    assist_device = fields.Integer(required=False)
 
     @post_load
     def make_sure(self, data, **kwargs):
         picture_name = data.get("picture_name")
         device_label = data.get("device_label")
+        assist_device = data.get('assist_device')
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=device_label)
         if not str.endswith(picture_name, (".png", ".jpg")):
@@ -41,8 +44,11 @@ class PaneSchema(Schema):
             os.makedirs(folder_path)
         image_path = os.path.join(folder_path, picture_name)
 
+        assist_device_ident = get_assist_device_ident(self.device_label, assist_device) \
+            if assist_device is not None else None
+
         # 返回的数据格式需要和异常时候的统一
-        ret_code = device_obj.get_snapshot(image_path)
+        ret_code = device_obj.get_snapshot(image_path, connect_number=assist_device_ident)
         if ret_code == 0:
             try:
                 with open(image_path, 'rb') as f:

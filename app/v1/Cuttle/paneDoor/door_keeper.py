@@ -232,8 +232,8 @@ class DoorKeeper(object):
         ret_dict = {
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
                 f"adb -s {s_id} shell getprop ro.build.version.release"),
-            "device_width": screen_size[0],
-            "device_height": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}
+            "width_resolution": screen_size[0],
+            "height_resolution": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}
         ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         ret_dict.update(device_info_fict)
         return ret_dict
@@ -307,11 +307,14 @@ class DoorKeeper(object):
         phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.oppo.market.name")
         old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
         productName = phone_model if len(phone_model) != 0 else old_phone_model
+        screen_size = self.get_screen_size_internal(f"-s {s_id}")
         ret_dict = {"phone_model_name": productName,
                     "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0',
                     "device_label": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
                     "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
-                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize()
+                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(),
+                    'width_resolution': screen_size[0],
+                    'height_resolution': screen_size[1]
                     }
         check_params = {"fields": "is_active", "serial_number": ret_dict["device_label"]}
         response = request(url=device_assis_url, params=check_params)

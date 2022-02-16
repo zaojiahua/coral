@@ -36,6 +36,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             self.image = ocr_obj.default_pic_path
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             ocr_obj.get_result()
             ocr_obj.point()
         return ocr_obj.result
@@ -77,7 +78,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return 2
 
     def press_and_swipe(self, content) -> int:
-        # 未知意义方法，似乎已经没有在使用....
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             self.image = ocr_obj.default_pic_path
@@ -123,6 +123,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     if hasattr(self, "image") and judge_pic_same(ocr_obj.default_pic_path, self.image):
                         return 1
                     self.image = ocr_obj.default_pic_path
+                    self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
                     getattr(ocr_obj, match_function)()
                     if click:
                         ocr_obj.point()

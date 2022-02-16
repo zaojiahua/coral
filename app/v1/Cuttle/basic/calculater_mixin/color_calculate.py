@@ -70,8 +70,8 @@ class ColorMixin(object):
         # 拿上面生成的二值化图片去识别问题，除了指定颜色其他都换为黑色了
         # （这儿有一种bug，就是选了白色背底色，其他彩色文字变成黑色之后，黑白依旧可以看出来）
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
-            response = ocr_obj.get_result()
             self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
+            response = ocr_obj.get_result()
         identify_words_list = [item.get("text").strip().strip(strip_str) for item in response]
         return identify_words_list, words_list
 
@@ -86,10 +86,10 @@ class ColorMixin(object):
         match_function = "get_result" if is_blur == False else "get_result_ignore_speed"
         with Complex_Center(inputImgFile=input_crop_path, **data, **self.kwargs) as ocr_obj:
             ocr_obj.default_pic_path = input_crop_path
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             getattr(ocr_obj, match_function)()
             x = ocr_obj.cx + ocr_obj.x_shift
             y = ocr_obj.cy + ocr_obj.y_shift
-            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         if type(ocr_obj.result) == int and ocr_obj.result != 0:
             return -2000
         b, g, r = check_color_by_position(cv2.imread(input_crop_path), y, x)

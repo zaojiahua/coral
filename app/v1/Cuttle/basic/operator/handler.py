@@ -105,6 +105,10 @@ class Handler():
             return {'result': UnitTimeOut.error_code}
         except ImageIsNoneException as e:
             return {'result': e.error_code}
+        except Exception as e:
+            if self.extra_result:
+                e.extra_result = self.extra_result
+            raise e
 
         response = {"result": self.after_execute(result, self.func.__name__)}
         if self.extra_result:
@@ -272,10 +276,7 @@ class Handler():
         result = re.search(regex, self.exec_content)
         x = float(result.group(1))
         y = float(result.group(2))
-        if any((0 < x < 1, 0 < y < 1)):
-            w, h = self._get_screen_point(x, y, self.portrait)
-            self.exec_content = self.exec_content.replace(result.group(1), str(w), 1)
-            self.exec_content = self.exec_content.replace(result.group(2), str(h), 1)
+        self._replace_relative_pos(x, y, result.group(1), result.group(2))
         return normal_result
 
     def _relative_swipe(self):
@@ -287,15 +288,16 @@ class Handler():
         y1 = float(result.group(2))
         x2 = float(result.group(3))
         y2 = float(result.group(4))
-        if any((0 < x1 < 1, 0 < y2 < 1, 0 < x2 < 1, 0 < y2 < 1)):
-            w1, h1 = self._get_screen_point(x1, y1, self.portrait)
-            w2, h2 = self._get_screen_point(x2, y2, self.portrait)
-            self.exec_content = self.exec_content.replace(result.group(1), str(w1), 1)
-            self.exec_content = self.exec_content.replace(result.group(2), str(h1), 1)
-            self.exec_content = self.exec_content.replace(result.group(3), str(w2), 1)
-            self.exec_content = self.exec_content.replace(result.group(4), str(h2), 1)
+        self._replace_relative_pos(x1, y1, result.group(1), result.group(2))
+        self._replace_relative_pos(x2, y2, result.group(3), result.group(4))
 
         return normal_result
+
+    def _replace_relative_pos(self, x, y, result_group_1, result_group_2):
+        if any((0 < x < 1, 0 < y < 1)):
+            w, h = self._get_screen_point(x, y, self.portrait)
+            self.exec_content = self.exec_content.replace(result_group_1, str(w), 1)
+            self.exec_content = self.exec_content.replace(result_group_2, str(h), 1)
 
 
 class ListHandler(Handler):

@@ -34,7 +34,7 @@ class DeviceStatus(object):
 class Device(BaseModel):
     # attribute that only coral have
     exclude_list = ["src_list", "has_camera", "has_arm", "flag", "is_bind", "x_border", "y_border", "kx1", "kx2", "ky1",
-                    "ky2", "assis_1", "assis_2", "assis_3", "x1", "x2", "y1", "y2"]
+                    "ky2", "assis_1", "assis_2", "assis_3", "x1", "x2", "y1", "y2", 'subsidiarydevice', 'disconnect_times_timestamp']
     # device basic attribute
     device_label = models.CharField()
     ip_address = models.CharField()
@@ -100,6 +100,8 @@ class Device(BaseModel):
     disconnect_times = models.IntegerField()
     # 代表每次重连发生的时间
     disconnect_times_timestamp = OwnerList(to=int)
+    # 僚机列表
+    subsidiarydevice = OwnerList(to=str)
 
     float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2",
                   'width', 'height', 'ply', "screen_z"]
@@ -123,7 +125,9 @@ class Device(BaseModel):
                         "phone_model.width,phone_model.height,phone_model.ply," \
                         "phone_model.width_resolution,phone_model.height_resolution," \
                         "rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera," \
-                        "paneslot.paneview.id,paneslot.paneview.robot_arm"
+                        "paneslot.paneview.id,paneslot.paneview.robot_arm," \
+                        "subsidiarydevice.id,subsidiarydevice.serial_number,subsidiarydevice.order," \
+                        "subsidiarydevice.phone_model.height_resolution,subsidiarydevice.phone_model.width_resolution"
         if device_label is None:
             param = {"status__in": "ReefList[idle{%,%}busy{%,%}error{%,%}occupied]",
                      "cabinet_id": HOST_IP.split(".")[-1],
@@ -229,10 +233,31 @@ class Device(BaseModel):
             self.set_border(kwargs)
             self.kx1, self.ky1, self.kx2, self.ky2 = self._relative_to_absolute(
                 key_map_position.get(self.phone_model_name, default_key_map_position))
+            self.update_subsidiary_device(**kwargs)
         except Exception as e:
             print(repr(e))
             print(traceback.format_exc())
             func(self, **kwargs)  # 4
+
+    def remove_subsidiary_device(self):
+        for _ in range(self.subsidiarydevice.llen()):
+            old_serial_number = self.subsidiarydevice.lpop()
+            Device(pk=old_serial_number).remove()
+
+    # 更新僚机信息
+    def update_subsidiary_device(self, **kwargs):
+        # 先移除旧的
+        self.remove_subsidiary_device()
+
+        subsidiarydevice = kwargs.get('subsidiarydevice')
+        # 可以只有僚机2，没有僚机1，所以需要封装一个函数从主机获取僚机
+        subsidiarydevice.sort(key=lambda x: x['order'])
+        print('僚机信息如下: ', subsidiarydevice)
+        for sub_device in kwargs.get('subsidiarydevice', []):
+            serial_number = sub_device.get("serial_number")
+            device_obj = Device(pk=serial_number)
+            device_obj._update_pix_width_height(sub_device['phone_model'])
+            self.subsidiarydevice.rpush(serial_number)
 
     def set_border(self, device_dict):
         # 设置roi区域
@@ -353,6 +378,8 @@ class Device(BaseModel):
         if self.ip_address != "0.0.0.0":
             h = AdbHandler(model=self)
             h.disconnect()
+        # 移除僚机信息
+        self.remove_subsidiary_device()
         self.remove()
         self.flag = False
 

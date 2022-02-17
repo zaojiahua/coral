@@ -82,6 +82,7 @@ from app.v1.Cuttle.basic.setting import CamObjList
 
 
 def camera_init_HK(**kwargs):
+    CamObjList.clear()
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
     check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
@@ -172,7 +173,7 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
 def check_result(func, *args):
     return_value = func(*args)
     if return_value != 0:
-        print("return_value", return_value)
+        print("return_value", return_value, args)
         raise CameraInitFail
 
 

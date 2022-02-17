@@ -111,6 +111,7 @@ class OriginalPicSchema(Schema):
     def get_snap_shot(self, device_label, path):
         from app.v1.Cuttle.basic.setting import camera_dq_dict
         retry_max_time = 7
+        src = None
         while retry_max_time > 0:
             try:
                 src = camera_dq_dict.get(device_label)[-1]
@@ -119,13 +120,15 @@ class OriginalPicSchema(Schema):
                 time.sleep(1)
                 retry_max_time -= 1
                 print('重试一次。。。。')
-        # image = cv2.imdecode(src, 1)
-        try:
-            os.remove(path)
-        except FileNotFoundError:
-            pass
-        cv2.imwrite(path, src)
-        return 0
+
+        if src is not None:
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+            cv2.imwrite(path, src)
+            return 0
+        return -1
 
 
 class CoordinateSchema(Schema):

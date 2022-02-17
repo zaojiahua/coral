@@ -82,6 +82,11 @@ from app.v1.Cuttle.basic.setting import CamObjList
 
 
 def camera_init_HK(**kwargs):
+    for c_o in CamObjList:
+        c_o.MV_CC_StopGrabbing()
+        c_o.MV_CC_CloseDevice()
+        c_o.MV_CC_DestroyHandle()
+        print('销毁......')
     CamObjList.clear()
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE

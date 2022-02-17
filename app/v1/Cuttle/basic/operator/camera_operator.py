@@ -138,6 +138,8 @@ def camera_start_HK(dq, data_buf, nPayloadSize, stFrameInfo, device_object):
             cam_obj.MV_CC_StopGrabbing()
             cam_obj.MV_CC_CloseDevice()
             cam_obj.MV_CC_DestroyHandle()
+            del cam_obj
+            CamObjList.clear()
             print("stop camera finished..[Debug]")
             break
         # 这个一个轮询的请求，5毫秒timeout，去获取图片

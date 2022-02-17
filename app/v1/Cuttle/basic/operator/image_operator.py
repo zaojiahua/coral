@@ -134,8 +134,8 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
             self.image = path
-            result = ocr_obj.get_result()
             self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
+            result = ocr_obj.get_result()
             if not isinstance(result, list) or len(result) == 0:
                 raise RecordWordsFindNoWords
             words = result[0].get("text")
@@ -235,6 +235,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
         words_list, path = self.words_prepare(exec_content, "requiredWords")
         # 此处不传递words给ocr service，避免不确定长度文字对结果的限制（会稍微影响速度）
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             response = ocr_obj.get_result()
         identify_words_list = [item.get("text").strip().strip('",.\n') for item in response]
         for word in set(words_list):

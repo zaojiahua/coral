@@ -102,6 +102,8 @@ class Device(BaseModel):
     disconnect_times_timestamp = OwnerList(to=int)
     # 僚机列表
     subsidiarydevice = OwnerList(to=str)
+    # 如果是僚机，代表的是第几个僚机，0代表的就是主机
+    order = models.IntegerField()
 
     float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2",
                   'width', 'height', 'ply', "screen_z"]
@@ -110,6 +112,7 @@ class Device(BaseModel):
         super(Device, self).__init__(*args, **kwargs)
         self.logger = setup_logger(f'{self.pk}', f'{self.pk}.log')
         self.flag = True
+        self.order = 0
 
     def __repr__(self):
         return f"{self.__class__.__name__}_{self.pk}_{self.device_name}_{self.id}"
@@ -257,7 +260,21 @@ class Device(BaseModel):
             serial_number = sub_device.get("serial_number")
             device_obj = Device(pk=serial_number)
             device_obj._update_pix_width_height(sub_device['phone_model'])
+            device_obj.order = sub_device['order']
             self.subsidiarydevice.rpush(serial_number)
+
+    # 获取僚机
+    def get_subsidiary_device(self, order=None, serial_number=None):
+        if serial_number is not None:
+            for s_n in self.subsidiarydevice:
+                if s_n == serial_number:
+                    return Device(pk=serial_number)
+        if order is not None:
+            for s_n in self.subsidiarydevice:
+                device_obj = Device(pk=s_n)
+                if device_obj.order == order:
+                    return device_obj
+        return None
 
     def set_border(self, device_dict):
         # 设置roi区域

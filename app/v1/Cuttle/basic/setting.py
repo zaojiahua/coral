@@ -1,5 +1,10 @@
 from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
+try:
+    from app.config.ip import m_location, m_location_center
+except Exception:
+    m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
+    m_location_center = [157, 202.5, -24]
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -51,10 +56,6 @@ Z_SIDE = -30
 Z_MIN_VALUE = -10
 # 梯形滑动连带的比例
 trapezoid = 0.9
-# m_location = [42, 12]  # 机械臂下手机左上外边框在机械臂下的坐标   tianjing setting
-# m_location = [38, 26]  # 商米Tcab-5型柜夹具参数
-m_location = [38, 13, -35]   # Tcab-5现有夹具m_location
-m_location_center = [157, 202.5, -24]
 wait_time = 1
 icon_threshold = 30
 icon_threshold_camera = 12

@@ -252,11 +252,9 @@ class Device(BaseModel):
         # 先移除旧的
         self.remove_subsidiary_device()
 
-        subsidiarydevice = kwargs.get('subsidiarydevice')
-        # 可以只有僚机2，没有僚机1，所以需要封装一个函数从主机获取僚机
-        subsidiarydevice.sort(key=lambda x: x['order'])
+        subsidiarydevice = kwargs.get('subsidiarydevice', [])
         print('僚机信息如下: ', subsidiarydevice)
-        for sub_device in kwargs.get('subsidiarydevice', []):
+        for sub_device in subsidiarydevice:
             serial_number = sub_device.get("serial_number")
             device_obj = Device(pk=serial_number)
             device_obj._update_pix_width_height(sub_device['phone_model'])

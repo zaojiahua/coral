@@ -112,7 +112,6 @@ class Device(BaseModel):
         super(Device, self).__init__(*args, **kwargs)
         self.logger = setup_logger(f'{self.pk}', f'{self.pk}.log')
         self.flag = True
-        self.order = 0
 
     def __repr__(self):
         return f"{self.__class__.__name__}_{self.pk}_{self.device_name}_{self.id}"
@@ -165,11 +164,18 @@ class Device(BaseModel):
 
     @property
     def device_height(self):
-        return self.pix_height if math.floor(CORAL_TYPE) != 5 else (int(self.x2) - int(self.x1))
+        if self.order == 0:
+            return self.pix_height if math.floor(CORAL_TYPE) != 5 else (int(self.x2) - int(self.x1))
+        else:
+            return self.pix_height
 
     @property
     def device_width(self):
-        return self.pix_width if math.floor(CORAL_TYPE) != 5 else (int(self.y2) - int(self.y1))
+        # 区分主机和僚机
+        if self.order == 0:
+            return self.pix_width if math.floor(CORAL_TYPE) != 5 else (int(self.y2) - int(self.y1))
+        else:
+            return self.pix_width
 
     @property
     def connect_number(self):
@@ -487,9 +493,10 @@ class Device(BaseModel):
                        "device_label": self.device_label,
                        'high_exposure': high_exposure,
                        'original': original})
-        if self.has_camera:
+        if self.has_camera and connect_number is None:
             handler_type = "CameraHandler"
         else:
+            # 支持僚机截图
             handler_type = "AdbHandler"
 
         snap_shot_result = UnitFactory().create(handler_type, jsdata)

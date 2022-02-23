@@ -241,7 +241,7 @@ class Device(BaseModel):
                 request(method="POST", url=device_create_update_url, json=self.data)
             self.flag = True
             self.set_border(kwargs)
-            self.kx1, self.ky1, self.kx2, self.ky2 = self._relative_to_absolute(
+            self.kx1, self.ky1, self.kx2, self.ky2 = self._keyboard_relative_to_absolute(
                 key_map_position.get(self.phone_model_name, default_key_map_position))
             self.update_subsidiary_device(**kwargs)
         except Exception as e:
@@ -267,7 +267,7 @@ class Device(BaseModel):
             device_obj._update_pix_width_height(sub_device['phone_model'])
             device_obj.order = sub_device['order']
             device_obj.phone_model_name = sub_device['phone_model']['phone_model_name']
-            device_obj.kx1, device_obj.ky1, device_obj.kx2, device_obj.ky2 = device_obj._relative_to_absolute(
+            device_obj.kx1, device_obj.ky1, device_obj.kx2, device_obj.ky2 = device_obj._keyboard_relative_to_absolute(
                 key_map_position.get(device_obj.phone_model_name, default_key_map_position))
             self.subsidiarydevice.rpush(serial_number)
 
@@ -306,10 +306,11 @@ class Device(BaseModel):
                 self.y2 = 0
             print('设置的边框是:', self.x1, self.y1, self.x2, self.y2)
 
-    def _relative_to_absolute(self, coordinate):
+    # 键盘坐标转换的函数
+    def _keyboard_relative_to_absolute(self, coordinate):
         if any((i < 1 for i in coordinate)):
-            coordinate = int(self.device_width * coordinate[0]), int(self.device_height * coordinate[1]), int(
-                self.device_width * coordinate[2]), int(self.device_height * coordinate[3])
+            coordinate = int(self.pix_width * coordinate[0]), int(self.pix_height * coordinate[1]), int(
+                self.pix_width * coordinate[2]), int(self.pix_height * coordinate[3])
         return coordinate
 
     def _update_attr_from_cedar(self, **kwargs):

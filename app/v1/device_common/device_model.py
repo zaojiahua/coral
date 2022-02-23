@@ -129,7 +129,8 @@ class Device(BaseModel):
                         "rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera," \
                         "paneslot.paneview.id,paneslot.paneview.robot_arm," \
                         "subsidiarydevice.id,subsidiarydevice.serial_number,subsidiarydevice.order," \
-                        "subsidiarydevice.phone_model.height_resolution,subsidiarydevice.phone_model.width_resolution"
+                        "subsidiarydevice.phone_model.height_resolution,subsidiarydevice.phone_model.width_resolution," \
+                        "subsidiarydevice.phone_model.phone_model_name"
         if device_label is None:
             param = {"status__in": "ReefList[idle{%,%}busy{%,%}error{%,%}occupied]",
                      "cabinet_id": HOST_IP.split(".")[-1],
@@ -265,6 +266,9 @@ class Device(BaseModel):
             device_obj = Device(pk=serial_number)
             device_obj._update_pix_width_height(sub_device['phone_model'])
             device_obj.order = sub_device['order']
+            device_obj.phone_model_name = sub_device['phone_model']['phone_model_name']
+            device_obj.kx1, device_obj.ky1, device_obj.kx2, device_obj.ky2 = device_obj._relative_to_absolute(
+                key_map_position.get(device_obj.phone_model_name, default_key_map_position))
             self.subsidiarydevice.rpush(serial_number)
 
     # 获取僚机

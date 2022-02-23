@@ -318,8 +318,15 @@ class Complex_Center(object):
             y_shift = float(xyShift.split(" ")[1])
             if all((-1 < x_shift < 1, -1 < y_shift < 1)):
                 from app.v1.device_common.device_model import Device
-                x_shift = Device(pk=self.device_label).device_width * x_shift
-                y_shift = Device(pk=self.device_label).device_height * y_shift
+                dev_obj = Device(pk=self.device_label)
+
+                serial_number = self.kwargs.get("assist_device_serial_number")
+                if serial_number is not None:
+                    dev_obj = dev_obj.get_subsidiary_device(serial_number=serial_number)
+
+                x_shift = dev_obj.device_width * x_shift
+                y_shift = dev_obj.device_height * y_shift
+
             return (int(x_shift), int(y_shift))
         except Exception as e:
             print(repr(e))

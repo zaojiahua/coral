@@ -241,6 +241,7 @@ class Device(BaseModel):
                 request(method="POST", url=device_create_update_url, json=self.data)
             self.flag = True
             self.set_border(kwargs)
+            self._update_pix_width_height(kwargs['phone_model'])
             self.kx1, self.ky1, self.kx2, self.ky2 = self._keyboard_relative_to_absolute(
                 key_map_position.get(self.phone_model_name, default_key_map_position))
             self.update_subsidiary_device(**kwargs)
@@ -367,7 +368,6 @@ class Device(BaseModel):
         for attr_name, attr_value in kwargs.items():
             if attr_name in self._astra_fields.keys() and not isinstance(attr_value, list):
                 setattr(self, attr_name, attr_value)
-        self._update_pix_width_height(kwargs)
 
     # 考虑到相机 像素宽高进行特殊的处理
     def _update_pix_width_height(self, kwargs):

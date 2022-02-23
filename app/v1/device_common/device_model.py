@@ -310,8 +310,8 @@ class Device(BaseModel):
     # 键盘坐标转换的函数
     def _keyboard_relative_to_absolute(self, coordinate):
         if any((i < 1 for i in coordinate)):
-            coordinate = int(self.pix_width * coordinate[0]), int(self.pix_height * coordinate[1]), int(
-                self.pix_width * coordinate[2]), int(self.pix_height * coordinate[3])
+            coordinate = int(self.device_width * coordinate[0]), int(self.device_height * coordinate[1]), int(
+                self.device_width * coordinate[2]), int(self.device_height * coordinate[3])
         return coordinate
 
     def _update_attr_from_cedar(self, **kwargs):

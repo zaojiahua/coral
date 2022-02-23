@@ -43,9 +43,6 @@ class ChineseMixin(object):
             for key, value in self.keyboard_mapping_dict.items():
                 if letter in key:
                     coor_tuple = (device_obj.kx1 + x * value[0], device_obj.ky1 + y * value[1])
-                    # kx1 kx2都是屏幕的位置，不包括外边框，这里再加上外边框
-                    coor_tuple = (device_obj.device_width / device_obj.pix_width * coor_tuple[0],
-                                  device_obj.device_height / device_obj.pix_height * coor_tuple[1])
                     coor_tuple_list.append(coor_tuple)
                     break
             else:

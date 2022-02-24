@@ -101,6 +101,8 @@ class DefaultMixin(object):
         elif 'G01' in raw_commend:
             pix_points = raw_commend
             opt_type = 'rotate'
+        elif "armReset" in raw_commend:
+            opt_type = "arm_back_home"
         else:
             pix_points = [float(i) for i in raw_commend.split("double_point")[-1].strip().split(" ")]
             opt_type = "double_click"

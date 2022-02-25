@@ -250,13 +250,20 @@ class Handler():
         pass
 
     def _get_screen_point(self, x, y, portrait):
+        # 需要判断是僚机在执行，还是主机在执行，从对应的机器上获取相关数据
         from app.v1.device_common.device_model import Device
+        target_device = Device(pk=self._model.pk)
+
+        serial_number = self.kwargs.get("assist_device_serial_number")
+        if serial_number is not None:
+            target_device = target_device.get_subsidiary_device(serial_number=serial_number)
+
         if portrait == 1:
-            w = Device(pk=self._model.pk).device_width * x
-            h = Device(pk=self._model.pk).device_height * y
+            w = target_device.device_width * x
+            h = target_device.device_height * y
         else:
-            w = Device(pk=self._model.pk).device_height * x
-            h = Device(pk=self._model.pk).device_width * y
+            w = target_device.device_height * x
+            h = target_device.device_width * y
         return w, h
 
     def _relative_double_point(self):

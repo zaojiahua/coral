@@ -126,6 +126,11 @@ class AreaSelectedMixin(object):
     def crop_input_picture_record_position(self, data, ocr_obj, config_name):
         from app.v1.device_common.device_model import Device
         dev_obj = Device(pk=self._model.pk)
+
+        serial_number = self.kwargs.get("assist_device_serial_number")
+        if serial_number is not None:
+            dev_obj = dev_obj.get_subsidiary_device(serial_number=serial_number)
+
         # 拿到手机的分辨率，用来把选区的左上角相对坐标->绝对坐标，后面用来加在识别结果上（因为识别的图是裁剪过，需要点击的位置是全局的）
         h, w = dev_obj.device_height, dev_obj.device_width
         x0, y0 = int(data.get(config_name)[0][0] * w), int(data.get(config_name)[0][1] * h)

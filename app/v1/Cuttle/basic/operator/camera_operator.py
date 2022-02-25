@@ -132,9 +132,10 @@ def camera_init_hk(device_object, **kwargs):
         else:
             # 这里的4和16是软件设置的时候，必须是4和16的倍数
             width = (int(device_object.x2) - int(device_object.x1)) - (int(device_object.x2) - int(device_object.x1)) % 16 + 16
-            offsetx = int(device_object.x1) - int(device_object.x1) % 4
+            offsetx = int(device_object.x1) - int(device_object.x1) % 16
             height = (int(device_object.y2) - int(device_object.y1)) - (int(device_object.y2) - int(device_object.y1)) % 16 + 16
             offsety = int(device_object.y1) - int(device_object.y1) % 4
+            print('设置的roi是：', width, offsetx, height, offsety)
             check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
             check_result(CamObj.MV_CC_SetIntValue, 'Height', height)
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offsetx)

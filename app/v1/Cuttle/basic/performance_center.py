@@ -10,7 +10,7 @@ from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.libs.thread_extensions import executor_callback
-from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
+from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, PERFORMANCE_END_LOOP_TIMEOUT
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from redis_init import redis_client
 
@@ -111,6 +111,9 @@ class PerformanceCenter(object):
                 # 对bias补偿的帧数，先只保存对应图片，不做结果判断，因为不可能在这个阶段出现终止点
                 # 主要是加快一些速度。
                 number, picture, next_picture, _ = self.picture_prepare(number)
+
+        # 设置超时时间
+        begin_time = time.time()
         while self.loop_flag:
             # 这个地方写了两遍不是bug，是特意的，一次取了两张
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
@@ -156,6 +159,9 @@ class PerformanceCenter(object):
                 self.move_flag = False
                 self.back_up_dq.clear()
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
+                raise VideoEndPointNotFound
+            if (time.time() - begin_time) > PERFORMANCE_END_LOOP_TIMEOUT:
+                print('终点超时退出')
                 raise VideoEndPointNotFound
         return 0
 

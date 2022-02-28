@@ -36,10 +36,10 @@ high_exposure_params_feature = [("ExposureTime", 200000.0),
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
-if CORAL_TYPE < 5.1:
-    HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
+if CORAL_TYPE == 5.1:
+    HAND_MAX_Y = 420  # 5L机械臂Y最大行程
 else:
-    HAND_MAX_Y = 420    # 5L机械臂Y最大行程
+    HAND_MAX_Y = 245    # Tcab-5机械臂Y最大行程
 HAND_MAX_Z = 5
 Z_START = 0
 # Z_DOWN = -3.5   tianjing setting

@@ -8,7 +8,7 @@ from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
-from app.v1.Cuttle.basic.hand_serial import HandSerial
+from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
@@ -65,7 +65,7 @@ class HandHandler(Handler, DefaultMixin):
         "input swipe": "_relative_swipe",
         "double_point": "_relative_double_point",
     }
-    arm_exec_content_str = ["arm_back_home"]
+    arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power"]
 
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)
@@ -301,6 +301,14 @@ class HandHandler(Handler, DefaultMixin):
 
     def rotate(self, commend):
         return self.str_func(commend)
+
+    def open_usb_power(self, *args, **kwargs):
+        self.ignore_reset = True
+        return controlUsbPower(status="ON")
+
+    def close_usb_power(self, *args, **kwargs):
+        self.ignore_reset = True
+        return controlUsbPower(status="OFF")
 
     def after_unit(self):
         # unit执行完 5型柜执行移开的操作，防止长时间遮挡摄像头

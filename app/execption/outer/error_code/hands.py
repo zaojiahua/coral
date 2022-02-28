@@ -60,3 +60,9 @@ class CoordinatesNotReasonable(APIException):
     error_code = 3007
     code = 400
     description = 'The Side Key Coordinates Should Not be In the Screen'
+
+
+class ControlUSBPowerFail(APIException):
+    error_code = 3008
+    code = 400
+    description = 'Control USB Power Fail'

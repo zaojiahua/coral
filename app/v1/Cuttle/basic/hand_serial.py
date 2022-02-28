@@ -3,7 +3,10 @@ import time
 import serial
 from serial import SerialException
 
-from app.config.setting import CORAL_TYPE
+from mcush import *
+
+from app.config.setting import CORAL_TYPE, usb_power_com
+from app.execption.outer.error_code.hands import ControlUSBPowerFail
 from app.v1.Cuttle.basic.setting import Z_UP, arm_wait_position
 
 
@@ -75,3 +78,28 @@ class HandSerial:
             return ""
         print('写入机械臂：', self.ser, content)
         return self.ser.write(content.encode())
+
+
+def controlUsbPower(status="ON"):
+    try:
+        s = ShellLab.ShellLab(usb_power_com)
+
+        s.pinOutputLow('0.0')
+        s.pinOutputLow('0.1')
+        s.pinOutputLow('0.2')
+        s.pinOutputLow('0.3')
+
+        if status == "ON":
+            s.pinSetHigh('0.0')
+            s.pinSetHigh('0.3')
+            s.pinSetHigh('0.1')
+            s.pinSetHigh('0.2')
+        else:
+            s.pinSetLow('0.0')
+            s.pinSetLow('0.3')
+            s.pinSetLow('0.1')
+            s.pinSetLow('0.2')
+        return 0
+    except Exception as e:
+        print("Control usb power fail, info: ", str(e))
+        raise ControlUSBPowerFail

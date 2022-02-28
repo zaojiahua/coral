@@ -18,6 +18,7 @@ from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, 
 from app.execption.outer.error_code.camera import ArmReInit, NoCamera, PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
+from app.v1.Cuttle.basic.hand_serial import controlUsbPower
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler
@@ -185,6 +186,7 @@ class PaneConfigView(MethodView):
                 function, attribute = (camera_start, "has_camera")
             else:
                 function, attribute = (hand_init, "has_arm")
+                controlUsbPower()
             setattr(device_object, attribute, True)
             future = executer.submit(function, port, device_object, init=True, original=True)
             exception = future.exception(timeout=2)

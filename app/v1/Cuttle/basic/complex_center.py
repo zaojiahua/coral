@@ -244,7 +244,7 @@ class Complex_Center(object):
         th, tw = template.shape[:2]
         # add light pyramid to support difference of phone-light
         template_list = [np.clip(template * present, 0, 255).astype(np.uint8) for present in
-                         light_pyramid_setting] if CORAL_TYPE == 5 else [template]
+                         light_pyramid_setting] if math.floor(CORAL_TYPE) == 5 else [template]
         for template in template_list:
             result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
             min_val_original, _, _, _ = cv2.minMaxLoc(result)

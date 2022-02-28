@@ -101,5 +101,7 @@ def controlUsbPower(status="ON"):
             s.pinSetLow('0.2')
         return 0
     except Exception as e:
+        if status == "init":
+            return 0
         print("Control usb power fail, info: ", str(e))
         raise ControlUSBPowerFail

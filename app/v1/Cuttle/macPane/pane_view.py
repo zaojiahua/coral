@@ -186,7 +186,7 @@ class PaneConfigView(MethodView):
                 function, attribute = (camera_start, "has_camera")
             else:
                 function, attribute = (hand_init, "has_arm")
-                controlUsbPower()
+                controlUsbPower(status='init')
             setattr(device_object, attribute, True)
             future = executer.submit(function, port, device_object, init=True, original=True)
             exception = future.exception(timeout=2)

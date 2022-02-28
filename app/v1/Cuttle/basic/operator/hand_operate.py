@@ -1,8 +1,9 @@
-import math
 import re
 import time
 
 import numpy as np
+
+from mcush import *
 
 from app.config.setting import CORAL_TYPE
 from app.config.url import phone_model_url
@@ -237,7 +238,7 @@ class HandHandler(Handler, DefaultMixin):
                                                                     others_orders=press_side_order[3:],
                                                                     wait_time=self.speed)
         rev = hand_serial_obj_dict.get(self._model.pk).recv(buffer_size=64)
-        time.sleep(len(press_side_order) * 1 - 2)
+        time.sleep(wait_time)
         return rev
 
     def press_out_screen(self, pix_point, **kwargs):
@@ -246,14 +247,16 @@ class HandHandler(Handler, DefaultMixin):
                                                                     others_orders=[click_orders[-1]],
                                                                     wait_time=self.speed)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(2)
+        time.sleep(wait_time)
         return result
 
     def arm_back_home(self, *args, **kwargs):
         back_order = self.arm_back_home_order()
-        hand_serial_obj_dict.get(self._model.pk).send_out_key_order(back_order[:2], others_orders=back_order[2:])
-        time.sleep(2)
-        return hand_serial_obj_dict.get(self._model.pk).recv(buffer_size=64)
+        serial_obj_for_back_home = hand_serial_obj_dict.get(self._model.pk)
+        for order in back_order:
+            serial_obj_for_back_home.send_single_order(order)
+            serial_obj_for_back_home.recv(buffer_size=64)
+        return 0
 
     def _find_key_point(self, name):
         from app.v1.device_common.device_model import Device
@@ -305,15 +308,15 @@ class HandHandler(Handler, DefaultMixin):
 
     def open_usb_power(self, *args, **kwargs):
         self.ignore_reset = True
-        return controlUsbPower(status="ON")
+        controlUsbPower(status="ON")
 
     def close_usb_power(self, *args, **kwargs):
         self.ignore_reset = True
-        return controlUsbPower(status="OFF")
+        controlUsbPower(status="OFF")
 
     def after_unit(self):
         # unit执行完 5型柜执行移开的操作，防止长时间遮挡摄像头
-        if self.ignore_reset is False and math.floor(CORAL_TYPE) == 5:
+        if self.ignore_reset is False and CORAL_TYPE == 5:
             self.reset_hand()
 
     # TODO 怎样处理如果传入点中有一个或多个计算出的坐标超过操作台范围
@@ -433,30 +436,28 @@ class HandHandler(Handler, DefaultMixin):
             ]
 
     @staticmethod
-    def press_side_order(pix_point, is_left=False, **kwargs):
+    def press_side_order(pix_point, is_left=False):
         """
         :param point: 要按压的侧边键坐标 eg：[x,y,z]
         :param is_left: 是否是左侧边键
         :return: 返回按压指令集
         """
         x_offset = pix_point[0] - X_SIDE_KEY_OFFSET if is_left else pix_point[0] + X_SIDE_KEY_OFFSET
-        speed = kwargs['speed'] if kwargs.get("speed") else MOVE_SPEED
-        press_side_speed = kwargs['press_side_speed'] if kwargs.get("press_sid_speed") else PRESS_SIDE_KEY_SPEED
-
         return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, speed),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], speed),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (pix_point[0], pix_point[1], pix_point[2], press_side_speed),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], press_side_speed),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, speed),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (pix_point[0], pix_point[1], pix_point[2], PRESS_SIDE_KEY_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], PRESS_SIDE_KEY_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, MOVE_SPEED),
         ]
 
     @staticmethod
     def arm_back_home_order():
         return [
-            'G01 Z%dF5000 \r\n' % Z_UP,
+            'G01 Z%dF5000 \r\n' % (Z_UP),
             '$H \r\n',
             'G92 X0Y0Z0 \r\n',
+            'G90 \r\n',
             arm_wait_position,
         ]
 

@@ -24,7 +24,7 @@ from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_ini
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
-    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE
+    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -320,8 +320,11 @@ class PaneClickTestView(MethodView):
 
     @staticmethod
     def press(device_label, x, y, z, is_left):
+        speed = MOVE_SPEED - 10000
+        press_side_speed = PRESS_SIDE_KEY_SPEED / 2
         # 生成指令
-        press_orders = HandHandler.press_side_order([x, y, z], is_left=is_left)
+        press_orders = HandHandler.press_side_order([x, y, z], is_left=is_left, speed=speed,
+                                                    press_side_speed=press_side_speed)
         # 执行指令
         hand_serial_obj_dict.get(device_label).send_out_key_order(press_orders[:3],
                                                                   others_orders=press_orders[3:],

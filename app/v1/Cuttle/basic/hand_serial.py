@@ -89,7 +89,7 @@ def controlUsbPower(status="ON"):
         s.pinOutputLow('0.2')
         s.pinOutputLow('0.3')
 
-        if status == "ON":
+        if status == "ON" or status == "init":
             s.pinSetHigh('0.0')
             s.pinSetHigh('0.3')
             s.pinSetHigh('0.1')

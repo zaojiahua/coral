@@ -21,6 +21,7 @@ COPY . /app/coral
 WORKDIR /app/coral
 
 RUN pip3 install --upgrade pip \
+    && pip3 install pymodbus==2.5.3 \
     && pip3 --default-timeout=1000 install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple \
     && bash setup.sh \
     && cp -r /opt/MVS/lib/64/. /lib/ \

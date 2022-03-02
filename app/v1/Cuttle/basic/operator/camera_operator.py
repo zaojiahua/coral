@@ -40,24 +40,27 @@ def camera_start(camera_id, device_object, **kwargs):
         camera_dq_dict[camera_dq_key] = dq
         # 性能测试相机初始化
         redis_client.set(f"g_bExit_{camera_id}", "0")
-        if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
-            response = camera_init_hk(camera_id, device_object, **kwargs)
+
+        if CORAL_TYPE in [5, 5.3]:
+            response = camera_init_hk(device_object, **kwargs)
             temporary = kwargs.get('temporary', True)
             print("half done  has camera? ", device_object.has_camera, 'temporary:', temporary)
-
-            if temporary is True:
-                @func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
-                def _inner_func():
-                    return camera_start_hk(camera_id, dq, *response, temporary=temporary)
-                _inner_func()
-            else:
-                camera_start_hk(camera_id, dq, *response, temporary=temporary)
         else:
             # 功能测试相机初始化
             kwargs['feature_test'] = True
-            response = camera_init_hk(camera_id, device_object, **kwargs)
+            response = camera_init_hk(device_object, **kwargs)
+            temporary = True
             print("has camera?", device_object.has_camera)
-            camera_start_hk_feature(camera_id, dq, *response)
+
+        if temporary is True:
+            @func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
+            def _inner_func():
+                return camera_start_hk(dq, *response, temporary=temporary)
+
+            _inner_func()
+        else:
+            camera_start_hk(dq, *response, temporary=temporary)
+
     except Exception as e:
         print('相机初始化异常：', e)
         raise e
@@ -177,22 +180,6 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
                 redis_client.set(f'g_bExit_{camera_id}', 1)
             else:
                 time.sleep(0.001)
-        else:
-            continue
-
-
-# 如果一直获取不到图片，这里可能存在超时的问题
-@func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
-def camera_start_hk_feature(camera_id, dq, data_buf, n_payload_size, st_frame_info):
-    cam_obj = CamObjList[camera_id]
-    while True:
-        # 这是一个轮询的请求，5毫秒timeout，去获取图片
-        ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), n_payload_size, st_frame_info, GET_ONE_FRAME_TIMEOUT)
-        if ret == 0:
-            camera_snapshot(dq, data_buf, st_frame_info, cam_obj)
-            stop_camera(cam_obj)
-            redis_client.set(f'g_bExit_{camera_id}', 1)
-            break
         else:
             continue
 

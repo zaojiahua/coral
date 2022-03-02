@@ -32,6 +32,8 @@ class Complex_Center(object):
 
     def __init__(self, device_label, requiredWords=None, xyShift="0 0", inputImgFile=None, work_path="", *args,
                  **kwargs):
+        # 存很多辅助信息 后边初始化的时候用，所以先设置
+        self.kwargs = kwargs
         self.device_label = device_label
         # _pic_path 存实例化时传入的图（很可能没有） 有裁剪区域的时候，裁剪以后的图也是放到这个地方
         self._pic_path = inputImgFile
@@ -56,8 +58,6 @@ class Complex_Center(object):
         if device.has_arm and device.has_rotate_arm:
             self.mode = 0
         self.logger = setup_logger(f'{device_label}', f'{device_label}.log')
-        # 存很多辅助信息
-        self.kwargs = kwargs
         # 上下裁剪的补偿，用于文字点击时，先裁剪掉上半屏幕（防止同样字干扰），再从结果中加回offset得到真实坐标。
         self.crop_offset = [0, 0, device.device_width, device.device_height]
 
@@ -244,7 +244,7 @@ class Complex_Center(object):
         th, tw = template.shape[:2]
         # add light pyramid to support difference of phone-light
         template_list = [np.clip(template * present, 0, 255).astype(np.uint8) for present in
-                         light_pyramid_setting] if CORAL_TYPE == 5 else [template]
+                         light_pyramid_setting] if math.floor(CORAL_TYPE) == 5 else [template]
         for template in template_list:
             result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
             min_val_original, _, _, _ = cv2.minMaxLoc(result)
@@ -318,8 +318,15 @@ class Complex_Center(object):
             y_shift = float(xyShift.split(" ")[1])
             if all((-1 < x_shift < 1, -1 < y_shift < 1)):
                 from app.v1.device_common.device_model import Device
-                x_shift = Device(pk=self.device_label).device_width * x_shift
-                y_shift = Device(pk=self.device_label).device_height * y_shift
+                dev_obj = Device(pk=self.device_label)
+
+                serial_number = self.kwargs.get("assist_device_serial_number")
+                if serial_number is not None:
+                    dev_obj = dev_obj.get_subsidiary_device(serial_number=serial_number)
+
+                x_shift = dev_obj.device_width * x_shift
+                y_shift = dev_obj.device_height * y_shift
+
             return (int(x_shift), int(y_shift))
         except Exception as e:
             print(repr(e))

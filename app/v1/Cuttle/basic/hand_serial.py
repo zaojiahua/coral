@@ -3,7 +3,10 @@ import time
 import serial
 from serial import SerialException
 
-from app.config.setting import CORAL_TYPE
+from mcush import *
+
+from app.config.setting import CORAL_TYPE, usb_power_com
+from app.execption.outer.error_code.hands import ControlUSBPowerFail
 from app.v1.Cuttle.basic.setting import Z_UP, arm_wait_position
 
 
@@ -21,7 +24,7 @@ class HandSerial:
     def send_single_order(self, g_order):
         return self.write(g_order)
 
-    def send_out_key_order(self, g_orders, others_orders, wait_time, **kwargs):
+    def send_out_key_order(self, g_orders, others_orders, wait_time=0, **kwargs):
         deviate_order = arm_wait_position
         for o_order in g_orders:
             self.write(o_order)
@@ -30,7 +33,6 @@ class HandSerial:
         for other_order in others_orders:
             self.write(other_order)
         self.write(deviate_order)
-        time.sleep(len(g_orders)*1)
         return 0
 
     def send_list_order(self, g_orders, **kwargs):
@@ -76,3 +78,30 @@ class HandSerial:
             return ""
         print('写入机械臂：', self.ser, content)
         return self.ser.write(content.encode())
+
+
+def controlUsbPower(status="ON"):
+    try:
+        s = ShellLab.ShellLab(usb_power_com)
+
+        s.pinOutputLow('0.0')
+        s.pinOutputLow('0.1')
+        s.pinOutputLow('0.2')
+        s.pinOutputLow('0.3')
+
+        if status == "ON" or status == "init":
+            s.pinSetHigh('0.0')
+            s.pinSetHigh('0.3')
+            s.pinSetHigh('0.1')
+            s.pinSetHigh('0.2')
+        else:
+            s.pinSetLow('0.0')
+            s.pinSetLow('0.3')
+            s.pinSetLow('0.1')
+            s.pinSetLow('0.2')
+        return 0
+    except Exception as e:
+        if status == "init":
+            return 0
+        print("Control usb power fail, info: ", str(e))
+        raise ControlUSBPowerFail

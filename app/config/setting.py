@@ -69,6 +69,7 @@ CORAL_TYPE_NAME = {
 
 arm_com = os.environ.get('ARM_COM', '/dev/arm')
 rotate_com = os.environ.get('ROTATE_COM', '/dev/rotate')
+usb_power_com = os.environ.get("USB_COM", '/dev/USBPower')
 
 if CORAL_TYPE == 3:
     HARDWARE_MAPPING_LIST = [rotate_com]
@@ -80,7 +81,6 @@ elif CORAL_TYPE == 5.3:
     HARDWARE_MAPPING_LIST = ['1', '2']
 else:
     HARDWARE_MAPPING_LIST = ['1', arm_com]
-
 
 Bugreport_file_name = "bugreport.zip"
 

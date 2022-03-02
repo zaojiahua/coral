@@ -129,7 +129,8 @@ class Device(BaseModel):
                         "rom_version,rom_version.version,paneslot.paneview.type,paneslot.paneview.camera," \
                         "paneslot.paneview.id,paneslot.paneview.robot_arm," \
                         "subsidiarydevice.id,subsidiarydevice.serial_number,subsidiarydevice.order," \
-                        "subsidiarydevice.phone_model.height_resolution,subsidiarydevice.phone_model.width_resolution"
+                        "subsidiarydevice.phone_model.height_resolution,subsidiarydevice.phone_model.width_resolution," \
+                        "subsidiarydevice.phone_model.phone_model_name"
         if device_label is None:
             param = {"status__in": "ReefList[idle{%,%}busy{%,%}error{%,%}occupied]",
                      "cabinet_id": HOST_IP.split(".")[-1],
@@ -240,7 +241,8 @@ class Device(BaseModel):
                 request(method="POST", url=device_create_update_url, json=self.data)
             self.flag = True
             self.set_border(kwargs)
-            self.kx1, self.ky1, self.kx2, self.ky2 = self._relative_to_absolute(
+            self._update_pix_width_height(kwargs['phone_model'])
+            self.kx1, self.ky1, self.kx2, self.ky2 = self._keyboard_relative_to_absolute(
                 key_map_position.get(self.phone_model_name, default_key_map_position))
             self.update_subsidiary_device(**kwargs)
         except Exception as e:
@@ -265,6 +267,9 @@ class Device(BaseModel):
             device_obj = Device(pk=serial_number)
             device_obj._update_pix_width_height(sub_device['phone_model'])
             device_obj.order = sub_device['order']
+            device_obj.phone_model_name = sub_device['phone_model']['phone_model_name']
+            device_obj.kx1, device_obj.ky1, device_obj.kx2, device_obj.ky2 = device_obj._keyboard_relative_to_absolute(
+                key_map_position.get(device_obj.phone_model_name, default_key_map_position))
             self.subsidiarydevice.rpush(serial_number)
 
     # 获取僚机
@@ -302,7 +307,8 @@ class Device(BaseModel):
                 self.y2 = 0
             print('设置的边框是:', self.x1, self.y1, self.x2, self.y2)
 
-    def _relative_to_absolute(self, coordinate):
+    # 键盘坐标转换的函数
+    def _keyboard_relative_to_absolute(self, coordinate):
         if any((i < 1 for i in coordinate)):
             coordinate = int(self.device_width * coordinate[0]), int(self.device_height * coordinate[1]), int(
                 self.device_width * coordinate[2]), int(self.device_height * coordinate[3])
@@ -362,7 +368,6 @@ class Device(BaseModel):
         for attr_name, attr_value in kwargs.items():
             if attr_name in self._astra_fields.keys() and not isinstance(attr_value, list):
                 setattr(self, attr_name, attr_value)
-        self._update_pix_width_height(kwargs)
 
     # 考虑到相机 像素宽高进行特殊的处理
     def _update_pix_width_height(self, kwargs):

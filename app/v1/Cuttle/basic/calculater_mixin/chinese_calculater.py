@@ -52,9 +52,15 @@ class ChineseMixin(object):
     def chinese_support(self, words):
         pinyin = self.transfer_2_pinyin(words)
         from app.v1.device_common.device_model import Device
+        dev_obj = Device(pk=self._model.pk)
         coor_tuple_list = []
+
+        serial_number = self.kwargs.get("assist_device_serial_number")
+        if serial_number is not None:
+            dev_obj = dev_obj.get_subsidiary_device(serial_number=serial_number)
+
         for pinyin_word in pinyin:
-            coor_tuple_list = self.pinyin_2_coordinate(pinyin_word, Device(pk=self._model.pk), coor_tuple_list)
+            coor_tuple_list = self.pinyin_2_coordinate(pinyin_word, dev_obj, coor_tuple_list)
         ocr_choice = {"ocr-server": 1}
         ocr_choice.update(self.kwargs)
         with Complex_Center(**ocr_choice, requiredWords=words) as ocr_obj:

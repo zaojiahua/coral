@@ -3,12 +3,14 @@ import time
 
 import numpy as np
 
+from mcush import *
+
 from app.config.setting import CORAL_TYPE
 from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
-from app.v1.Cuttle.basic.hand_serial import HandSerial
+from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
@@ -65,6 +67,7 @@ class HandHandler(Handler, DefaultMixin):
         "input swipe": "_relative_swipe",
         "double_point": "_relative_double_point",
     }
+    arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power"]
 
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)
@@ -78,8 +81,11 @@ class HandHandler(Handler, DefaultMixin):
         # 根据adb指令中的关键词dispatch到对应机械臂方法,pix_points为adb模式下的截图中的像素坐标
         pix_points, opt_type, self.speed, absolute = self.grouping(self.exec_content)
         print('pix_points', pix_points, '*' * 10)
-        # 根据截图中的像素坐标，根据dpi和起始点坐标，换算到物理距离中毫米为单位的坐标
-        self.exec_content = self.transform_pix_point(pix_points, absolute)
+        if opt_type in self.arm_exec_content_str:
+            self.exec_content = list()
+        else:
+            # 根据截图中的像素坐标，根据dpi和起始点坐标，换算到物理距离中毫米为单位的坐标
+            self.exec_content = self.transform_pix_point(pix_points, absolute)
         # 龙门架机械臂self.exec_content是列表（放点击的坐标），所以会找self.func这个方法来执行（写在基类的流程中）
         # 旋转机械臂self.exec_content是字符串命令，所以会找self.str_func这个方法来执行
         self.func = getattr(self, opt_type)
@@ -166,7 +172,8 @@ class HandHandler(Handler, DefaultMixin):
         # 按返回键，需要在5#型柜 先配置过返回键的位置
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order(self.calculate([device_obj.back_x, device_obj.back_y, device_obj.back_z], absolute=False))
+        click_orders = self.__single_click_order(
+            self.calculate([device_obj.back_x, device_obj.back_y, device_obj.back_z], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time * len(click_orders))
@@ -176,7 +183,8 @@ class HandHandler(Handler, DefaultMixin):
         # 双击返回键  同5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__double_click_order(self.calculate([device_obj.back_x, device_obj.back_y, device_obj.back_z], absolute=False))
+        click_orders = self.__double_click_order(
+            self.calculate([device_obj.back_x, device_obj.back_y, device_obj.back_z], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time * len(click_orders))
@@ -186,7 +194,8 @@ class HandHandler(Handler, DefaultMixin):
         # 点击桌面键 5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order(self.calculate([device_obj.home_x, device_obj.home_y, device_obj.home_z], absolute=False))
+        click_orders = self.__single_click_order(
+            self.calculate([device_obj.home_x, device_obj.home_y, device_obj.home_z], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time * len(click_orders))
@@ -196,7 +205,8 @@ class HandHandler(Handler, DefaultMixin):
         # 点击菜单键 5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order(self.calculate([device_obj.menu_x, device_obj.menu_y, device_obj.menu_z], absolute=False))
+        click_orders = self.__single_click_order(
+            self.calculate([device_obj.menu_x, device_obj.menu_y, device_obj.menu_z], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders)
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time * len(click_orders))
@@ -206,7 +216,8 @@ class HandHandler(Handler, DefaultMixin):
         # 长按菜单键 5#型柜使用
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        click_orders = self.__single_click_order(self.calculate([device_obj.menu_x, device_obj.menu_y, device_obj.menu_z], absolute=False))
+        click_orders = self.__single_click_order(
+            self.calculate([device_obj.menu_x, device_obj.menu_y, device_obj.menu_z], absolute=False))
         hand_serial_obj_dict.get(self._model.pk).send_list_order(click_orders[:2],
                                                                  other_orders=[click_orders[-1]],
                                                                  wait=True)
@@ -238,6 +249,14 @@ class HandHandler(Handler, DefaultMixin):
         result = hand_serial_obj_dict.get(self._model.pk).recv()
         time.sleep(wait_time)
         return result
+
+    def arm_back_home(self, *args, **kwargs):
+        back_order = self.arm_back_home_order()
+        serial_obj_for_back_home = hand_serial_obj_dict.get(self._model.pk)
+        for order in back_order:
+            serial_obj_for_back_home.send_single_order(order)
+            serial_obj_for_back_home.recv(buffer_size=64)
+        return 0
 
     def _find_key_point(self, name):
         from app.v1.device_common.device_model import Device
@@ -286,6 +305,14 @@ class HandHandler(Handler, DefaultMixin):
 
     def rotate(self, commend):
         return self.str_func(commend)
+
+    def open_usb_power(self, *args, **kwargs):
+        self.ignore_reset = True
+        controlUsbPower(status="ON")
+
+    def close_usb_power(self, *args, **kwargs):
+        self.ignore_reset = True
+        controlUsbPower(status="OFF")
 
     def after_unit(self):
         # unit执行完 5型柜执行移开的操作，防止长时间遮挡摄像头
@@ -409,19 +436,31 @@ class HandHandler(Handler, DefaultMixin):
             ]
 
     @staticmethod
-    def press_side_order(pix_point, is_left=False):
+    def press_side_order(pix_point, is_left=False, **kwargs):
         """
         :param point: 要按压的侧边键坐标 eg：[x,y,z]
         :param is_left: 是否是左侧边键
         :return: 返回按压指令集
         """
         x_offset = pix_point[0] - X_SIDE_KEY_OFFSET if is_left else pix_point[0] + X_SIDE_KEY_OFFSET
+        speed = kwargs['speed'] if kwargs.get('speed') else MOVE_SPEED
+        press_side_speed = kwargs['press_side_speed'] if kwargs.get('press_side_speed') else PRESS_SIDE_KEY_SPEED
         return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (pix_point[0], pix_point[1], pix_point[2], PRESS_SIDE_KEY_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], PRESS_SIDE_KEY_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, speed),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], speed),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (pix_point[0], pix_point[1], pix_point[2], press_side_speed),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], press_side_speed),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, speed),
+        ]
+
+    @staticmethod
+    def arm_back_home_order():
+        return [
+            'G01 Z%dF5000 \r\n' % (Z_UP),
+            '$H \r\n',
+            'G92 X0Y0Z0 \r\n',
+            'G90 \r\n',
+            arm_wait_position,
         ]
 
 

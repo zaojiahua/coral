@@ -76,6 +76,8 @@ elif CORAL_TYPE == 3.1:
     HARDWARE_MAPPING_LIST = [rotate_com, arm_com]
 elif CORAL_TYPE == 4:
     HARDWARE_MAPPING_LIST = [arm_com]
+elif CORAL_TYPE == 5.3:
+    HARDWARE_MAPPING_LIST = ['1', '2']
 else:
     HARDWARE_MAPPING_LIST = ['1', arm_com]
 

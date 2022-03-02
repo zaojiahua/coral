@@ -92,7 +92,7 @@ chinese_ingore = 0.55
 # 屏幕右侧开关占比
 right_switch_percent = 0.87
 
-CamObjList = []
+CamObjList = {}
 normal_result = (False, None)
 blur_signal = "[B]"
 # 需要按常见顺序调整 亮度百分比的顺序 尽可能优先匹配到常见亮度变化。

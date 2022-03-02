@@ -18,6 +18,7 @@ from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, CameraMax, \
     camera_params_240, CamObjList, camera_params_feature, high_exposure_params, high_exposure_params_feature
 from app.execption.outer.error_code.imgtool import CameraNotResponse
+from app.config.setting import HARDWARE_MAPPING_LIST
 from redis_init import redis_client
 
 MoveToPress = 9
@@ -27,34 +28,36 @@ GET_ONE_FRAME_TIMEOUT = 5
 
 # 相机初始化
 def camera_start(camera_id, device_object, **kwargs):
+    # 根据camera_id来支持多摄像头的方案
     print('camera_id:', camera_id)
     try:
+        camera_dq_key = device_object.pk + camera_id
         # 先销毁
-        if camera_dq_dict.get(device_object.pk) is not None:
-            del camera_dq_dict[device_object.pk]
+        if camera_dq_dict.get(camera_dq_key) is not None:
+            del camera_dq_dict[camera_dq_key]
         # 为了保证后续操作的统一性，将图片统一放到队列中
         dq = deque(maxlen=CameraMax)
-        camera_dq_dict[device_object.pk] = dq
+        camera_dq_dict[camera_dq_key] = dq
         # 性能测试相机初始化
-        redis_client.set("g_bExit", "0")
-        if CORAL_TYPE == 5:
-            response = camera_init_hk(device_object, **kwargs)
+        redis_client.set(f"g_bExit_{camera_id}", "0")
+        if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
+            response = camera_init_hk(camera_id, device_object, **kwargs)
             temporary = kwargs.get('temporary', True)
             print("half done  has camera? ", device_object.has_camera, 'temporary:', temporary)
 
             if temporary is True:
                 @func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
                 def _inner_func():
-                    return camera_start_hk(dq, *response, temporary=temporary)
+                    return camera_start_hk(camera_id, dq, *response, temporary=temporary)
                 _inner_func()
             else:
-                camera_start_hk(dq, *response, temporary=temporary)
+                camera_start_hk(camera_id, dq, *response, temporary=temporary)
         else:
             # 功能测试相机初始化
             kwargs['feature_test'] = True
-            response = camera_init_hk(device_object, **kwargs)
+            response = camera_init_hk(camera_id, device_object, **kwargs)
             print("has camera?", device_object.has_camera)
-            camera_start_hk_feature(dq, *response)
+            camera_start_hk_feature(camera_id, dq, *response)
     except Exception as e:
         print('相机初始化异常：', e)
         raise e
@@ -62,14 +65,14 @@ def camera_start(camera_id, device_object, **kwargs):
         print('获取图片超时了！！！')
         raise e
     finally:
-        redis_client.set("g_bExit", "1")
+        redis_client.set(f"g_bExit_{camera_id}", "1")
 
 
-def camera_init_hk(device_object, **kwargs):
+def camera_init_hk(camera_id, device_object, **kwargs):
     inited = False
-    if len(CamObjList) > 0:
+    if camera_id in CamObjList:
         inited = True
-        CamObj = CamObjList[-1]
+        CamObj = CamObjList[camera_id]
 
     if not inited:
         deviceList = MV_CC_DEVICE_INFO_LIST()
@@ -77,7 +80,7 @@ def camera_init_hk(device_object, **kwargs):
         check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
         CamObj = MvCamera()
         # index 0--->第一个设备
-        stDeviceList = cast(deviceList.pDeviceInfo[0], POINTER(MV_CC_DEVICE_INFO)).contents
+        stDeviceList = cast(deviceList.pDeviceInfo[int(camera_id) - 1], POINTER(MV_CC_DEVICE_INFO)).contents
         check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
 
         check_result(CamObj.MV_CC_OpenDevice, 5, 0)
@@ -152,18 +155,18 @@ def camera_init_hk(device_object, **kwargs):
     stFrameInfo = MV_FRAME_OUT_INFO_EX()
 
     if not inited:
-        CamObjList.append(CamObj)
+        CamObjList[camera_id] = CamObj
 
     memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
     return data_buf, nPayloadSize, stFrameInfo
 
 
 # temporary：性能测试的时候需要持续不断的往队列里边放图片，但是在其他情况，只需要获取当时的一张截图即可
-def camera_start_hk(dq, data_buf, n_payload_size, st_frame_info, temporary=True):
+def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temporary=True):
     # 这个是海康摄像头持续获取图片的方法，原理还是用ctypes模块调用.dll或者.so文件中的变量
-    cam_obj = CamObjList[-1]
+    cam_obj = CamObjList[camera_id]
     while True:
-        if redis_client.get("g_bExit") == "1":
+        if redis_client.get(f"g_bExit_{camera_id}") == "1":
             stop_camera(cam_obj)
             break
         # 这个一个轮询的请求，5毫秒timeout，去获取图片
@@ -171,7 +174,7 @@ def camera_start_hk(dq, data_buf, n_payload_size, st_frame_info, temporary=True)
         if ret == 0:
             camera_snapshot(dq, data_buf, st_frame_info, cam_obj)
             if temporary is True:
-                redis_client.set('g_bExit', 1)
+                redis_client.set(f'g_bExit_{camera_id}', 1)
             else:
                 time.sleep(0.001)
         else:
@@ -180,15 +183,15 @@ def camera_start_hk(dq, data_buf, n_payload_size, st_frame_info, temporary=True)
 
 # 如果一直获取不到图片，这里可能存在超时的问题
 @func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
-def camera_start_hk_feature(dq, data_buf, n_payload_size, st_frame_info):
-    cam_obj = CamObjList[-1]
+def camera_start_hk_feature(camera_id, dq, data_buf, n_payload_size, st_frame_info):
+    cam_obj = CamObjList[camera_id]
     while True:
         # 这是一个轮询的请求，5毫秒timeout，去获取图片
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), n_payload_size, st_frame_info, GET_ONE_FRAME_TIMEOUT)
         if ret == 0:
             camera_snapshot(dq, data_buf, st_frame_info, cam_obj)
             stop_camera(cam_obj)
-            redis_client.set('g_bExit', 1)
+            redis_client.set(f'g_bExit_{camera_id}', 1)
             break
         else:
             continue
@@ -213,7 +216,11 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
     # 得到图片做最简单处理就放入deque,这块不要做旋转等操作，否则跟不上240帧的获取速度
     image = np.asarray(content, dtype="uint8")
     image = image.reshape((stFrameInfo.nHeight, stFrameInfo.nWidth, 3))
-    dq.append(image)
+    dq.append({'image': image,
+               'host_timestamp': stFrameInfo.nHostTimeStamp,
+               'dev_timestamp_high': stFrameInfo.nDevTimeStampHigh,
+               'dev_timestamp_low': stFrameInfo.nDevTimeStampLow,
+               'frame_num': stFrameInfo.nFrameNum})
     print('获取到图片了')
 
 
@@ -265,31 +272,83 @@ class CameraHandler(Handler):
         return "", "ignore"
 
     def snap_shot(self, *args, **kwargs):
-        time.sleep(0.5)
+        # 摄像头数量不一样的时候，方案不同
+        camera_ids = []
+        for camera_id in HARDWARE_MAPPING_LIST:
+            if not camera_id.isdigit():
+                continue
+            camera_ids.append(camera_id)
 
-        # 相机正在获取图片的时候 不能再次使用
-        if redis_client.get("g_bExit") == "0":
-            raise CameraInUse()
+        futures = []
+        for camera_id in camera_ids:
+            # 相机正在获取图片的时候 不能再次使用
+            if redis_client.get(f"g_bExit_{camera_id}") == "0":
+                raise CameraInUse()
 
-        image = None
-        executer = ThreadPoolExecutor()
-        future = executer.submit(camera_start, 1, self._model, high_exposure=self.high_exposure, original=self.original)
-        for _ in as_completed([future]):
-            image = camera_dq_dict.get(self._model.pk)[-1]
-            if not self.original:
-                image = self.get_roi(image)
-                image = np.rot90(image, 3)
+            executer = ThreadPoolExecutor()
+            temporary = False if len(camera_ids) > 1 and CORAL_TYPE == 5.2 else True
+            future = executer.submit(camera_start,
+                                     camera_id,
+                                     self._model,
+                                     high_exposure=self.high_exposure,
+                                     original=self.original,
+                                     temporary=temporary)
+            futures.append(future)
 
-        try:
-            self.src = image
-        except UnboundLocalError:
-            raise CameraNotResponse
+        # 默认使用第一个相机中的截图
+        if len(camera_ids) == 1 or CORAL_TYPE != 5.3:
+            image = None
+            for _ in as_completed(futures):
+                image = camera_dq_dict.get(self._model.pk + camera_ids[0])[-1]['image']
+                if not self.original:
+                    image = self.get_roi(image)
+                    image = np.rot90(image, 3)
+
+            try:
+                self.src = image
+            except UnboundLocalError:
+                raise CameraNotResponse
+        else:
+            # 拼接图像 等待1s 多拍几张图片 方便同步
+            time.sleep(1)
+            for camera_id in camera_ids:
+                redis_client.set(f"g_bExit_{camera_id}", "1")
+            for _ in as_completed(futures):
+                print('线程结束了')
+            print(camera_ids, 'a' * 10)
+            for camera_id in camera_ids:
+                # 在这里进行运算，选出一张图片，赋给self.src
+                for src in camera_dq_dict.get(self._model.pk + camera_id):
+                    frame_num = src['frame_num']
+                    file_path = f'camera_{camera_id}/{frame_num}.png'
+                    print(frame_num)
+                    cv2.imwrite(file_path, src['image'])
+            # self.get_syn_frame(*[camera_dq_dict.get(self._model.pk + camera_id) for camera_id in camera_ids])
 
         return 0
 
     def get_roi(self, src):
         # return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
         return src
+
+    # 从多个相机中获取同步的内容，同步的第一帧应该是最晚开始拍摄的第一个相机的第一帧，
+    # 其他相机找到和这个相机第一帧同步的帧，后边的每一个帧就是一一对应的关系。同步的最后一帧应该是最早结束拍摄的相机的最后一帧，
+    # 其他相机晚于这帧后边的内容不再使用
+    def get_syn_frame(self, *frame_lists):
+        # 先找到最晚开始拍摄的相机
+        min_frame = frame_lists[0][0]
+        for i in range(10):
+            if i > 0:
+                print(frame_lists[1][i]['host_timestamp'] - frame_lists[1][i-1]['host_timestamp'])
+            # print(frame_lists[1][i]['dev_timestamp_low'])
+            print('----------------')
+        # for f_l in frame_lists:
+        #     # print(f_l[0]['dev_timestamp_low'])
+        #     # print(f_l[0]['frame_num'])
+        #     # print(f_l[0][''])
+        #     print('-----------------')
+            # if f_l[0][''] < min_frame['']:
+            #     pass
 
     def move(self, *args, **kwargs):
         if hasattr(self, "src"):

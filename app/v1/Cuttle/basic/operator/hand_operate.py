@@ -436,19 +436,21 @@ class HandHandler(Handler, DefaultMixin):
             ]
 
     @staticmethod
-    def press_side_order(pix_point, is_left=False):
+    def press_side_order(pix_point, is_left=False, **kwargs):
         """
         :param point: 要按压的侧边键坐标 eg：[x,y,z]
         :param is_left: 是否是左侧边键
         :return: 返回按压指令集
         """
         x_offset = pix_point[0] - X_SIDE_KEY_OFFSET if is_left else pix_point[0] + X_SIDE_KEY_OFFSET
+        speed = kwargs['speed'] if kwargs.get['speed'] else MOVE_SPEED
+        press_side_speed = kwargs['press_side_speed'] if kwargs.get['press_side_speed'] else PRESS_SIDE_KEY_SPEED
         return [
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], MOVE_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (pix_point[0], pix_point[1], pix_point[2], PRESS_SIDE_KEY_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], PRESS_SIDE_KEY_SPEED),
-            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, MOVE_SPEED),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, speed),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], speed),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (pix_point[0], pix_point[1], pix_point[2], press_side_speed),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], pix_point[2], press_side_speed),
+            'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x_offset, pix_point[1], Z_START, speed),
         ]
 
     @staticmethod

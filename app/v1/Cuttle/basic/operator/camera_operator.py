@@ -96,7 +96,13 @@ def camera_init_hk(device_object, **kwargs):
                 check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
             elif isinstance(key[1], float):
                 check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
+            elif isinstance(key[1], bool):
+                check_result(CamObj.MV_CC_SetBoolValue, key[0], key[1])
     else:
+        # 2022.3.2 5.2柜设置Gamma参数
+        if CORAL_TYPE == 5.2:
+            CamObj.MV_CC_SetBoolValue("GammaEnable", True)
+            CamObj.MV_CC_SetFloatValue("Gamma", 0.7000)
         # 性能测试参数设置
         if kwargs.get("init") is None:
             CamObj.MV_CC_SetIntValue("OffsetY", 0)

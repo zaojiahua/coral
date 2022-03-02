@@ -42,13 +42,13 @@ def camera_start(camera_id, device_object, **kwargs):
         redis_client.set(f"g_bExit_{camera_id}", "0")
 
         if CORAL_TYPE in [5, 5.3]:
-            response = camera_init_hk(device_object, **kwargs)
+            response = camera_init_hk(camera_id, device_object, **kwargs)
             temporary = kwargs.get('temporary', True)
             print("half done  has camera? ", device_object.has_camera, 'temporary:', temporary)
         else:
             # 功能测试相机初始化
             kwargs['feature_test'] = True
-            response = camera_init_hk(device_object, **kwargs)
+            response = camera_init_hk(camera_id, device_object, **kwargs)
             temporary = True
             print("has camera?", device_object.has_camera)
 

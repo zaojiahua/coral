@@ -90,14 +90,14 @@ def camera_init_hk(device_object, **kwargs):
     if kwargs.get('feature_test') is True:
         # 功能测试参数设置
         for key in camera_params_feature:
-            if len(key) == 3 and key[2] == 'enum':
+            if isinstance(key[1], bool):
+                check_result(CamObj.MV_CC_SetBoolValue, key[0], key[1])
+            elif len(key) == 3 and key[2] == 'enum':
                 check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
             elif isinstance(key[1], int):
                 check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
             elif isinstance(key[1], float):
                 check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
-            elif isinstance(key[1], bool):
-                check_result(CamObj.MV_CC_SetBoolValue, key[0], key[1])
     else:
         # 2022.3.2 5.2柜设置Gamma参数
         if CORAL_TYPE == 5.2:
@@ -139,9 +139,11 @@ def camera_init_hk(device_object, **kwargs):
             pass
         else:
             # 这里的4和16是软件设置的时候，必须是4和16的倍数
-            width = (int(device_object.x2) - int(device_object.x1)) - (int(device_object.x2) - int(device_object.x1)) % 16 + 16
+            width = (int(device_object.x2) - int(device_object.x1)) - (
+                        int(device_object.x2) - int(device_object.x1)) % 16 + 16
             offsetx = int(device_object.x1) - int(device_object.x1) % 16
-            height = (int(device_object.y2) - int(device_object.y1)) - (int(device_object.y2) - int(device_object.y1)) % 16 + 16
+            height = (int(device_object.y2) - int(device_object.y1)) - (
+                        int(device_object.y2) - int(device_object.y1)) % 16 + 16
             offsety = int(device_object.y1) - int(device_object.y1) % 4
             print('设置的roi是：', width, offsetx, height, offsety)
             check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
@@ -221,7 +223,7 @@ def stop_camera(cam_obj):
 def check_result(func, *args):
     return_value = func(*args)
     if return_value != 0:
-        print("return_value", hex(return_value), *args)
+        print("return_value", hex(return_value), *args, func)
         raise CameraInitFail
 
 

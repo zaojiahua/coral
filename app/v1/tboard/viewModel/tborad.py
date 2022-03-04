@@ -13,7 +13,7 @@ from app.v1.tboard.validators.role import Role
 class TBoardViewModel(object):
 
     def __init__(self, tboard_id, board_name, device_label_list,
-                 jobs, repeat_time, owner_label, create_level):
+                 jobs, repeat_time, owner_label, create_level, job_random_order):
         self.tboard_id = tboard_id
         self.board_name = board_name
         self.device_label_list = device_label_list
@@ -24,8 +24,9 @@ class TBoardViewModel(object):
         self.create_level = create_level
         self.board_stamp = datetime.datetime.now().strftime(REEF_DATE_TIME_FORMAT)
         self.logger = logging.getLogger(TBOARD_LOG_NAME)
+        self.job_random_order = job_random_order
 
-    def add_dut(self, device_label, job_label_list, repeat_time, tboard_id):
+    def add_dut(self, device_label, job_label_list, repeat_time, tboard_id, job_random_order):
         """
         生成一个任务集合 一个device 对应的多个job和运行次数
         """
@@ -33,7 +34,7 @@ class TBoardViewModel(object):
         dut_obj = Dut(pk=f"{device_label}_{tboard_id}", parent_pk=tboard_id, stop_flag=False,
                       device_label=device_label,
                       job_msg={job["job_label"]: job for job in self.jobs},
-                      repeat_time=repeat_time, current_job_index=-1)
+                      repeat_time=repeat_time, current_job_index=-1, job_random_order=job_random_order)
 
         dut_obj.job_label_list.rpush(*job_label_list)
         return dut_obj
@@ -46,7 +47,8 @@ class TBoardViewModel(object):
         """
         dut_obj_list = []
         for device_label in device_idle_list:
-            dut_obj_list.append(self.add_dut(device_label, self.job_label_list, self.repeat_time, self.tboard_id))
+            dut_obj_list.append(self.add_dut(device_label, self.job_label_list, self.repeat_time, self.tboard_id,
+                                             self.job_random_order))
         return dut_obj_list
 
     def create_tboard(self):

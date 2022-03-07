@@ -106,9 +106,10 @@ class DoorKeeper(object):
         return [i.get("cpu_id") for i in id_list] + [i.get("serial_number") for i in assis_id_list]
 
     def authorize_device_manually(self, **kwargs):
-        length = np.hypot(kwargs.get("height_resolution"), kwargs.get("width_resolution"))
-        # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
-        kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
+        if kwargs.get('height_resolution'):
+            length = np.hypot(kwargs.get("height_resolution"), kwargs.get("width_resolution"))
+            # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
+            kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
         kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + '-' + kwargs.get("device_name")
         try:

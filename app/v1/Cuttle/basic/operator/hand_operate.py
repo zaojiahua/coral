@@ -1,3 +1,4 @@
+import math
 import re
 import time
 
@@ -316,7 +317,7 @@ class HandHandler(Handler, DefaultMixin):
 
     def after_unit(self):
         # unit执行完 5型柜执行移开的操作，防止长时间遮挡摄像头
-        if self.ignore_reset is False and CORAL_TYPE == 5:
+        if self.ignore_reset is False and math.floor(CORAL_TYPE) == 5:
             self.reset_hand()
 
     # TODO 怎样处理如果传入点中有一个或多个计算出的坐标超过操作台范围

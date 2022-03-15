@@ -5,8 +5,6 @@ LOG_TO_CONSOLE = True  # 是否输出到控制台
 LOG_TO_FILE = True  # 是否输出到文件
 
 LOGGER_OBJ_DICT = {}  # 记录实例化的log 对象
-# 8点以后的log保存到新的日志文件中
-CRITICAL_HOUR = 8
 
 TBOARD_LOG_NAME = "tboard"
 DJOB_LOG_NAME = "djob"

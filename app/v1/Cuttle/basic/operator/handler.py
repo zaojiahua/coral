@@ -14,7 +14,8 @@ from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersi
 from app.libs.functools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result, SERVER_OPERATE_LOCK, \
-    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, RESTART_SERVER, adb_disconnect_threshold
+    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, RESTART_SERVER, \
+    adb_disconnect_threshold
 
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
@@ -38,7 +39,7 @@ class Handler():
     standard_list = []
 
     skip_retry_list = ["end_point_with_icon", "end_point_with_icon_template_match", "end_point_with_changed",
-                       "end_point_with_fps_lost","initiative_remove_interference"]
+                       "end_point_with_fps_lost", "initiative_remove_interference"]
 
     def __init__(self, *args, **kwargs):
         self._model = kwargs.get("model", Dummy_model(False, 0, setup_logger(f'dummy', 'dummy.log')))
@@ -249,13 +250,20 @@ class Handler():
         pass
 
     def _get_screen_point(self, x, y, portrait):
+        # 需要判断是僚机在执行，还是主机在执行，从对应的机器上获取相关数据
         from app.v1.device_common.device_model import Device
+        target_device = Device(pk=self._model.pk)
+
+        serial_number = self.kwargs.get("assist_device_serial_number")
+        if serial_number is not None:
+            target_device = target_device.get_subsidiary_device(serial_number=serial_number)
+
         if portrait == 1:
-            w = Device(pk=self._model.pk).device_width * x
-            h = Device(pk=self._model.pk).device_height * y
+            w = target_device.device_width * x
+            h = target_device.device_height * y
         else:
-            w = Device(pk=self._model.pk).device_height * x
-            h = Device(pk=self._model.pk).device_width * y
+            w = target_device.device_height * x
+            h = target_device.device_width * y
         return w, h
 
     def _relative_double_point(self):

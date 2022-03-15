@@ -131,9 +131,10 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     x_start, y_start, x_end, y_end = mapping_dict.get(content.get("direction"), (500, 500, 900, 700))
                     ocr_obj.cx = x_start
                     ocr_obj.cy = y_start
-                    speed = 500 if CORAL_TYPE < 4 else 11000
+                    is_adb = CORAL_TYPE < 4 or self.kwargs.get("assist_device_serial_number") is not None
+                    speed = 500 if is_adb else 11000
                     ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=speed)
-                    if CORAL_TYPE >= 4:
+                    if not is_adb:
                         time.sleep(1)
                     continue
             return ocr_obj.result

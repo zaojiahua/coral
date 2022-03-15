@@ -259,6 +259,8 @@ class OcrTestSchema(Schema):
     ocr_choice = fields.String(data_key="ocrChoice", required=False)
 
     def load_config(self, value):
+        if type(value) == list and len(value) > 0:
+            value = value[0]
         value.save(f"{value.filename}")
         with open(f"{value.filename}", "r") as f:
             content = json.load(f)
@@ -266,6 +268,8 @@ class OcrTestSchema(Schema):
         return content
 
     def load_picture(self, value):
+        if type(value) == list and len(value) > 0:
+            value = value[0]
         value.save(f"{value.filename}")
         return f"{value.filename}"
 

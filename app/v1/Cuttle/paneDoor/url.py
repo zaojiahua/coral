@@ -1,7 +1,7 @@
 from flask import Blueprint
 
 from app.v1.Cuttle.paneDoor.door_view import GetDevice, SetDevice, SetMutiDevice, GetMutiDevice, SetDeviceManual, \
-    GetAssisDevice, SetAssisDevice, OpenPort, UpdateDeviceInfo
+    GetAssisDevice, SetAssisDevice, OpenPort, UpdateDeviceInfo, UpdateDoorInfo
 
 door = Blueprint('door', __name__)
 
@@ -23,3 +23,5 @@ door.add_url_rule('/set_muti-device_in_door/', view_func=SetMutiDevice.as_view('
 door.add_url_rule('/wifi_port/', view_func=OpenPort.as_view('wifi_port'))
 # 更新设备信息的url
 door.add_url_rule('/device_info/', view_func=UpdateDeviceInfo.as_view('device_info'))
+# 通知更新设备信息，需要coral再次向reef发起请求
+door.add_url_rule('/door_info/', view_func=UpdateDoorInfo.as_view('door_info'))

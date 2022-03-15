@@ -1,9 +1,10 @@
 import logging
-import platform
+import os.path
+import random
+import shutil
 import subprocess
 import sys
 import traceback
-from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import numpy as np
@@ -14,29 +15,29 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS
-from app.execption.outer.error_code.camera import ArmReInit, NoCamera, RemoveBeforeAdd, PerformancePicNotFound
+from app.execption.outer.error_code.camera import ArmReInit, NoCamera, PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
+from app.v1.Cuttle.basic.hand_serial import controlUsbPower
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
-from app.v1.Cuttle.basic.operator.camera_operator import camera_start_3
-from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init
+from app.v1.Cuttle.basic.operator.camera_operator import camera_start
+from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler
+from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
-from app.v1.Cuttle.basic.setting import hand_serial_obj_dict
-from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema
+from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
+    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED
+from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
 from app.v1.tboard.views.get_dut_progress import get_dut_progress_inner
 from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
 from redis_init import redis_client
 
-logger = logging.getLogger(PANE_LOG_NAME)
 from concurrent.futures._base import TimeoutError
 import copy
 
-# mapping_dict = {0: ADB_SERVER_1, 1: ADB_SERVER_2, 2: ADB_SERVER_3}
-
-
 ip = copy.copy(HOST_IP)
+logger = logging.getLogger(PANE_LOG_NAME)
 
 
 def pic_push(device_object, pic_name="success.png"):
@@ -118,7 +119,7 @@ class PaneDeleteView(MethodView):
 
     def _reset_arm(self, device_object):
         try:
-            hand_serial_obj = hand_serial_obj_dict[device_object.pk]
+            hand_serial_obj = rotate_hand_serial_obj_dict[device_object.pk]
             hand_serial_obj.send_single_order("G01 X0Y0Z0F1000 \r\n")
             hand_serial_obj.recv(buffer_size=64)
             hand_serial_obj.close()
@@ -164,17 +165,6 @@ class PerformancePictureView(MethodView):
 
 class PaneConfigView(MethodView):
 
-    def post(self):
-        data = request.get_json()
-        executer = ThreadPoolExecutor()
-        if data.get("camera_id") is not None:
-            self.hardware_init(data.get("camera_id"), data.get("device_label"), executer, rotate=False)
-        if data.get("arm_id"):
-            self.hardware_init(data.get("arm_id"), data.get("device_label"), executer, rotate=False)
-        if data.get("rotate_arm_id"):
-            self.hardware_init('rotate', data.get("device_label"), executer, rotate=True)
-        return jsonify({"status": "success"}), 200
-
     def init_bright(self, device_label):
         ip = Device(pk=device_label).ip_address
         cmd = f"adb -s {ip}:5555 shell echo {DEVICE_BRIGHTNESS} >/sys/class/leds/lcd-backlight/brightness"
@@ -188,19 +178,19 @@ class PaneConfigView(MethodView):
 
     @staticmethod
     def hardware_init(port, device_label, executer, rotate=False):
-        port = f'/dev/{port}' if platform.system() == 'Linux' else port
         try:
             device_object = Device(pk=device_label)
             if rotate is True:
                 function, attribute = (rotate_hand_init, "has_rotate_arm")
             elif port.split("/")[-1].isdigit():
-                function, attribute = (camera_start_3, "has_camera")
+                function, attribute = (camera_start, "has_camera")
             else:
                 function, attribute = (hand_init, "has_arm")
+                controlUsbPower(status='init')
             setattr(device_object, attribute, True)
-            future = executer.submit(function, port, device_object, init=True)
+            future = executer.submit(function, port, device_object, init=True, original=True)
             exception = future.exception(timeout=2)
-            print(str(exception))
+            print(exception, '*' * 10)
             if "PermissionError" in str(exception):
                 traceback.print_exc()
                 raise ArmReInit
@@ -211,16 +201,6 @@ class PaneConfigView(MethodView):
         except TimeoutError:
             print('TimeoutError')
             return 0
-
-    def delete(self):
-        try:
-            device_object = Device(pk=request.get_json().get("device_label"))
-            device_object.has_arm = False
-            device_object.has_camera = False
-            hand_serial_obj_dict.get(request.get_json().get("device_label")).close()
-            return "success", 204
-        except AttributeError:
-            raise RemoveBeforeAdd
 
 
 class PaneBorderView(MethodView):
@@ -284,3 +264,71 @@ class FilePushView(MethodView):
             return jsonify({"status": "ok"}), 200
         except Exception as e:
             return jsonify({"fail": repr(e)}), 400
+
+
+# 测试点击
+class PaneClickTestView(MethodView):
+
+    def post(self):
+        random_dir = str(random.randint(0, 100))
+        if not os.path.exists(random_dir):
+            os.mkdir(random_dir)
+        fs = request.files.getlist('img')
+        for f in fs:
+            f.save(os.path.join(random_dir, f.filename))
+
+        schema = ClickTestSchema()
+        request_data = request.form.to_dict()
+        schema.load(request_data)
+
+        device_label = request_data.get("device_label")
+        device_obj = Device(pk=device_label)
+
+        device_point = [int(request_data.get('inside_upper_left_x')),
+                        int(request_data.get('inside_upper_left_y')),
+                        int(request_data.get('inside_under_right_x')),
+                        int(request_data.get('inside_under_right_y'))]
+        click_x, click_y, click_z = device_obj.get_click_position(int(request_data.get('x')),
+                                                                  int(request_data.get('y')),
+                                                                  int(request_data.get('z')),
+                                                                  device_point)
+        # 判断是否是按压侧边键
+        location = get_global_value("m_location")
+        try:
+            DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                      location[0] + float(device_obj.width), location[0], location[2])
+            is_side = True
+        except Exception as e:
+            is_side = False
+
+        if is_side:
+            is_left_side = False
+            if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                is_left_side = True
+            self.press(device_label, click_x, click_y, click_z, is_left_side)
+        else:
+            self.click(device_label, click_x, click_y, click_z)
+
+        shutil.rmtree(random_dir)
+        return jsonify(dict(error_code=0))
+
+    @staticmethod
+    def click(device_label, x, y, z):
+        click_orders = ['G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, 0, MOVE_SPEED - 10000),
+                        'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, z, MOVE_SPEED - 10000),
+                        'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, 0, MOVE_SPEED - 10000)]
+        hand_serial_obj_dict.get(device_label).send_list_order(click_orders)
+        hand_serial_obj_dict.get(device_label).recv()
+
+    @staticmethod
+    def press(device_label, x, y, z, is_left):
+        speed = MOVE_SPEED - 10000
+        press_side_speed = PRESS_SIDE_KEY_SPEED / 2
+        # 生成指令
+        press_orders = HandHandler.press_side_order([x, y, z], is_left=is_left, speed=speed,
+                                                    press_side_speed=press_side_speed)
+        # 执行指令
+        hand_serial_obj_dict.get(device_label).send_out_key_order(press_orders[:3],
+                                                                  others_orders=press_orders[3:],
+                                                                  wait_time=0)
+        hand_serial_obj_dict.get(device_label).recv()

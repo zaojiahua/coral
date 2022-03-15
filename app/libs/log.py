@@ -4,7 +4,7 @@ import datetime
 from logging import handlers
 
 from app.config.setting import LOG_FORMAT, LOG_TO_CONSOLE, LOG_TO_FILE, LOGGER_OBJ_DICT, \
-    LOG_DIR, CRITICAL_HOUR
+    LOG_DIR
 from app.libs.ospathutil import asure_path_exist
 
 

@@ -1,6 +1,5 @@
 from app.v1.Cuttle.basic.common_utli import suit_for_blur, blur_match
 from app.v1.Cuttle.basic.complex_center import Complex_Center
-from app.v1.Cuttle.basic.setting import blur_signal
 
 
 class PreciseMixin(object):

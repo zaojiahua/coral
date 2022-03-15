@@ -28,6 +28,7 @@ class CoordinateWrongFormat(APIException):
     code = 400
     description = 'coordinate not in correct format '
 
+
 class KeyPositionUsedBeforesSet(APIException):
     """
     在未设置关键点（返回，菜单，主页，电源，音量）在摄像头位置的情况下，使用到机械臂去点击关键点
@@ -36,9 +37,32 @@ class KeyPositionUsedBeforesSet(APIException):
     code = 400
     description = 'key point used before used '
 
+
 class SerialLostConnection(APIException):
     error_code = 3004
     code = 400
     description = 'Arm Serial lost connection'
 
 
+class SideKeyNotFound(APIException):
+    error_code = 3005
+    code = 400
+    description = 'Press Side Key Not Found'
+
+
+class ExecContentFormatError(APIException):
+    error_code = 3006
+    code = 400
+    description = 'Exec Content Format Error'
+
+
+class CoordinatesNotReasonable(APIException):
+    error_code = 3007
+    code = 400
+    description = 'The Side Key Coordinates Should Not be In the Screen'
+
+
+class ControlUSBPowerFail(APIException):
+    error_code = 3008
+    code = 400
+    description = 'Control USB Power Fail'

@@ -45,6 +45,7 @@ class TboardSchema(BaseSchema):
     repeat_time = fields.Integer(missing=1)
     owner_label = fields.Str(required=True)
     create_level = fields.Str(missing="USER", validate=validate.OneOf(Role.__members__))
+    job_random_order = fields.Boolean(missing=False)
 
     # # extends
     # class Meta(BaseSchema.Meta):

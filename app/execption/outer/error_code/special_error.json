@@ -21,7 +21,10 @@
     "description": "adb commend exec fail"
   },{
     "error_code": -9,
-    "description": "Do not have rotate arm in rotate arm 's unit "
+    "description": "缺少旋转机械臂"
+  },{
+    "error_code": -10,
+    "description": "缺少三轴机械臂"
   },{
     "error_code": -16,
     "description": "job内有无法识别的宏，--检查job内容"

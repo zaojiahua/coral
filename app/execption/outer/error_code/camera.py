@@ -48,3 +48,9 @@ class PerformancePicNotFound(APIException):
     error_code = 5006
     code = 400
     description = "performance picture path not found "
+
+
+class CameraInUse(APIException):
+    error_code = 5007
+    code = 400
+    description = "相机正在使用中，请稍后重试。"

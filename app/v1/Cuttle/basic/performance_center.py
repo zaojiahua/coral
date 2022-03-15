@@ -10,7 +10,9 @@ from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.libs.thread_extensions import executor_callback
-from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
+from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, PERFORMANCE_END_LOOP_TIMEOUT
+from app.v1.Cuttle.basic.operator.camera_operator import camera_start
+from redis_init import redis_client
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 
@@ -61,7 +63,7 @@ class PerformanceCenter(object):
         self.back_up_dq.clear()
         executer = ThreadPoolExecutor()
         # 先清空back_up_dq并异步开始记录照片
-        self.move_src_task = executer.submit(self.move_src_to_backup).add_done_callback(executor_callback)
+        executer.submit(self.move_src_to_backup, executer).add_done_callback(executor_callback)
         number = 0
         self.start_number = 0
         # 等异步线程时间，确认back_up_dq已经有了一些照片
@@ -109,6 +111,9 @@ class PerformanceCenter(object):
                 # 对bias补偿的帧数，先只保存对应图片，不做结果判断，因为不可能在这个阶段出现终止点
                 # 主要是加快一些速度。
                 number, picture, next_picture, _ = self.picture_prepare(number)
+
+        # 设置超时时间
+        begin_time = time.time()
         while self.loop_flag:
             # 这个地方写了两遍不是bug，是特意的，一次取了两张
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
@@ -142,6 +147,7 @@ class PerformanceCenter(object):
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": self.end_number + 39,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+                time.sleep(39 / FpsMax)
                 self.move_flag = False
                 break
             if number >= CameraMax:
@@ -153,6 +159,9 @@ class PerformanceCenter(object):
                 self.move_flag = False
                 self.back_up_dq.clear()
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
+                raise VideoEndPointNotFound
+            if (time.time() - begin_time) > PERFORMANCE_END_LOOP_TIMEOUT:
+                print('终点超时退出')
                 raise VideoEndPointNotFound
         return 0
 
@@ -270,11 +279,14 @@ class PerformanceCenter(object):
         pic_compare_2 = pic_compare_2[area[1]:area[3], area[0]:area[2]]
         return number, pic_original, pic_compare_1, pic_compare_2
 
-    def move_src_to_backup(self):
+    def move_src_to_backup(self, executer):
         # 把dq内图片放置到备用dq中去，此方法在起始点判定时异步开始执行，到终止点判定结束退出
         self.move_flag = True
         from app.v1.Cuttle.basic.setting import camera_dq_dict
         camera_dq_dict.get(self.device_id).clear()
+        # 开启相机
+        from app.v1.device_common.device_model import Device
+        executer.submit(camera_start, 1, Device(pk=self.device_id), temporary=False, original=False)
         time.sleep(2 / FpsMax)  # 确保dq里至少一张照片
         while self.move_flag: # 这个move_flag会被start点和end点更改状态，从而这个线程跳出while循环
             try:
@@ -285,6 +297,8 @@ class PerformanceCenter(object):
             except IndexError as e:
                 # 向备份Q中放置过快,超过摄像头读取速度，需要等待1,2帧时间
                 time.sleep(2 / FpsMax)
+        # 关闭相机
+        redis_client.set('g_bExit', 1)
         # 找到结束点后再继续保存最多40张:
         if not hasattr(self, "end_number"):
             return 0

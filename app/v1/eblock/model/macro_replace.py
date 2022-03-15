@@ -4,12 +4,13 @@ import time
 
 from app.config.ip import REEF_IP
 from app.config.url import simcard_url, account_url, device_assis_url
-from app.execption.outer.error_code.eblock import EblockCannotFindFile, MaroUnrecognition, \
+from app.execption.outer.error_code.eblock import \
     EblockResourceMacroWrongFormat, DeviceNeedResource, DeviceNeedRelativeAssisDevice, AssisDeviceNotHaveMainDevie
 from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
 from app.execption.outer.error_code.eblock import EblockCannotFindFile, MaroUnrecognition
-from app.v1.Cuttle.basic.setting import arm_default
+from app.v1.Cuttle.basic.setting import arm_default, hand_origin_cmd_prefix, arm_default_y, HAND_MAX_X, HAND_MAX_Y, \
+    HAND_MAX_Z, get_global_value
 from app.config.setting import find_command
 
 adb_data_path = "<adbOutPath>"
@@ -30,6 +31,16 @@ Rotate_switchHold = "<RotateSwitchHold>"
 RotateNormal = "<RotateNormal>"
 RotateInit = "<RotateInit>"
 RotateUp = '<RotateUp>'
+# 旋转机械臂原始移动
+RotateOrigin = '<RotateOrigin>'
+rotate_origin_x_range = [-90, 90]
+rotate_origin_y_range = [-33, 90]
+rotate_origin_z_range = [-180, 180]
+# 用户写的单位是 毫米/秒 实际需要的单位是 毫米/秒
+rotate_origin_f_range = [600 / 60, 9000 / 60]
+# 三轴机械臂原始移动
+HandOrigin = '<HandOrigin>'
+hand_origin_f_range = [600 / 60, 15000 / 60]
 Resource = "<Acc_"
 Phone = "<Sim_"
 pipe_command = "<FindCommand>"
@@ -45,7 +56,9 @@ macro_dict = {
     Rotate_switchHold: "G01 X34Y33Z0F1500 \r\n<move><rotateSleep>",
     RotateNormal: arm_default,
     RotateInit: "G01 X0Y00Z0F5000 \r\n",
-    RotateUp: "G01 X0Y123Z0F7000 \r\n"
+    RotateUp: "G01 X0Y123Z0F7000 \r\n",
+    RotateOrigin: "G01",
+    HandOrigin: f'{hand_origin_cmd_prefix} G01'
 }
 
 
@@ -166,6 +179,9 @@ class MacroHandler(object):
                     res = re.search(f"{Rotate_switchHold}(.*?)$", cmd)
                     second = res.group(1)
                     value = value + str(second)
+                if RotateOrigin == key or HandOrigin == key:
+                    cmd = self.set_origin_rotate_param(cmd)
+                    cmd = f'{cmd} \r\n'
                 cmd = cmd.replace(key, value)
                 break
         if adb_ip_prefix in cmd:
@@ -177,6 +193,45 @@ class MacroHandler(object):
         if pipe_command in cmd:
             cmd = cmd.replace(pipe_command, find_command)
         return cmd, save_file
+
+    @staticmethod
+    def get_validate_range(r_list, x):
+        if x < r_list[0]:
+            x = r_list[0]
+        elif x > r_list[1]:
+            x = r_list[1]
+        return x
+
+    @staticmethod
+    def set_origin_rotate_param(cmd):
+        pattern = r'X(.+)Y(.+)Z(.+)F(.+)'
+        rotate_params = re.findall(pattern, cmd)
+        if len(rotate_params) > 0:
+            # 需要对范围进行限制 同时y方向减少33度
+            if cmd.startswith(RotateOrigin):
+                x = MacroHandler.get_validate_range(rotate_origin_x_range, int(rotate_params[0][0]))
+                y = MacroHandler.get_validate_range(rotate_origin_y_range, int(rotate_params[0][1]))
+                z = MacroHandler.get_validate_range(rotate_origin_z_range, int(rotate_params[0][2]))
+                f = MacroHandler.get_validate_range(rotate_origin_f_range, int(rotate_params[0][3]))
+                y = y + int(arm_default_y)
+                spend_time = max(abs(x), abs(y), abs(z)) / f
+                f = f * 60
+                cmd = re.sub(pattern, f'X{x}Y{y}Z{z}F{f}', cmd)
+                cmd += f'<rotateSleep>{spend_time}'
+            elif cmd.startswith(HandOrigin):
+                x = MacroHandler.get_validate_range([0, 100], int(rotate_params[0][0]))
+                y = MacroHandler.get_validate_range([0, 100], int(rotate_params[0][1]))
+                z = MacroHandler.get_validate_range([0, 100], int(rotate_params[0][2]))
+                f = MacroHandler.get_validate_range(hand_origin_f_range, int(rotate_params[0][3]))
+                x = x / 100 * HAND_MAX_X
+                # 6 是由于硬件导致的安装误差
+                y = -y / 100 * (HAND_MAX_Y - 6)
+                z = z / 100 * (HAND_MAX_Z - get_global_value('Z_DOWN')) + get_global_value('Z_DOWN')
+                spend_time = max(x, y, abs(z)) / f
+                f = f * 60
+                cmd = re.sub(pattern, f'X{x}Y{y}Z{z}F{f}', cmd)
+                cmd += f'<rotateSleep>{spend_time}'
+        return cmd
 
     def set_sim_value(self, cmd, d_params, sim_number):
         d_params.update({"order": sim_number, "fields": "phone_number"})

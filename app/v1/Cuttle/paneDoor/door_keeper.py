@@ -10,7 +10,7 @@ from typing import Dict
 import numpy as np
 
 from app.config.ip import HOST_IP, ADB_TYPE
-from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST
+from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url, device_update_url
@@ -34,6 +34,16 @@ class DoorKeeper(object):
         self.today_id = 0
         self.date_mark = None
 
+    def update_door_info(self, request_data):
+        resource_name = request_data.get('resource_name')
+        # 更新设备信息
+        if resource_name == 'device':
+            res = Device.request_device_info()
+            for device_dict in res.get("devices"):
+                print('更新的设备信息有：', device_dict.get('device_label'))
+                device_obj = Device(pk=device_dict.get("device_label"))
+                device_obj.update_attr(**device_dict)
+
     def authorize_device(self, **kwargs):
         s_id = self.get_device_connect_id(multi=False)
         dev_info_dict = self.get_device_info(s_id, kwargs)
@@ -47,7 +57,7 @@ class DoorKeeper(object):
         else:
             self.is_device_rootable(num=f"-s {s_id}")
         if CORAL_TYPE > 2:
-            self.set_arm_or_camera(CORAL_TYPE, dev_info_dict["device_label"])
+            self.set_arm_or_camera(dev_info_dict["device_label"])
         # 设备注册成功的话，设置状态为idle
         dev_info_dict['status'] = DeviceStatus.IDLE
         self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"),
@@ -55,13 +65,9 @@ class DoorKeeper(object):
         logger.info(f"set device success")
         return 0
 
-    def set_arm_or_camera(self, CORAL_TYPE, device_label):
+    def set_arm_or_camera(self, device_label):
         port_list = HARDWARE_MAPPING_LIST.copy()
-        rotate = True if CORAL_TYPE == 3 else False
         executer = ThreadPoolExecutor()
-        # if CORAL_TYPE >= 5:
-        #     for port in port_list:
-        #         PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
         try:
             # 一个机柜只放一台手机限定
             available_port_list = list(set(port_list) ^ set(hand_used_list))
@@ -69,7 +75,7 @@ class DoorKeeper(object):
             if len(available_port_list) == 0:
                 raise ArmNorEnough
             for port in available_port_list:
-                PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
+                PaneConfigView.hardware_init(port, device_label, executer, rotate=(port == rotate_com))
                 hand_used_list.append(port)
         except IndexError:
             raise ArmNorEnough
@@ -100,11 +106,12 @@ class DoorKeeper(object):
         return [i.get("cpu_id") for i in id_list] + [i.get("serial_number") for i in assis_id_list]
 
     def authorize_device_manually(self, **kwargs):
-        length = np.hypot(kwargs.get("device_height"), kwargs.get("device_width"))
-        # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
-        kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
+        if kwargs.get('height_resolution'):
+            length = np.hypot(kwargs.get("height_resolution"), kwargs.get("width_resolution"))
+            # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
+            kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
         kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        kwargs["device_label"] = "M-" + kwargs.get("phone_model_name")
+        kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + '-' + kwargs.get("device_name")
         try:
             response = request(url=phone_model_url, params={"fields": "manufacturer.manufacturer_name",
                                                             "phone_model_name": kwargs.get("phone_model_name")},
@@ -113,14 +120,13 @@ class DoorKeeper(object):
         except RequestException:
             kwargs["manufacturer"] = "Manual_device"
         kwargs["rom_version"] = "Manual_"+kwargs["manufacturer"]
-        kwargs["android_version"] =  kwargs["cpu_name"] = kwargs[
-            "cpu_id"] = "Manual_device"
+        kwargs["android_version"] = kwargs["cpu_name"] = kwargs["cpu_id"] = "Manual_device"
         kwargs["ip_address"] = "0.0.0.0"
         kwargs["auto_test"] = False
         kwargs["device_type"] = "test_box"
-        if CORAL_TYPE > 2:
-            self.set_arm_or_camera(CORAL_TYPE, kwargs["device_label"])
         self.send_dev_info_to_reef(kwargs.pop("device_name"), kwargs, with_monitor=False)
+        if CORAL_TYPE > 2:
+            self.set_arm_or_camera(kwargs["device_label"])
         return 0
 
     def open_device_wifi_service(self, device_id=""):
@@ -227,8 +233,8 @@ class DoorKeeper(object):
         ret_dict = {
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
                 f"adb -s {s_id} shell getprop ro.build.version.release"),
-            "device_width": screen_size[0],
-            "device_height": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}
+            "width_resolution": screen_size[0],
+            "height_resolution": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}
         ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         ret_dict.update(device_info_fict)
         return ret_dict
@@ -302,11 +308,14 @@ class DoorKeeper(object):
         phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.oppo.market.name")
         old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
         productName = phone_model if len(phone_model) != 0 else old_phone_model
+        screen_size = self.get_screen_size_internal(f"-s {s_id}")
         ret_dict = {"phone_model_name": productName,
                     "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0',
                     "device_label": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
                     "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
-                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize()
+                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(),
+                    'width_resolution': screen_size[0],
+                    'height_resolution': screen_size[1]
                     }
         check_params = {"fields": "is_active", "serial_number": ret_dict["device_label"]}
         response = request(url=device_assis_url, params=check_params)
@@ -325,22 +334,11 @@ class DoorKeeper(object):
         return ret_dict
 
     def set_assis_device(self, **kwargs):
-        # {
-        #     "serial_number": "1231234",
-        #     "ip_address": "127.0.0.6",
-        #     "order": 1,
-        #     "is_active": true,
-        #     "devices": [
-        #         1
-        #     ]
-        # }
         if ADB_TYPE == 0:
             self.open_wifi_service(f"-s {kwargs.get('serial_number')}")
         kwargs["is_active"] = True
         res = request(method="POST", url=device_assis_create_update_url, json=kwargs)
         logger.info(f"response from reef: {res}")
-        # device_object = Device(pk=kwargs["device_label"])
-        # setattr(device_object, "assis_" + kwargs.get("order"), kwargs.get("ip_address"))
         return 0
 
     def is_new_phone_model(self, phone_model) -> (Dict, bool):
@@ -430,6 +428,7 @@ class DoorKeeper(object):
         dev_data_dict["id"] = res.get("id") if res.get("id") else 0
         device_object = Device(pk=dev_data_dict["device_label"])
         device_object.update_attr(**dev_data_dict, avoid_push=True)
+        device_object.update_m_location()
         aide_monitor_instance = AideMonitor(device_object)
         t = threading.Thread(target=device_object.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(dev_data_dict["device_label"])

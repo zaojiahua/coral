@@ -241,8 +241,7 @@ class Device(BaseModel):
                 request(method="POST", url=device_create_update_url, json=self.data)
             self.flag = True
             self.set_border(kwargs)
-            if 'phone_model' in kwargs:
-                self._update_pix_width_height(kwargs['phone_model'])
+            self._update_pix_width_height(kwargs.get('phone_model', kwargs))
             self.kx1, self.ky1, self.kx2, self.ky2 = self._keyboard_relative_to_absolute(
                 key_map_position.get(self.phone_model_name, default_key_map_position))
             self.update_subsidiary_device(**kwargs)

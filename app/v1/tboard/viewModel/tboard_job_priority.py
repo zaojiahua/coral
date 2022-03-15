@@ -18,5 +18,6 @@ class TBoardJobPriorityViewModel(TBoardViewModel):
             for device_task in self.device_mapping:
                 if device_label == device_task.get("device_label"):
                     job_label_list = [job["job_label"] for job in device_task.get("job")]
-            dut_obj_list.append(self.add_dut(device_label, job_label_list, self.repeat_time, self.tboard_id))
+            dut_obj_list.append(self.add_dut(device_label, job_label_list, self.repeat_time, self.tboard_id,
+                                             self.job_random_order))
         return dut_obj_list

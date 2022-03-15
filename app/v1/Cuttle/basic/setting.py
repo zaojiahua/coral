@@ -1,10 +1,14 @@
 from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
+
 try:
     from app.config.ip import m_location, m_location_center
 except Exception:
     m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
     m_location_center = [157, 202.5, -24]
+
+if CORAL_TYPE == 5.2:
+    m_location = [38, 13, -24]
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -28,18 +32,20 @@ camera_params_feature = [("OffsetY", 0),
                          ("ExposureTime", 15000.0),
                          ("Gain", 2.5),
                          ("AcquisitionFrameRate", 35.0),
-                         ("PixelFormat", 0x0108000A, 'enum')]
+                         ("PixelFormat", 0x0108000A, 'enum'),
+                         ("GammaEnable", True),
+                         ("Gamma", 0.7000)]
 high_exposure_params = [("ExposureTime", 100000.0),
                         ("Gain", 10)]
 high_exposure_params_feature = [("ExposureTime", 200000.0),
-                        ("Gain", 15)]
+                                ("Gain", 15)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
 if CORAL_TYPE == 5.1:
     HAND_MAX_Y = 420  # 5L机械臂Y最大行程
 else:
-    HAND_MAX_Y = 245    # Tcab-5机械臂Y最大行程
+    HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
 HAND_MAX_Z = 5
 Z_START = 0
 # Z_DOWN = -3.5   tianjing setting
@@ -96,7 +102,7 @@ CamObjList = {}
 normal_result = (False, None)
 blur_signal = "[B]"
 # 需要按常见顺序调整 亮度百分比的顺序 尽可能优先匹配到常见亮度变化。
-light_pyramid_setting = [1, 0.4, 0.6, 1.4,0.06, 0.1, 0.15, 0.2,  1.6, 1.8, 1.9, 2, 2.3]
+light_pyramid_setting = [1, 0.4, 0.6, 1.4, 0.06, 0.1, 0.15, 0.2, 1.6, 1.8, 1.9, 2, 2.3]
 light_pyramid_setting_simple = [0.1, 0.2, 0.4, 0.7, 1.3, 1.6, 1.8]
 
 handler_config = {

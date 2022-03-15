@@ -1,4 +1,5 @@
 import logging
+import random
 from threading import Lock
 
 from astra import models
@@ -27,6 +28,7 @@ class Dut(BaseModel):
     device_label = models.CharField()
     current_job_index: int = models.IntegerField()
     model = "app.v1.tboard.model.tboard.TBoard"
+    job_random_order = models.BooleanField()
 
     def save(self, action, attr=None, value=None):
         if action == "post_remove":  # attr = 'pk', value = self.pk
@@ -54,8 +56,14 @@ class Dut(BaseModel):
 
     @property
     def next_job_label(self):
+        if self.job_random_order:
+            if self.current_job_index > 0 and self.current_job_index % len(self.job_label_list) == (len(self.job_label_list) - 1):
+                current_job_label_list = []
+                while len(self.job_label_list) > 0:
+                    current_job_label_list.append(self.job_label_list.lpop())
+                random.shuffle(current_job_label_list)
+                self.job_label_list.rpush(*current_job_label_list)
         self.current_job_index += 1
-        # self.current_job_index_incr()
         return self.get_job_label_by_index(self.current_job_index)
 
     def start_dut(self):

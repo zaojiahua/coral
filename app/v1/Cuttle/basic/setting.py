@@ -6,9 +6,8 @@ try:
 except Exception:
     m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
     m_location_center = [157, 202.5, -24]
-
-if CORAL_TYPE == 5.2:
-    m_location = [38, 13, -24]
+    if CORAL_TYPE == 5.2:
+        m_location = [38, 13, -24]
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}

@@ -65,12 +65,14 @@ CORAL_TYPE_NAME = {
     5: 'Tcab_5',
     3.1: 'Tcab_3C',
     5.1: 'Tcab_5L',
-    5.2: 'Tcab-5SE',
+    5.2: 'Tcab_5se',
+    5.3: 'Tcab_5M'
 }
 
 arm_com = os.environ.get('ARM_COM', '/dev/arm')
 rotate_com = os.environ.get('ROTATE_COM', '/dev/rotate')
 usb_power_com = os.environ.get("USB_COM", '/dev/USBPower')
+camera_power_com = os.environ.get('CAMERA_COM', '/dev/CameraPower')
 
 if CORAL_TYPE == 3:
     HARDWARE_MAPPING_LIST = [rotate_com]

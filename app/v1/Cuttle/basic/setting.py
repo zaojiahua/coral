@@ -39,6 +39,12 @@ high_exposure_params = [("ExposureTime", 100000.0),
                         ("Gain", 10)]
 high_exposure_params_feature = [("ExposureTime", 200000.0),
                                 ("Gain", 15)]
+# 俩个同步相机的参数
+sync_camera_params = [('TriggerMode', 1, 'enum'),
+                      ('TriggerSource', 0, 'enum'),
+                      ('TriggerActivation', 2, 'enum'),
+                      ('LineSelector', 0, 'enum'),
+                      ('AcquisitionFrameRate', 20.0)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
@@ -172,5 +178,7 @@ def get_global_value(key, def_value=None):
 
 set_global_value('m_location', m_location)
 set_global_value('Z_DOWN', Z_DOWN)
+# 图片拼接的h矩阵
+set_global_value('merge_image_h', None)
 
 PERFORMANCE_END_LOOP_TIMEOUT = 60 * 3

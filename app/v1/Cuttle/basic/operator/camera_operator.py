@@ -1,4 +1,5 @@
 import collections
+import os.path
 import re
 import time
 from ctypes import *
@@ -16,10 +17,13 @@ from app.v1.Cuttle.basic.MvImport.HK_import import *
 from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, CameraMax, \
-    camera_params_240, CamObjList, camera_params_feature, high_exposure_params, high_exposure_params_feature
+    camera_params_240, CamObjList, camera_params_feature, high_exposure_params, high_exposure_params_feature, \
+    sync_camera_params, get_global_value, set_global_value
 from app.execption.outer.error_code.imgtool import CameraNotResponse
 from app.config.setting import HARDWARE_MAPPING_LIST
+from app.libs import image_utils
 from redis_init import redis_client
+from app.v1.Cuttle.basic.hand_serial import CameraUsbPower
 
 MoveToPress = 9
 ImageNumberFile = "__number.txt"
@@ -55,11 +59,11 @@ def camera_start(camera_id, device_object, **kwargs):
         if temporary is True:
             @func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
             def _inner_func():
-                return camera_start_hk(dq, *response, temporary=temporary)
+                return camera_start_hk(camera_id, dq, *response, temporary=temporary)
 
             _inner_func()
         else:
-            camera_start_hk(dq, *response, temporary=temporary)
+            camera_start_hk(camera_id, dq, *response, temporary=temporary)
 
     except Exception as e:
         print('相机初始化异常：', e)
@@ -68,7 +72,11 @@ def camera_start(camera_id, device_object, **kwargs):
         print('获取图片超时了！！！')
         raise e
     finally:
+        # 结束循环，关闭取图
         redis_client.set(f"g_bExit_{camera_id}", "1")
+        cam_obj = CamObjList[camera_id] if camera_id in CamObjList else None
+        if cam_obj is not None:
+            stop_camera(cam_obj)
 
 
 def camera_init_hk(camera_id, device_object, **kwargs):
@@ -137,6 +145,15 @@ def camera_init_hk(camera_id, device_object, **kwargs):
             for key in high_exposure_params:
                 check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
 
+    if kwargs.get('sync_camera'):
+        for key in sync_camera_params:
+            if len(key) == 3 and key[2] == 'enum':
+                check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
+            elif isinstance(key[1], float):
+                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
+    else:
+        check_result(CamObj.MV_CC_SetEnumValue, 'TriggerMode', 0)
+
     # 设置roi
     if not kwargs.get('original'):
         if int(device_object.x1) == int(device_object.x2) == 0:
@@ -178,7 +195,6 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
     cam_obj = CamObjList[camera_id]
     while True:
         if redis_client.get(f"g_bExit_{camera_id}") == "1":
-            stop_camera(cam_obj)
             break
         # 这个一个轮询的请求，5毫秒timeout，去获取图片
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), n_payload_size, st_frame_info, 5)
@@ -231,7 +247,7 @@ def stop_camera(cam_obj):
 def check_result(func, *args):
     return_value = func(*args)
     if return_value != 0:
-        print("return_value", hex(return_value), *args, func)
+        print("return_value", hex(return_value), *args, func.__name__)
         raise CameraInitFail
 
 
@@ -275,19 +291,21 @@ class CameraHandler(Handler):
             camera_ids.append(camera_id)
 
         futures = []
+        temporary = False if CORAL_TYPE == 5.3 else True
+        sync_camera = True if CORAL_TYPE == 5.3 else False
         for camera_id in camera_ids:
             # 相机正在获取图片的时候 不能再次使用
             if redis_client.get(f"g_bExit_{camera_id}") == "0":
                 raise CameraInUse()
 
             executer = ThreadPoolExecutor()
-            temporary = False if len(camera_ids) > 1 and CORAL_TYPE == 5.2 else True
             future = executer.submit(camera_start,
                                      camera_id,
                                      self._model,
                                      high_exposure=self.high_exposure,
                                      original=self.original,
-                                     temporary=temporary)
+                                     temporary=temporary,
+                                     sync_camera=sync_camera)
             futures.append(future)
 
         # 默认使用第一个相机中的截图
@@ -306,19 +324,38 @@ class CameraHandler(Handler):
         else:
             # 拼接图像 等待1s 多拍几张图片 方便同步
             time.sleep(1)
+            if sync_camera:
+                # 发送同步信号
+                with CameraUsbPower(timeout=1):
+                    pass
             for camera_id in camera_ids:
                 redis_client.set(f"g_bExit_{camera_id}", "1")
             for _ in as_completed(futures):
                 print('线程结束了')
-            print(camera_ids, 'a' * 10)
-            for camera_id in camera_ids:
-                # 在这里进行运算，选出一张图片，赋给self.src
-                for src in camera_dq_dict.get(self._model.pk + camera_id):
-                    frame_num = src['frame_num']
-                    file_path = f'camera_{camera_id}/{frame_num}.png'
-                    print(frame_num)
-                    cv2.imwrite(file_path, src['image'])
-            # self.get_syn_frame(*[camera_dq_dict.get(self._model.pk + camera_id) for camera_id in camera_ids])
+
+            # 这里保存的就是同一帧拍摄的所有图片
+            frames = collections.defaultdict(list)
+            # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
+            for frame_index in range(min([len(camera_dq_dict.get(self._model.pk + camera_id))
+                                          for camera_id in camera_ids])):
+                for camera_id in camera_ids:
+                    # 在这里进行运算，选出一张图片，赋给self.src
+                    src = camera_dq_dict.get(self._model.pk + camera_id)[frame_index]
+                    # 记录来源于哪个相机，方便后续处理
+                    src['camera_id'] = camera_id
+                    frames[src['frame_num']].append(src)
+
+            merged_frames = self.get_syn_frame(frames)
+            self.src = merged_frames[0]
+            # 写入到文件夹中，测试用
+            # if os.path.exists('camera'):
+            #     import shutil
+            #     shutil.rmtree('camera')
+            #     os.mkdir('camera')
+            # else:
+            #     os.mkdir('camera')
+            # for index, merged_img in enumerate(merged_frames):
+            #     cv2.imwrite(f'camera/{index}.png', merged_img)
 
         return 0
 
@@ -326,24 +363,67 @@ class CameraHandler(Handler):
         # return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
         return src
 
-    # 从多个相机中获取同步的内容，同步的第一帧应该是最晚开始拍摄的第一个相机的第一帧，
-    # 其他相机找到和这个相机第一帧同步的帧，后边的每一个帧就是一一对应的关系。同步的最后一帧应该是最早结束拍摄的相机的最后一帧，
-    # 其他相机晚于这帧后边的内容不再使用
-    def get_syn_frame(self, *frame_lists):
-        # 先找到最晚开始拍摄的相机
-        min_frame = frame_lists[0][0]
-        for i in range(10):
-            if i > 0:
-                print(frame_lists[1][i]['host_timestamp'] - frame_lists[1][i-1]['host_timestamp'])
-            # print(frame_lists[1][i]['dev_timestamp_low'])
-            print('----------------')
-        # for f_l in frame_lists:
-        #     # print(f_l[0]['dev_timestamp_low'])
-        #     # print(f_l[0]['frame_num'])
-        #     # print(f_l[0][''])
-        #     print('-----------------')
-            # if f_l[0][''] < min_frame['']:
-            #     pass
+    # 从多个相机中获取同步的内容
+    def get_syn_frame(self, frames_list):
+        result_frames = []
+        for frame_num, frames in frames_list.items():
+            if len(frames) != 2:
+                continue
+
+            # 目前只支持拼接俩个相机的数据
+            img1 = frames[0]['image']
+            img2 = frames[1]['image']
+
+            host_t_1 = frames[0]['host_timestamp']
+            host_t_2 = frames[1]['host_timestamp']
+            dev_t_1 = (frames[0]['dev_timestamp_high'] << 32) + frames[0]['dev_timestamp_low']
+            dev_t_2 = (frames[1]['dev_timestamp_high'] << 32) + frames[1]['dev_timestamp_low']
+            print(frame_num, host_t_2 - host_t_1, dev_t_2 - dev_t_1)
+            # print('frame_num: ', frame_num, '&' * 10)
+
+            h1, w1 = img1.shape[:2]
+            h2, w2 = img2.shape[:2]
+
+            h = self.get_homography(img1, img2)
+
+            pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
+            pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
+            pts2_ = cv2.perspectiveTransform(pts2, h)
+            pts = np.concatenate((pts1, pts2_), axis=0)
+            [xmin, ymin] = np.int32(pts.min(axis=0).ravel() - 0.5)
+            [xmax, ymax] = np.int32(pts.max(axis=0).ravel() + 0.5)
+            t = [-xmin, -ymin]
+            ht = np.array([[1, 0, t[0]], [0, 1, t[1]], [0, 0, 1]])
+
+            result = cv2.warpPerspective(img2, ht.dot(h), (xmax - xmin, ymax - ymin))
+
+            result_copy = np.array(result)
+            result[t[1]:h1 + t[1], t[0]:w1 + t[0]] = img1
+
+            rows = int(pts2_.max(axis=0).ravel()[1] - pts2_.min(axis=0).ravel()[1])
+            cols = int(pts2_.max(axis=0).ravel()[0] - pts2_.min(axis=0).ravel()[0])
+
+            for r in range(t[1], rows):
+                weight = (r - t[1]) / (rows - t[1])
+                result[r, t[0]: cols, :] = result_copy[r, t[0]: cols, :] * (1 - weight) + img1[r - t[1], t[0]: cols - t[0], :] * weight
+            result_frames.append(result)
+
+        return result_frames
+
+    @staticmethod
+    def get_homography(img1, img2):
+        # 先读取缓存中的矩阵，没有的话再重新生成
+        key = 'merge_image_h'
+        h = get_global_value(key)
+        if h is None:
+            # 判断是否有文件，有的话从文件中读出来，赋值给全局的变量，没有的话现生成一个，然后保存到文件中（方便柜子之间拷贝）。最后还需要提供一个接口，可以删除这个文件，重置全局变量
+            if os.path.exists(f'{key}.npy'):
+                h = np.load(f'{key}.npy', allow_pickle=True)
+            else:
+                h = image_utils.get_homography(img1, img2)
+                np.save(f'{key}.npy', h)
+            set_global_value(key, h)
+        return h
 
     def move(self, *args, **kwargs):
         if hasattr(self, "src"):

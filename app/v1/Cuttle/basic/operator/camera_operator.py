@@ -77,6 +77,13 @@ def camera_start(camera_id, device_object, **kwargs):
         cam_obj = CamObjList[camera_id] if camera_id in CamObjList else None
         if cam_obj is not None:
             stop_camera(cam_obj)
+        # 统计帧率
+        pic_count = len(camera_dq_dict[camera_dq_key])
+        begin_time = camera_dq_dict[camera_dq_key][0]['host_timestamp']
+        end_time = camera_dq_dict[camera_dq_key][-1]['host_timestamp']
+        if pic_count > 1:
+            frame_rate = pic_count / ((end_time - begin_time) / 1000)
+            print(f'camera{camera_id}帧率是：', int(frame_rate), '^' * 10, pic_count, ((end_time - begin_time) / 1000))
 
 
 def camera_init_hk(camera_id, device_object, **kwargs):
@@ -117,8 +124,6 @@ def camera_init_hk(camera_id, device_object, **kwargs):
             CamObj.MV_CC_SetFloatValue("Gamma", 0.7000)
         # 性能测试参数设置
         if kwargs.get("init") is None:
-            CamObj.MV_CC_SetIntValue("OffsetY", 0)
-            CamObj.MV_CC_SetIntValue("OffsetX", 0)
             CamObj.MV_CC_SetEnumValue("ADCBitDepth", 2)
             CamObj.MV_CC_SetEnumValue("PixelFormat", 0x01080009)
             CamObj.MV_CC_SetEnumValue("BalanceWhiteAuto", 0)
@@ -345,7 +350,7 @@ class CameraHandler(Handler):
                     src['camera_id'] = camera_id
                     frames[src['frame_num']].append(src)
 
-            merged_frames = self.get_syn_frame(frames)
+            merged_frames = self.get_syn_frame(frames, camera_ids)
             self.src = merged_frames[0]
             # 写入到文件夹中，测试用
             # if os.path.exists('camera'):
@@ -364,11 +369,17 @@ class CameraHandler(Handler):
         return src
 
     # 从多个相机中获取同步的内容
-    def get_syn_frame(self, frames_list):
+    def get_syn_frame(self, frames_list, camera_ids):
+        # 判断是否丢帧
+        frame_nums = []
+        max_frame_num = 0
+
         result_frames = []
         for frame_num, frames in frames_list.items():
-            if len(frames) != 2:
+            if len(frames) != len(camera_ids):
                 continue
+            frame_nums.append(frame_num)
+            max_frame_num = frame_num if frame_num > max_frame_num else max_frame_num
 
             # 目前只支持拼接俩个相机的数据
             img1 = frames[0]['image']
@@ -408,6 +419,9 @@ class CameraHandler(Handler):
                 result[r, t[0]: cols, :] = result_copy[r, t[0]: cols, :] * (1 - weight) + img1[r - t[1], t[0]: cols - t[0], :] * weight
             result_frames.append(result)
 
+        lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
+        if lost_frames:
+            print('发生了丢帧:', lost_frames, '&' * 10)
         return result_frames
 
     @staticmethod

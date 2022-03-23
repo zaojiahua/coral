@@ -110,8 +110,15 @@ def controlUsbPower(status="ON"):
 # 相机的触发控制
 class CameraUsbPower(object):
 
+    def __new__(cls, *args, **kwargs):
+        # 确保自己为单例对象
+        if not hasattr(cls, "instance"):
+            cls.instance = super().__new__(cls)
+        return cls.instance
+
     def __init__(self, power_com=camera_power_com, timeout=1):
-        self.s = ShellLab.ShellLab(power_com)
+        if not hasattr(self, "s"):
+            self.s = ShellLab.ShellLab(power_com)
         self.timeout = timeout
         self.line_number = 1.7
 

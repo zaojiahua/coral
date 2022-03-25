@@ -206,11 +206,13 @@ class Unit(BaseModel):
                 cmd_dict["functionName"] = self.functionName
                 sending_data = {"execCmdDict": cmd_dict}
                 target = "ImageHandler" if self.execModName == "IMGTOOL" else "ComplexHandler"
+
             if kwargs.pop("test_running", False):
                 sending_data["test_running"] = True
             sending_data["work_path"] = self.unit_work_path
             sending_data["device_label"] = self.device_label
             sending_data['timeout'] = self.timeout
+            sending_data['max_retry_time'] = kwargs.get('max_retry_time', None)
             if self.ocrChoice:
                 sending_data["ocr_choice"] = self.ocrChoice
             if self.tGuard:
@@ -223,6 +225,7 @@ class Unit(BaseModel):
                 sending_data['portrait'] = self.portrait
             logger.info(f'target is {target}')
             logger.info(f"unit:{sending_data}")
+
             try:
                 for i in range(3):
                     # # 给Tguard 留下发现重试执行当前unit的机会

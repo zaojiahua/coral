@@ -48,7 +48,7 @@ class PaneSchema(Schema):
             if assist_device is not None else None
 
         # 返回的数据格式需要和异常时候的统一
-        ret_code = device_obj.get_snapshot(image_path, connect_number=assist_device_ident)
+        ret_code = device_obj.get_snapshot(image_path, connect_number=assist_device_ident, max_retry_time=1)
         if ret_code == 0:
             try:
                 with open(image_path, 'rb') as f:

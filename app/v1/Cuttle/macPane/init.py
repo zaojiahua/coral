@@ -83,8 +83,9 @@ def recover_device(executer, logger):
             pass
 
         # 开启执行任务的线程和获取电量信息的线程
-        if device_obj.status != DeviceStatus.ERROR:
+        if device_obj.status != DeviceStatus.ERROR and math.floor(CORAL_TYPE) != 5:
             recover_root(device_obj.device_label, device_obj.connect_number)
+
         aide_monitor_instance = AideMonitor(device_obj)
         t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(device_dict.get("device_label"))
@@ -103,6 +104,7 @@ def recover_root(device_label, connect_num):
     jsdata["ip_address"] = connect_num
     jsdata["device_label"] = device_label
     jsdata["execCmdList"] = cmd_list
+    jsdata['max_retry_time'] = 1
     UnitFactory().create("AdbHandler", jsdata)
 
 

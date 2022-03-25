@@ -281,7 +281,7 @@ class Complex_Center(object):
         cmd_list = [f"shell input tap {max(self.cx + self.x_shift, 0)} {max(self.cy + self.y_shift, 0)}"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>0.5")
-        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
+        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, **self.kwargs)
         if kwargs.get("ignore_arm_reset") == True:
             request_body.update({"ignore_arm_reset": True})
         self.logger.info(
@@ -294,7 +294,7 @@ class Complex_Center(object):
             f"shell input swipe {self.cx + self.x_shift} {self.cy + self.y_shift} {self.cx + self.x_shift} {self.cy + self.y_shift} 2000"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>1")
-        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
+        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, **self.kwargs)
         self.logger.info(f"in coral cor ready to long press point{self.cx},{self.cy}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
 
@@ -307,7 +307,7 @@ class Complex_Center(object):
             f"shell input swipe {self.cx} {self.cy} {float(x_end)} {float(y_end)} {speed}"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>1")
-        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
+        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, **self.kwargs)
         self.logger.info(
             f"in coral cor ready to swipe{self.cx, self.cy},{self.cx + float(x_end), self.cy + float(y_end)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
@@ -349,7 +349,7 @@ class Complex_Center(object):
             pass
 
         def screencap(cmd_list, device_label, connect_number):
-            request_body = adb_unit_maker(cmd_list, device_label, connect_number)
+            request_body = adb_unit_maker(cmd_list, device_label, connect_number, **self.kwargs)
             handler_index = 0 if self.mode == 0 else (1 if device.has_camera is True else 0)
             return handler_exec(request_body, kwargs.get("handler")[handler_index])
 
@@ -375,7 +375,7 @@ class Complex_Center(object):
             cmd_list = [
                 f"bugreport {self.work_path}bugreport.zip"
             ]
-            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, BUG_REPORT_TIMEOUT)
+            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, BUG_REPORT_TIMEOUT, **self.kwargs)
             handler_exec(request_body, kwargs.get("handler")[0])
             self.logger.debug("bug report finished ")
 

@@ -9,7 +9,7 @@ def get_file_name(path):
     return ".".join(path.split(".")[:-1])
 
 
-def adb_unit_maker(cmd_list, device_label, connect_number, timeout=None):
+def adb_unit_maker(cmd_list, device_label, connect_number, timeout=None, max_retry_time=None, **kwargs):
     # 由于新增僚机adb有线连接可能，需要将原有复合unit内所有adb部分增加前置层
     # 缓存内僚机存储形式确定好之后需要对应修改此方法
     from app.v1.device_common.device_model import Device
@@ -21,6 +21,8 @@ def adb_unit_maker(cmd_list, device_label, connect_number, timeout=None):
     }
     if timeout is not None:
         request_body['timeout'] = timeout
+    if max_retry_time is not None:
+        request_body['max_retry_time'] = max_retry_time
     return request_body
 
 

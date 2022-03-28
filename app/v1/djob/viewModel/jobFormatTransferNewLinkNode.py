@@ -186,7 +186,7 @@ class JobFormatTransform:
     def isEnd(self, blockKey, nodeDataArray):
         existEnd = False
         for nodeDict in nodeDataArray:
-            if nodeDict.get('category', '') == 'End':
+            if nodeDict.get('category', '') in ['End', 'Fail', 'Success', 'Abnormal']:
                 existEnd = True
                 if str(nodeDict['key']) == str(blockKey):
                     return True

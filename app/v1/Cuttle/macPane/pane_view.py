@@ -288,9 +288,9 @@ class PaneClickTestView(MethodView):
                         int(request_data.get('inside_upper_left_y')),
                         int(request_data.get('inside_under_right_x')),
                         int(request_data.get('inside_under_right_y'))]
-        click_x, click_y, click_z = device_obj.get_click_position(int(request_data.get('x')),
-                                                                  int(request_data.get('y')),
-                                                                  int(request_data.get('z')),
+        click_x, click_y, click_z = device_obj.get_click_position(request_data.get('x'),
+                                                                  request_data.get('y'),
+                                                                  request_data.get('z'),
                                                                   device_point)
         # 判断是否是按压侧边键
         location = get_global_value("m_location")

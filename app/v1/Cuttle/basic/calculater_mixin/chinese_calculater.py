@@ -37,6 +37,7 @@ class ChineseMixin(object):
 
     @staticmethod
     def keyboard_pos_dict(img):
+        # cv2.imwrite('1.png', img)
         # 取一半以下的区域进行判断
         h, w, _ = img.shape
 
@@ -106,7 +107,7 @@ class ChineseMixin(object):
             if len(point_level) >= THREE_POINT:
                 point_level = sorted(point_level, key=lambda x: x[1])
                 # 第一个点是point本身
-                if abs(point_level[1][1] - point_level[2][1]) < 5:
+                if abs(point_level[1][1] - point_level[2][1]) < 10:
                     point_level = point_level[:THREE_POINT]
                     order_point = sorted(point_level, key=lambda x: x[0][0][0])
                     # print(order_point)

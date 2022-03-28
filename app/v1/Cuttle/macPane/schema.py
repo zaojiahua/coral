@@ -125,9 +125,9 @@ class ClickTestSchema(Schema):
     inside_upper_left_y = fields.Int(required=True)
     inside_under_right_x = fields.Int(required=True)
     inside_under_right_y = fields.Int(required=True)
-    x = fields.Int(required=True)
-    y = fields.Int(required=True)
-    z = fields.Int(required=True)
+    x = fields.Float(required=True)
+    y = fields.Float(required=True)
+    z = fields.Float(required=True)
 
     class Meta:
         unknown = INCLUDE

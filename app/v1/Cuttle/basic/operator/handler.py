@@ -93,7 +93,10 @@ class Handler():
         # 返回 {"result":int}  也可能多出其他项目eg： {"result": 0, "point_x": float(point_x), "point_y": float(point_y)}
         (skip, result) = self.before_execute()
         if skip:
-            return {"result": result}
+            response = {"result": result}
+            if self.extra_result:
+                response.update(self.extra_result)
+            return response
         assert (hasattr(self, "func") and hasattr(self, "exec_content")), "func and exec_content should be set"
         try:
             result = self.do(self.exec_content, **kwargs)

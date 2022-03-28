@@ -78,6 +78,8 @@ class ChineseMixin(object):
                 time.sleep(1.5)
             ocr_obj.snap_shot()
             ocr_obj.picture_crop()
+            # 最后验证的ocr不压缩
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             ocr_obj.get_result()
             ocr_obj.point()
         return ocr_obj.result

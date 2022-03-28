@@ -381,10 +381,10 @@ class Device(BaseModel):
 
     def update_device_border(self, data):
         # 设置roi
-        self.x1 = str(int(data.get("inside_upper_left_x")))
-        self.y1 = str(int(data.get("inside_upper_left_y")))
-        self.x2 = str(int(data.get("inside_under_right_x")))
-        self.y2 = str(int(data.get("inside_under_right_y")))
+        self.x1 = str(int(data.get("inside_upper_left_x") or 0))
+        self.y1 = str(int(data.get("inside_upper_left_y") or 0))
+        self.x2 = str(int(data.get("inside_under_right_x") or 0))
+        self.y2 = str(int(data.get("inside_under_right_y") or 0))
 
         return 0
 

@@ -85,7 +85,7 @@ class ChineseMixin(object):
         # 查找位于中心线上的三个点
         three_point = []
         for contour_points in target_contours:
-            if abs(contour_points[0][0] - w / 2) < 5:
+            if abs(contour_points[0][0] - w / 2) < 10:
                 three_point.append(contour_points)
                 # cv2.putText(img, '1', contour_points[0], cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
         # 直接使用最上面的三个
@@ -93,7 +93,7 @@ class ChineseMixin(object):
         if len(three_point) > 2:
             three_point = three_point[:3]
         else:
-            three_point = None
+            three_point = []
 
         # 查找和3个点位于同一水平面的点，然后从这些点中找俩个距离最近且距离几乎相等的点，这样就把查找和验证放到一块了
         THREE_POINT = 3
@@ -154,7 +154,11 @@ class ChineseMixin(object):
             # 先截图一张，用来获取坐标位置
             ocr_obj.snap_shot()
             keyboard_pos = self.keyboard_pos_dict(cv2.imread(ocr_obj.get_pic_path()))
+            # 保存图片，方便后续优化
+            if not keyboard_pos:
+                self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             self._model.logger.debug(f'获取到的键盘坐标是：{keyboard_pos}')
+
             coor_tuple_list = []
             for pinyin_word in pinyin:
                 coor_tuple_list = self.pinyin_2_coordinate(pinyin_word, dev_obj, coor_tuple_list, keyboard_pos)

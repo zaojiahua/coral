@@ -15,7 +15,8 @@ RUN apt-get install -y android-tools-adb && apt-get install -y usbutils && apt-g
     && apt-get install -y kmod \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' >/etc/timezone \
     && apt-get install -y tzdata \
-    && apt-get install pngquant
+    && apt-get install pngquant \
+    && apt-get install -y ffmpeg
 
 COPY . /app/coral
 WORKDIR /app/coral

@@ -45,7 +45,8 @@ def save_result_txt(result):
     """
     try:
         date = time.strftime("%Y%m%d", time.localtime())
-        path = "./logs"
+        cur_dir, _ = os.path.split(os.path.abspath(__file__))
+        path = os.path.join(cur_dir, "./logs")
         filename = "{}/{}_{}.txt".format(path, "splash_screen_result", date)
         with open(filename, 'a') as f:
             row = "%s\n" % (";".join([str(i) for i in result]))
@@ -64,7 +65,8 @@ def splash_video_detect(video_path, max_length=5 * 60):
     :param max_length: 处理的最长视频时长，单位秒
     :return: result，识别结果，1为命中，0为未命中
     """
-    image_dirs = './temp_image/'
+    cur_dir, _ = os.path.split(os.path.abspath(__file__))
+    image_dirs = os.path.join(cur_dir, './temp_image/')
     fps = 10
 
     ret, image_dir = get_image_ffmpeg(video_path, image_dirs, fps)

@@ -452,9 +452,9 @@ class Device(BaseModel):
             raise DeviceStatusError()
 
     def update_device_status(self, status):
+        self.logger.debug(f'*************** url: {device_url}{self.id}/, status:{status}')
         request(method="PATCH", url=f'{device_url}{self.id}/', json={"status": status})
         self.status = status
-        self.logger.debug(f'*************** url: {device_url}{self.id}/, status:{status}')
 
     # 更新5l机柜的m_location信息，没有机械臂对象，所以方法先写到这里
     def update_m_location(self):

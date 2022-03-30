@@ -76,9 +76,10 @@ class Dut(BaseModel):
                 current_job_label = self.next_job_label
                 if current_job_label is None:  # singal device's job finished
                     logger.info(f"dut ({self.pk}) finished and remove")
+                    device_label = self.device_label
                     self.remove_dut()  # 完成后移除
                     # 这里设置状态为idle
-                    device.update_device_status(DeviceStatus.IDLE)
+                    self.update_device_status(device_label)
                 else:
                     result_dict, *_ = self.send_djob()
                     self.djob_pk = result_dict.get("pk")
@@ -86,6 +87,12 @@ class Dut(BaseModel):
     def remove_dut(self):
         self.remove()
         self.check_tboard_finish()
+
+    def update_device_status(self, device_label=None, status=None):
+        from app.v1.device_common.device_model import Device, DeviceStatus
+        device = Device(pk=device_label or self.device_label)
+        # 这里设置状态为idle
+        device.update_device_status(status or DeviceStatus.IDLE)
 
     def check_tboard_finish(self):
         try:

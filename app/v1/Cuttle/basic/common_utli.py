@@ -1,3 +1,5 @@
+import random
+
 import cv2
 import numpy as np
 
@@ -117,11 +119,14 @@ def condition_judge(is_blur, is_not, required_words_list, identify_words_list):
 
 
 def judge_pic_same(path_1, path_2):
-    src_1 = cv2.imread(path_1)
-    src_2 = cv2.imread(path_2)
+    src_1 = cv2.imread(path_1, 0)
+    src_2 = cv2.imread(path_2, 0)
     if (src_1 is not None and src_2 is not None and src_1.shape != src_2.shape) or src_1 is None or src_2 is None:
         return False
-    difference = cv2.subtract(src_1, src_2)
+    # 绝对值加减，不会取模，也不会截断
+    difference = cv2.absdiff(src_1, src_2)
+    # 如果像素的差值很小，就认为是一样的，因为相机拍摄的模式下，像素不太可能完全一样
+    _, difference = cv2.threshold(difference, 10, 255, cv2.THRESH_BINARY)
     return np.count_nonzero(difference) < (src_1.shape[0] * src_1.shape[1]) / 2000
 
 

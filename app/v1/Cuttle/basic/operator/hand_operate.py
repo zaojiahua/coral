@@ -81,7 +81,7 @@ class HandHandler(Handler, DefaultMixin):
                 getattr(self, value)()
         # 根据adb指令中的关键词dispatch到对应机械臂方法,pix_points为adb模式下的截图中的像素坐标
         pix_points, opt_type, self.speed, absolute = self.grouping(self.exec_content)
-        print('pix_points', pix_points, '*' * 10)
+        print('pix_points', pix_points, '*' * 10, self.speed)
         if opt_type in self.arm_exec_content_str:
             self.exec_content = list()
         else:

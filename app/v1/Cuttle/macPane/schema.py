@@ -48,7 +48,7 @@ class PaneSchema(Schema):
             if assist_device is not None else None
 
         # 返回的数据格式需要和异常时候的统一
-        ret_code = device_obj.get_snapshot(image_path, connect_number=assist_device_ident)
+        ret_code = device_obj.get_snapshot(image_path, connect_number=assist_device_ident, max_retry_time=1)
         if ret_code == 0:
             try:
                 with open(image_path, 'rb') as f:
@@ -125,9 +125,9 @@ class ClickTestSchema(Schema):
     inside_upper_left_y = fields.Int(required=True)
     inside_under_right_x = fields.Int(required=True)
     inside_under_right_y = fields.Int(required=True)
-    x = fields.Int(required=True)
-    y = fields.Int(required=True)
-    z = fields.Int(required=True)
+    x = fields.Float(required=True)
+    y = fields.Float(required=True)
+    z = fields.Float(required=True)
 
     class Meta:
         unknown = INCLUDE

@@ -93,7 +93,10 @@ class Handler():
         # 返回 {"result":int}  也可能多出其他项目eg： {"result": 0, "point_x": float(point_x), "point_y": float(point_y)}
         (skip, result) = self.before_execute()
         if skip:
-            return {"result": result}
+            response = {"result": result}
+            if self.extra_result:
+                response.update(self.extra_result)
+            return response
         assert (hasattr(self, "func") and hasattr(self, "exec_content")), "func and exec_content should be set"
         try:
             result = self.do(self.exec_content, **kwargs)
@@ -154,16 +157,18 @@ class Handler():
 
         return self.retry_timeout_func(_inner_lock_func)
 
-    def retry_timeout_func(self, func, max_retry_time=3):
+    def retry_timeout_func(self, func):
         retry_time = 0
+        max_retry_time = self.kwargs.get('max_retry_time') or 3
         while retry_time < max_retry_time:
             try:
                 return func()
             except func_timeout.exceptions.FunctionTimedOut as e:
                 retry_time += 1
-                self._model.logger.error(f'超时重试: {retry_time}')
                 if retry_time == max_retry_time:
                     raise e
+                else:
+                    self._model.logger.error(f'超时重试: {retry_time}')
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:

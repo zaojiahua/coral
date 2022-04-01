@@ -36,6 +36,7 @@ def send_battery_check(device_label, device_ip):
         jsdata["ip_address"] = device_ip
         jsdata["device_label"] = device_label
         jsdata["execCmdList"] = cmd_list
+        jsdata['max_retry_time'] = 1
         UnitFactory().create("AdbHandler", jsdata)
     except func_timeout.exceptions.FunctionTimedOut as e:
         pass

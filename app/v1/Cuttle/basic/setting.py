@@ -6,9 +6,8 @@ try:
 except Exception:
     m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
     m_location_center = [157, 202.5, -24]
-
-if CORAL_TYPE == 5.2:
-    m_location = [38, 13, -24]
+    if CORAL_TYPE == 5.2:
+        m_location = [38, 13, -24]
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -32,9 +31,7 @@ camera_params_feature = [("OffsetY", 0),
                          ("ExposureTime", 15000.0),
                          ("Gain", 2.5),
                          ("AcquisitionFrameRate", 35.0),
-                         ("PixelFormat", 0x0108000A, 'enum'),
-                         ("GammaEnable", True),
-                         ("Gamma", 0.7000)]
+                         ("PixelFormat", 0x01080009, 'enum')]
 high_exposure_params = [("ExposureTime", 100000.0),
                         ("Gain", 10)]
 high_exposure_params_feature = [("ExposureTime", 200000.0),

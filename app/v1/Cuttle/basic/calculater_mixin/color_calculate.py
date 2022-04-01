@@ -4,7 +4,8 @@ import random
 import cv2
 import numpy as np
 
-from app.v1.Cuttle.basic.common_utli import precise_match, blur_match, check_color_by_position, suit_for_blur
+from app.v1.Cuttle.basic.common_utli import blur_match, check_color_by_position, suit_for_blur, \
+    condition_judge
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageColorSchema, ImageColorRelativePositionSchema, ImageColorPostionSchema
 from app.v1.Cuttle.basic.setting import color_rate, color_threshold, strip_str
@@ -33,10 +34,7 @@ class ColorMixin(object):
         # 判断所选区域内文字为期待的颜色
         exec_content, is_blur = suit_for_blur(exec_content)
         identify_words_list, words_list = self._is_color_words(exec_content)
-        if not is_blur:
-            return precise_match(identify_words_list, words_list)
-        else:
-            return blur_match(identify_words_list, words_list)
+        return condition_judge(is_blur, False, words_list, identify_words_list)
 
     def get_color_by_position(self, data):
         src_refer = cv2.imread(data.get("refer_im"))
@@ -107,4 +105,4 @@ class ColorMixin(object):
     # ------------------------------已经废弃的unit   但还需要支持之前用过的job  不能删除----------------------
     def is_excepted_color_word_blur(self, exec_content) -> int:
         identify_words_list, words_list = self._is_color_words(exec_content)
-        return blur_match(identify_words_list, words_list)
+        return blur_match(words_list, identify_words_list)

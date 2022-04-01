@@ -77,15 +77,15 @@ class Device(BaseModel):
     x2 = models.CharField()
     y2 = models.CharField()
     # 摄像头下多个按键的位置,储存的是屏幕截图中的坐标（paneview设置&重启服务恢复设备时，需要读取数据库中存的摄像头的下坐标值，并换算回截图中的坐标值）
-    back_x = models.IntegerField()
-    back_y = models.IntegerField()
-    back_z = models.IntegerField()
-    home_x = models.IntegerField()
-    home_y = models.IntegerField()
-    home_z = models.IntegerField()
-    menu_x = models.IntegerField()
-    menu_y = models.IntegerField()
-    menu_z = models.IntegerField()
+    back_x = models.CharField()
+    back_y = models.CharField()
+    back_z = models.CharField()
+    home_x = models.CharField()
+    home_y = models.CharField()
+    home_z = models.CharField()
+    menu_x = models.CharField()
+    menu_y = models.CharField()
+    menu_z = models.CharField()
     # 输入键盘的左上点和右下点
     kx1 = models.IntegerField()
     kx2 = models.IntegerField()
@@ -106,7 +106,8 @@ class Device(BaseModel):
     order = models.IntegerField()
 
     float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2",
-                  'width', 'height', 'ply', "screen_z"]
+                  'width', 'height', 'ply', "screen_z", 'back_x', 'back_y', 'back_z',
+                  'home_x', 'home_y', 'home_z', 'menu_x', 'menu_y', 'menu_z']
 
     def __init__(self, *args, **kwargs):
         super(Device, self).__init__(*args, **kwargs)
@@ -380,10 +381,10 @@ class Device(BaseModel):
 
     def update_device_border(self, data):
         # 设置roi
-        self.x1 = str(int(data.get("inside_upper_left_x")))
-        self.y1 = str(int(data.get("inside_upper_left_y")))
-        self.x2 = str(int(data.get("inside_under_right_x")))
-        self.y2 = str(int(data.get("inside_under_right_y")))
+        self.x1 = str(int(data.get("inside_upper_left_x") or 0))
+        self.y1 = str(int(data.get("inside_upper_left_y") or 0))
+        self.x2 = str(int(data.get("inside_under_right_x") or 0))
+        self.y2 = str(int(data.get("inside_under_right_y") or 0))
 
         return 0
 
@@ -477,27 +478,28 @@ class Device(BaseModel):
         m_location = get_global_value('m_location')
         # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
         if absolute:
-            x_location_per = y / (roi[2] - roi[0])
-            y_location_per = 1 - (x / (roi[3] - roi[1]))
+            x_location_per = x / (roi[3] - roi[1])
+            y_location_per = y / (roi[2] - roi[0])
         else:
             # 先计算在相机拍照模式下 要点击的位置在roi的区域 计算出的百分比针对的是图片上的左上角点
-            x_location_per = (x - roi[0]) / (roi[2] - roi[0])
-            y_location_per = (y - roi[1]) / (roi[3] - roi[1])
+            x_location_per = (1 - float(y))
+            y_location_per = float(x)
         print('location percent ', x_location_per, y_location_per)
         # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
-        click_x = round((m_location[0] + float(self.width) * (1 - y_location_per)), 2)
-        click_y = round((m_location[1] + float(self.height) * x_location_per), 2)
-        click_z = m_location[2] + z
+        click_x = round((m_location[0] + float(self.width) * x_location_per), 2)
+        click_y = round((m_location[1] + float(self.height) * y_location_per), 2)
+        click_z = m_location[2] + float(z)
         return click_x, click_y, click_z
 
     # 将截图获取统一到这里
-    def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None):
+    def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None, max_retry_time=None):
         jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
                        "execCmdList": [f"adb -s {connect_number if connect_number is not None else self.connect_number} "
                                        f"exec-out screencap -p > {image_path}"],
                        "device_label": self.device_label,
                        'high_exposure': high_exposure,
-                       'original': original})
+                       'original': original,
+                       'max_retry_time': max_retry_time})
         if self.has_camera and connect_number is None:
             handler_type = "CameraHandler"
         else:

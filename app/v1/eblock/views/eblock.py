@@ -62,7 +62,8 @@ class UnitView(MethodView):
 
         unit = Unit(unit_list_index=1, **validate_data)
         try:
-            unit.process_unit(logger, handler, test_running=True)
+            # 调试用例的时候，重试一次
+            unit.process_unit(logger, handler, test_running=True, max_retry_time=1)
         finally:
             deal_dir_file(device_vm.base_path)
 

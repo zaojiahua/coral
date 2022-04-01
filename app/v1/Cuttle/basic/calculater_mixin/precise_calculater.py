@@ -1,4 +1,4 @@
-from app.v1.Cuttle.basic.common_utli import suit_for_blur, blur_match
+from app.v1.Cuttle.basic.common_utli import suit_for_blur, condition_judge
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 
 
@@ -13,11 +13,7 @@ class PreciseMixin(object):
             self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             response = ocr_obj.get_result()
         identify_words_list = [item.get("text").strip().strip('"[]<>\,.\n') for item in response]
-        if is_blur:
-            response = blur_match(identify_words_list, required_words_list)
-        else:
-            response = 0 if set(required_words_list).issubset(set(identify_words_list)) else 1
-        return response
+        return condition_judge(is_blur, False, required_words_list, identify_words_list)
 
     def except_words_precise(self, exec_content) -> int:
         # 判断所选择区域内没有有指定文字
@@ -27,11 +23,4 @@ class PreciseMixin(object):
             response = ocr_obj.get_result()
             self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
         identify_words_list = [item.get("text").strip('",.\n') for item in response]
-        if is_blur:
-            for word in words_list:
-                for req_word in identify_words_list:
-                    if word in req_word:
-                        return 1
-            return 0
-        else:
-            return 1 if set(identify_words_list) & set(words_list) else 0
+        return condition_judge(is_blur, True, words_list, identify_words_list)

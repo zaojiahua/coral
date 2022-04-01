@@ -54,7 +54,7 @@ class ChineseMixin(object):
 
         # 通过腐蚀和膨胀使得文字部分成为一块一块的区域，方便获取轮廓
         element1 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
         dilation = cv2.dilate(sobel, element2, iterations=1)
         erosion = cv2.erode(dilation, element1, iterations=1)
         dilation = cv2.dilate(erosion, element2, iterations=1)

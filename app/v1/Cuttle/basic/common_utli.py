@@ -126,7 +126,7 @@ def judge_pic_same(path_1, path_2):
     # 绝对值加减，不会取模，也不会截断
     difference = cv2.absdiff(src_1, src_2)
     # 如果像素的差值很小，就认为是一样的，因为相机拍摄的模式下，像素不太可能完全一样
-    _, difference = cv2.threshold(difference, 10, 255, cv2.THRESH_BINARY)
+    _, difference = cv2.threshold(difference, 15, 255, cv2.THRESH_BINARY)
     return np.count_nonzero(difference) < (src_1.shape[0] * src_1.shape[1]) / 2000
 
 

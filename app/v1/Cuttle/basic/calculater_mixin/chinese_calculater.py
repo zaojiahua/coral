@@ -101,7 +101,7 @@ class ChineseMixin(object):
         for point in three_point:
             point_level = []
             for contour_points in target_contours:
-                if abs(point[0][1] - contour_points[0][1]) < 5:
+                if abs(point[0][1] - contour_points[0][1]) < 10:
                     point_level.append((contour_points, np.sqrt(np.sum((point[0] - contour_points[0]) ** 2))))
                     # cv2.putText(img, '1', contour_points[0], cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
             if len(point_level) >= THREE_POINT:

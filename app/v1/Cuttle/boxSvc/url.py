@@ -1,6 +1,6 @@
 from flask import Blueprint
 
-from app.v1.Cuttle.boxSvc.box_views import SetPort, BoxManagement, CheckPort
+from app.v1.Cuttle.boxSvc.box_views import SetPort, BoxManagement, CheckPort, PortChargeSlg
 
 resource = Blueprint('resource', __name__)
 # add
@@ -22,3 +22,5 @@ resource.add_url_rule('/power_action', view_func=SetPort.as_view("power_action")
 resource.add_url_rule('/box', view_func=BoxManagement.as_view("change_power_box"))
 resource.add_url_rule('/box/<string:name>', view_func=BoxManagement.as_view("remove_power"))
 resource.add_url_rule('/power_check', view_func=CheckPort.as_view("check_port_status"))
+# 更新充电口的充电策略
+resource.add_url_rule("/update_port_slg", view_func=PortChargeSlg.as_view("new_port_slg"))

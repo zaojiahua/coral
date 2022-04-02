@@ -226,12 +226,16 @@ class AideMonitor(object):
         """
         :return: 1 -->charge  0--> uncharge
         """
+        print("获取到的电量: ", battery_data)
         if len(battery_data[0]) < battery_data_amount:
             result = 2
         else:
             time_list = [round(int(i[8:10]) * 24 + int(i[11:13]) + float(i[14:16]) / 60, 3) for i in battery_data[1]]
+            print("time_list：", time_list)
             z = numpy.polyfit(time_list, battery_data[0], 1)  # (x:h,y:battery%)  z:[k,b]
+            print("z: ", z)
             k = round(float(z[0]), 3) + 0.0000001  # add bias 0.0000001 to prevent division by zero
+            print("k: ", k)
             self.logger.debug(
                 f"k value in calculate power:{k} for device:{self.device_object.pk} recent power data:{battery_data[0][0]}")
             result = 1 if -k >= 28 else 2

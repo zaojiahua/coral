@@ -18,7 +18,8 @@ from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, get_lock_cmd, unlock_cmd, \
-    adb_cmd_prefix, RESTART_SERVER, KILL_SERVER, START_SERVER, DEVICE_DETECT_ERROR_MAX_TIME
+    adb_cmd_prefix, RESTART_SERVER, KILL_SERVER, START_SERVER, DEVICE_DETECT_ERROR_MAX_TIME, get_global_value
+from app.v1.Cuttle.boxSvc.box_setting import port_charge_strategy
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 from app.v1.eblock.config.setting import ADB_DEFAULT_TIMEOUT
 
@@ -100,7 +101,8 @@ class AdbHandler(Handler, ChineseMixin):
                         lock.release()
                         break
                 else:
-                    sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                    sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE,
+                                                stderr=subprocess.STDOUT)
                     restr = sub_proc.communicate()[0]
                     no_sleep = False
                     for cmd in self.NoSleepList:
@@ -188,11 +190,17 @@ class AdbHandler(Handler, ChineseMixin):
         result_list = result.split(mark)
         battery_level = int(result_list[0])
         charging = False if result_list[1].strip() in self.discharging_mark_list else True
-        if int(battery_level) <= 10 and charging == False:
-            on_or_off_singal_port({
-                "port": Device(pk=self._model.pk).power_port,
-                "action": True
-            })
+        # 原来Coral的充电逻辑
+        # if int(battery_level) <= 10 and charging == False:
+        #     on_or_off_singal_port({
+        #         "port": Device(pk=self._model.pk).power_port,
+        #         "action": True
+        #     })
+        # 2022.3.31  根据充电口的充电策略进行充电
+        print("根据充电策略充电")
+        self.set_power_port_status_by_battery(battery_level)
+
+
         self._model.disconnect_times = 0
         try:
             json_data = {
@@ -311,3 +319,39 @@ class AdbHandler(Handler, ChineseMixin):
 
     def _ignore_unsupported_commend(self):
         return True, -9
+
+    def set_power_port_status_by_battery(self, battery_level):
+        from app.v1.device_common.device_model import Device
+        port = Device(pk=self._model.pk).power_port
+        if not port:
+            return
+
+        def compare_battery_level(max_level, min_level, level):
+            if min_level <= level < max_level:
+                on_or_off_singal_port({
+                    "port": port,
+                    "action": True
+                })
+            else:
+                on_or_off_singal_port({
+                    "port": port,
+                    "action": False
+                })
+
+        port_slg = get_global_value("port_charge_strategy")[port]
+        slgs_by_user: list[dict] = port_slg["set_by_user_slg"]
+        is_use_slgs_by_user = False
+        if slgs_by_user:
+            # 存在定时充电策略
+            for slg in slgs_by_user:
+                # 获取当前时间戳,判断是否有包含当前时间点的定时策略
+                current_time = time.strftime('%H:%M', time.localtime())
+                if slg["timer"][0] <= current_time < slg["timer"][1]:
+                    is_use_slgs_by_user = True
+                    compare_battery_level(slg["max_value"], slg["min_value"], battery_level)
+
+        if not is_use_slgs_by_user:
+            # 未找到包含当前时间点的定时充电策略，或者当前充电端口不存在定时充电策略
+            # 则使用默认充电策略
+            compare_battery_level(port_slg["default_slg"]["max_value"], port_slg["default_slg"]["min_value"])
+        return 0

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from flask import jsonify, request
@@ -5,6 +6,7 @@ from flask.views import MethodView
 
 from app.libs.functools import execute_limit
 from app.execption.outer.error_code.box import ConnectPowerFail
+from app.v1.Cuttle.basic.setting import set_global_value, get_global_value
 from app.v1.Cuttle.boxSvc import box_setting
 from app.v1.Cuttle.boxSvc.box_models import Box
 from app.v1.Cuttle.boxSvc.request_sender import send_order, send_temper_to_reef
@@ -29,7 +31,8 @@ class BoxManagement(MethodView):
 
     @staticmethod
     def power_view(box_obj):
-        order_set_name = "set_on_order" if box_obj.init_status else "set_off_order"
+        # order_set_name = "set_on_order" if box_obj.init_status else "set_off_order"
+        order_set_name = "set_off_order" if box_obj.init_status else "set_on_order"
         order_dict = getattr(box_setting, order_set_name)
         verified_list = box_obj.verify_box(order_dict)
         return jsonify({"verified_list": verified_list}), 200
@@ -63,8 +66,15 @@ class SetPort(MethodView):
     def post(self):
 
         params_dict = request.get_json()
+        power_box_obj = Box(pk="-".join(params_dict["port"]))
+        if not power_box_obj.ip:
+            return False
+        power_total_nums = power_box_obj.total_number
         try:
-            params_dict['action'] = True if params_dict['action'] == 'off' else False
+            if power_total_nums == 16:
+                params_dict['action'] = True if params_dict['action'] == 'on' else False
+            else:
+                params_dict['action'] = True if params_dict['action'] == 'off' else False
             response = on_or_off_singal_port(params_dict)
             if response:
                 return jsonify(response), 200
@@ -90,18 +100,24 @@ class CheckPort(MethodView):
             power_box_obj = Box(pk="-".join(port_list))
             if not power_box_obj.ip:
                 return False
-            check_status_order = box_setting.check_power_order[power_box_obj.total_number]
-            power_box_obj.logger.info(
-                f"port: {port} -- check order: {check_status_order}"
-            )
+            power_total_nums = power_box_obj.total_number
+            check_status_order = box_setting.check_power_order[power_total_nums]
             response = send_order(power_box_obj.ip, power_box_obj.port, check_status_order, power_box_obj.method)
-            port_status = parse_rev_data(port, response, power_box_obj.init_status)
+            port_status = parse_rev_data(port, response, power_box_obj.init_status, power_total_nums)
             if port_status:
                 return jsonify({"status": "on"}), 200
             else:
                 return jsonify({"status": "off"}), 200
         except ConnectPowerFail:
             raise ConnectPowerFail
+
+
+class PortChargeSlg(MethodView):
+    def post(self):
+        # 更新充电口的充电策略
+        port_slg_info = request.get_json()
+        save_charge_slg(port_slg_info)
+        return jsonify({"result": "0"}), 200
 
 
 def on_or_off_singal_port(params_dict):
@@ -159,7 +175,7 @@ def hexToBinary(hexNumber):
     return s
 
 
-def parse_rev_data(port, rev_data, init_status, num=8):
+def parse_rev_data(port, rev_data, init_status, num):
     """
     :param port: 继电器充电口编号
     :param rev_data: 发送检查充电口状态指令后收到的回复数据  eg: fe01017ee1bc
@@ -169,13 +185,59 @@ def parse_rev_data(port, rev_data, init_status, num=8):
     """
     if num == 8:
         s = hexToBinary(rev_data[6:8])
+        portState = int(s[num - int(port[-2:])])
+        status = bool(portState) ^ init_status
+        return status
     else:
-        # s8 - before 8 ports state[0-7]
-        # s_8 - after 8 ports state[8-15]
         s8 = hexToBinary(rev_data[6:8])
         s_8 = hexToBinary(rev_data[8:10])
-        s = str(s_8) + str(s8)
+        s = (str(s_8) + str(s8))[::-1]
+        num = int(port[-2:])
+        portState = int(s[num - 1])
+        status = not (bool(portState) ^ init_status)
+        return status
 
-    portState = int(s[num - int(port[-2:])])
-    status = bool(portState) ^ init_status
-    return status
+
+def save_charge_slg(data_from_reef, port_nums=1):
+    """
+    input: {"powerports": [{"port": "PA-15","powerstrategy": [
+                {"id": 1,"min_value": 30,"max_value": 60,"start_time": "18:30:59","end_time": "18:31:04","is_default": true}
+            ]
+        },
+        {
+            "port": "PA-11",
+            "powerstrategy": []
+        }]
+    output: {
+        "PA-01":{"default_slg":{"start":30, "end":80},
+                 "set_by_user_slg":[{"start"：20, "end":50, "timer":["00:00:00", "12:00:00"]},
+                                    {"start"：30, "end":80, "timer":["14:00:00", "16:00:00"]]
+                 },
+        "PA-02":{}
+    }
+    """
+    ports_info = data_from_reef["powerports"]
+    ports_info_size = len(ports_info)
+    # 判断是否取到了期望数量的端口充电策略
+    if ports_info_size < port_nums:
+        raise Exception
+
+    powers_slgs = get_global_value("port_charge_strategy")
+    for i in range(0, ports_info_size):
+        port_name = ports_info[i]["port"]
+        default_slg, set_by_user = {}, []
+        for strategy in ports_info[i]["powerstrategy"]:
+            if strategy["is_default"]:
+                default_slg = {"min_value": strategy['min_value'], "max_value": strategy['max_value']}
+            else:
+                target = {"min_value": strategy["min_value"], "max_value": strategy["max_value"],
+                          "timer": [strategy["start_time"][:-3], strategy["end_time"][:-3]]}
+                set_by_user.append(target)
+        port_name_slg = {"default_slg": default_slg, "set_by_user_slg": set_by_user}
+        if port_name in powers_slgs.keys():
+            powers_slgs[port_name] = port_name_slg
+        else:
+            powers_slgs.update({port_name: port_name_slg})
+    print(f"port_charge_strategy: {powers_slgs}")
+    set_global_value("port_charge_strategy", powers_slgs)
+    return 0

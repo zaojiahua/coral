@@ -197,9 +197,8 @@ class AdbHandler(Handler, ChineseMixin):
         #         "action": True
         #     })
         # 2022.3.31  根据充电口的充电策略进行充电
-        print("根据充电策略充电")
+        print("根据充电策略充电.....battery_level: ", battery_level)
         self.set_power_port_status_by_battery(battery_level)
-
 
         self._model.disconnect_times = 0
         try:
@@ -339,6 +338,7 @@ class AdbHandler(Handler, ChineseMixin):
                 })
 
         port_slg = get_global_value("port_charge_strategy")[port]
+        print("当前绑定端口是：", port, "当前端口充电策略是：", port_slg)
         slgs_by_user: list[dict] = port_slg["set_by_user_slg"]
         is_use_slgs_by_user = False
         if slgs_by_user:
@@ -353,5 +353,6 @@ class AdbHandler(Handler, ChineseMixin):
         if not is_use_slgs_by_user:
             # 未找到包含当前时间点的定时充电策略，或者当前充电端口不存在定时充电策略
             # 则使用默认充电策略
-            compare_battery_level(port_slg["default_slg"]["max_value"], port_slg["default_slg"]["min_value"])
+            compare_battery_level(port_slg["default_slg"]["max_value"], port_slg["default_slg"]["min_value"],
+                                  battery_level)
         return 0

@@ -57,8 +57,8 @@ stew_start_url = "/stew/"
 adb_exec_url = "/adb/"
 
 box_url = "/api/v1/cedar/woodenbox/"
-port_slg_url = "/api/v1/cedar/power_port/?device__cabinet={}&fields=port,powerstrategy.min_value," \
-               "powerstrategy.max_value,powerstrategy.start_time,powerstrategy.end_time,powerstrategy.is_default "
+port_slg_url = "/api/v1/cedar/power_port/?woodenbox__cabinet={}&fields=port,powerstrategy.min_value," \
+               "powerstrategy.max_value,powerstrategy.start_time,powerstrategy.end_time,powerstrategy.is_default"
 hw_ocr_token_url = "https://iam.{}.myhuaweicloud.com/v3/auth/tokens"
 hw_ocr_url = "https://{}/v1.0/ocr/web-image"
 

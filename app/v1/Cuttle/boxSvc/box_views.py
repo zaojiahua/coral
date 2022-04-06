@@ -66,9 +66,11 @@ class SetPort(MethodView):
     def post(self):
 
         params_dict = request.get_json()
-        power_box_obj = Box(pk="-".join(params_dict["port"]))
+        power_name = params_dict["port"].split("-")
+        power_name.pop()
+        power_box_obj = Box(pk="-".join(power_name))
         if not power_box_obj.ip:
-            return False
+            return jsonify({"status": "fail"}), 400
         power_total_nums = power_box_obj.total_number
         try:
             if power_total_nums == 16:
@@ -199,6 +201,8 @@ def parse_rev_data(port, rev_data, init_status, num):
 
 
 def save_charge_slg(data_from_reef, port_nums=1):
+    print("*"*10)
+    print(data_from_reef)
     """
     input: {"powerports": [{"port": "PA-15","powerstrategy": [
                 {"id": 1,"min_value": 30,"max_value": 60,"start_time": "18:30:59","end_time": "18:31:04","is_default": true}

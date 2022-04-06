@@ -2,12 +2,15 @@ from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
 
 try:
-    from app.config.ip import m_location, m_location_center
+    from app.config.ip import m_location, m_location_center, Z_DOWN
 except Exception:
     m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
     m_location_center = [157, 202.5, -24]
     if CORAL_TYPE == 5.2:
         m_location = [38, 13, -24]
+    # Z_DOWN = -3.5   tianjing setting
+    # Z_DOWN = -12   # 商米Tcab-5型柜夹具参数
+    Z_DOWN = -27
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -41,7 +44,8 @@ sync_camera_params = [('TriggerMode', 1, 'enum'),
                       ('TriggerSource', 0, 'enum'),
                       ('TriggerActivation', 2, 'enum'),
                       ('LineSelector', 0, 'enum'),
-                      ('AcquisitionFrameRate', 20.0)]
+                      ('AcquisitionFrameRate', 20.0),
+                      ("ExposureTime", 10000.0)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
@@ -51,9 +55,6 @@ else:
     HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
 HAND_MAX_Z = 5
 Z_START = 0
-# Z_DOWN = -3.5   tianjing setting
-# Z_DOWN = -12   # 商米Tcab-5型柜夹具参数
-Z_DOWN = -27
 Z_UP = 0
 MOVE_SPEED = 15000
 SWIPE_TIME = 1

@@ -416,7 +416,7 @@ class CameraHandler(Handler):
 
             for r in range(t[1], rows):
                 weight = (r - t[1]) / (rows - t[1])
-                result[r, t[0]: cols, :] = result_copy[r, t[0]: cols, :] * (1 - weight) + img1[r - t[1], t[0]: cols - t[0], :] * weight
+                result[r, t[0]: cols, :] = result_copy[r, t[0]: cols, :] * (1 - weight) + img1[r - t[1], 0: cols - t[0], :] * weight
             result_frames.append(result)
 
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)

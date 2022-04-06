@@ -70,6 +70,7 @@ CORAL_TYPE_NAME = {
 }
 
 arm_com = os.environ.get('ARM_COM', '/dev/arm')
+arm_com_1 = os.environ.get('ARM_COM_1', '/dev/arm_1')
 rotate_com = os.environ.get('ROTATE_COM', '/dev/rotate')
 usb_power_com = os.environ.get("USB_COM", '/dev/USBPower')
 camera_power_com = os.environ.get('CAMERA_COM', '/dev/CameraPower')
@@ -81,7 +82,7 @@ elif CORAL_TYPE == 3.1:
 elif CORAL_TYPE == 4:
     HARDWARE_MAPPING_LIST = [arm_com]
 elif CORAL_TYPE == 5.3:
-    HARDWARE_MAPPING_LIST = ['1', '2']
+    HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_1]
 else:
     HARDWARE_MAPPING_LIST = ['1', arm_com]
 

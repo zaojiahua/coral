@@ -1,6 +1,7 @@
 import math
 import re
 import time
+import platform
 
 import numpy as np
 
@@ -27,15 +28,20 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     3. 设置HOME点为操作原点
     :return:
     """
+    arm_index = arm_com_id.split('_')[-1]
+    arm_index_str = '_' + arm_index if arm_index.isdigit() else ''
+    if platform.system() == 'Windows' and arm_index.isdigit():
+        arm_com_id = 'COM' + arm_com_id.split('_')[-2]
+
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
-    hand_serial_obj_dict[device_obj.pk] = hand_serial_obj
+    hand_serial_obj_dict[device_obj.pk + arm_index_str] = hand_serial_obj
     hand_reset_orders = [
         "$x \r\n",
         "$h \r\n",
         f"G92 X0Y0Z{Z_UP} \r\n",
         "G90 \r\n",
-        arm_wait_position
+        # arm_wait_position
     ]
     for g_orders in hand_reset_orders:
         hand_serial_obj.send_single_order(g_orders)

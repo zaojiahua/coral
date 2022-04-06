@@ -14,7 +14,8 @@ from flask.views import MethodView
 from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
-from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS
+from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
+    arm_com_1
 from app.execption.outer.error_code.camera import ArmReInit, NoCamera, PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -25,7 +26,7 @@ from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_ini
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
-    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED
+    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -184,6 +185,8 @@ class PaneConfigView(MethodView):
                 function, attribute = (rotate_hand_init, "has_rotate_arm")
             elif port.split("/")[-1].isdigit():
                 function, attribute = (camera_start, "has_camera")
+            elif port.startswith('/dev/arm_'):
+                function, attribute = (hand_init, "has_arm_" + arm_com_1.split('_')[-1])
             else:
                 function, attribute = (hand_init, "has_arm")
                 controlUsbPower(status='init')
@@ -332,3 +335,47 @@ class PaneClickTestView(MethodView):
                                                                   others_orders=press_orders[3:],
                                                                   wait_time=0)
         hand_serial_obj_dict.get(device_label).recv()
+
+
+# 5D等自动建立坐标系统
+class PaneCoordinateView(MethodView):
+    # 确定俩件事情，一个是比例，也就是一个像素等于实际多少毫米。另一个是图片坐标系统下的原点实际的坐标值。
+    def post(self):
+        # 让机械臂点击一个点，在屏幕上留下了一个记号A，再让机械臂点击另一个点，在屏幕上留下了记号B
+        # 计算A、B俩点的像素距离，和实际距离的比，就得到了比例。根据比例，计算原点的坐标值。
+        for hand_key in hand_serial_obj_dict.keys():
+            # 找到主机械臂，让主机械臂移动即可
+            if '_' not in hand_key:
+                hand_obj = hand_serial_obj_dict[hand_key]
+                for click_pos in [[100, -100], [200, -100]]:
+                    click_orders = self.get_click_orders(*click_pos)
+                    for order in click_orders:
+                        hand_obj.send_single_order(order)
+                    hand_obj.recv(buffer_size=64)
+
+                # 拍照
+                request_data = request.get_json() or request.args
+                if request_data is not None:
+                    device_label = request_data.get('device_label')
+                    device_obj = Device(pk=device_label)
+                elif len(Device.all()) == 1:
+                    device_obj = Device.first()
+                else:
+                    return '获取图片失败！'
+
+                file_name = 'coordinate.png'
+                ret_code = device_obj.get_snapshot(file_name, max_retry_time=1)
+                if ret_code == 0:
+                    print('拍到照片了')
+                break
+
+        return '坐标系统更新成功'
+
+    # 传入x,y俩个值即可
+    @staticmethod
+    def get_click_orders(pos_x, pos_y):
+        z_down = get_global_value('Z_DOWN')
+        return [f"G01 X{pos_x}Y{pos_y}Z{z_down + 10}F15000\r\n",
+                f"G01 X{pos_x}Y{pos_y}Z{z_down}F15000\r\n",
+                f"G01 X{pos_x}Y{pos_y}Z{z_down + 10}F15000\r\n",
+                arm_wait_position]

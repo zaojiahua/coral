@@ -459,6 +459,9 @@ class Device(BaseModel):
 
     # 更新5l机柜的m_location信息，没有机械臂对象，所以方法先写到这里
     def update_m_location(self):
+        if CORAL_TYPE == 5.3:
+            return
+
         if CORAL_TYPE == 5.1:
             set_global_value('m_location', [m_location_center[0] - float(self.width) / 2,
                                             m_location_center[1] - float(self.height) / 2,

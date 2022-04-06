@@ -132,7 +132,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     ocr_obj.cx = x_start
                     ocr_obj.cy = y_start
                     is_adb = CORAL_TYPE < 4 or self.kwargs.get("assist_device_serial_number") is not None
-                    speed = 500 if is_adb else 11000
+                    speed = 500 if is_adb else 500
                     ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=speed)
                     if not is_adb:
                         time.sleep(1)

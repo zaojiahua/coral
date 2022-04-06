@@ -418,6 +418,10 @@ class CameraHandler(Handler):
                 weight = (r - t[1]) / (rows - t[1])
                 result[r, t[0]: cols, :] = result_copy[r, t[0]: cols, :] * (1 - weight) + img1[r - t[1], 0: cols - t[0], :] * weight
             result_frames.append(result)
+            # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
+            merge_shape = get_global_value('merge_shape')
+            if merge_shape is None:
+                set_global_value('merge_shape', result.shape)
 
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
         if lost_frames:

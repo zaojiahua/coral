@@ -469,7 +469,6 @@ class Device(BaseModel):
         else:
             set_global_value('m_location', [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
         self.screen_z = str(get_global_value('m_location')[2])
-        print('new m_location:', get_global_value('m_location'))
         set_global_value('Z_DOWN', get_global_value('m_location')[2])
         print('new Z_DOWN', get_global_value('Z_DOWN'))
 
@@ -479,19 +478,33 @@ class Device(BaseModel):
             roi = [float(self.x1), float(self.y1), float(self.x2), float(self.y2)]
 
         m_location = get_global_value('m_location')
-        # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
-        if absolute:
-            x_location_per = x / (roi[3] - roi[1])
-            y_location_per = y / (roi[2] - roi[0])
+
+        if CORAL_TYPE == 5.3:
+            dpi = get_global_value('pane_dpi')
+            h, w, _ = get_global_value('merge_shape')
+            if absolute:
+                click_x = 0
+                click_y = 0
+                click_z = 0
+            else:
+                click_x = m_location[0] + y / dpi
+                click_y = abs(m_location[1] - (w - x) / dpi)
+                click_z = m_location[2]
         else:
-            # 先计算在相机拍照模式下 要点击的位置在roi的区域 计算出的百分比针对的是图片上的左上角点
-            x_location_per = (1 - float(y))
-            y_location_per = float(x)
-        print('location percent ', x_location_per, y_location_per)
-        # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
-        click_x = round((m_location[0] + float(self.width) * x_location_per), 2)
-        click_y = round((m_location[1] + float(self.height) * y_location_per), 2)
-        click_z = m_location[2] + float(z)
+            # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
+            if absolute:
+                x_location_per = x / (roi[3] - roi[1])
+                y_location_per = y / (roi[2] - roi[0])
+            else:
+                # 先计算在相机拍照模式下 要点击的位置在roi的区域 计算出的百分比针对的是图片上的左上角点
+                x_location_per = (1 - float(y))
+                y_location_per = float(x)
+            print('location percent ', x_location_per, y_location_per)
+            # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
+            click_x = round((m_location[0] + float(self.width) * x_location_per), 2)
+            click_y = round((m_location[1] + float(self.height) * y_location_per), 2)
+            click_z = m_location[2] + float(z)
+
         return click_x, click_y, click_z
 
     # 将截图获取统一到这里

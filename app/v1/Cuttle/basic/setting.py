@@ -164,6 +164,8 @@ _global_dict = {}
 
 def set_global_value(key, value):
     """ 定义一个全局变量 """
+    if key == 'm_location':
+        print('new m_location:', value)
     _global_dict[key] = value
 
 

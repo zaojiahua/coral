@@ -15,7 +15,7 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1
+    arm_com_1, Z_DOWN
 from app.execption.outer.error_code.camera import ArmReInit, NoCamera, PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -26,7 +26,7 @@ from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_ini
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
-    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position
+    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -218,11 +218,24 @@ class AutoPaneBorderView(MethodView):
             return jsonify({"fail": "can not get raw image"}), 400
         image = Image.open(request.files.get("rawImage"))  # 720*1280*3
         src = np.array(image)
+        point = self.get_suitable_area(src, 30)
+        if point is None:
+            return jsonify(
+                {"status": "can not find suitable area, please make sure phone is showing a light page"}), 400
+        else:
+            return jsonify({"upper_left_x": int(point[0][0]),
+                            "upper_left_y": int(point[0][1]),
+                            "under_right_x": int(point[3][0]),
+                            "under_right_y": int(point[3][1]),
+                            }), 200
+
+    @staticmethod
+    def get_suitable_area(src, thresh):
         kernel = np.uint8(np.ones((3, 3)))
         src = cv2.erode(src, kernel, iterations=2)
         src = cv2.dilate(src, kernel, iterations=2)
         gray = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY)
-        ret, binary = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
+        ret, binary = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)
         image, contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         box_list = []
         for contour in contours:
@@ -235,15 +248,11 @@ class AutoPaneBorderView(MethodView):
         box_list.sort(key=lambda x: x[1], reverse=True)
         try:
             point = box_list[0][0].tolist()
+            point.sort(key=lambda x: x[0] + x[1])
         except IndexError:
-            return jsonify(
-                {"status": "can not find suitable area, please make sure phone is showing a light page"}), 400
-        point.sort(key=lambda x: x[0] + x[1])
-        return jsonify({"upper_left_x": int(point[0][0]),
-                        "upper_left_y": int(point[0][1]),
-                        "under_right_x": int(point[3][0]),
-                        "under_right_y": int(point[3][1]),
-                        }), 200
+            pass
+
+        return point
 
 
 class FilePushView(MethodView):
@@ -347,11 +356,10 @@ class PaneCoordinateView(MethodView):
             # 找到主机械臂，让主机械臂移动即可
             if '_' not in hand_key:
                 hand_obj = hand_serial_obj_dict[hand_key]
-                for click_pos in [[100, -100], [200, -100]]:
-                    click_orders = self.get_click_orders(*click_pos)
-                    for order in click_orders:
-                        hand_obj.send_single_order(order)
-                    hand_obj.recv(buffer_size=64)
+                pos_a = [100, -100]
+                pos_b = [200, -100]
+                for click_pos in [pos_a, pos_b]:
+                    self.click(*click_pos, hand_obj)
 
                 # 拍照
                 request_data = request.get_json() or request.args
@@ -363,10 +371,17 @@ class PaneCoordinateView(MethodView):
                 else:
                     return '获取图片失败！'
 
-                file_name = 'coordinate.png'
-                ret_code = device_obj.get_snapshot(file_name, max_retry_time=1)
+                filename = 'coordinate.png'
+                ret_code = device_obj.get_snapshot(filename, max_retry_time=1)
                 if ret_code == 0:
                     print('拍到照片了')
+                    dpi = self.get_scale(filename, pos_a, pos_b)
+                    if dpi is not None:
+                        # 测试计算的是否正确 点击左上角
+                        points = AutoPaneBorderView.get_suitable_area(cv2.imread(filename), 60)
+                        if points is not None:
+                            click_x, click_y, _ = device_obj.get_click_position(*points[1])
+                            self.click(click_x, -click_y, hand_obj)
                 break
 
         return '坐标系统更新成功'
@@ -379,3 +394,61 @@ class PaneCoordinateView(MethodView):
                 f"G01 X{pos_x}Y{pos_y}Z{z_down}F15000\r\n",
                 f"G01 X{pos_x}Y{pos_y}Z{z_down + 10}F15000\r\n",
                 arm_wait_position]
+
+    def click(self, pos_x, pos_y, hand_obj):
+        click_orders = self.get_click_orders(pos_x, pos_y)
+        for order in click_orders:
+            hand_obj.send_single_order(order)
+        hand_obj.recv(buffer_size=64)
+
+    @staticmethod
+    def get_scale(filename, pos_a, pos_b):
+        img = cv2.imread(filename)
+        _, w, _ = img.shape
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+        # 机械臂点下的点需要是红色的
+        lower_red = np.array([0, 43, 46])
+        upper_red = np.array([10, 255, 255])
+        mask_1 = cv2.inRange(hsv, lower_red, upper_red)
+
+        lower_red = np.array([156, 43, 46])
+        upper_red = np.array([180, 255, 255])
+        mask_2 = cv2.inRange(hsv, lower_red, upper_red)
+
+        mask = mask_1 + mask_2
+
+        kernel = np.uint8(np.ones((3, 3)))
+        mask = cv2.dilate(mask, kernel, iterations=2)
+
+        # 获取符合条件的轮廓
+        _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        target_contours = []
+        # 查找符合条件的轮廓
+        for contour_index, contour_points in enumerate(contours):
+            # 遍历组成轮廓的每个坐标点
+            m = cv2.moments(contour_points)
+            if m['m00'] > 0:
+                # 获取对象的质心
+                cx = int(m['m10'] / m['m00'])
+                cy = int(m['m01'] / m['m00'])
+                if w * 0.3 < cx < w * 0.6:
+                    target_contours.append(np.array([[int(cx), int(cy)]]))
+
+        if len(target_contours) == 2:
+            # A、B俩点的x像素坐标默认是相等的。根据这个默认条件执行以下的逻辑。实际上得出来的A、B俩点的x像素坐标不一样，原因是相机是歪的。
+            dis = abs(target_contours[0][0][1] - target_contours[1][0][1])
+            # 实际上就是dpi 代表1毫米多少个像素点
+            dpi = dis / abs(pos_a[0] - pos_b[0])
+            print(f'dpi:{dpi}', '&' * 10)
+            # 计算图片的右上角对应的坐标点，也就是得出来m_location
+            cal_point = target_contours[0] if target_contours[0][0][1] < target_contours[1][0][1] else target_contours[1]
+            m_x = pos_a[0] - cal_point[0][1] / dpi
+            m_y = pos_a[1] + (w - cal_point[0][0]) / dpi
+            set_global_value('m_location', [m_x, m_y, Z_DOWN])
+            set_global_value('pane_dpi', dpi)
+
+            # 画出轮廓，方便测试
+            # img = cv2.drawContours(img, target_contours, -1, (0, 255, 0), 30)
+
+            return dpi

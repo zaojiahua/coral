@@ -18,7 +18,7 @@ from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, CameraMax, \
     camera_params_240, CamObjList, camera_params_feature, high_exposure_params, high_exposure_params_feature, \
-    sync_camera_params, get_global_value, set_global_value
+    sync_camera_params, get_global_value, set_global_value, MERGE_IMAGE_H
 from app.execption.outer.error_code.imgtool import CameraNotResponse
 from app.config.setting import HARDWARE_MAPPING_LIST
 from app.libs import image_utils
@@ -431,16 +431,15 @@ class CameraHandler(Handler):
     @staticmethod
     def get_homography(img1, img2):
         # 先读取缓存中的矩阵，没有的话再重新生成
-        key = 'merge_image_h'
-        h = get_global_value(key)
+        h = get_global_value(MERGE_IMAGE_H)
         if h is None:
             # 判断是否有文件，有的话从文件中读出来，赋值给全局的变量，没有的话现生成一个，然后保存到文件中（方便柜子之间拷贝）。最后还需要提供一个接口，可以删除这个文件，重置全局变量
-            if os.path.exists(f'{key}.npy'):
-                h = np.load(f'{key}.npy', allow_pickle=True)
+            if os.path.exists(MERGE_IMAGE_H):
+                h = np.load(MERGE_IMAGE_H, allow_pickle=True)
             else:
                 h = image_utils.get_homography(img1, img2)
-                np.save(f'{key}.npy', h)
-            set_global_value(key, h)
+                np.save(MERGE_IMAGE_H, h)
+            set_global_value(MERGE_IMAGE_H, h)
         return h
 
     def move(self, *args, **kwargs):

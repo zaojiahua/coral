@@ -1,3 +1,4 @@
+import os.path
 import time
 import math
 import traceback
@@ -19,7 +20,8 @@ from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
-from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value, m_location
+from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value, m_location, \
+    COORDINATE_CONFIG_FILE, Z_DOWN
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 
 
@@ -460,9 +462,19 @@ class Device(BaseModel):
     # 更新5l机柜的m_location信息，没有机械臂对象，所以方法先写到这里
     def update_m_location(self):
         if CORAL_TYPE == 5.3:
-            return
-
-        if CORAL_TYPE == 5.1:
+            if not os.path.exists(COORDINATE_CONFIG_FILE):
+                self.logger.error('多机械臂缺少必要的坐标配置文件, 请注意先配置坐标！！！')
+            else:
+                with open(COORDINATE_CONFIG_FILE, 'rt') as f:
+                    for line in f.readlines():
+                        key, value = line.strip('\n').split('=')
+                        if key == 'm_location':
+                            m_l = eval(value)
+                            m_l.append(Z_DOWN)
+                            set_global_value(key, m_l)
+                        else:
+                            set_global_value(key, eval(value))
+        elif CORAL_TYPE == 5.1:
             set_global_value('m_location', [m_location_center[0] - float(self.width) / 2,
                                             m_location_center[1] - float(self.height) / 2,
                                             m_location_center[2] + float(self.ply)])

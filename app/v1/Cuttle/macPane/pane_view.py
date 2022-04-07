@@ -26,7 +26,8 @@ from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_ini
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
-    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value
+    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
+    COORDINATE_CONFIG_FILE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -445,8 +446,13 @@ class PaneCoordinateView(MethodView):
             cal_point = target_contours[0] if target_contours[0][0][1] < target_contours[1][0][1] else target_contours[1]
             m_x = pos_a[0] - cal_point[0][1] / dpi
             m_y = pos_a[1] + (w - cal_point[0][0]) / dpi
+
+            # 写入到文件中，方便初始化的时候获取，这里也是这俩个值更新的唯一地方
             set_global_value('m_location', [m_x, m_y, Z_DOWN])
             set_global_value('pane_dpi', dpi)
+            with open(COORDINATE_CONFIG_FILE, 'wt') as f:
+                f.writelines(f'm_location=[{m_x},{m_y}]\n')
+                f.writelines(f'pane_dpi={dpi}\n')
 
             # 画出轮廓，方便测试
             # img = cv2.drawContours(img, target_contours, -1, (0, 255, 0), 30)

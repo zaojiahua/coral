@@ -182,3 +182,5 @@ set_global_value('Z_DOWN', Z_DOWN)
 set_global_value('merge_image_h', None)
 
 PERFORMANCE_END_LOOP_TIMEOUT = 60 * 3
+COORDINATE_CONFIG_FILE = 'app/config/coordinate.py'
+MERGE_IMAGE_H = 'app/config/merge_image_h.npy'

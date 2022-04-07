@@ -66,7 +66,7 @@ CORAL_TYPE_NAME = {
     3.1: 'Tcab_3C',
     5.1: 'Tcab_5L',
     5.2: 'Tcab_5se',
-    5.3: 'Tcab_5M'
+    5.3: 'Tcab_5D'
 }
 
 arm_com = os.environ.get('ARM_COM', '/dev/arm')

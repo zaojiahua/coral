@@ -179,32 +179,19 @@ class PaneConfigView(MethodView):
         adjust_brightness_result = UnitFactory().create("AdbHandler", jsdata)
 
     @staticmethod
-    def hardware_init(port, device_label, executer, rotate=False):
-        try:
-            device_object = Device(pk=device_label)
-            if rotate is True:
-                function, attribute = (rotate_hand_init, "has_rotate_arm")
-            elif port.split("/")[-1].isdigit():
-                function, attribute = (camera_start, "has_camera")
-            elif port.startswith('/dev/arm_'):
-                function, attribute = (hand_init, "has_arm_" + arm_com_1.split('_')[-1])
-            else:
-                function, attribute = (hand_init, "has_arm")
-                controlUsbPower(status='init')
-            setattr(device_object, attribute, True)
-            future = executer.submit(function, port, device_object, init=True, original=True)
-            exception = future.exception(timeout=2)
-            print(exception, '*' * 10)
-            if "PermissionError" in str(exception):
-                traceback.print_exc()
-                raise ArmReInit
-            elif "FileNotFoundError" in str(exception):
-                return 0
-            elif "tolist" in str(exception):
-                raise NoCamera
-        except TimeoutError:
-            print('TimeoutError')
-            return 0
+    def hardware_init(port, device_label, rotate=False):
+        device_object = Device(pk=device_label)
+        if rotate is True:
+            function, attribute = (rotate_hand_init, "has_rotate_arm")
+        elif port.split("/")[-1].isdigit():
+            function, attribute = (camera_start, "has_camera")
+        elif port.startswith('/dev/arm_'):
+            function, attribute = (hand_init, "has_arm_" + arm_com_1.split('_')[-1])
+        else:
+            function, attribute = (hand_init, "has_arm")
+            controlUsbPower(status='init')
+        setattr(device_object, attribute, True)
+        return function, device_object
 
 
 class PaneBorderView(MethodView):

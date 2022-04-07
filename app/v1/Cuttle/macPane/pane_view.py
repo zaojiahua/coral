@@ -368,7 +368,7 @@ class PaneCoordinateView(MethodView):
                         # 测试计算的是否正确 点击左上角
                         points = AutoPaneBorderView.get_suitable_area(cv2.imread(filename), 60)
                         if points is not None:
-                            click_x, click_y, _ = device_obj.get_click_position(*points[1])
+                            click_x, click_y, _ = device_obj.get_click_position(*points[1], test=True)
                             self.click(click_x, -click_y, hand_obj)
                 break
 

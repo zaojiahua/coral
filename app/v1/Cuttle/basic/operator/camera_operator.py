@@ -18,7 +18,7 @@ from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, CameraMax, \
     camera_params_240, CamObjList, camera_params_feature, high_exposure_params, high_exposure_params_feature, \
-    sync_camera_params, get_global_value, set_global_value, MERGE_IMAGE_H
+    sync_camera_params, get_global_value, set_global_value, MERGE_IMAGE_H, COORDINATE_CONFIG_FILE
 from app.execption.outer.error_code.imgtool import CameraNotResponse
 from app.config.setting import HARDWARE_MAPPING_LIST
 from app.libs import image_utils
@@ -159,8 +159,8 @@ def camera_init_hk(camera_id, device_object, **kwargs):
     else:
         check_result(CamObj.MV_CC_SetEnumValue, 'TriggerMode', 0)
 
-    # 设置roi
-    if not kwargs.get('original'):
+    # 设置roi 多摄像机暂时不设置
+    if not kwargs.get('original') and CORAL_TYPE != 5.3:
         if int(device_object.x1) == int(device_object.x2) == 0:
             pass
         else:
@@ -319,7 +319,6 @@ class CameraHandler(Handler):
             for _ in as_completed(futures):
                 image = camera_dq_dict.get(self._model.pk + camera_ids[0])[-1]['image']
                 if not self.original:
-                    image = self.get_roi(image)
                     image = np.rot90(image, 3)
 
             try:
@@ -351,7 +350,11 @@ class CameraHandler(Handler):
                     frames[src['frame_num']].append(src)
 
             merged_frames = self.get_syn_frame(frames, camera_ids)
-            self.src = merged_frames[0]
+            image = merged_frames[0]
+            if not self.original:
+                image = self.get_roi(merged_frames[0])
+                image = np.rot90(image)
+            self.src = image
             # 写入到文件夹中，测试用
             # if os.path.exists('camera'):
             #     import shutil
@@ -365,8 +368,8 @@ class CameraHandler(Handler):
         return 0
 
     def get_roi(self, src):
-        # return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
-        return src
+        # 只针对多摄像机，多摄像机没有把参数设置到摄像机上，后续有需求可以直接设置到相机的参数上
+        return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
 
     # 从多个相机中获取同步的内容
     def get_syn_frame(self, frames_list, camera_ids):
@@ -422,6 +425,8 @@ class CameraHandler(Handler):
             merge_shape = get_global_value('merge_shape')
             if merge_shape is None:
                 set_global_value('merge_shape', result.shape)
+                with open(COORDINATE_CONFIG_FILE, 'at') as f:
+                    f.writelines(f'merge_shape={result.shape}\n')
 
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
         if lost_frames:

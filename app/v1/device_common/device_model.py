@@ -485,7 +485,7 @@ class Device(BaseModel):
         print('new Z_DOWN', get_global_value('Z_DOWN'))
 
     # 获取5l柜的点击坐标
-    def get_click_position(self, x, y, z=0, roi=None, absolute=False):
+    def get_click_position(self, x, y, z=0, roi=None, absolute=False, test=False):
         if roi is None:
             roi = [float(self.x1), float(self.y1), float(self.x2), float(self.y2)]
 
@@ -495,13 +495,20 @@ class Device(BaseModel):
             dpi = get_global_value('pane_dpi')
             h, w, _ = get_global_value('merge_shape')
             if absolute:
-                click_x = 0
-                click_y = 0
-                click_z = 0
+                x = x + roi[1]
+                y = y + w - roi[2]
+                click_x = m_location[0] + x / dpi
+                click_y = abs(m_location[1] - y / dpi)
+                click_z = m_location[2] + float(z)
             else:
+                # 从pane测试点击的时候走这里
+                if not test:
+                    x = float(x) * (roi[2] - roi[0]) + roi[0]
+                    y = float(y) * (roi[3] - roi[1]) + roi[1]
+                # 程序自己的测试走的这里
                 click_x = m_location[0] + y / dpi
                 click_y = abs(m_location[1] - (w - x) / dpi)
-                click_z = m_location[2]
+                click_z = m_location[2] + float(z)
         else:
             # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
             if absolute:

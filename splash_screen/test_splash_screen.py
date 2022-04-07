@@ -75,7 +75,7 @@ def splash_video_detect(video_path, max_length=5 * 60):
         return 0
 
     print('fps', fps, ret, image_dir)
-    result, result_time = splash_screen.splash_screen_detect(image_dir, fps=fps, dis_max= 16, splash_num = 4,max_length=max_length)
+    result, result_time = splash_screen.splash_screen_detect(image_dir, fps=fps, dis_max= 18, splash_num = 5,max_length=max_length)
     save_result_txt([video_path, result, result_time])
 
     return result

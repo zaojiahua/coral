@@ -342,7 +342,7 @@ class PaneCoordinateView(MethodView):
         # 计算A、B俩点的像素距离，和实际距离的比，就得到了比例。根据比例，计算原点的坐标值。
         for hand_key in hand_serial_obj_dict.keys():
             # 找到主机械臂，让主机械臂移动即可
-            if '_' not in hand_key:
+            if '_' not in hand_key or not hand_key.split('_')[-1].isdigit():
                 hand_obj = hand_serial_obj_dict[hand_key]
                 pos_a = [100, -100]
                 pos_b = [200, -100]
@@ -360,7 +360,7 @@ class PaneCoordinateView(MethodView):
                     return '获取图片失败！'
 
                 filename = 'coordinate.png'
-                ret_code = device_obj.get_snapshot(filename, max_retry_time=1)
+                ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=True)
                 if ret_code == 0:
                     print('拍到照片了')
                     dpi = self.get_scale(filename, pos_a, pos_b)

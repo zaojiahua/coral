@@ -198,6 +198,8 @@ def camera_init_hk(camera_id, device_object, **kwargs):
 def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temporary=True):
     # 这个是海康摄像头持续获取图片的方法，原理还是用ctypes模块调用.dll或者.so文件中的变量
     cam_obj = CamObjList[camera_id]
+    # 走到这里以后，设置一个标记，代表相机开始工作了
+    redis_client.set(f"camera_loop_{camera_id}", 1)
     while True:
         if redis_client.get(f"g_bExit_{camera_id}") == "1":
             break
@@ -326,11 +328,18 @@ class CameraHandler(Handler):
             except UnboundLocalError:
                 raise CameraNotResponse
         else:
-            # 拼接图像 等待1s 多拍几张图片 方便同步
-            time.sleep(1)
+            # 判断俩个相机都已经进入到了循环中
+            while True:
+                all_in_loop = True
+                for camera_id in camera_ids:
+                    if not redis_client.get(f"camera_loop_{camera_id}"):
+                        all_in_loop = False
+                        break
+                if all_in_loop:
+                    break
             if sync_camera:
                 # 发送同步信号
-                with CameraUsbPower(timeout=1):
+                with CameraUsbPower(timeout=0.1):
                     pass
             for camera_id in camera_ids:
                 redis_client.set(f"g_bExit_{camera_id}", "1")

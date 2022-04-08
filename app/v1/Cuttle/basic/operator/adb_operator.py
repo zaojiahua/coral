@@ -326,12 +326,14 @@ class AdbHandler(Handler, ChineseMixin):
             return
 
         def compare_battery_level(max_level, min_level, level):
-            if min_level <= level < max_level:
+            if level <= min_level:
+                print("当前电量低于mix_level, 开始充电")
                 on_or_off_singal_port({
                     "port": port,
                     "action": True
                 })
-            else:
+            elif level >= max_level:
+                print("当前电量高于max_level, 停止充电")
                 on_or_off_singal_port({
                     "port": port,
                     "action": False
@@ -348,11 +350,13 @@ class AdbHandler(Handler, ChineseMixin):
                 current_time = time.strftime('%H:%M', time.localtime())
                 if slg["timer"][0] <= current_time < slg["timer"][1]:
                     is_use_slgs_by_user = True
+                    print("当前使用了定时充电策略： ", slg)
                     compare_battery_level(slg["max_value"], slg["min_value"], battery_level)
 
         if not is_use_slgs_by_user:
             # 未找到包含当前时间点的定时充电策略，或者当前充电端口不存在定时充电策略
             # 则使用默认充电策略
+            print("当前使用了默认充电策略： ", port_slg["default_slg"])
             compare_battery_level(port_slg["default_slg"]["max_value"], port_slg["default_slg"]["min_value"],
                                   battery_level)
         return 0

@@ -166,10 +166,10 @@ def camera_init_hk(camera_id, device_object, **kwargs):
         else:
             # 这里的4和16是软件设置的时候，必须是4和16的倍数
             width = (int(device_object.x2) - int(device_object.x1)) - (
-                        int(device_object.x2) - int(device_object.x1)) % 16 + 16
+                    int(device_object.x2) - int(device_object.x1)) % 16 + 16
             offsetx = int(device_object.x1) - int(device_object.x1) % 16
             height = (int(device_object.y2) - int(device_object.y1)) - (
-                        int(device_object.y2) - int(device_object.y1)) % 16 + 16
+                    int(device_object.y2) - int(device_object.y1)) % 16 + 16
             offsety = int(device_object.y1) - int(device_object.y1) % 4
             print('设置的roi是：', width, offsetx, height, offsety)
             check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
@@ -377,6 +377,9 @@ class CameraHandler(Handler):
         return 0
 
     def get_roi(self, src):
+        if int(self._model.y1) == 0 and int(self._model.y2) == 0 and int(self._model.x1) == 0 and int(
+                self._model.x2) == 0:
+            return src
         # 只针对多摄像机，多摄像机没有把参数设置到摄像机上，后续有需求可以直接设置到相机的参数上
         return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
 

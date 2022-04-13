@@ -2,7 +2,7 @@ from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
 
 try:
-    from app.config.ip import m_location, m_location_center, Z_DOWN
+    from app.config.ip import m_location, m_location_center, Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION
 except Exception:
     m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
     m_location_center = [157, 202.5, -24]
@@ -11,6 +11,8 @@ except Exception:
     # Z_DOWN = -3.5   tianjing setting
     # Z_DOWN = -12   # 商米Tcab-5型柜夹具参数
     Z_DOWN = -27
+    ARM_MOVE_REGION = [201, 240]
+    DOUBLE_ARM_MOVE_REGION = [368, 239]
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -54,8 +56,15 @@ if CORAL_TYPE == 5.1:
 else:
     HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
 HAND_MAX_Z = 5
-Z_START = 0
-Z_UP = 0
+if CORAL_TYPE == 5.3:
+    Z_UP = -32
+    Z_START = -32
+    arm_wait_position = f"G01 X0Y0Z{Z_UP}F15000 \r\n"
+else:
+    Z_UP = 0
+    Z_START = 0
+    arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
+
 MOVE_SPEED = 15000
 SWIPE_TIME = 1
 # 按压侧边键参数
@@ -79,7 +88,6 @@ arm_default_y = '33'
 arm_default = f"G01 X0Y{arm_default_y}Z0F5000 \r\n"
 arm_move_position = f'G01 X0Y{arm_default_y}Z0F3000 \r\n'
 # 和三轴机械臂相关
-arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
 last_swipe_end_point = [0, 0]
 
 color_threshold = 4000

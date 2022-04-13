@@ -1,7 +1,7 @@
 from flask import Blueprint
 
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
-    AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView
+    AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, \
     PaneBorderView
 
@@ -30,3 +30,5 @@ pane.add_url_rule('/get_roi/', view_func=AutoPaneBorderView.as_view('get_roi'))
 pane.add_url_rule('/file_push/', view_func=FilePushView.as_view('file_push'))
 # 建立坐标系统
 pane.add_url_rule('/coordinate/', view_func=PaneCoordinateView.as_view('coordinate'))
+# 重置拼图矩阵
+pane.add_url_rule('/reset_h/', view_func=PaneMergePicView.as_view('reset_h'))

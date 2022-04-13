@@ -27,7 +27,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
-    COORDINATE_CONFIG_FILE
+    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -447,3 +447,18 @@ class PaneCoordinateView(MethodView):
             # img = cv2.drawContours(img, target_contours, -1, (0, 255, 0), 30)
 
             return dpi, [m_x, m_y, Z_DOWN]
+
+
+# 重置5D等拼接图像的参数
+class PaneMergePicView(MethodView):
+    # 删除文件，重置全局变量
+    def post(self):
+        try:
+            if os.path.exists(MERGE_IMAGE_H):
+                os.remove(MERGE_IMAGE_H)
+            set_global_value(MERGE_IMAGE_H, None)
+            set_global_value('merge_shape', None)
+            return jsonify(dict(error_code=0))
+        except Exception as e:
+            print(e)
+            return jsonify(dict(error_code=1, description='重置失败！'))

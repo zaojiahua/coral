@@ -338,6 +338,8 @@ class PaneClickTestView(MethodView):
 class PaneCoordinateView(MethodView):
     # 确定俩件事情，一个是比例，也就是一个像素等于实际多少毫米。另一个是图片坐标系统下的原点实际的坐标值。
     def post(self):
+        dpi = 0
+        m_location= [0, 0, 0]
         # 让机械臂点击一个点，在屏幕上留下了一个记号A，再让机械臂点击另一个点，在屏幕上留下了记号B
         # 计算A、B俩点的像素距离，和实际距离的比，就得到了比例。根据比例，计算原点的坐标值。
         for hand_key in hand_serial_obj_dict.keys():
@@ -357,13 +359,13 @@ class PaneCoordinateView(MethodView):
                 elif len(Device.all()) == 1:
                     device_obj = Device.first()
                 else:
-                    return '获取图片失败！'
+                    return jsonify(dict(error_code=1, description='坐标换算失败！无法获取图片！'))
 
                 filename = 'coordinate.png'
                 ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=True)
                 if ret_code == 0:
                     print('拍到照片了')
-                    dpi = self.get_scale(filename, pos_a, pos_b)
+                    dpi, m_location = self.get_scale(filename, pos_a, pos_b)
                     if dpi is not None:
                         # 测试计算的是否正确 点击左上角
                         points = AutoPaneBorderView.get_suitable_area(cv2.imread(filename), 60)
@@ -372,7 +374,7 @@ class PaneCoordinateView(MethodView):
                             self.click(click_x, -click_y, hand_obj)
                 break
 
-        return '坐标系统更新成功'
+        return jsonify(dict(error_code=0, data={'dpi': dpi, 'm_location': m_location}))
 
     # 传入x,y俩个值即可
     @staticmethod
@@ -444,4 +446,4 @@ class PaneCoordinateView(MethodView):
             # 画出轮廓，方便测试
             # img = cv2.drawContours(img, target_contours, -1, (0, 255, 0), 30)
 
-            return dpi
+            return dpi, [m_x, m_y, Z_DOWN]

@@ -4,6 +4,7 @@ import random
 import shutil
 import subprocess
 import sys
+import time
 import traceback
 
 import cv2
@@ -462,3 +463,28 @@ class PaneMergePicView(MethodView):
         except Exception as e:
             print(e)
             return jsonify(dict(error_code=1, description='重置失败！'))
+
+
+# 调试距离
+class PaneLocateDeviceView(MethodView):
+    # 根据z的值，移动被测试设备
+    def post(self):
+        for hand_key in hand_serial_obj_dict.keys():
+            # 找到主机械臂，让主机械臂移动即可
+            if '_' not in hand_key or not hand_key.split('_')[-1].isdigit():
+                hand_obj = hand_serial_obj_dict[hand_key]
+                pos_x = 100
+                pos_y = -100
+                z_down = get_global_value('Z_DOWN')
+                click_orders = [f"G01 X{pos_x}Y{pos_y}Z{z_down + 10}F15000\r\n",
+                                f"G01 X{pos_x}Y{pos_y}Z{z_down}F15000\r\n"]
+                for order in click_orders:
+                    hand_obj.send_single_order(order)
+                hand_obj.recv(buffer_size=32)
+                # 等待一段时间，方便用户调试
+                time.sleep(10)
+                click_orders = [f"G01 X{pos_x}Y{pos_y}Z{z_down + 10}F15000\r\n", arm_wait_position]
+                for order in click_orders:
+                    hand_obj.send_single_order(order)
+                hand_obj.recv(buffer_size=32)
+        return jsonify(dict(error_code=0))

@@ -1,7 +1,8 @@
 from flask import Blueprint
 
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
-    AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView
+    AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView, \
+    PaneLocateDeviceView
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, \
     PaneBorderView
 
@@ -32,3 +33,5 @@ pane.add_url_rule('/file_push/', view_func=FilePushView.as_view('file_push'))
 pane.add_url_rule('/coordinate/', view_func=PaneCoordinateView.as_view('coordinate'))
 # 重置拼图矩阵
 pane.add_url_rule('/reset_h/', view_func=PaneMergePicView.as_view('reset_h'))
+# 调试被测试设备的距离
+pane.add_url_rule('/locate_device/', view_func=PaneLocateDeviceView.as_view('locate_device'))

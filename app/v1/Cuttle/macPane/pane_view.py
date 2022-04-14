@@ -498,3 +498,18 @@ class PaneLocateDeviceView(MethodView):
                     hand_obj.send_single_order(order)
                 hand_obj.recv(buffer_size=32)
         return jsonify(dict(error_code=0))
+
+
+# 录制视频
+class PaneVideoView(MethodView):
+    def post(self):
+        request_data = request.get_json() or request.args
+        device_label = request_data.get("device_label")
+        record_time = request_data.get('record_time')
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=device_label)
+        device_obj.get_snapshot(image_path='', max_retry_time=1,
+                                record_video=True,
+                                record_time=int(record_time),
+                                timeout=10 * 60)
+        return jsonify(dict(error_code=0))

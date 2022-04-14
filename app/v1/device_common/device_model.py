@@ -527,14 +527,18 @@ class Device(BaseModel):
         return click_x, click_y, click_z
 
     # 将截图获取统一到这里
-    def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None, max_retry_time=None):
+    def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None,
+                     max_retry_time=None, record_video=False, record_time=0, timeout=None):
         jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
                        "execCmdList": [f"adb -s {connect_number if connect_number is not None else self.connect_number} "
                                        f"exec-out screencap -p > {image_path}"],
                        "device_label": self.device_label,
                        'high_exposure': high_exposure,
                        'original': original,
-                       'max_retry_time': max_retry_time})
+                       'record_video': record_video,
+                       'record_time': record_time,
+                       'max_retry_time': max_retry_time,
+                       'timeout': timeout})
         if self.has_camera and connect_number is None:
             handler_type = "CameraHandler"
         else:

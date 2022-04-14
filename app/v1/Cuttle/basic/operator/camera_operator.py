@@ -275,6 +275,9 @@ class CameraHandler(Handler):
         self.high_exposure = kwargs.get('high_exposure')
         # 是否获取原始图片，非roi图片
         self.original = kwargs.get('original')
+        # 摄像机录像
+        self.record_video = kwargs.get('record_video')
+        self.record_time = kwargs.get('record_time') or 1
 
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
@@ -289,7 +292,7 @@ class CameraHandler(Handler):
                 return res.group(1) if res.group() else "", function
         return "", "ignore"
 
-    def snap_shot(self, *args, **kwargs):
+    def snap_shot(self):
         # 摄像头数量不一样的时候，方案不同
         camera_ids = []
         for camera_id in HARDWARE_MAPPING_LIST:
@@ -310,8 +313,8 @@ class CameraHandler(Handler):
                                      camera_id,
                                      self._model,
                                      high_exposure=self.high_exposure,
-                                     original=self.original,
                                      temporary=temporary,
+                                     original=self.original,
                                      sync_camera=sync_camera)
             futures.append(future)
 
@@ -338,8 +341,12 @@ class CameraHandler(Handler):
                 if all_in_loop:
                     break
             if sync_camera:
+                if self.record_video:
+                    timeout = self.record_time
+                else:
+                    timeout = 0.1
                 # 发送同步信号
-                with CameraUsbPower(timeout=0.1):
+                with CameraUsbPower(timeout=timeout):
                     pass
             for camera_id in camera_ids:
                 redis_client.set(f"g_bExit_{camera_id}", "1")
@@ -364,15 +371,17 @@ class CameraHandler(Handler):
                 image = self.get_roi(merged_frames[0])
                 image = np.rot90(image)
             self.src = image
+
             # 写入到文件夹中，测试用
-            # if os.path.exists('camera'):
-            #     import shutil
-            #     shutil.rmtree('camera')
-            #     os.mkdir('camera')
-            # else:
-            #     os.mkdir('camera')
-            # for index, merged_img in enumerate(merged_frames):
-            #     cv2.imwrite(f'camera/{index}.png', merged_img)
+            if self.record_video:
+                if os.path.exists('camera'):
+                    import shutil
+                    shutil.rmtree('camera')
+                    os.mkdir('camera')
+                else:
+                    os.mkdir('camera')
+                for index, merged_img in enumerate(merged_frames):
+                    cv2.imwrite(f'camera/{index}.png', merged_img)
 
         return 0
 
@@ -460,22 +469,24 @@ class CameraHandler(Handler):
         return h
 
     def move(self, *args, **kwargs):
-        if hasattr(self, "src"):
+        if hasattr(self, "src") and args[0]:
             cv2.imwrite(args[0], self.src)
             delattr(self, "src")
             return 0
-        elif hasattr(self, "video_src"):
-            # 视频分析，存储每一帧图片，并记录总数
-            start = time.time()
-            number = 0
-            total_number = len(self.video_src)
-            with open(get_file_name(args[0]) + ImageNumberFile, "w") as f:
-                f.write(str(total_number))
-            for i in range(total_number):
-                cv2.imwrite(get_file_name(args[0]) + f"__{number}.png", self.video_src.popleft())
-                number += 1
-            delattr(self, "video_src")
-            print("save image time:", time.time() - start)
+        elif hasattr(self, "video_src") or self.record_video:
+            # 暂时注释掉 需要的时候再实现
+            pass
+            # # 视频分析，存储每一帧图片，并记录总数
+            # start = time.time()
+            # number = 0
+            # total_number = len(self.video_src)
+            # with open(get_file_name(args[0]) + ImageNumberFile, "w") as f:
+            #     f.write(str(total_number))
+            # for i in range(total_number):
+            #     cv2.imwrite(get_file_name(args[0]) + f"__{number}.png", self.video_src.popleft())
+            #     number += 1
+            # delattr(self, "video_src")
+            # print("save image time:", time.time() - start)
         else:
             raise NoSrc
 

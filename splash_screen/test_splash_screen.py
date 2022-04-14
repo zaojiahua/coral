@@ -25,6 +25,7 @@ def get_image_ffmpeg(video_path, image_dirs, fps):
         if os.path.exists(image_path):
             os.system('rm -r %s' % image_path)
 
+        os.system('mkdir %s' % image_dirs)
         os.system('mkdir %s' % image_path)
         try:
             result = os.system(
@@ -68,8 +69,9 @@ def splash_video_detect(video_path, max_length=5 * 60):
     :param max_length: 处理的最长视频时长，单位秒
     :return: result，识别结果，1为命中，0为未命中
     """
-    # cur_dir, _ = os.path.split(os.path.abspath(__file__))
-    image_dirs = os.path.join(video_path, './temp_image/')
+    cur_dir, _ = os.path.split(video_path)
+
+    image_dirs = os.path.join(cur_dir, 'temp_image/')
     fps = 10
 
     ret, image_dir = get_image_ffmpeg(video_path, image_dirs, fps)

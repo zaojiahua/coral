@@ -8,7 +8,8 @@ import splash_screen
 
 fps_num = 15
 
-def get_image_ffmpeg(video_path,image_dirs, fps):
+
+def get_image_ffmpeg(video_path, image_dirs, fps):
     """
      基于ffmpeg对视频进行抽帧
 
@@ -26,7 +27,8 @@ def get_image_ffmpeg(video_path,image_dirs, fps):
 
         os.system('mkdir %s' % image_path)
         try:
-            result = os.system('ffmpeg -i %s -f image2 -vf fps=fps=%d %s' % (video_path, fps, image_path) +str(vid)+'_%04d.jpg')
+            result = os.system(
+                'ffmpeg -i %s -f image2 -vf fps=fps=%d %s' % (video_path, fps, image_path) + str(vid) + '_%04d.jpg')
             if result == 0:
                 flag = True
             else:
@@ -37,7 +39,8 @@ def get_image_ffmpeg(video_path,image_dirs, fps):
     else:
         flag = False
 
-    return flag,image_path
+    return flag, image_path
+
 
 def save_result_txt(result):
     """
@@ -65,8 +68,8 @@ def splash_video_detect(video_path, max_length=5 * 60):
     :param max_length: 处理的最长视频时长，单位秒
     :return: result，识别结果，1为命中，0为未命中
     """
-    cur_dir, _ = os.path.split(os.path.abspath(__file__))
-    image_dirs = os.path.join(cur_dir, './temp_image/')
+    # cur_dir, _ = os.path.split(os.path.abspath(__file__))
+    image_dirs = os.path.join(video_path, './temp_image/')
     fps = 10
 
     ret, image_dir = get_image_ffmpeg(video_path, image_dirs, fps)
@@ -75,12 +78,11 @@ def splash_video_detect(video_path, max_length=5 * 60):
         return 0
 
     print('fps', fps, ret, image_dir)
-    result, result_time = splash_screen.splash_screen_detect(image_dir, fps=fps, dis_max= 18, splash_num = 5,max_length=max_length)
+    result, result_time = splash_screen.splash_screen_detect(image_dir, fps=fps, dis_max=20, splash_num=4,
+                                                             max_length=max_length)
     save_result_txt([video_path, result, result_time])
 
     return result
-
-
 
 
 if __name__ == '__main__':

@@ -66,3 +66,9 @@ class ControlUSBPowerFail(APIException):
     error_code = 3008
     code = 400
     description = 'Control USB Power Fail'
+
+
+class ChooseSerialObjFail(APIException):
+    error_code = 3009
+    code = 400
+    description = 'Unknown Execution G code Serial object '

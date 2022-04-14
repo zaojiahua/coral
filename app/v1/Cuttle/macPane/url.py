@@ -1,7 +1,8 @@
 from flask import Blueprint
 
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
-    AutoPaneBorderView, update_phone_model, PaneClickTestView
+    AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView, \
+    PaneLocateDeviceView, PaneVideoView
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, \
     PaneBorderView
 
@@ -28,3 +29,11 @@ pane.add_url_rule('/device_border/', view_func=PaneBorderView.as_view('device_bo
 pane.add_url_rule('/get_roi/', view_func=AutoPaneBorderView.as_view('get_roi'))
 # 给所有adb连接状态的手机推图片的接口，仅在天津给编辑用例人使用
 pane.add_url_rule('/file_push/', view_func=FilePushView.as_view('file_push'))
+# 建立坐标系统
+pane.add_url_rule('/coordinate/', view_func=PaneCoordinateView.as_view('coordinate'))
+# 重置拼图矩阵
+pane.add_url_rule('/reset_h/', view_func=PaneMergePicView.as_view('reset_h'))
+# 调试被测试设备的距离
+pane.add_url_rule('/locate_device/', view_func=PaneLocateDeviceView.as_view('locate_device'))
+# 录制视频
+pane.add_url_rule('/video/', view_func=PaneVideoView.as_view('record_video'))

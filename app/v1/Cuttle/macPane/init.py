@@ -7,17 +7,16 @@ import time
 import math
 from concurrent.futures import ThreadPoolExecutor
 
-from app.config.setting import BASE_DIR, HOST_IP, CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com
+from app.config.setting import BASE_DIR, HOST_IP, CORAL_TYPE
 from app.config.url import device_url, device_logout
 from app.execption.outer.error import APIException
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.basic_views import UnitFactory
-from app.v1.Cuttle.basic.setting import hand_used_list
-from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
+from app.v1.Cuttle.paneDoor.door_keeper import DoorKeeper
 
 key_parameter_list = ["camera", "robot_arm"]
 
@@ -72,12 +71,7 @@ def recover_device(executer, logger):
         try:
             # 1和2类型的柜子，不涉及到其他硬件，3往上的会涉及到其他硬件，所以需要初始化
             if CORAL_TYPE >= 3:
-                executer = ThreadPoolExecutor()
-                port_list = HARDWARE_MAPPING_LIST.copy()
-                for port in port_list:
-                    PaneConfigView.hardware_init(port, device_dict.get("device_label"), executer,
-                                                 rotate=(port == rotate_com))
-                    hand_used_list.append(port)
+                DoorKeeper.set_arm_or_camera(device_dict.get("device_label"))
         except (AttributeError, APIException) as e:
             print(repr(e))
             pass

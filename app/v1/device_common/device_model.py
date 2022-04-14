@@ -1,3 +1,4 @@
+import os.path
 import time
 import math
 import traceback
@@ -19,7 +20,8 @@ from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
-from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value, m_location
+from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value, m_location, \
+    COORDINATE_CONFIG_FILE, Z_DOWN
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 
 
@@ -459,47 +461,84 @@ class Device(BaseModel):
 
     # 更新5l机柜的m_location信息，没有机械臂对象，所以方法先写到这里
     def update_m_location(self):
-        if CORAL_TYPE == 5.1:
+        if CORAL_TYPE == 5.3:
+            if not os.path.exists(COORDINATE_CONFIG_FILE):
+                self.logger.error('多机械臂缺少必要的坐标配置文件, 请注意先配置坐标！！！')
+            else:
+                with open(COORDINATE_CONFIG_FILE, 'rt') as f:
+                    for line in f.readlines():
+                        key, value = line.strip('\n').split('=')
+                        if key == 'm_location':
+                            m_l = eval(value)
+                            m_l.append(Z_DOWN)
+                            set_global_value(key, m_l)
+                        else:
+                            set_global_value(key, eval(value))
+        elif CORAL_TYPE == 5.1:
             set_global_value('m_location', [m_location_center[0] - float(self.width) / 2,
                                             m_location_center[1] - float(self.height) / 2,
                                             m_location_center[2] + float(self.ply)])
         else:
             set_global_value('m_location', [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
         self.screen_z = str(get_global_value('m_location')[2])
-        print('new m_location:', get_global_value('m_location'))
         set_global_value('Z_DOWN', get_global_value('m_location')[2])
         print('new Z_DOWN', get_global_value('Z_DOWN'))
 
     # 获取5l柜的点击坐标
-    def get_click_position(self, x, y, z=0, roi=None, absolute=False):
+    def get_click_position(self, x, y, z=0, roi=None, absolute=False, test=False):
         if roi is None:
             roi = [float(self.x1), float(self.y1), float(self.x2), float(self.y2)]
 
         m_location = get_global_value('m_location')
-        # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
-        if absolute:
-            x_location_per = x / (roi[3] - roi[1])
-            y_location_per = y / (roi[2] - roi[0])
+
+        if CORAL_TYPE == 5.3:
+            dpi = get_global_value('pane_dpi')
+            h, w, _ = get_global_value('merge_shape')
+            if absolute:
+                x = x + roi[1]
+                y = y + w - roi[2]
+                click_x = m_location[0] + x / dpi
+                click_y = abs(m_location[1] - y / dpi)
+                click_z = m_location[2] + float(z)
+            else:
+                # 从pane测试点击的时候走这里
+                if not test:
+                    x = float(x) * (roi[2] - roi[0]) + roi[0]
+                    y = float(y) * (roi[3] - roi[1]) + roi[1]
+                # 程序自己的测试走的这里
+                click_x = m_location[0] + y / dpi
+                click_y = abs(m_location[1] - (w - x) / dpi)
+                click_z = m_location[2] + float(z)
         else:
-            # 先计算在相机拍照模式下 要点击的位置在roi的区域 计算出的百分比针对的是图片上的左上角点
-            x_location_per = (1 - float(y))
-            y_location_per = float(x)
-        print('location percent ', x_location_per, y_location_per)
-        # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
-        click_x = round((m_location[0] + float(self.width) * x_location_per), 2)
-        click_y = round((m_location[1] + float(self.height) * y_location_per), 2)
-        click_z = m_location[2] + float(z)
+            # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
+            if absolute:
+                x_location_per = x / (roi[3] - roi[1])
+                y_location_per = y / (roi[2] - roi[0])
+            else:
+                # 先计算在相机拍照模式下 要点击的位置在roi的区域 计算出的百分比针对的是图片上的左上角点
+                x_location_per = (1 - float(y))
+                y_location_per = float(x)
+            print('location percent ', x_location_per, y_location_per)
+            # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
+            click_x = round((m_location[0] + float(self.width) * x_location_per), 2)
+            click_y = round((m_location[1] + float(self.height) * y_location_per), 2)
+            click_z = m_location[2] + float(z)
+
         return click_x, click_y, click_z
 
     # 将截图获取统一到这里
-    def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None, max_retry_time=None):
+    def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None,
+                     max_retry_time=None, record_video=False, record_time=0, timeout=None):
         jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
                        "execCmdList": [f"adb -s {connect_number if connect_number is not None else self.connect_number} "
                                        f"exec-out screencap -p > {image_path}"],
                        "device_label": self.device_label,
                        'high_exposure': high_exposure,
                        'original': original,
-                       'max_retry_time': max_retry_time})
+                       'record_video': record_video,
+                       'record_time': record_time,
+                       'max_retry_time': max_retry_time,
+                       'timeout': timeout})
         if self.has_camera and connect_number is None:
             handler_type = "CameraHandler"
         else:

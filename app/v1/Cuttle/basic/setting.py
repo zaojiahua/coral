@@ -2,12 +2,17 @@ from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
 
 try:
-    from app.config.ip import m_location, m_location_center
+    from app.config.ip import m_location, m_location_center, Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION
 except Exception:
     m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
     m_location_center = [157, 202.5, -24]
     if CORAL_TYPE == 5.2:
         m_location = [38, 13, -24]
+    # Z_DOWN = -3.5   tianjing setting
+    # Z_DOWN = -12   # 商米Tcab-5型柜夹具参数
+    Z_DOWN = -27
+    ARM_MOVE_REGION = [201, 240]
+    DOUBLE_ARM_MOVE_REGION = [368, 239]
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -36,6 +41,13 @@ high_exposure_params = [("ExposureTime", 100000.0),
                         ("Gain", 10)]
 high_exposure_params_feature = [("ExposureTime", 200000.0),
                                 ("Gain", 15)]
+# 俩个同步相机的参数
+sync_camera_params = [('TriggerMode', 1, 'enum'),
+                      ('TriggerSource', 0, 'enum'),
+                      ('TriggerActivation', 2, 'enum'),
+                      ('LineSelector', 0, 'enum'),
+                      ('AcquisitionFrameRate', 20.0),
+                      ("ExposureTime", 10000.0)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
@@ -44,11 +56,17 @@ if CORAL_TYPE == 5.1:
 else:
     HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
 HAND_MAX_Z = 5
-Z_START = 0
-# Z_DOWN = -3.5   tianjing setting
-# Z_DOWN = -12   # 商米Tcab-5型柜夹具参数
-Z_DOWN = -27
-Z_UP = 0
+if CORAL_TYPE == 5.3:
+    Z_UP = -32
+    Z_START = -32
+    arm_wait_position = f"G01 X0Y0Z{Z_UP}F15000 \r\n"
+    HAND_MAX_X = DOUBLE_ARM_MOVE_REGION[0]
+    HAND_MAX_Y = DOUBLE_ARM_MOVE_REGION[1]
+else:
+    Z_UP = 0
+    Z_START = 0
+    arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
+
 MOVE_SPEED = 15000
 SWIPE_TIME = 1
 # 按压侧边键参数
@@ -72,7 +90,6 @@ arm_default_y = '33'
 arm_default = f"G01 X0Y{arm_default_y}Z0F5000 \r\n"
 arm_move_position = f'G01 X0Y{arm_default_y}Z0F3000 \r\n'
 # 和三轴机械臂相关
-arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
 last_swipe_end_point = [0, 0]
 
 color_threshold = 4000
@@ -95,7 +112,7 @@ chinese_ingore = 0.55
 # 屏幕右侧开关占比
 right_switch_percent = 0.87
 
-CamObjList = []
+CamObjList = {}
 normal_result = (False, None)
 blur_signal = "[B]"
 # 需要按常见顺序调整 亮度百分比的顺序 尽可能优先匹配到常见亮度变化。
@@ -157,6 +174,8 @@ _global_dict = {}
 
 def set_global_value(key, value):
     """ 定义一个全局变量 """
+    if key == 'm_location':
+        print('new m_location:', value)
     _global_dict[key] = value
 
 
@@ -169,5 +188,9 @@ def get_global_value(key, def_value=None):
 
 set_global_value('m_location', m_location)
 set_global_value('Z_DOWN', Z_DOWN)
+# 图片拼接的h矩阵
+set_global_value('merge_image_h', None)
 
 PERFORMANCE_END_LOOP_TIMEOUT = 60 * 3
+COORDINATE_CONFIG_FILE = 'app/config/coordinate.py'
+MERGE_IMAGE_H = 'app/config/merge_image_h.npy'

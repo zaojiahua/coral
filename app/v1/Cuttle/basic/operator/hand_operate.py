@@ -234,17 +234,25 @@ class HandHandler(Handler, DefaultMixin):
         time.sleep(3.5)  # 因为用力滑动会有惯性,sleep3确保动作执行完成
         return kwargs["exec_serial_obj"].recv()
 
+    def double_hand_swipe(self, axis):
+        # Tcab-5D 双指缩放
+        """
+        axis:[[左机械臂起点],[左机械臂终点],[右机械臂起点],[右机械臂终点]]
+        """
+        pass
+
     def reset_hand(self, reset_orders=arm_wait_position, rotate=False, **kwargs):
         # 恢复手臂位置 可能是龙门架也可能是旋转机械臂
         self._model.logger.info(f"reset hand order:{reset_orders}")
+        serial_obj = None
         if rotate is True:
             serial_obj = rotate_hand_serial_obj_dict(self._model.pk)
+            serial_obj.send_single_order(reset_orders)
         else:
-            serial_obj = kwargs.get("exec_serial_obj")
-            print("serial_obj: ", serial_obj, "*" * 100)
-            # serial_obj = hand_serial_obj_dict[self._model.pk]
-            # serial_obj = kwargs.get("exec_serial_obj", hand_serial_obj_dict[self._model.pk])
-        serial_obj.send_single_order(reset_orders)
+            for obj_key in hand_serial_obj_dict.keys():
+                if obj_key.startswith(self._model.pk):
+                    serial_obj = hand_serial_obj_dict.get(obj_key)
+                    serial_obj.send_single_order(reset_orders)
         serial_obj.recv()
         time.sleep(wait_time)
         return 0
@@ -344,10 +352,12 @@ class HandHandler(Handler, DefaultMixin):
 
     def arm_back_home(self, *args, **kwargs):
         back_order = self.arm_back_home_order()
-        serial_obj_for_back_home = hand_serial_obj_dict.get(self._model.pk)
-        for order in back_order:
-            serial_obj_for_back_home.send_single_order(order)
-            serial_obj_for_back_home.recv(buffer_size=64)
+        for obj_key in hand_serial_obj_dict.keys():
+            if obj_key.startswith(self._model.pk):
+                serial_obj = hand_serial_obj_dict.get(obj_key)
+                for order in back_order:
+                    serial_obj.send_single_order(order)
+                    serial_obj.recv(buffer_size=64)
         return 0
 
     def _find_key_point(self, name):

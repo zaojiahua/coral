@@ -27,12 +27,7 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     :return:
     """
     if CORAL_TYPE == 5.3:
-        if platform.system() == 'Windows':
-            obj_key = device_obj.pk + "_" + arm_com_id
-        else:
-            arm_index = arm_com_id.split('_')[-1]
-            arm_index_str = '_' + arm_index if arm_index.isdigit() else ''
-            obj_key = device_obj.pk + arm_index_str
+        obj_key = device_obj.pk + arm_com_id
     else:
         obj_key = device_obj.pk
 
@@ -42,12 +37,12 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     hand_reset_orders = [
         "$x \r\n",
         "$h \r\n",
-        f"G92 X0Y0Z{Z_UP} \r\n",
+        f"G92 X0Y0Z0 \r\n",
         "G90 \r\n",
-        # arm_wait_position
+        arm_wait_position
     ]
-    for g_orders in hand_reset_orders:
-        hand_serial_obj.send_single_order(g_orders)
+    for orders in hand_reset_orders:
+        hand_serial_obj.send_single_order(orders)
         hand_serial_obj.recv(buffer_size=64)
     return 0
 
@@ -90,24 +85,21 @@ def pre_point(point, arm_num=0):
     raise ChooseSerialObjFail
 
 
-def judge_start_x(start_x_point, device_pk):
+def judge_start_x(start_x_point, device_level):
     arm_num = 0
     if CORAL_TYPE == 5.3:
-        if start_x_point[0] < ARM_MOVE_REGION[0]:
-            suffix_key = arm_com if platform.system() == "Windows" else arm_com.split("_")[-1]
-        else:
-            suffix_key = arm_com_1 if platform.system() == "Windows" else arm_com_1.split("_")[-1]
-            arm_num = 1
-        exec_serial_obj = hand_serial_obj_dict.get(device_pk + "_" + suffix_key)
+        suffix_key = arm_com if start_x_point < ARM_MOVE_REGION[0] else arm_com_1
+        arm_num = 0 if suffix_key == arm_com else 1
+        exec_serial_obj = hand_serial_obj_dict.get(device_level + suffix_key)
     else:
-        exec_serial_obj = hand_serial_obj_dict.get(device_pk)
+        exec_serial_obj = hand_serial_obj_dict.get(device_level)
     return exec_serial_obj, arm_num
 
 
 def allot_serial_obj(func):
     # 该函数用来分配执行的机械臂对象
     def wrapper(self, axis, **kwargs):
-        start_x_point = axis[0][0] if axis[0] is list else axis[0]
+        start_x_point = axis[0][0] if type(axis[0]) is list else axis[0]
         exec_serial_obj, arm_num = judge_start_x(start_x_point, self._model.pk)
         kwargs["exec_serial_obj"] = exec_serial_obj
         kwargs["arm_num"] = arm_num
@@ -497,7 +489,8 @@ class HandHandler(Handler, DefaultMixin):
         # 在4,5 型号柜1代表毫米，其他型柜15代表像素，所以这里做区分。
         th = 15 if CORAL_TYPE < 4 else 1
         # 如果前一滑动的终止点和下一次滑动的起始点很接近，我们认为就是要连续滑动，直接把其赋值为相同点。并且每次都缓存此次的终止点做下次对比
-        if np.abs(abs(start_x) - abs(last_swipe_end_point[0])) < th and np.abs(abs(start_y) - abs(last_swipe_end_point[1])) < th:
+        if np.abs(abs(start_x) - abs(last_swipe_end_point[0])) < th and np.abs(
+                abs(start_y) - abs(last_swipe_end_point[1])) < th:
             start_x, start_y = last_swipe_end_point
         last_swipe_end_point[0] = end_x
         last_swipe_end_point[1] = end_y

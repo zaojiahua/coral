@@ -16,19 +16,19 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN
+    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com
 from app.execption.outer.error_code.camera import ArmReInit, NoCamera, PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.hand_serial import controlUsbPower
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
-from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler
+from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler, judge_start_x, pre_point
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
-    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H
+    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -293,33 +293,42 @@ class PaneClickTestView(MethodView):
                                                                   request_data.get('y'),
                                                                   request_data.get('z'),
                                                                   device_point)
-        # 判断是否是按压侧边键
-        location = get_global_value("m_location")
-        try:
-            DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                      location[0] + float(device_obj.width), location[0], location[2])
-            is_side = True
-        except Exception as e:
-            is_side = False
 
-        if is_side:
-            is_left_side = False
-            if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
-                is_left_side = True
-            self.press(device_label, click_x, click_y, click_z, is_left_side)
-        else:
+        if CORAL_TYPE == 5.3:
             self.click(device_label, click_x, click_y, click_z)
+        else:
+            # 判断是否是按压侧边键
+            location = get_global_value("m_location")
+            try:
+                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                          location[0] + float(device_obj.width), location[0],
+                                                          location[2])
+                is_side = True
+            except Exception as e:
+                is_side = False
+
+            if is_side:
+                is_left_side = False
+                if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                    is_left_side = True
+                self.press(device_label, click_x, click_y, click_z, is_left_side)
+            else:
+                self.click(device_label, click_x, click_y, click_z)
 
         shutil.rmtree(random_dir)
         return jsonify(dict(error_code=0))
 
     @staticmethod
     def click(device_label, x, y, z):
-        click_orders = ['G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, 0, MOVE_SPEED - 10000),
-                        'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, z, MOVE_SPEED - 10000),
-                        'G01 X%0.1fY-%0.1fZ%dF%d \r\n' % (x, y, 0, MOVE_SPEED - 10000)]
-        hand_serial_obj_dict.get(device_label).send_list_order(click_orders)
-        hand_serial_obj_dict.get(device_label).recv()
+        exec_serial_obj, arm_num = judge_start_x(x, device_label)
+        axis = pre_point([x, y, z], arm_num=arm_num)
+        orders = [
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2] + 5, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2], MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], Z_UP, MOVE_SPEED),
+        ]
+        exec_serial_obj.send_list_order(orders)
+        exec_serial_obj.recv()
 
     @staticmethod
     def press(device_label, x, y, z, is_left):
@@ -340,19 +349,17 @@ class PaneCoordinateView(MethodView):
     # 确定俩件事情，一个是比例，也就是一个像素等于实际多少毫米。另一个是图片坐标系统下的原点实际的坐标值。
     def post(self):
         dpi = 0
-        m_location= [0, 0, 0]
+        m_location = [0, 0, 0]
         # 让机械臂点击一个点，在屏幕上留下了一个记号A，再让机械臂点击另一个点，在屏幕上留下了记号B
         # 计算A、B俩点的像素距离，和实际距离的比，就得到了比例。根据比例，计算原点的坐标值。
-        for hand_key in hand_serial_obj_dict.keys():
-            # 找到主机械臂，让主机械臂移动即可
-            if '_' not in hand_key or not hand_key.split('_')[-1].isdigit():
-                hand_obj = hand_serial_obj_dict[hand_key]
+        # 找到主机械臂，让主机械臂移动即可
+        for obj_key in hand_serial_obj_dict.keys():
+            if arm_com in obj_key:
+                hand_obj = hand_serial_obj_dict[obj_key]
                 pos_a = [100, -100]
                 pos_b = [200, -100]
                 for click_pos in [pos_a, pos_b]:
                     self.click(*click_pos, hand_obj)
-
-                # 拍照
                 request_data = request.get_json() or request.args
                 if request_data is not None:
                     device_label = request_data.get('device_label')
@@ -362,6 +369,7 @@ class PaneCoordinateView(MethodView):
                 else:
                     return jsonify(dict(error_code=1, description='坐标换算失败！无法获取图片！'))
 
+                # 拍照
                 filename = 'coordinate.png'
                 ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=True)
                 if ret_code == 0:
@@ -373,7 +381,7 @@ class PaneCoordinateView(MethodView):
                         if points is not None:
                             click_x, click_y, _ = device_obj.get_click_position(*points[1], test=True)
                             self.click(click_x, -click_y, hand_obj)
-                break
+            break
 
         return jsonify(dict(error_code=0, data={'dpi': dpi, 'm_location': m_location}))
 
@@ -433,7 +441,8 @@ class PaneCoordinateView(MethodView):
             dpi = dis / abs(pos_a[0] - pos_b[0])
             print(f'dpi:{dpi}', '&' * 10)
             # 计算图片的右上角对应的坐标点，也就是得出来m_location
-            cal_point = target_contours[0] if target_contours[0][0][1] < target_contours[1][0][1] else target_contours[1]
+            cal_point = target_contours[0] if target_contours[0][0][1] < target_contours[1][0][1] else target_contours[
+                1]
             m_x = pos_a[0] - cal_point[0][1] / dpi
             m_y = pos_a[1] + (w - cal_point[0][0]) / dpi
 
@@ -471,7 +480,8 @@ class PaneLocateDeviceView(MethodView):
     def post(self):
         for hand_key in hand_serial_obj_dict.keys():
             # 找到主机械臂，让主机械臂移动即可
-            if '_' not in hand_key or not hand_key.split('_')[-1].isdigit():
+            # if '_' not in hand_key or not hand_key.split('_')[-1].isdigit():
+            if arm_com in hand_key:
                 hand_obj = hand_serial_obj_dict[hand_key]
                 pos_x = 100
                 pos_y = -100

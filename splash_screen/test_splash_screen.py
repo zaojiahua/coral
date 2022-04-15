@@ -84,7 +84,7 @@ def splash_video_detect(video_path, max_length=5 * 60):
                                                              max_length=max_length)
     save_result_txt([video_path, result, result_time])
 
-    return result
+    return result, result_time
 
 
 if __name__ == '__main__':
@@ -97,9 +97,9 @@ if __name__ == '__main__':
     try:
         result = 0
         if '.mp4' in path1:
-            result = splash_video_detect(path1)
+            result, result_time = splash_video_detect(path1)
             time_record1 = time.time() - time_start
-            print('time_record1', time_record1)
+            print('result_time', result_time)
 
         else:
             file_num = 0

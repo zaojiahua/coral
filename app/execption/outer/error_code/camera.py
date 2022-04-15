@@ -29,7 +29,7 @@ class NoCamera(APIException):
 class ArmReInit(APIException):
     error_code = 5003
     code = 400
-    description = "do not send init request twice"
+    description = "端口拒绝访问！！！"
 
 
 class RemoveBeforeAdd(APIException):

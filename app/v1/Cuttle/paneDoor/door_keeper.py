@@ -3,6 +3,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict
@@ -24,6 +25,7 @@ from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
 from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
 from app.libs.adbutil import AdbCommand, get_room_version
+from app.execption.outer.error_code.camera import ArmReInit, NoCamera
 
 logger = logging.getLogger(DOOR_LOG_NAME)
 
@@ -65,20 +67,39 @@ class DoorKeeper(object):
         logger.info(f"set device success")
         return 0
 
-    def set_arm_or_camera(self, device_label):
-        port_list = HARDWARE_MAPPING_LIST.copy()
+    @staticmethod
+    def set_arm_or_camera(device_label):
         executer = ThreadPoolExecutor()
+        port_list = HARDWARE_MAPPING_LIST.copy()
         try:
-            # 一个机柜只放一台手机限定
+            # 3型柜以及以上 一个机柜只放一台主机
             available_port_list = list(set(port_list) ^ set(hand_used_list))
             print("available port list :", available_port_list)
             if len(available_port_list) == 0:
                 raise ArmNorEnough
+
+            futures = []
             for port in available_port_list:
-                PaneConfigView.hardware_init(port, device_label, executer, rotate=(port == rotate_com))
+                function, device_object = PaneConfigView.hardware_init(port, device_label, rotate=(port == rotate_com))
+                future = executer.submit(function, port, device_object, init=True, original=True)
+                futures.append(future)
                 hand_used_list.append(port)
+
+            for future in futures:
+                exception = future.exception(timeout=20)
+                print(exception, '!' * 10)
+                if "PermissionError" in str(exception):
+                    traceback.print_exc()
+                    raise ArmReInit
+                elif "FileNotFoundError" in str(exception):
+                    return 0
+                elif "tolist" in str(exception):
+                    raise NoCamera
         except IndexError:
             raise ArmNorEnough
+        except TimeoutError:
+            print('TimeoutError', '!' * 10)
+            return 0
 
     def get_connected_device_list(self, adb_response):
         try:

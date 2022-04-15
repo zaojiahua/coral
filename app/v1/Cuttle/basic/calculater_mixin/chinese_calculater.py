@@ -54,7 +54,7 @@ class ChineseMixin(object):
 
         # 通过腐蚀和膨胀使得文字部分成为一块一块的区域，方便获取轮廓
         element1 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
         dilation = cv2.dilate(sobel, element2, iterations=1)
         erosion = cv2.erode(dilation, element1, iterations=1)
         dilation = cv2.dilate(erosion, element2, iterations=1)
@@ -85,7 +85,7 @@ class ChineseMixin(object):
         # 查找位于中心线上的三个点
         three_point = []
         for contour_points in target_contours:
-            if abs(contour_points[0][0] - w / 2) < 5:
+            if abs(contour_points[0][0] - w / 2) < 10:
                 three_point.append(contour_points)
                 # cv2.putText(img, '1', contour_points[0], cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
         # 直接使用最上面的三个
@@ -93,7 +93,7 @@ class ChineseMixin(object):
         if len(three_point) > 2:
             three_point = three_point[:3]
         else:
-            three_point = None
+            three_point = []
 
         # 查找和3个点位于同一水平面的点，然后从这些点中找俩个距离最近且距离几乎相等的点，这样就把查找和验证放到一块了
         THREE_POINT = 3
@@ -101,7 +101,7 @@ class ChineseMixin(object):
         for point in three_point:
             point_level = []
             for contour_points in target_contours:
-                if abs(point[0][1] - contour_points[0][1]) < 5:
+                if abs(point[0][1] - contour_points[0][1]) < 10:
                     point_level.append((contour_points, np.sqrt(np.sum((point[0] - contour_points[0]) ** 2))))
                     # cv2.putText(img, '1', contour_points[0], cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
             if len(point_level) >= THREE_POINT:
@@ -154,7 +154,11 @@ class ChineseMixin(object):
             # 先截图一张，用来获取坐标位置
             ocr_obj.snap_shot()
             keyboard_pos = self.keyboard_pos_dict(cv2.imread(ocr_obj.get_pic_path()))
+            # 保存图片，方便后续优化
+            if not keyboard_pos:
+                self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             self._model.logger.debug(f'获取到的键盘坐标是：{keyboard_pos}')
+
             coor_tuple_list = []
             for pinyin_word in pinyin:
                 coor_tuple_list = self.pinyin_2_coordinate(pinyin_word, dev_obj, coor_tuple_list, keyboard_pos)

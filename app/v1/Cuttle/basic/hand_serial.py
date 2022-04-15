@@ -5,7 +5,7 @@ from serial import SerialException
 
 from mcush import *
 
-from app.config.setting import CORAL_TYPE, usb_power_com
+from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
 from app.v1.Cuttle.basic.setting import Z_UP, arm_wait_position
 
@@ -72,11 +72,11 @@ class HandSerial:
         return 0
 
     def write(self, content):
-        print('before-写入机械臂：', content)
+        print(f'{self.ser.port} before-写入机械臂：', content)
         if content == "<SLEEP>":
             time.sleep(0.8)
             return ""
-        print('写入机械臂：', self.ser, content)
+        # print('写入机械臂：', self.ser, content)
         return self.ser.write(content.encode())
 
 
@@ -105,3 +105,29 @@ def controlUsbPower(status="ON"):
             return 0
         print("Control usb power fail, info: ", str(e))
         raise ControlUSBPowerFail
+
+
+# 相机的触发控制
+class CameraUsbPower(object):
+
+    def __new__(cls, *args, **kwargs):
+        # 确保自己为单例对象
+        if not hasattr(cls, "instance"):
+            cls.instance = super().__new__(cls)
+        return cls.instance
+
+    def __init__(self, power_com=camera_power_com, timeout=1):
+        if not hasattr(self, "s"):
+            self.s = ShellLab.ShellLab(power_com)
+        self.timeout = timeout
+        self.line_number = 1.7
+
+    def __enter__(self):
+        print('------发送同步信号-----')
+        self.s.pinOutputHigh(self.line_number)
+        return self.s
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        time.sleep(self.timeout)
+        print('-------结束同步信号-----')
+        self.s.pinSetLow(self.line_number)

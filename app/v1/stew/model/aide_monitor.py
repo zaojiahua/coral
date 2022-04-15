@@ -226,6 +226,7 @@ class AideMonitor(object):
         """
         :return: 1 -->charge  0--> uncharge
         """
+        print("获取到的电量: ", battery_data)
         if len(battery_data[0]) < battery_data_amount:
             result = 2
         else:
@@ -241,10 +242,10 @@ class AideMonitor(object):
         self.logger.debug(f"do_action_for_battery:{judge_result}")
         if judge_result == 2:
             return
-        return on_or_off_singal_port({
-            "port": self.device_object.power_port,
-            "action": judge_result
-        })
+        # return on_or_off_singal_port({
+        #     "port": self.device_object.power_port,
+        #     "action": judge_result
+        # })
 
     # -------------------------------------------------------------------------
     @execute_limit(300)

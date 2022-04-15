@@ -1,3 +1,5 @@
+from app.v1.Cuttle.basic.setting import set_global_value
+
 set_off_order = {
     "01": "fe0500000000d9c5",
     "02": "fe05000100008805",
@@ -58,3 +60,7 @@ check_power_order = {
     8: "FE010000000829C3",
     16: "FE010000001029C9",
 }
+port_charge_strategy = {}   # 存放所有充电口的充电策略
+
+set_global_value('port_charge_strategy', port_charge_strategy)
+

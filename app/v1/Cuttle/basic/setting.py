@@ -20,34 +20,46 @@ rotate_hand_serial_obj_dict = {}
 hand_origin_cmd_prefix = 'Hand'
 hand_used_list = []
 camera_dq_dict = {}
-camera_params = [("Width", 1280), ("Height", 720), ("OffsetY", 200), ("OffsetX", 0)]
-camera_params_240 = [("OffsetY", 0),
-                     ("OffsetX", 0),
-                     ("Width", 1440),
-                     ("Height", 1080),
-                     ("AcquisitionFrameRate", 240.0),
-                     ("ExposureTime", 2500.0),
-                     ("Gain", 2.5)]
-# 功能测试相机初始化参数
-camera_params_feature = [("OffsetY", 0),
-                         ("OffsetX", 0),
-                         ("Width", 2448),
-                         ("Height", 2048),
-                         ("ExposureTime", 15000.0),
-                         ("Gain", 2.5),
-                         ("AcquisitionFrameRate", 35.0),
-                         ("PixelFormat", 0x01080009, 'enum')]
-high_exposure_params = [("ExposureTime", 100000.0),
-                        ("Gain", 10)]
-high_exposure_params_feature = [("ExposureTime", 200000.0),
-                                ("Gain", 15)]
+
+# 相机的参数和柜子类型紧密相关，所以应该根据柜子类型来区分，而不是功能测试还是性能测试
+# 因为不论功能测试，还是性能测试，用的相机硬件都是一样的
+camera_params_50 = [("OffsetY", 0),
+                    ("OffsetX", 0),
+                    ("Width", 1440),
+                    ("Height", 1080),
+                    ("AcquisitionFrameRate", 170.0),
+                    ("ExposureTime", 3500.0),
+                    ("Gain", 2.5),
+                    ('ADCBitDepth', 2, 'enum'),
+                    ('BalanceWhiteAuto', 0, 'enum'),
+                    ('BalanceRatioSelector', 0, 'enum'),
+                    ('BalanceRatio', 1100),
+                    ('BalanceRatioSelector', 1, 'enum'),
+                    ('BalanceRatio', 950),
+                    ('BalanceRatioSelector', 2, 'enum'),
+                    ('BalanceRatio', 1850),
+                    ("PixelFormat", 0x01080009, 'enum')]
+camera_params_52 = camera_params_50 + [('GammaEnable', True), ('Gamma',  0.7000)]
+camera_params_53 = camera_params_50
+# 5L相机初始化参数
+camera_params_51 = [("OffsetY", 0),
+                    ("OffsetX", 0),
+                    ("Width", 2448),
+                    ("Height", 2048),
+                    ("ExposureTime", 15000.0),
+                    ("Gain", 2.5),
+                    ("AcquisitionFrameRate", 35.0),
+                    ('ADCBitDepth', 2),
+                    ("PixelFormat", 0x01080009, 'enum')]
+
+high_exposure_params = [("ExposureTime", 200000.0),
+                        ("Gain", 15)]
+
 # 俩个同步相机的参数
 sync_camera_params = [('TriggerMode', 1, 'enum'),
                       ('TriggerSource', 0, 'enum'),
                       ('TriggerActivation', 2, 'enum'),
-                      ('LineSelector', 0, 'enum'),
-                      ('AcquisitionFrameRate', 170.0),
-                      ("ExposureTime", 3500.0)]
+                      ('LineSelector', 0, 'enum')]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315

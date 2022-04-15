@@ -2,6 +2,7 @@ import collections
 import os.path
 import re
 import time
+import traceback
 from ctypes import *
 # 更高效，但不便于跨进程使用，待有性能要求时可以考虑deque
 from collections import deque
@@ -14,11 +15,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.execption.outer.error_code.camera import NoSrc, CameraInitFail, CameraInUse
 from app.v1.Cuttle.basic.MvImport.HK_import import *
-from app.v1.Cuttle.basic.common_utli import get_file_name
 from app.v1.Cuttle.basic.operator.handler import Handler
-from app.v1.Cuttle.basic.setting import camera_dq_dict, normal_result, CameraMax, \
-    camera_params_240, CamObjList, camera_params_feature, high_exposure_params, high_exposure_params_feature, \
-    sync_camera_params, get_global_value, set_global_value, MERGE_IMAGE_H, COORDINATE_CONFIG_FILE
+from app.v1.Cuttle.basic.setting import *
 from app.execption.outer.error_code.imgtool import CameraNotResponse
 from app.config.setting import HARDWARE_MAPPING_LIST
 from app.libs import image_utils
@@ -42,19 +40,12 @@ def camera_start(camera_id, device_object, **kwargs):
         # 为了保证后续操作的统一性，将图片统一放到队列中
         dq = deque(maxlen=CameraMax)
         camera_dq_dict[camera_dq_key] = dq
-        # 性能测试相机初始化
+        # 相机初始化
         redis_client.set(f"g_bExit_{camera_id}", "0")
 
-        if CORAL_TYPE in [5, 5.3]:
-            response = camera_init_hk(camera_id, device_object, **kwargs)
-            temporary = kwargs.get('temporary', True)
-            print("half done  has camera? ", device_object.has_camera, 'temporary:', temporary)
-        else:
-            # 功能测试相机初始化
-            kwargs['feature_test'] = True
-            response = camera_init_hk(camera_id, device_object, **kwargs)
-            temporary = True
-            print("has camera?", device_object.has_camera)
+        temporary = kwargs.get('temporary', True)
+        response = camera_init_hk(camera_id, device_object, **kwargs)
+        print("half done  has camera? ", device_object.has_camera, 'temporary:', temporary)
 
         if temporary is True:
             @func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
@@ -67,6 +58,7 @@ def camera_start(camera_id, device_object, **kwargs):
 
     except Exception as e:
         print('相机初始化异常：', e)
+        print(traceback.format_exc())
         raise e
     except func_timeout.exceptions.FunctionTimedOut as e:
         print('获取图片超时了！！！')
@@ -75,22 +67,22 @@ def camera_start(camera_id, device_object, **kwargs):
         # 结束循环，关闭取图
         redis_client.set(f"g_bExit_{camera_id}", "1")
         cam_obj = CamObjList[camera_id] if camera_id in CamObjList else None
-        if cam_obj is not None:
-            stop_camera(cam_obj)
 
         # 统计帧率
-        pic_count = len(camera_dq_dict[camera_dq_key])
-        begin_time = camera_dq_dict[camera_dq_key][0]['host_timestamp']
-        end_time = camera_dq_dict[camera_dq_key][-1]['host_timestamp']
-
         stParam = MVCC_FLOATVALUE()
         memset(byref(stParam), 0, sizeof(MVCC_FLOATVALUE))
         check_result(cam_obj.MV_CC_GetFloatValue, "ResultingFrameRate", stParam)
         print(f'camera{camera_id}原始帧率是：', stParam.fCurValue, '^' * 10)
 
+        pic_count = len(camera_dq_dict[camera_dq_key])
+        begin_time = camera_dq_dict[camera_dq_key][0]['host_timestamp']
+        end_time = camera_dq_dict[camera_dq_key][-1]['host_timestamp']
         if pic_count > 1:
             frame_rate = pic_count / ((end_time - begin_time) / 1000)
             print(f'camera{camera_id}帧率是：', int(frame_rate), '^' * 10, pic_count, ((end_time - begin_time) / 1000))
+
+        if cam_obj is not None:
+            stop_camera(cam_obj, camera_id, **kwargs)
 
 
 def camera_init_hk(camera_id, device_object, **kwargs):
@@ -100,6 +92,7 @@ def camera_init_hk(camera_id, device_object, **kwargs):
         CamObj = CamObjList[camera_id]
 
     if not inited:
+        print('重新初始化。。。。')
         deviceList = MV_CC_DEVICE_INFO_LIST()
         tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
         check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
@@ -113,49 +106,19 @@ def camera_init_hk(camera_id, device_object, **kwargs):
         # CamObj.MV_CC_DestroyHandle()
         check_result(CamObj.MV_CC_OpenDevice, 5, 0)
 
-    if kwargs.get('feature_test') is True:
-        # 功能测试参数设置
-        for key in camera_params_feature:
-            if isinstance(key[1], bool):
-                check_result(CamObj.MV_CC_SetBoolValue, key[0], key[1])
-            elif len(key) == 3 and key[2] == 'enum':
-                check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
-            elif isinstance(key[1], int):
-                check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
-            elif isinstance(key[1], float):
-                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
-    else:
-        # 2022.3.2 5.2柜设置Gamma参数
-        if CORAL_TYPE == 5.2:
-            CamObj.MV_CC_SetBoolValue("GammaEnable", True)
-            CamObj.MV_CC_SetFloatValue("Gamma", 0.7000)
-        # 性能测试参数设置
-        if kwargs.get("init") is None:
-            CamObj.MV_CC_SetEnumValue("ADCBitDepth", 2)
-            CamObj.MV_CC_SetEnumValue("PixelFormat", 0x01080009)
-            CamObj.MV_CC_SetEnumValue("BalanceWhiteAuto", 0)
-            CamObj.MV_CC_SetEnumValue("BalanceRatioSelector", 0)
-            CamObj.MV_CC_SetIntValue("BalanceRatio", 1100)
-            CamObj.MV_CC_SetEnumValue("BalanceRatioSelector", 1)
-            CamObj.MV_CC_SetIntValue("BalanceRatio", 950)
-            CamObj.MV_CC_SetEnumValue("BalanceRatioSelector", 2)
-            CamObj.MV_CC_SetIntValue("BalanceRatio", 1850)
-            for key in camera_params_240:
-                if isinstance(key[1], int):
-                    check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
-                elif isinstance(key[1], float):
-                    check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
-        for key in camera_params_240:
-            if kwargs.get(key[0]) is not None:
-                check_result(CamObj.MV_CC_SetIntValue, key[0], kwargs.get(key[0]))
+    for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
+        if isinstance(key[1], bool):
+            check_result(CamObj.MV_CC_SetBoolValue, key[0], key[1])
+        elif len(key) == 3 and key[2] == 'enum':
+            check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
+        elif isinstance(key[1], int):
+            check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
+        elif isinstance(key[1], float):
+            check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
 
     if kwargs.get('high_exposure'):
-        if kwargs.get('feature_test') is True:
-            for key in high_exposure_params_feature:
-                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
-        else:
-            for key in high_exposure_params:
-                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
+        for key in high_exposure_params:
+            check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
 
     if kwargs.get('sync_camera'):
         for key in sync_camera_params:
@@ -249,12 +212,15 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
     print('获取到图片了', stFrameInfo.nFrameNum)
 
 
-def stop_camera(cam_obj):
+def stop_camera(cam_obj, camera_id, **kwargs):
     cam_obj.MV_CC_StopGrabbing()
-    # cam_obj.MV_CC_CloseDevice()
-    # cam_obj.MV_CC_DestroyHandle()
-    # 目前的柜子类型，只有一个相机，所以销毁所有
-    # CamObjList.clear()
+    # 性能测试的时候销毁，用来释放内存
+    if not kwargs.get('feature_test'):
+        print('开始销毁。。。。。。。。。。。。')
+        cam_obj.MV_CC_CloseDevice()
+        cam_obj.MV_CC_DestroyHandle()
+        # 销毁
+        del CamObjList[camera_id]
     print("stop camera finished..[Debug]")
 
 
@@ -310,7 +276,10 @@ class CameraHandler(Handler):
         futures = []
         temporary = False if CORAL_TYPE == 5.3 else True
         sync_camera = True if CORAL_TYPE == 5.3 else False
+        # 如果录像的话，则按照性能测试来录像
+        feature_test = False if self.record_video else True
         for camera_id in camera_ids:
+            redis_client.set(f"camera_loop_{camera_id}", 0)
             # 相机正在获取图片的时候 不能再次使用
             if redis_client.get(f"g_bExit_{camera_id}") == "0":
                 raise CameraInUse()
@@ -322,7 +291,8 @@ class CameraHandler(Handler):
                                      high_exposure=self.high_exposure,
                                      temporary=temporary,
                                      original=self.original,
-                                     sync_camera=sync_camera)
+                                     sync_camera=sync_camera,
+                                     feature_test=feature_test)
             futures.append(future)
 
         # 默认使用第一个相机中的截图
@@ -342,16 +312,18 @@ class CameraHandler(Handler):
             while True:
                 all_in_loop = True
                 for camera_id in camera_ids:
-                    if not redis_client.get(f"camera_loop_{camera_id}"):
+                    # 注意这里是字符串
+                    if redis_client.get(f"camera_loop_{camera_id}") == '0':
                         all_in_loop = False
                         break
                 if all_in_loop:
                     break
+
             if sync_camera:
                 if self.record_video:
                     timeout = self.record_time
                 else:
-                    timeout = 0.1
+                    timeout = 0.2
                 # 发送同步信号
                 with CameraUsbPower(timeout=timeout):
                     pass
@@ -376,11 +348,13 @@ class CameraHandler(Handler):
                 del camera_dq_dict[self._model.pk + camera_id]
 
             merged_frames = self.get_syn_frame(frames, camera_ids)
-            image = merged_frames[0]
-            if not self.original:
-                image = self.get_roi(merged_frames[0])
-                image = np.rot90(image)
-            self.src = image
+
+            if len(merged_frames) > 0:
+                image = merged_frames[0]
+                if not self.original:
+                    image = self.get_roi(merged_frames[0])
+                    image = np.rot90(image)
+                self.src = image
 
             # 写入到文件夹中，测试用
             if self.record_video:
@@ -512,10 +486,3 @@ class CameraHandler(Handler):
 
     def ignore(self, *arg, **kwargs):
         return 0
-
-
-if __name__ == '__main__':
-    import collections
-
-    FakeDevice = collections.namedtuple("fakeDevice", ["pk", "has_camera"])
-    camera_start(1, FakeDevice(0, True))

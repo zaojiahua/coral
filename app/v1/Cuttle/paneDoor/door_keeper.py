@@ -81,7 +81,7 @@ class DoorKeeper(object):
             futures = []
             for port in available_port_list:
                 function, device_object = PaneConfigView.hardware_init(port, device_label, rotate=(port == rotate_com))
-                future = executer.submit(function, port, device_object, init=True, original=True)
+                future = executer.submit(function, port, device_object, init=True, original=True, feature_test=True)
                 futures.append(future)
                 hand_used_list.append(port)
 

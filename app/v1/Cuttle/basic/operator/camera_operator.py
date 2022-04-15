@@ -246,7 +246,7 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
                'dev_timestamp_high': stFrameInfo.nDevTimeStampHigh,
                'dev_timestamp_low': stFrameInfo.nDevTimeStampLow,
                'frame_num': stFrameInfo.nFrameNum})
-    print('获取到图片了')
+    print('获取到图片了', stFrameInfo.nFrameNum)
 
 
 def stop_camera(cam_obj):
@@ -367,10 +367,13 @@ class CameraHandler(Handler):
                                           for camera_id in camera_ids])):
                 for camera_id in camera_ids:
                     # 在这里进行运算，选出一张图片，赋给self.src
-                    src = camera_dq_dict.get(self._model.pk + camera_id)[frame_index]
+                    src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
                     # 记录来源于哪个相机，方便后续处理
                     src['camera_id'] = camera_id
                     frames[src['frame_num']].append(src)
+                # 清空内存
+                for camera_id in camera_ids:
+                    camera_dq_dict.get(self._model.pk + camera_id).clear()
 
             merged_frames = self.get_syn_frame(frames, camera_ids)
             image = merged_frames[0]

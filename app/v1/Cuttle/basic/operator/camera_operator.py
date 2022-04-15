@@ -371,9 +371,9 @@ class CameraHandler(Handler):
                     # 记录来源于哪个相机，方便后续处理
                     src['camera_id'] = camera_id
                     frames[src['frame_num']].append(src)
-                # 清空内存
-                for camera_id in camera_ids:
-                    camera_dq_dict.get(self._model.pk + camera_id).clear()
+            # 清空内存
+            for camera_id in camera_ids:
+                del camera_dq_dict[self._model.pk + camera_id]
 
             merged_frames = self.get_syn_frame(frames, camera_ids)
             image = merged_frames[0]
@@ -392,6 +392,9 @@ class CameraHandler(Handler):
                     os.mkdir('camera')
                 for index, merged_img in enumerate(merged_frames):
                     cv2.imwrite(f'camera/{index}.png', merged_img)
+
+            # 清理内存
+            del merged_frames
 
         return 0
 
@@ -458,6 +461,9 @@ class CameraHandler(Handler):
                 set_global_value('merge_shape', result.shape)
                 with open(COORDINATE_CONFIG_FILE, 'at') as f:
                     f.writelines(f'merge_shape={result.shape}\n')
+
+            # 释放内存
+            del frames
 
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
         if lost_frames:

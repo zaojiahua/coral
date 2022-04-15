@@ -46,8 +46,8 @@ sync_camera_params = [('TriggerMode', 1, 'enum'),
                       ('TriggerSource', 0, 'enum'),
                       ('TriggerActivation', 2, 'enum'),
                       ('LineSelector', 0, 'enum'),
-                      ('AcquisitionFrameRate', 20.0),
-                      ("ExposureTime", 10000.0)]
+                      ('AcquisitionFrameRate', 240.0),
+                      ("ExposureTime", 3500.0)]
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315

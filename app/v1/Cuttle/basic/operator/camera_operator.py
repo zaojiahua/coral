@@ -77,10 +77,17 @@ def camera_start(camera_id, device_object, **kwargs):
         cam_obj = CamObjList[camera_id] if camera_id in CamObjList else None
         if cam_obj is not None:
             stop_camera(cam_obj)
+
         # 统计帧率
         pic_count = len(camera_dq_dict[camera_dq_key])
         begin_time = camera_dq_dict[camera_dq_key][0]['host_timestamp']
         end_time = camera_dq_dict[camera_dq_key][-1]['host_timestamp']
+
+        stParam = MVCC_FLOATVALUE()
+        memset(byref(stParam), 0, sizeof(MVCC_FLOATVALUE))
+        check_result(cam_obj.MV_CC_GetFloatValue, "ResultingFrameRate", stParam)
+        print(f'camera{camera_id}原始帧率是：', stParam.fCurValue, '^' * 10)
+
         if pic_count > 1:
             frame_rate = pic_count / ((end_time - begin_time) / 1000)
             print(f'camera{camera_id}帧率是：', int(frame_rate), '^' * 10, pic_count, ((end_time - begin_time) / 1000))

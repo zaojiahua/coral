@@ -206,8 +206,6 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
     image = image.reshape((stFrameInfo.nHeight, stFrameInfo.nWidth, 3))
     dq.append({'image': image,
                'host_timestamp': stFrameInfo.nHostTimeStamp,
-               'dev_timestamp_high': stFrameInfo.nDevTimeStampHigh,
-               'dev_timestamp_low': stFrameInfo.nDevTimeStampLow,
                'frame_num': stFrameInfo.nFrameNum})
     print('获取到图片了', stFrameInfo.nFrameNum)
 
@@ -220,6 +218,7 @@ def stop_camera(cam_obj, camera_id, **kwargs):
         cam_obj.MV_CC_CloseDevice()
         cam_obj.MV_CC_DestroyHandle()
         # 销毁
+        del cam_obj
         del CamObjList[camera_id]
     print("stop camera finished..[Debug]")
 
@@ -347,28 +346,28 @@ class CameraHandler(Handler):
             for camera_id in camera_ids:
                 del camera_dq_dict[self._model.pk + camera_id]
 
-            merged_frames = self.get_syn_frame(frames, camera_ids)
+            self.get_syn_frame(frames, camera_ids)
 
-            if len(merged_frames) > 0:
-                image = merged_frames[0]
-                if not self.original:
-                    image = self.get_roi(merged_frames[0])
-                    image = np.rot90(image)
-                self.src = image
-
-            # 写入到文件夹中，测试用
-            if self.record_video:
-                if os.path.exists('camera'):
-                    import shutil
-                    shutil.rmtree('camera')
-                    os.mkdir('camera')
-                else:
-                    os.mkdir('camera')
-                for index, merged_img in enumerate(merged_frames):
-                    cv2.imwrite(f'camera/{index}.png', merged_img)
+            # if len(frames) > 0:
+            #     image = frames[0]
+            #     if not self.original:
+            #         image = self.get_roi(frames[0])
+            #         image = np.rot90(image)
+            #     self.src = image
+            #
+            # # 写入到文件夹中，测试用
+            # if self.record_video:
+            #     if os.path.exists('camera'):
+            #         import shutil
+            #         shutil.rmtree('camera')
+            #         os.mkdir('camera')
+            #     else:
+            #         os.mkdir('camera')
+            #     for index, merged_img in enumerate(frames):
+            #         cv2.imwrite(f'camera/{index}.png', merged_img)
 
             # 清理内存
-            del merged_frames
+            del frames
 
         return 0
 
@@ -385,7 +384,6 @@ class CameraHandler(Handler):
         frame_nums = []
         max_frame_num = 0
 
-        result_frames = []
         for frame_num, frames in frames_list.items():
             if len(frames) != len(camera_ids):
                 continue
@@ -398,10 +396,7 @@ class CameraHandler(Handler):
 
             host_t_1 = frames[0]['host_timestamp']
             host_t_2 = frames[1]['host_timestamp']
-            dev_t_1 = (frames[0]['dev_timestamp_high'] << 32) + frames[0]['dev_timestamp_low']
-            dev_t_2 = (frames[1]['dev_timestamp_high'] << 32) + frames[1]['dev_timestamp_low']
-            print(frame_num, host_t_2 - host_t_1, dev_t_2 - dev_t_1)
-            # print('frame_num: ', frame_num, '&' * 10)
+            print(frame_num, host_t_2 - host_t_1)
 
             h1, w1 = img1.shape[:2]
             h2, w2 = img2.shape[:2]
@@ -428,7 +423,14 @@ class CameraHandler(Handler):
             for r in range(t[1], rows):
                 weight = (r - t[1]) / (rows - t[1])
                 result[r, t[0]: cols, :] = result_copy[r, t[0]: cols, :] * (1 - weight) + img1[r - t[1], 0: cols - t[0], :] * weight
-            result_frames.append(result)
+
+            # 释放内存
+            del img1
+            del img2
+            del result_copy
+            del frames
+
+            frames_list[frame_num] = result
             # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
             merge_shape = get_global_value('merge_shape')
             if merge_shape is None:
@@ -436,13 +438,9 @@ class CameraHandler(Handler):
                 with open(COORDINATE_CONFIG_FILE, 'at') as f:
                     f.writelines(f'merge_shape={result.shape}\n')
 
-            # 释放内存
-            del frames
-
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
         if lost_frames:
             print('发生了丢帧:', lost_frames, '&' * 10)
-        return result_frames
 
     @staticmethod
     def get_homography(img1, img2):

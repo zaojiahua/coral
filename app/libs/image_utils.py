@@ -24,4 +24,5 @@ def get_homography(img1, img2):
 
         (H, status) = cv2.findHomography(ptsA, ptsB, cv2.RANSAC, 4.0)
         print(H)
+        del img1, img2
         return H

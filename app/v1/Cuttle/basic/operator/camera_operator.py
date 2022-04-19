@@ -332,7 +332,7 @@ class CameraHandler(Handler):
                 print('线程结束了')
 
             # 这里保存的就是同一帧拍摄的所有图片
-            frames = collections.defaultdict(list)
+            self.frames = collections.defaultdict(list)
             # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
             for frame_index in range(min([len(camera_dq_dict.get(self._model.pk + camera_id))
                                           for camera_id in camera_ids])):
@@ -341,12 +341,13 @@ class CameraHandler(Handler):
                     src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
                     # 记录来源于哪个相机，方便后续处理
                     src['camera_id'] = camera_id
-                    frames[src['frame_num']].append(src)
+                    self.frames[src['frame_num']].append(src)
+                    del src
             # 清空内存
             for camera_id in camera_ids:
                 del camera_dq_dict[self._model.pk + camera_id]
 
-            self.get_syn_frame(frames, camera_ids)
+            self.get_syn_frame(camera_ids)
 
             # if len(frames) > 0:
             #     image = frames[0]
@@ -355,19 +356,20 @@ class CameraHandler(Handler):
             #         image = np.rot90(image)
             #     self.src = image
             #
-            # # 写入到文件夹中，测试用
-            # if self.record_video:
-            #     if os.path.exists('camera'):
-            #         import shutil
-            #         shutil.rmtree('camera')
-            #         os.mkdir('camera')
-            #     else:
-            #         os.mkdir('camera')
-            #     for index, merged_img in enumerate(frames):
-            #         cv2.imwrite(f'camera/{index}.png', merged_img)
+            # 写入到文件夹中，测试用
+            if self.record_video:
+                if os.path.exists('camera'):
+                    import shutil
+                    shutil.rmtree('camera')
+                    os.mkdir('camera')
+                else:
+                    os.mkdir('camera')
+                for index, merged_img in enumerate(self.frames):
+                    del merged_img
+                    # cv2.imwrite(f'camera/{index}.png', merged_img)
 
             # 清理内存
-            del frames
+            del self.frames
 
         return 0
 
@@ -379,12 +381,14 @@ class CameraHandler(Handler):
         return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
 
     # 从多个相机中获取同步的内容
-    def get_syn_frame(self, frames_list, camera_ids):
+    def get_syn_frame(self, camera_ids):
         # 判断是否丢帧
         frame_nums = []
         max_frame_num = 0
 
-        for frame_num, frames in frames_list.items():
+        h = get_global_value(MERGE_IMAGE_H)
+        xmin = ymin = xmax = ymax = ht = None
+        for frame_num, frames in self.frames.items():
             if len(frames) != len(camera_ids):
                 continue
             frame_nums.append(frame_num)
@@ -401,43 +405,51 @@ class CameraHandler(Handler):
             h1, w1 = img1.shape[:2]
             h2, w2 = img2.shape[:2]
 
-            h = self.get_homography(img1, img2)
+            if h is None:
+                h = self.get_homography(img1, img2)
 
-            pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
-            pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
-            pts2_ = cv2.perspectiveTransform(pts2, h)
-            pts = np.concatenate((pts1, pts2_), axis=0)
-            [xmin, ymin] = np.int32(pts.min(axis=0).ravel() - 0.5)
-            [xmax, ymax] = np.int32(pts.max(axis=0).ravel() + 0.5)
-            t = [-xmin, -ymin]
-            ht = np.array([[1, 0, t[0]], [0, 1, t[1]], [0, 0, 1]])
+            if ht is None:
+                pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
+                pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
+                pts2_ = cv2.perspectiveTransform(pts2, h)
+                pts = np.concatenate((pts1, pts2_), axis=0)
+                xmin, ymin = np.int32(pts.min(axis=0).ravel() - 0.5)
+                xmax, ymax = np.int32(pts.max(axis=0).ravel() + 0.5)
+                # t = [-xmin, -ymin]
+                ht = np.array([[1, 0, -xmin], [0, 1, -ymin], [0, 0, 1]])
 
             result = cv2.warpPerspective(img2, ht.dot(h), (xmax - xmin, ymax - ymin))
-
             result_copy = np.array(result)
-            result[t[1]:h1 + t[1], t[0]:w1 + t[0]] = img1
+            result[-ymin:h1 + (-ymin), -xmin:w1 + (-xmin)] = img1
 
             rows = int(pts2_.max(axis=0).ravel()[1] - pts2_.min(axis=0).ravel()[1])
             cols = int(pts2_.max(axis=0).ravel()[0] - pts2_.min(axis=0).ravel()[0])
 
-            for r in range(t[1], rows):
-                weight = (r - t[1]) / (rows - t[1])
-                result[r, t[0]: cols, :] = result_copy[r, t[0]: cols, :] * (1 - weight) + img1[r - t[1], 0: cols - t[0], :] * weight
+            # for r in range(t[1], rows):
+            #     weight = (r - t[1]) / (rows - t[1])
+            #     result[r, t[0]: cols, :] = result_copy[r, t[0]: cols, :] * (1 - weight) + img1[r - t[1], 0: cols - t[0], :] * weight
 
             # 释放内存
             del img1
             del img2
-            del result_copy
+            del frames[0]['image']
+            del frames[0]
+            del frames[0]['image']
+            del frames[0]
             del frames
+            del result_copy
 
-            frames_list[frame_num] = result
+            self.frames[frame_num] = result
+            del result
+
             # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
-            merge_shape = get_global_value('merge_shape')
-            if merge_shape is None:
-                set_global_value('merge_shape', result.shape)
-                with open(COORDINATE_CONFIG_FILE, 'at') as f:
-                    f.writelines(f'merge_shape={result.shape}\n')
+            # merge_shape = get_global_value('merge_shape')
+            # if merge_shape is None:
+            #     set_global_value('merge_shape', result.shape)
+            #     with open(COORDINATE_CONFIG_FILE, 'at') as f:
+            #         f.writelines(f'merge_shape={result.shape}\n')
 
+        del xmin, ymin, xmax, ymax, ht, h
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
         if lost_frames:
             print('发生了丢帧:', lost_frames, '&' * 10)
@@ -454,6 +466,7 @@ class CameraHandler(Handler):
                 h = image_utils.get_homography(img1, img2)
                 np.save(MERGE_IMAGE_H, h)
             set_global_value(MERGE_IMAGE_H, h)
+        del img1, img2
         return h
 
     def move(self, *args, **kwargs):

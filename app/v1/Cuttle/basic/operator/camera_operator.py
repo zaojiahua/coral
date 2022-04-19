@@ -356,8 +356,8 @@ class CameraHandler(Handler):
 
             self.get_syn_frame(camera_ids)
 
-            if len(self.frames) > 0:
-                image = self.frames[0]
+            if len(self.merged_frames) > 0:
+                image = self.merged_frames[0]
 
                 # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
                 merge_shape = get_global_value('merge_shape')

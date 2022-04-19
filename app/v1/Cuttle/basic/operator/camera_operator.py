@@ -349,13 +349,21 @@ class CameraHandler(Handler):
 
             self.get_syn_frame(camera_ids)
 
-            # if len(frames) > 0:
-            #     image = frames[0]
-            #     if not self.original:
-            #         image = self.get_roi(frames[0])
-            #         image = np.rot90(image)
-            #     self.src = image
-            #
+            if len(self.frames) > 0:
+                image = self.frames[0]
+
+                # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
+                # merge_shape = get_global_value('merge_shape')
+                # if merge_shape is None:
+                #     set_global_value('merge_shape', image.shape)
+                #     with open(COORDINATE_CONFIG_FILE, 'at') as f:
+                #         f.writelines(f'merge_shape={image.shape}\n')
+                #
+                # if not self.original:
+                #     image = self.get_roi(image)
+                #     image = np.rot90(image)
+                # self.src = image
+
             # 写入到文件夹中，测试用
             if self.record_video:
                 if os.path.exists('camera'):
@@ -364,12 +372,12 @@ class CameraHandler(Handler):
                     os.mkdir('camera')
                 else:
                     os.mkdir('camera')
-                for index, merged_img in enumerate(self.frames):
-                    del merged_img
+                # for index, merged_img in enumerate(self.frames):
+                #     del merged_img
                     # cv2.imwrite(f'camera/{index}.png', merged_img)
 
             # 清理内存
-            del self.frames
+            # del self.frames
 
         return 0
 
@@ -387,10 +395,13 @@ class CameraHandler(Handler):
         max_frame_num = 0
 
         h = get_global_value(MERGE_IMAGE_H)
-        xmin = ymin = xmax = ymax = ht = None
+        xmin = ymin = xmax = ymax = ht = pts2_ = rows = cols = None
+        weights = {}
         for frame_num, frames in self.frames.items():
             if len(frames) != len(camera_ids):
+                del frames
                 continue
+
             frame_nums.append(frame_num)
             max_frame_num = frame_num if frame_num > max_frame_num else max_frame_num
 
@@ -417,17 +428,20 @@ class CameraHandler(Handler):
                 xmax, ymax = np.int32(pts.max(axis=0).ravel() + 0.5)
                 # t = [-xmin, -ymin]
                 ht = np.array([[1, 0, -xmin], [0, 1, -ymin], [0, 0, 1]])
+                rows = int(pts2_.max(axis=0).ravel()[1] - pts2_.min(axis=0).ravel()[1])
+                cols = int(pts2_.max(axis=0).ravel()[0] - pts2_.min(axis=0).ravel()[0])
 
             result = cv2.warpPerspective(img2, ht.dot(h), (xmax - xmin, ymax - ymin))
             result_copy = np.array(result)
             result[-ymin:h1 + (-ymin), -xmin:w1 + (-xmin)] = img1
 
-            rows = int(pts2_.max(axis=0).ravel()[1] - pts2_.min(axis=0).ravel()[1])
-            cols = int(pts2_.max(axis=0).ravel()[0] - pts2_.min(axis=0).ravel()[0])
+            if not weights:
+                for r in range(-ymin, rows):
+                    weights[r] = (r - (-ymin)) / (rows - (-ymin))
 
-            # for r in range(t[1], rows):
-            #     weight = (r - t[1]) / (rows - t[1])
-            #     result[r, t[0]: cols, :] = result_copy[r, t[0]: cols, :] * (1 - weight) + img1[r - t[1], 0: cols - t[0], :] * weight
+            for r in range(-ymin, rows):
+                weight = weights[r]
+                result[r, -xmin: cols, :] = result_copy[r, -xmin: cols, :] * (1 - weight) + img1[r - (-ymin), 0: cols - (-xmin), :] * weight
 
             # 释放内存
             del img1
@@ -439,17 +453,15 @@ class CameraHandler(Handler):
             del frames
             del result_copy
 
-            self.frames[frame_num] = result
+            # self.frames[frame_num] = result
             del result
 
-            # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
-            # merge_shape = get_global_value('merge_shape')
-            # if merge_shape is None:
-            #     set_global_value('merge_shape', result.shape)
-            #     with open(COORDINATE_CONFIG_FILE, 'at') as f:
-            #         f.writelines(f'merge_shape={result.shape}\n')
+        del xmin, ymin, xmax, ymax, ht, h, pts2_, rows, cols
+        del weights
 
-        del xmin, ymin, xmax, ymax, ht, h
+        for frame_num in frame_nums:
+            del self.frames[frame_num]
+
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
         if lost_frames:
             print('发生了丢帧:', lost_frames, '&' * 10)

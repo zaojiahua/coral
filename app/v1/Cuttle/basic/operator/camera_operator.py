@@ -298,7 +298,7 @@ class CameraHandler(Handler):
                                      original=self.original,
                                      sync_camera=sync_camera,
                                      feature_test=feature_test)
-            if not feature_test:
+            if camera_id not in CamObjList and camera_id != camera_ids[-1]:
                 # 必须等待一段时间 同时初始化有bug发生 以后解决吧
                 time.sleep(0.5)
             futures.append(future)

@@ -83,11 +83,12 @@ def camera_start(camera_id, device_object, **kwargs):
 
         if cam_obj is not None:
             stop_camera(cam_obj, camera_id, **kwargs)
+            del cam_obj
 
 
 def camera_init_hk(camera_id, device_object, **kwargs):
     inited = False
-    if camera_id in CamObjList:
+    if camera_id in CamObjList and CamObjList[camera_id]:
         inited = True
         CamObj = CamObjList[camera_id]
 
@@ -160,6 +161,7 @@ def camera_init_hk(camera_id, device_object, **kwargs):
     if not inited:
         CamObjList[camera_id] = CamObj
 
+    del CamObj
     memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
     return data_buf, nPayloadSize, stFrameInfo
 
@@ -183,6 +185,7 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
                 time.sleep(0.001)
         else:
             continue
+    del cam_obj
 
 
 def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
@@ -207,6 +210,9 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
     dq.append({'image': image,
                'host_timestamp': stFrameInfo.nHostTimeStamp,
                'frame_num': stFrameInfo.nFrameNum})
+    del content
+    del image
+    del data_buf
     print('获取到图片了', stFrameInfo.nFrameNum)
 
 
@@ -349,20 +355,20 @@ class CameraHandler(Handler):
 
             self.get_syn_frame(camera_ids)
 
-            if len(self.frames) > 0:
-                image = self.frames[0]
-
-                # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
-                # merge_shape = get_global_value('merge_shape')
-                # if merge_shape is None:
-                #     set_global_value('merge_shape', image.shape)
-                #     with open(COORDINATE_CONFIG_FILE, 'at') as f:
-                #         f.writelines(f'merge_shape={image.shape}\n')
-                #
-                # if not self.original:
-                #     image = self.get_roi(image)
-                #     image = np.rot90(image)
-                # self.src = image
+            # if len(self.frames) > 0:
+            #     image = self.frames[0]
+            #
+            #     # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
+            #     merge_shape = get_global_value('merge_shape')
+            #     if merge_shape is None:
+            #         set_global_value('merge_shape', image.shape)
+            #         with open(COORDINATE_CONFIG_FILE, 'at') as f:
+            #             f.writelines(f'merge_shape={image.shape}\n')
+            #
+            #     if not self.original:
+            #         image = self.get_roi(image)
+            #         image = np.rot90(image)
+            #     self.src = image
 
             # 写入到文件夹中，测试用
             if self.record_video:
@@ -372,12 +378,12 @@ class CameraHandler(Handler):
                     os.mkdir('camera')
                 else:
                     os.mkdir('camera')
-                # for index, merged_img in enumerate(self.frames):
-                #     del merged_img
+                for index, merged_img in enumerate(self.frames):
+                    del merged_img
                     # cv2.imwrite(f'camera/{index}.png', merged_img)
 
             # 清理内存
-            # del self.frames
+            del self.frames
 
         return 0
 
@@ -395,7 +401,7 @@ class CameraHandler(Handler):
         max_frame_num = 0
 
         h = get_global_value(MERGE_IMAGE_H)
-        xmin = ymin = xmax = ymax = ht = pts2_ = rows = cols = None
+        xmin = ymin = xmax = ymax = ht = rows = cols = None
         weights = {}
         for frame_num, frames in self.frames.items():
             if len(frames) != len(camera_ids):
@@ -426,7 +432,6 @@ class CameraHandler(Handler):
                 pts = np.concatenate((pts1, pts2_), axis=0)
                 xmin, ymin = np.int32(pts.min(axis=0).ravel() - 0.5)
                 xmax, ymax = np.int32(pts.max(axis=0).ravel() + 0.5)
-                # t = [-xmin, -ymin]
                 ht = np.array([[1, 0, -xmin], [0, 1, -ymin], [0, 0, 1]])
                 rows = int(pts2_.max(axis=0).ravel()[1] - pts2_.min(axis=0).ravel()[1])
                 cols = int(pts2_.max(axis=0).ravel()[0] - pts2_.min(axis=0).ravel()[0])
@@ -456,11 +461,8 @@ class CameraHandler(Handler):
             # self.frames[frame_num] = result
             del result
 
-        del xmin, ymin, xmax, ymax, ht, h, pts2_, rows, cols
+        del xmin, ymin, xmax, ymax, ht, h, rows, cols
         del weights
-
-        for frame_num in frame_nums:
-            del self.frames[frame_num]
 
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
         if lost_frames:

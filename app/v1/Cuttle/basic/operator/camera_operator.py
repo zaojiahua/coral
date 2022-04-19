@@ -102,10 +102,10 @@ def camera_init_hk(camera_id, device_object, **kwargs):
         stDeviceList = cast(deviceList.pDeviceInfo[int(camera_id) - 1], POINTER(MV_CC_DEVICE_INFO)).contents
         check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
 
-        check_result(CamObj.MV_CC_OpenDevice, 5, 0)
-        CamObj.MV_CC_CloseDevice()
+        check_result(CamObj.MV_CC_OpenDevice, 1, 0)
+        # CamObj.MV_CC_CloseDevice()
         # CamObj.MV_CC_DestroyHandle()
-        check_result(CamObj.MV_CC_OpenDevice, 5, 0)
+        # check_result(CamObj.MV_CC_OpenDevice, 5, 0)
 
     for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
         if isinstance(key[1], bool):
@@ -355,20 +355,20 @@ class CameraHandler(Handler):
 
             self.get_syn_frame(camera_ids)
 
-            # if len(self.frames) > 0:
-            #     image = self.frames[0]
-            #
-            #     # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
-            #     merge_shape = get_global_value('merge_shape')
-            #     if merge_shape is None:
-            #         set_global_value('merge_shape', image.shape)
-            #         with open(COORDINATE_CONFIG_FILE, 'at') as f:
-            #             f.writelines(f'merge_shape={image.shape}\n')
-            #
-            #     if not self.original:
-            #         image = self.get_roi(image)
-            #         image = np.rot90(image)
-            #     self.src = image
+            if len(self.frames) > 0:
+                image = self.frames[0]
+
+                # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
+                merge_shape = get_global_value('merge_shape')
+                if merge_shape is None:
+                    set_global_value('merge_shape', image.shape)
+                    with open(COORDINATE_CONFIG_FILE, 'at') as f:
+                        f.writelines(f'merge_shape={image.shape}\n')
+
+                if not self.original:
+                    image = self.get_roi(image)
+                    image = np.rot90(image)
+                self.src = image
 
             # 写入到文件夹中，测试用
             if self.record_video:
@@ -458,7 +458,7 @@ class CameraHandler(Handler):
             del frames
             del result_copy
 
-            # self.frames[frame_num] = result
+            self.frames[frame_num] = result
             del result
 
         del xmin, ymin, xmax, ymax, ht, h, rows, cols

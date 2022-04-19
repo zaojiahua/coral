@@ -339,6 +339,7 @@ class CameraHandler(Handler):
 
             # 这里保存的就是同一帧拍摄的所有图片
             self.frames = collections.defaultdict(list)
+            self.merged_frames = {}
             # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
             for frame_index in range(min([len(camera_dq_dict.get(self._model.pk + camera_id))
                                           for camera_id in camera_ids])):
@@ -378,12 +379,16 @@ class CameraHandler(Handler):
                     os.mkdir('camera')
                 else:
                     os.mkdir('camera')
-                for index, merged_img in enumerate(self.frames):
-                    del merged_img
-                    # cv2.imwrite(f'camera/{index}.png', merged_img)
+
+            for index, merged_img in self.merged_frames.items():
+                del merged_img
+                # cv2.imwrite(f'camera/{index}.png', merged_img)
+            for frame in self.frames.values():
+                del frame
 
             # 清理内存
             del self.frames
+            del self.merged_frames
 
         return 0
 
@@ -458,7 +463,7 @@ class CameraHandler(Handler):
             del frames
             del result_copy
 
-            self.frames[frame_num] = result
+            self.merged_frames[frame_num] = result
             del result
 
         del xmin, ymin, xmax, ymax, ht, h, rows, cols

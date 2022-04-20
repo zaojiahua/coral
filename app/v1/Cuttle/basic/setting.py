@@ -49,8 +49,8 @@ camera_params_51 = [("OffsetY", 0),
                     ("Height", 2048),
                     ("ExposureTime", 15000.0),
                     ("Gain", 2.5),
-                    ("AcquisitionFrameRate", 35.0),
-                    ('ADCBitDepth', 2),
+                    ("AcquisitionFrameRate", 60.0),
+                    ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
 
 high_exposure_params = [("ExposureTime", 200000.0),
@@ -207,3 +207,6 @@ set_global_value('merge_image_h', None)
 PERFORMANCE_END_LOOP_TIMEOUT = 60 * 3
 COORDINATE_CONFIG_FILE = 'app/config/coordinate.py'
 MERGE_IMAGE_H = 'app/config/merge_image_h.npy'
+# 性能测试控制摄像机是否继续获取图片
+CAMERA_IN_LOOP = 'camera_in_loop'
+set_global_value(CAMERA_IN_LOOP, False)

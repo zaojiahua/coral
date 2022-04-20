@@ -256,6 +256,8 @@ class CameraHandler(Handler):
         # 摄像机录像
         self.record_video = kwargs.get('record_video')
         self.record_time = kwargs.get('record_time') or 1
+        # 性能测试的时候，用来实时的存放图片，如果传入这个参数，则可以实时的获取dp里边的图片
+        self.back_up_dq = kwargs.get('back_up_dq')
 
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
@@ -279,10 +281,10 @@ class CameraHandler(Handler):
             camera_ids.append(camera_id)
 
         futures = []
-        temporary = False if CORAL_TYPE == 5.3 else True
+        temporary = False if CORAL_TYPE == 5.3 else self.back_up_dq is None
         sync_camera = True if CORAL_TYPE == 5.3 else False
         # 如果录像的话，则按照性能测试来录像
-        feature_test = False if self.record_video else True
+        feature_test = False if self.record_video else self.back_up_dq is None
         for camera_id in camera_ids:
             redis_client.set(f"camera_loop_{camera_id}", 0)
             # 相机正在获取图片的时候 不能再次使用
@@ -306,15 +308,30 @@ class CameraHandler(Handler):
         # 默认使用第一个相机中的截图
         if len(camera_ids) == 1 or CORAL_TYPE != 5.3:
             image = None
-            for _ in as_completed(futures):
-                image = camera_dq_dict.get(self._model.pk + camera_ids[0])[-1]['image']
-                if not self.original:
-                    image = np.rot90(image, 3)
+            # 实时的获取到图片
+            if self.back_up_dq is not None:
+                # 停止时刻由外部进行控制，这里负责图像处理即可
+                while get_global_value(CAMERA_IN_LOOP):
+                    try:
+                        image = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()['image']
+                        image = np.rot90(image, 3)
+                        self.back_up_dq.append(image)
+                    except IndexError:
+                        # 拿的速度太快的话可能还没有存进去
+                        time.sleep(1 / FpsMax)
+                redis_client.set(f"g_bExit_{camera_ids[0]}", "1")
+                for _ in as_completed(futures):
+                    print('已经停止获取图片了')
+            else:
+                for _ in as_completed(futures):
+                    image = camera_dq_dict.get(self._model.pk + camera_ids[0])[-1]['image']
+                    if not self.original:
+                        image = np.rot90(image, 3)
 
-            try:
-                self.src = image
-            except UnboundLocalError:
-                raise CameraNotResponse
+                try:
+                    self.src = image
+                except UnboundLocalError:
+                    raise CameraNotResponse
         else:
             # 判断俩个相机都已经进入到了循环中
             while True:

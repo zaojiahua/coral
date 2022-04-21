@@ -30,6 +30,8 @@ GET_ONE_FRAME_TIMEOUT = 5
 
 # 相机初始化
 def camera_start(camera_id, device_object, **kwargs):
+    # 相机初始化
+    redis_client.set(f"g_bExit_{camera_id}", "0")
     # 根据camera_id来支持多摄像头的方案
     print('camera_id:', camera_id)
     try:
@@ -40,8 +42,6 @@ def camera_start(camera_id, device_object, **kwargs):
         # 为了保证后续操作的统一性，将图片统一放到队列中
         dq = deque(maxlen=CameraMax)
         camera_dq_dict[camera_dq_key] = dq
-        # 相机初始化
-        redis_client.set(f"g_bExit_{camera_id}", "0")
 
         temporary = kwargs.get('temporary', True)
         response = camera_init_hk(camera_id, device_object, **kwargs)
@@ -64,8 +64,6 @@ def camera_start(camera_id, device_object, **kwargs):
         print('获取图片超时了！！！')
         raise e
     finally:
-        # 结束循环，关闭取图
-        redis_client.set(f"g_bExit_{camera_id}", "1")
         cam_obj = CamObjList[camera_id] if camera_id in CamObjList else None
 
         # 统计帧率
@@ -84,6 +82,9 @@ def camera_start(camera_id, device_object, **kwargs):
         if cam_obj is not None:
             stop_camera(cam_obj, camera_id, **kwargs)
             del cam_obj
+
+        # 结束循环，关闭取图
+        redis_client.set(f"g_bExit_{camera_id}", "1")
 
 
 def camera_init_hk(camera_id, device_object, **kwargs):

@@ -483,7 +483,7 @@ class PaneLocateDeviceView(MethodView):
     def post(self):
         for hand_key in hand_serial_obj_dict.keys():
             # 找到主机械臂，让主机械臂移动即可
-            if arm_com in hand_key:
+            if arm_com in hand_key and not hand_key[-1].isdigit():
                 hand_obj = hand_serial_obj_dict[hand_key]
                 pos_x = 100
                 pos_y = -100

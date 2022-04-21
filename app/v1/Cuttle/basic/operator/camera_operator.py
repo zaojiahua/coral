@@ -344,7 +344,16 @@ class CameraHandler(Handler):
                 if all_in_loop:
                     break
 
-            if sync_camera:
+            need_back_up_dq = True
+            # 实时的获取到图片
+            if self.back_up_dq is not None:
+                need_back_up_dq = False
+                # 发送同步信号
+                with CameraUsbPower(timeout=0.2):
+                    pass
+                while get_global_value(CAMERA_IN_LOOP):
+                    self.merge_frame(camera_ids, 3)
+            else:
                 if self.record_video:
                     timeout = self.record_time
                 else:
@@ -352,44 +361,61 @@ class CameraHandler(Handler):
                 # 发送同步信号
                 with CameraUsbPower(timeout=timeout):
                     pass
+
             for camera_id in camera_ids:
                 redis_client.set(f"g_bExit_{camera_id}", "1")
             for _ in as_completed(futures):
                 print('线程结束了')
 
-            # 这里保存的就是同一帧拍摄的所有图片
-            self.frames = collections.defaultdict(list)
-            self.merged_frames = {}
-            # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
-            for frame_index in range(min([len(camera_dq_dict.get(self._model.pk + camera_id))
-                                          for camera_id in camera_ids])):
-                for camera_id in camera_ids:
-                    # 在这里进行运算，选出一张图片，赋给self.src
-                    src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
-                    # 记录来源于哪个相机，方便后续处理
-                    src['camera_id'] = camera_id
-                    self.frames[src['frame_num']].append(src)
-                    del src
+            # 最后再统一处理图片
+            if need_back_up_dq:
+                self.back_up_dq = []
+                self.merge_frame(camera_ids)
+
             # 清空内存
             for camera_id in camera_ids:
                 del camera_dq_dict[self._model.pk + camera_id]
 
-            self.get_syn_frame(camera_ids)
+            for merged_img in self.back_up_dq:
+                del merged_img
+                # cv2.imwrite(f'camera/{index}.png', merged_img)
+            del self.back_up_dq
 
-            if len(self.merged_frames) > 0:
-                image = self.merged_frames[0]
+        return 0
 
-                # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
-                merge_shape = get_global_value('merge_shape')
-                if merge_shape is None:
-                    set_global_value('merge_shape', image.shape)
-                    with open(COORDINATE_CONFIG_FILE, 'at') as f:
-                        f.writelines(f'merge_shape={image.shape}\n')
+    def merge_frame(self, camera_ids, merge_number=None):
+        # 这里保存的就是同一帧拍摄的所有图片
+        self.frames = collections.defaultdict(list)
 
-                if not self.original:
-                    image = self.get_roi(image)
-                    image = np.rot90(image)
-                self.src = image
+        if merge_number is None:
+            merge_number = min([len(camera_dq_dict.get(self._model.pk + camera_id))
+                                for camera_id in camera_ids])
+
+        # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
+        for frame_index in range(merge_number):
+            for camera_id in camera_ids:
+                # 在这里进行运算，选出一张图片，赋给self.src
+                src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
+                # 记录来源于哪个相机，方便后续处理
+                src['camera_id'] = camera_id
+                self.frames[src['frame_num']].append(src)
+                del src
+
+        if len(self.frames) == 0:
+            return
+
+        self.get_syn_frame(camera_ids)
+
+        if len(self.back_up_dq) > 0:
+            image = self.back_up_dq[0]
+            self.src = image
+
+            # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
+            merge_shape = get_global_value('merge_shape')
+            if merge_shape is None:
+                set_global_value('merge_shape', image.shape)
+                with open(COORDINATE_CONFIG_FILE, 'at') as f:
+                    f.writelines(f'merge_shape={image.shape}\n')
 
             # 写入到文件夹中，测试用
             if self.record_video:
@@ -400,17 +426,10 @@ class CameraHandler(Handler):
                 else:
                     os.mkdir('camera')
 
-            for index, merged_img in self.merged_frames.items():
-                del merged_img
-                # cv2.imwrite(f'camera/{index}.png', merged_img)
-            for frame in self.frames.values():
-                del frame
-
-            # 清理内存
-            del self.frames
-            del self.merged_frames
-
-        return 0
+        # 清理内存
+        for frame in self.frames.values():
+            del frame
+        del self.frames
 
     def get_roi(self, src):
         if int(self._model.y1) == 0 and int(self._model.y2) == 0 and int(self._model.x1) == 0 and int(
@@ -483,7 +502,10 @@ class CameraHandler(Handler):
             del frames
             del result_copy
 
-            self.merged_frames[frame_num] = result
+            # self.back_up_dq[frame_num] = result
+            if not self.original:
+                result = np.rot90(self.get_roi(result))
+            self.back_up_dq.append(result)
             del result
 
         del xmin, ymin, xmax, ymax, ht, h, rows, cols

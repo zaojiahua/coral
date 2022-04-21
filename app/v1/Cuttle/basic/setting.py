@@ -18,6 +18,12 @@ def get_global_value(key, def_value=None):
         return def_value
 
 
+# import的时候可能存在问题，所以变量都声明一下
+m_location = None
+m_location_center = None
+Z_DOWN = None
+ARM_MOVE_REGION = None
+DOUBLE_ARM_MOVE_REGION = None
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
     try:
         from app.config.ip import m_location

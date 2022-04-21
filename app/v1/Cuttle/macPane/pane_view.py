@@ -375,12 +375,12 @@ class PaneCoordinateView(MethodView):
                 if ret_code == 0:
                     print('拍到照片了')
                     dpi, m_location = self.get_scale(filename, pos_a, pos_b)
-                    if dpi is not None:
-                        # 测试计算的是否正确 点击左上角
-                        points = AutoPaneBorderView.get_suitable_area(cv2.imread(filename), 60)
-                        if points is not None:
-                            click_x, click_y, _ = device_obj.get_click_position(*points[1], test=True)
-                            self.click(click_x, -click_y, hand_obj)
+                    # if dpi is not None:
+                    #     # 测试计算的是否正确 点击左上角
+                    #     points = AutoPaneBorderView.get_suitable_area(cv2.imread(filename), 60)
+                    #     if points is not None:
+                    #         click_x, click_y, _ = device_obj.get_click_position(*points[1], test=True)
+                    #         self.click(click_x, -click_y, hand_obj)
             break
 
         return jsonify(dict(error_code=0, data={'dpi': dpi, 'm_location': m_location}))

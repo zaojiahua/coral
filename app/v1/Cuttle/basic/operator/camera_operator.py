@@ -81,7 +81,6 @@ def camera_start(camera_id, device_object, **kwargs):
 
         if cam_obj is not None:
             stop_camera(cam_obj, camera_id, **kwargs)
-            del cam_obj
 
         # 结束循环，关闭取图
         redis_client.set(f"g_bExit_{camera_id}", "1")
@@ -162,7 +161,6 @@ def camera_init_hk(camera_id, device_object, **kwargs):
     if not inited:
         CamObjList[camera_id] = CamObj
 
-    del CamObj
     memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
     return data_buf, nPayloadSize, stFrameInfo
 

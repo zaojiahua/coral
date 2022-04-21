@@ -1,11 +1,29 @@
 from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
 
+_global_dict = {}
+
+
+def set_global_value(key, value):
+    """ 定义一个全局变量 """
+    if key == 'm_location':
+        print('new m_location:', value)
+    _global_dict[key] = value
+
+
+def get_global_value(key, def_value=None):
+    try:
+        return _global_dict[key]
+    except KeyError:
+        return def_value
+
+
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
     try:
         from app.config.ip import m_location
     except Exception:
         m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
+    set_global_value('m_location', m_location)
 elif CORAL_TYPE == 5.1:
     try:
         from app.config.ip import m_location_center
@@ -18,6 +36,7 @@ elif CORAL_TYPE == 5.3:
         Z_DOWN = -27
         ARM_MOVE_REGION = [201, 240]
         DOUBLE_ARM_MOVE_REGION = [368, 239]
+    set_global_value('Z_DOWN', Z_DOWN)
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -187,25 +206,6 @@ PM_DUMP = 'pm dump'
 
 DEVICE_DETECT_ERROR_MAX_TIME = 30 * 60
 
-_global_dict = {}
-
-
-def set_global_value(key, value):
-    """ 定义一个全局变量 """
-    if key == 'm_location':
-        print('new m_location:', value)
-    _global_dict[key] = value
-
-
-def get_global_value(key, def_value=None):
-    try:
-        return _global_dict[key]
-    except KeyError:
-        return def_value
-
-
-set_global_value('m_location', m_location)
-set_global_value('Z_DOWN', Z_DOWN)
 # 图片拼接的h矩阵
 set_global_value('merge_image_h', None)
 

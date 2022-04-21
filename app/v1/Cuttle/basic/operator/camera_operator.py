@@ -217,6 +217,7 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
 
 
 def stop_camera(cam_obj, camera_id, **kwargs):
+    print('stop grabbing..........', kwargs.get('feature_test'))
     cam_obj.MV_CC_StopGrabbing()
     # 性能测试的时候销毁，用来释放内存
     if not kwargs.get('feature_test'):

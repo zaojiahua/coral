@@ -1,18 +1,23 @@
 from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
 
-try:
-    from app.config.ip import m_location, m_location_center, Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION
-except Exception:
-    m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
-    m_location_center = [157, 202.5, -24]
-    if CORAL_TYPE == 5.2:
-        m_location = [38, 13, -24]
-    # Z_DOWN = -3.5   tianjing setting
-    # Z_DOWN = -12   # 商米Tcab-5型柜夹具参数
-    Z_DOWN = -27
-    ARM_MOVE_REGION = [201, 240]
-    DOUBLE_ARM_MOVE_REGION = [368, 239]
+if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
+    try:
+        from app.config.ip import m_location
+    except Exception:
+        m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
+elif CORAL_TYPE == 5.1:
+    try:
+        from app.config.ip import m_location_center
+    except Exception:
+        m_location_center = [157, 202.5, -24]
+elif CORAL_TYPE == 5.3:
+    try:
+        from app.config.ip import Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION
+    except Exception:
+        Z_DOWN = -27
+        ARM_MOVE_REGION = [201, 240]
+        DOUBLE_ARM_MOVE_REGION = [368, 239]
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}

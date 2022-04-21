@@ -345,19 +345,18 @@ class CameraHandler(Handler):
                     break
 
             need_back_up_dq = True
+            timeout = 0.1
             # 实时的获取到图片
             if self.back_up_dq is not None:
                 need_back_up_dq = False
                 # 发送同步信号
-                with CameraUsbPower(timeout=0.2):
+                with CameraUsbPower(timeout=timeout):
                     pass
                 while get_global_value(CAMERA_IN_LOOP):
                     self.merge_frame(camera_ids, 3)
             else:
                 if self.record_video:
                     timeout = self.record_time
-                else:
-                    timeout = 0.2
                 # 发送同步信号
                 with CameraUsbPower(timeout=timeout):
                     pass

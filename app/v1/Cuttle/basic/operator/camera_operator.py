@@ -346,7 +346,7 @@ class CameraHandler(Handler):
 
             need_back_up_dq = True
             if self.high_exposure:
-                timeout = 0.3
+                timeout = 0.4
             else:
                 timeout = 0.1
             # 实时的获取到图片

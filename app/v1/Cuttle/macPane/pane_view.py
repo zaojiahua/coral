@@ -427,12 +427,15 @@ class PaneCoordinateView(MethodView):
         for contour_index, contour_points in enumerate(contours):
             # 遍历组成轮廓的每个坐标点
             m = cv2.moments(contour_points)
-            if m['m00'] > 0:
+            # m00代表面积
+            if m['m00'] > 50:
                 # 获取对象的质心
                 cx = int(m['m10'] / m['m00'])
                 cy = int(m['m01'] / m['m00'])
                 if w * 0.3 < cx < w * 0.6:
-                    target_contours.append(np.array([[int(cx), int(cy)]]))
+                    bx, by, bw, bh = cv2.boundingRect(contour_points)
+                    if 0.9 < bw / bh < 1.1:
+                        target_contours.append(np.array([[int(cx), int(cy)]]))
 
         if len(target_contours) == 2:
             # A、B俩点的x像素坐标默认是相等的。根据这个默认条件执行以下的逻辑。实际上得出来的A、B俩点的x像素坐标不一样，原因是相机是歪的。

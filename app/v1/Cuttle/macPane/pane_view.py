@@ -354,7 +354,7 @@ class PaneCoordinateView(MethodView):
         # 计算A、B俩点的像素距离，和实际距离的比，就得到了比例。根据比例，计算原点的坐标值。
         # 找到主机械臂，让主机械臂移动即可
         for obj_key in hand_serial_obj_dict.keys():
-            if arm_com in obj_key:
+            if arm_com in obj_key and not obj_key[-1].isdigit():
                 hand_obj = hand_serial_obj_dict[obj_key]
                 pos_a = [100, -100]
                 pos_b = [200, -100]
@@ -381,7 +381,7 @@ class PaneCoordinateView(MethodView):
                     #     if points is not None:
                     #         click_x, click_y, _ = device_obj.get_click_position(*points[1], test=True)
                     #         self.click(click_x, -click_y, hand_obj)
-            break
+                break
 
         return jsonify(dict(error_code=0, data={'dpi': dpi, 'm_location': m_location}))
 

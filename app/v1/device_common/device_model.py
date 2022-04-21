@@ -20,7 +20,7 @@ from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
-from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value, m_location, \
+from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value, \
     COORDINATE_CONFIG_FILE, Z_DOWN
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 
@@ -479,6 +479,7 @@ class Device(BaseModel):
                                             m_location_center[1] - float(self.height) / 2,
                                             m_location_center[2] + float(self.ply)])
         else:
+            m_location = get_global_value('m_location')
             set_global_value('m_location', [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
         self.screen_z = str(get_global_value('m_location')[2])
         set_global_value('Z_DOWN', get_global_value('m_location')[2])

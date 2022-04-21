@@ -9,7 +9,7 @@ from app.config.setting import CORAL_TYPE
 from app.execption.outer.error_code.hands import CrossMax, CoordinateWrongFormat, SideKeyNotFound, \
     ExecContentFormatError, CoordinatesNotReasonable
 from app.execption.outer.error_code.adb import NoContent
-from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, m_location, MOVE_SPEED, Z_MIN_VALUE, get_global_value, \
+from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, MOVE_SPEED, Z_MIN_VALUE, get_global_value, \
     X_SIDE_OFFSET_DISTANCE
 
 
@@ -31,8 +31,8 @@ class DefaultMixin(object):
                                  pix_point[1] / self.h_dpi * 2.54 * 10 + float(device.y_border)]
 
             opt_coordinate = [
-                round(window_coordinate[0] + m_location[0], 1),
-                round(window_coordinate[1] + m_location[1], 1)
+                round(window_coordinate[0] + get_global_value('m_location')[0], 1),
+                round(window_coordinate[1] + get_global_value('m_location')[1], 1)
             ]
         elif math.floor(CORAL_TYPE) == 5:
             opt_coordinate = list(device.get_click_position(pix_point[0],

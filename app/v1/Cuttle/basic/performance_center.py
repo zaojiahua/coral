@@ -99,6 +99,11 @@ class PerformanceCenter(object):
         # 如果能走到这里，代表发现了起始点，该unit结束，但是依然在获取图片
         return 0
 
+    @staticmethod
+    def end_loop_not_found():
+        set_global_value(CAMERA_IN_LOOP, False)
+        raise VideoEndPointNotFound
+
     def end_loop(self, judge_function):
         # 计算终止点的方法
         if not hasattr(self, "start_number") or not hasattr(self, "bias"):
@@ -115,6 +120,9 @@ class PerformanceCenter(object):
                 # 对bias补偿的帧数，先只保存对应图片，不做结果判断，因为不可能在这个阶段出现终止点 主要是加快一些速度。
                 # 这里必须调用，因为里边会保存图片
                 picture, next_picture, _ = self.picture_prepare(number)
+                if picture is None:
+                    print('图片不够 bias')
+                    self.end_loop_not_found()
                 number += 1
 
         # 设置超时时间
@@ -124,10 +132,18 @@ class PerformanceCenter(object):
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
             # 准确度上就是有50%概率晚一帧，不过在240帧水平上，1帧误差可以接受
             # 这部分我们自己知道就好，千万别给客户解释出去了。
-            self.picture_prepare(number)
+            picture, _, _ = self.picture_prepare(number)
+            if picture is None:
+                print('图片不够 loop 1')
+                self.end_loop_not_found()
             number += 1
+
             picture, next_picture, third_pic = self.picture_prepare(number)
+            if picture is None:
+                print('图片不够 loop 2')
+                self.end_loop_not_found()
             number += 1
+
             if judge_function.__name__ in ["_icon_find", "_icon_find_template_match"]:
                 # 判定终止图标出现只看标准图标和前后两张
                 pic2 = self.judge_icon
@@ -167,13 +183,12 @@ class PerformanceCenter(object):
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": number,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-                set_global_value(CAMERA_IN_LOOP, False)
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                raise VideoEndPointNotFound
+                print('结束点图片判断超出最大数量')
+                self.end_loop_not_found()
             elif (time.time() - begin_time) > PERFORMANCE_END_LOOP_TIMEOUT:
                 print('终点超时退出')
-                set_global_value(CAMERA_IN_LOOP, False)
-                raise VideoEndPointNotFound
+                self.end_loop_not_found()
         return 0
 
     def draw_line_in_pic(self, number, picture):
@@ -245,7 +260,7 @@ class PerformanceCenter(object):
         # use_icon_scope为true时裁剪snap图中真实icon出现的位置
         # use_icon_scope为false时裁剪snap图中refer中标记的configArea选区大致范围
         picture = None
-        max_retry_time = 3
+        max_retry_time = 5
         while max_retry_time >= 0:
             if len(self.back_up_dq) >= 3:
                 try:
@@ -266,6 +281,8 @@ class PerformanceCenter(object):
             area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
                 if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
             return [p[area[1]:area[3], area[0]:area[2]] for p in [picture, pic_next, pic_next_next]]
+        else:
+            return None, None, None
 
     def picture_prepare_for_fps_lost(self, number, skip=2):
         for i in range(3):

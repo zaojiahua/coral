@@ -177,7 +177,7 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
         # 这个一个轮询的请求，5毫秒timeout，去获取图片
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), n_payload_size, st_frame_info, 5)
         if ret == 0:
-            camera_snapshot(dq, data_buf, st_frame_info, cam_obj)
+            camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id)
             if temporary is True:
                 redis_client.set(f'g_bExit_{camera_id}', 1)
             else:
@@ -186,7 +186,7 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
             continue
 
 
-def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
+def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj, camera_id):
     # 当摄像头有最新照片后，创建一个stConvertParam的结构体去获取实际图片和图片信息，
     # pDstBuffer这个指针指向真实图片数据的缓存
     nRGBSize = stFrameInfo.nWidth * stFrameInfo.nHeight * 3
@@ -205,13 +205,18 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj):
     # 得到图片做最简单处理就放入deque,这块不要做旋转等操作，否则跟不上240帧的获取速度
     image = np.asarray(content, dtype="uint8")
     image = image.reshape((stFrameInfo.nHeight, stFrameInfo.nWidth, 3))
+    frame_num = stFrameInfo.nFrameNum
     dq.append({'image': image,
                'host_timestamp': stFrameInfo.nHostTimeStamp,
-               'frame_num': stFrameInfo.nFrameNum})
+               'frame_num': frame_num})
     del content
     del image
     del data_buf
-    print('获取到图片了', stFrameInfo.nFrameNum)
+    print('获取到图片了', frame_num)
+    # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
+    if frame_num >= CameraMax:
+        print('达到了取图的最大限制！！！')
+        redis_client.set(f'g_bExit_{camera_id}', 1)
 
 
 def stop_camera(cam_obj, camera_id, **kwargs):

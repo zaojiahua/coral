@@ -98,6 +98,7 @@ class PerformanceCenter(object):
                 set_global_value(CAMERA_IN_LOOP, False)
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 raise VideoStartPointNotFound
+            del picture
 
         # 如果能走到这里，代表发现了起始点，该unit结束，但是依然在获取图片
         return 0
@@ -187,6 +188,7 @@ class PerformanceCenter(object):
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 print('结束点图片判断超出最大数量')
                 self.end_loop_not_found()
+            del picture
         return 0
 
     def draw_line_in_pic(self, number, picture):
@@ -272,7 +274,7 @@ class PerformanceCenter(object):
             max_retry_time -= 1
 
         if picture is not None:
-            picture_save = picture
+            picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
             cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
             h, w = picture.shape[:2]
             scope = self.scope if use_icon_scope is False else self.icon_scope
@@ -337,4 +339,7 @@ class PerformanceCenter(object):
                 print(repr(e))
                 self.back_up_dq.clear()
                 return 0
+        # 销毁
+        for pic in self.back_up_dq:
+            del pic
         self.back_up_dq.clear()

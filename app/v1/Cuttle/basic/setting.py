@@ -215,9 +215,9 @@ for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
         FpsMax = key[1]
         break
 if CORAL_TYPE == 5.1:
-    CameraMax = FpsMax * 10  # 5l可以拍10s
+    CameraMax = int(FpsMax * 10)  # 5l可以拍10s
 else:
-    CameraMax = FpsMax * 5  # 5系列其他相机拍5s
+    CameraMax = int(FpsMax * 5)  # 5系列其他相机拍5s
 BIAS = int(FpsMax / 120 * 19)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
 SWIPE_BIAS_HARD = int(FpsMax / 120 * 9)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
 SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))

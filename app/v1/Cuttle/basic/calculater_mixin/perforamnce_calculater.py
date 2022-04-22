@@ -1,6 +1,5 @@
 import os
 import time
-from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
@@ -21,8 +20,6 @@ from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, 
 # from skimage.measure import compare_ssim
 # from skimage.metrics.structural_similarity import compare_ssim
 class PerformanceMinix(object):
-    dq = deque(maxlen=CameraMax * 4)
-
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
         return self.swipe_calculate(exec_content, SWIPE_BIAS_HARD)
@@ -37,7 +34,7 @@ class PerformanceMinix(object):
         icon_areas = [(x1 + x2) / 2 - 0.03, (y1 + y2) / 2 - 0.02, (x1 + x2) / 2 + 0.03, (y1 + y2) / 2 + 0.02]
         performance = PerformanceCenter(self._model.pk, [icon_areas], data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=bias)
+                                        self.kwargs.get("work_path"), bias=bias)
         return performance.start_loop(self._black_field)
 
     def start_point_with_swipe_slow(self, exec_content):
@@ -88,7 +85,7 @@ class PerformanceMinix(object):
         # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
+                                        self.kwargs.get("work_path"), bias=BIAS)
         return performance.start_loop(self._black_field)
 
     def start_point_with_point(self, exec_content):
@@ -136,7 +133,7 @@ class PerformanceMinix(object):
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
+                                        self.kwargs.get("work_path"), bias=BIAS)
         return performance.start_loop(self._black_field)
 
     def start_point_with_point_fixed(self, exec_content):
@@ -156,7 +153,7 @@ class PerformanceMinix(object):
             executor_callback)
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
+                                        self.kwargs.get("work_path"), bias=BIAS)
         return performance.start_loop(self._black_field)
 
     # 下面几个就是上面那几个结束点版本
@@ -175,7 +172,7 @@ class PerformanceMinix(object):
             data = self._validate(exec_content, schema)
             performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                             data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq)
+                                            self.kwargs.get("work_path"))
             performance.end_loop(judge_function)
             time.sleep(0.5)  # 等待后续30张图片save完成
             self.extra_result = performance.result
@@ -194,7 +191,7 @@ class PerformanceMinix(object):
         data = self._validate(exec_content, PerformanceSchemaCompare)
         performance = PerformanceCenter(self._model.pk, None, None,
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq)
+                                        self.kwargs.get("work_path"))
         return performance.start_loop(self._picture_changed)
 
     def end_point_with_fps_lost(self, exec_content):
@@ -202,7 +199,7 @@ class PerformanceMinix(object):
             data = self._validate(exec_content, PerformanceSchemaFps)
             performance = PerformanceCenter(self._model.pk, None, None,
                                             data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq, fps=data.get("fps"))
+                                            self.kwargs.get("work_path"), fps=data.get("fps"))
             performance.test_fps_lost(self._picture_changed)
             self.extra_result = performance.result
             result = 0 if performance.result.get("fps_lost") == False else 1

@@ -1,6 +1,7 @@
 import os
 import platform
 import time
+from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
@@ -8,7 +9,7 @@ import cv2
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
-from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, PERFORMANCE_END_LOOP_TIMEOUT, set_global_value, \
+from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
     CAMERA_IN_LOOP
 
 sp = '/' if platform.system() == 'Linux' else '\\'
@@ -16,6 +17,10 @@ EXTRA_PIC_NUMBER = 40
 
 
 class PerformanceCenter(object):
+
+    # dq存储起始点前到终止点后的每一帧图片
+    back_up_dq = deque(maxlen=CameraMax * 4)
+
     # 这部分是性能测试的中心对象，性能测试主要测试启动点 和终止点两个点位，并根据拍照频率计算实际时间
     # 终止点比较简单，但是启动点由于现有机械臂无法确认到具体点压的时间，只能通过机械臂遮挡关键位置时间+补偿时间（机械臂下落按压时间）计算得到
     # 补偿时间又区分出多种情况，点击普通滑动 和用力滑动，第一接触点位置位于屏幕x方向的位置（摄像头角度），需要分别计算补偿的帧数。
@@ -25,11 +30,9 @@ class PerformanceCenter(object):
             cls.instance = super().__new__(cls)
         return cls.instance
 
-    def __init__(self, device_id, icon_area, refer_im_path, scope, threshold, work_path: str, dq, **kwargs):
+    def __init__(self, device_id, icon_area, refer_im_path, scope, threshold, work_path: str, **kwargs):
         self.device_id = device_id
         self.result = 0
-        # dq存储起始点前到终止点后的每一帧图片
-        self.back_up_dq = dq
         # 使用黑色区域时，icon_scope为icon实际出现在snap图中的位置，使用icon surf时icon_scope为编辑时出现在refer图中的位置
         # 使用选区变化/不变时 icon_scope 为None
         # icon 和scope 这里都是相对的坐标
@@ -125,8 +128,6 @@ class PerformanceCenter(object):
                     self.end_loop_not_found()
                 number += 1
 
-        # 设置超时时间
-        begin_time = time.time()
         while self.loop_flag:
             # 这个地方写了两遍不是bug，是特意的，一次取了两张
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
@@ -185,9 +186,6 @@ class PerformanceCenter(object):
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 print('结束点图片判断超出最大数量')
-                self.end_loop_not_found()
-            elif (time.time() - begin_time) > PERFORMANCE_END_LOOP_TIMEOUT:
-                print('终点超时退出')
                 self.end_loop_not_found()
         return 0
 

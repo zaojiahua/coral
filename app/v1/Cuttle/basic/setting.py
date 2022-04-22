@@ -137,17 +137,6 @@ last_swipe_end_point = [0, 0]
 
 color_threshold = 4000
 color_rate = 1500
-g_bExit = False
-# BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量
-FpsMax = 240
-CameraMax = 2400
-BIAS = int(FpsMax / 120 * 19)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
-SWIPE_BIAS_HARD = int(FpsMax / 120 * 9)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
-SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
-
-Continues_Number = 1  # 连续多张判断准则，适用于性能测试
-camera_w = 1280  # 摄像头拍摄分辨率，需要根据具体摄像头设置
-camera_h = 720
 
 # 中文键盘忽略屏幕上半比例内文字
 chinese_ingore = 0.55
@@ -212,12 +201,23 @@ PM_DUMP = 'pm dump'
 
 DEVICE_DETECT_ERROR_MAX_TIME = 30 * 60
 
-# 图片拼接的h矩阵
-set_global_value('merge_image_h', None)
-
-PERFORMANCE_END_LOOP_TIMEOUT = 60 * 3
+# 跟摄像机相关的参数
+set_global_value('merge_image_h', None) # 图片拼接的h矩阵
 COORDINATE_CONFIG_FILE = 'app/config/coordinate.py'
 MERGE_IMAGE_H = 'app/config/merge_image_h.npy'
-# 性能测试控制摄像机是否继续获取图片
-CAMERA_IN_LOOP = 'camera_in_loop'
+CAMERA_IN_LOOP = 'camera_in_loop' # 性能测试控制摄像机是否继续获取图片
 set_global_value(CAMERA_IN_LOOP, False)
+
+# 跟性能测试相关的参数
+FpsMax = 240
+for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
+    if key[0] == 'AcquisitionFrameRate':
+        FpsMax = key[1]
+        break
+if CORAL_TYPE == 5.1:
+    CameraMax = FpsMax * 10  # 5l可以拍10s
+else:
+    CameraMax = FpsMax * 5  # 5系列其他相机拍5s
+BIAS = int(FpsMax / 120 * 19)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
+SWIPE_BIAS_HARD = int(FpsMax / 120 * 9)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
+SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))

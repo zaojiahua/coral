@@ -72,3 +72,21 @@ class ChooseSerialObjFail(APIException):
     error_code = 3009
     code = 400
     description = 'Unknown Execution G code Serial object '
+
+
+class InvalidCoordinates(APIException):
+    """
+     当使用双指缩小与放大unit时，各点的x坐标必须满足
+        【放大】左机械臂终点x坐标 < 左机械臂起点x坐标 < 右机械臂起点x坐标 < 右机械臂终点x坐标
+    或者：
+        【缩小】左机械臂起点x坐标 < 左机械臂终点x坐标 < 右机械臂终点x坐标 < 右机械臂起点x坐标
+    """
+    error_code = 3010
+    code = 400
+    description = "Invalid Coordinates "
+
+
+class InsufficientSafeDistance(APIException):
+    error_code = 3011
+    code = 400
+    description = "To Increased the last two point's x-coordinate"

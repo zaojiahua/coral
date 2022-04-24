@@ -541,7 +541,7 @@ class CameraHandler(Handler):
             cv2.imwrite(args[0], self.src)
             delattr(self, "src")
             return 0
-        elif hasattr(self, "video_src") or self.record_video:
+        elif hasattr(self, "video_src") or self.record_video or self.back_up_dq:
             # 暂时注释掉 需要的时候再实现
             pass
             # # 视频分析，存储每一帧图片，并记录总数

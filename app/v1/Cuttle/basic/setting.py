@@ -105,6 +105,7 @@ if CORAL_TYPE == 5.3:
     arm_wait_position = f"G01 X0Y0Z{Z_UP}F15000 \r\n"
     HAND_MAX_X = DOUBLE_ARM_MOVE_REGION[0]
     HAND_MAX_Y = DOUBLE_ARM_MOVE_REGION[1]
+    DIFF_X = 30
 else:
     Z_UP = 0
     Z_START = 0

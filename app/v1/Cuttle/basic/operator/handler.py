@@ -324,6 +324,8 @@ class ListHandler(Handler):
         flag = 0
         result = None
         for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
+            if "onlyShow" in single_cmd:
+                continue
             try:
                 self.child.exec_content = single_cmd
                 kwargs['index'] = index

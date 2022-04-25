@@ -212,7 +212,7 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj, camera_id):
     del content
     del image
     del data_buf
-    print('获取到图片了', frame_num)
+    print(f'camera{camera_id}获取到图片了', frame_num)
     # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
     if frame_num >= CameraMax:
         print('达到了取图的最大限制！！！')
@@ -384,9 +384,9 @@ class CameraHandler(Handler):
                     # cv2.imwrite(f'camera/{index}.png', merged_img)
                 self.back_up_dq.clear()
 
-            # 清空内存
+            # 清空图片内存
             for camera_id in camera_ids:
-                del camera_dq_dict[self._model.pk + camera_id]
+                camera_dq_dict[self._model.pk + camera_id].clear()
 
         return 0
 

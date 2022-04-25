@@ -57,7 +57,6 @@ camera_params_50 = [("OffsetY", 0),
                     ("OffsetX", 0),
                     ("Width", 1440),
                     ("Height", 1080),
-                    ("AcquisitionFrameRate", 240.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("ExposureTime", 3500.0),
                     ("Gain", 2.5),
@@ -70,7 +69,10 @@ camera_params_50 = [("OffsetY", 0),
                     ('BalanceRatioSelector', 2, 'enum'),
                     ('BalanceRatio', 1850),
                     ("PixelFormat", 0x01080009, 'enum')]
-camera_params_52 = camera_params_50 + [('GammaEnable', True), ('Gamma',  0.7000)]
+camera_params_50 = camera_params_50 + [("AcquisitionFrameRate", 240.0)]
+camera_params_52 = camera_params_50 + [("AcquisitionFrameRate", 240.0),
+                                       ('GammaEnable', True),
+                                       ('Gamma',  0.7000)]
 camera_params_53 = camera_params_50 + [("AcquisitionFrameRate", 120.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),

@@ -314,8 +314,12 @@ class PerformanceCenter(object):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self.device_id)
         # 这里会阻塞，一直在获取图片
-        device_obj.get_snapshot(image_path='', max_retry_time=1,
-                                timeout=10 * 60, back_up_dq=self.back_up_dq)
+        try:
+            device_obj.get_snapshot(image_path='', max_retry_time=1,
+                                    timeout=10 * 60, back_up_dq=self.back_up_dq)
+        except Exception as e:
+            print(e)
+            print('获取图片的接口报错。。。。')
 
         # 找到结束点后再继续保存最多40张:
         if not hasattr(self, "end_number"):
@@ -343,3 +347,4 @@ class PerformanceCenter(object):
         for pic in self.back_up_dq:
             del pic
         self.back_up_dq.clear()
+        print('清空 back up dq 队列。。。。')

@@ -53,27 +53,27 @@ camera_dq_dict = {}
 
 # 相机的参数和柜子类型紧密相关，所以应该根据柜子类型来区分，而不是功能测试还是性能测试
 # 因为不论功能测试，还是性能测试，用的相机硬件都是一样的
-camera_params_50 = [("OffsetY", 0),
-                    ("OffsetX", 0),
-                    ("Width", 1440),
-                    ("Height", 1080),
-                    ("AcquisitionFrameRateEnable", True),
-                    ("ExposureTime", 3500.0),
-                    ("Gain", 2.5),
-                    ('ADCBitDepth', 2, 'enum'),
-                    ('BalanceWhiteAuto', 0, 'enum'),
-                    ('BalanceRatioSelector', 0, 'enum'),
-                    ('BalanceRatio', 1100),
-                    ('BalanceRatioSelector', 1, 'enum'),
-                    ('BalanceRatio', 950),
-                    ('BalanceRatioSelector', 2, 'enum'),
-                    ('BalanceRatio', 1850),
-                    ("PixelFormat", 0x01080009, 'enum')]
-camera_params_50 = camera_params_50 + [("AcquisitionFrameRate", 240.0)]
-camera_params_52 = camera_params_50 + [("AcquisitionFrameRate", 240.0),
+camera_params_5 = [("OffsetY", 0),
+                   ("OffsetX", 0),
+                   ("Width", 1440),
+                   ("Height", 1080),
+                   ("AcquisitionFrameRateEnable", True),
+                   ("ExposureTime", 3500.0),
+                   ("Gain", 2.5),
+                   ('ADCBitDepth', 2, 'enum'),
+                   ('BalanceWhiteAuto', 0, 'enum'),
+                   ('BalanceRatioSelector', 0, 'enum'),
+                   ('BalanceRatio', 1100),
+                   ('BalanceRatioSelector', 1, 'enum'),
+                   ('BalanceRatio', 950),
+                   ('BalanceRatioSelector', 2, 'enum'),
+                   ('BalanceRatio', 1850),
+                   ("PixelFormat", 0x01080009, 'enum')]
+camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 240.0),
                                        ('GammaEnable', True),
                                        ('Gamma',  0.7000)]
-camera_params_53 = camera_params_50 + [("AcquisitionFrameRate", 120.0)]
+camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 120.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
                     ("OffsetX", 0),

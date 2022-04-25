@@ -357,11 +357,9 @@ class CameraHandler(Handler):
             if self.back_up_dq is not None:
                 need_back_up_dq = False
                 # 发送同步信号
-                camera_syn_toggle = CameraUsbPower(0)
-                camera_syn_toggle.open()
-                while get_global_value(CAMERA_IN_LOOP):
-                    self.merge_frame(camera_ids, 10)
-                camera_syn_toggle.close()
+                with CameraUsbPower(timeout=timeout):
+                    while get_global_value(CAMERA_IN_LOOP):
+                        self.merge_frame(camera_ids, 5)
             else:
                 if self.record_video:
                     timeout = self.record_time

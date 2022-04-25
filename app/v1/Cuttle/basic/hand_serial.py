@@ -56,6 +56,14 @@ class HandSerial:
                 self.write(g_order)
             return 0
 
+    def check_hand_status(self, buffer_size=64):
+        # 查询机械臂状态
+        self.ser.write("?? \r\n")
+        rev = self.ser.read(buffer_size).decode()
+        if "idle" in rev:
+            return True
+        return False
+
     def recv(self, buffer_size=32):
         # print(self.ser.read(buffer_size))
         try:

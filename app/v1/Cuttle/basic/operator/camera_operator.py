@@ -379,14 +379,14 @@ class CameraHandler(Handler):
                 self.back_up_dq = []
                 self.merge_frame(camera_ids)
 
+                for merged_img in self.back_up_dq:
+                    del merged_img
+                    # cv2.imwrite(f'camera/{index}.png', merged_img)
+                self.back_up_dq.clear()
+
             # 清空内存
             for camera_id in camera_ids:
                 del camera_dq_dict[self._model.pk + camera_id]
-
-            for merged_img in self.back_up_dq:
-                del merged_img
-                # cv2.imwrite(f'camera/{index}.png', merged_img)
-            self.back_up_dq.clear()
 
         return 0
 
@@ -523,7 +523,7 @@ class CameraHandler(Handler):
         del weights
 
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
-        if lost_frames and not self.back_up_dq:
+        if lost_frames and self.back_up_dq is None:
             print('发生了丢帧:', lost_frames, '&' * 10)
 
     @staticmethod

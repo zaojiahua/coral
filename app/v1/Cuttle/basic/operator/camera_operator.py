@@ -360,7 +360,7 @@ class CameraHandler(Handler):
                 with CameraUsbPower(timeout=timeout):
                     pass
                 while get_global_value(CAMERA_IN_LOOP):
-                    self.merge_frame(camera_ids, 3)
+                    self.merge_frame(camera_ids, 10)
             else:
                 if self.record_video:
                     timeout = self.record_time
@@ -371,7 +371,7 @@ class CameraHandler(Handler):
             for camera_id in camera_ids:
                 redis_client.set(f"g_bExit_{camera_id}", "1")
             for _ in as_completed(futures):
-                print('线程结束了')
+                print('已经停止获取图片了')
 
             # 最后再统一处理图片
             if need_back_up_dq:
@@ -385,7 +385,7 @@ class CameraHandler(Handler):
             for merged_img in self.back_up_dq:
                 del merged_img
                 # cv2.imwrite(f'camera/{index}.png', merged_img)
-            del self.back_up_dq
+            self.back_up_dq.clear()
 
         return 0
 
@@ -393,9 +393,13 @@ class CameraHandler(Handler):
         # 这里保存的就是同一帧拍摄的所有图片
         self.frames = collections.defaultdict(list)
 
+        # 先合并指定数量的图片
+        camera_length = min([len(camera_dq_dict.get(self._model.pk + camera_id))
+                             for camera_id in camera_ids])
         if merge_number is None:
-            merge_number = min([len(camera_dq_dict.get(self._model.pk + camera_id))
-                                for camera_id in camera_ids])
+            merge_number = camera_length
+        else:
+            merge_number = merge_number if merge_number < camera_length else camera_length
 
         # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
         for frame_index in range(merge_number):
@@ -435,7 +439,7 @@ class CameraHandler(Handler):
         # 清理内存
         for frame in self.frames.values():
             del frame
-        del self.frames
+        self.frames.clear()
 
     def get_roi(self, src):
         if int(self._model.y1) == 0 and int(self._model.y2) == 0 and int(self._model.x1) == 0 and int(
@@ -518,7 +522,7 @@ class CameraHandler(Handler):
         del weights
 
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
-        if lost_frames:
+        if lost_frames and not self.back_up_dq:
             print('发生了丢帧:', lost_frames, '&' * 10)
 
     @staticmethod

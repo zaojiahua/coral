@@ -422,6 +422,8 @@ class HandHandler(Handler, DefaultMixin):
         self.exec_double_hand_swipe(left_order, right_order)
         if min(left_swipe_speed, right_swipe_speed) < 2000:
             time.sleep(self.speed + 0.5)
+        hand_serial_obj_dict.get(self._model.pk + arm_com).recv(64)
+        hand_serial_obj_dict.get(self._model.pk + arm_com_1).recv(64)
         return 0
 
     def record_double_hand_point(self, axis, *args, **kwargs):

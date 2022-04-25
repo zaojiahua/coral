@@ -123,11 +123,19 @@ class CameraUsbPower(object):
         self.line_number = 1.7
 
     def __enter__(self):
-        print('------发送同步信号-----')
-        self.s.pinOutputHigh(self.line_number)
+        self.open()
         return self.s
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    # 开启同步信号
+    def open(self):
+        print('------发送同步信号-----')
+        self.s.pinOutputHigh(self.line_number)
+
+    # 结束同步信号
+    def close(self):
         time.sleep(self.timeout)
-        print('-------结束同步信号-----')
         self.s.pinSetLow(self.line_number)
+        print('-------结束同步信号-----')

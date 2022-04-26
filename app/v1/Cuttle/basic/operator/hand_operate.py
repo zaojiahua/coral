@@ -43,7 +43,7 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     ]
     for orders in hand_reset_orders:
         hand_serial_obj.send_single_order(orders)
-        hand_serial_obj.recv(buffer_size=64)
+        hand_serial_obj.recv(buffer_size=64, is_init=True)
     return 0
 
 
@@ -101,14 +101,6 @@ def allot_serial_obj(func):
     def wrapper(self, axis, **kwargs):
         start_x_point = axis[0][0] if type(axis[0]) is list else axis[0]
         exec_serial_obj, arm_num = judge_start_x(start_x_point, self._model.pk)
-        # 判断另一个机械臂是否空闲
-        if arm_num == 0:
-            other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com)
-        else:
-            other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1)
-        while not (other_serial_obj.check_hand_status()):
-            time.sleep(0.2)
-            continue
         kwargs["exec_serial_obj"] = exec_serial_obj
         kwargs["arm_num"] = arm_num
         func(self, axis, **kwargs)

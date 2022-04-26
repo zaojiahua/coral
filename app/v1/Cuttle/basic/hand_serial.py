@@ -58,19 +58,23 @@ class HandSerial:
 
     def check_hand_status(self, buffer_size=64):
         # 查询机械臂状态
-        self.ser.write("?? \r\n")
+        self.ser.write("?? \r\n".encode())
         rev = self.ser.read(buffer_size).decode()
-        if "idle" in rev:
+        if "Idle" in rev:
             return True
         return False
 
-    def recv(self, buffer_size=32):
+    def recv(self, buffer_size=32, is_init=False):
         # print(self.ser.read(buffer_size))
         try:
             rev = self.ser.read(buffer_size).decode()
         except SerialException:
             raise
         print('返回：', rev, '*' * 10)
+        while not is_init and not self.check_hand_status():
+            print("当前动作未执行完毕")
+            time.sleep(0.2)
+        print("当前动作执行完毕")
         if 'ok' in rev or 'unlock' in rev:
             return 0
         return -1

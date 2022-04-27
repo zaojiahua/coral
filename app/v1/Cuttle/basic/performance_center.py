@@ -2,6 +2,7 @@ import os
 import platform
 import time
 from collections import deque
+import traceback
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
@@ -319,6 +320,7 @@ class PerformanceCenter(object):
                                     timeout=10 * 60, back_up_dq=self.back_up_dq)
         except Exception as e:
             print(e)
+            traceback.print_exc()
             print('获取图片的接口报错。。。。')
 
         # 找到结束点后再继续保存最多40张:

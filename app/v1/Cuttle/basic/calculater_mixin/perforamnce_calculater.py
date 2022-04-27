@@ -165,6 +165,13 @@ class PerformanceMinix(object):
     def end_point_with_changed(self, exec_content):
         return self._end_point(exec_content, PerformanceSchemaCompare, self._picture_changed)
 
+    @staticmethod
+    def wait_end():
+        # 当发生异常的时候，另一个进程可能还在使用相机，所以这里等待几秒再返回，防止t-guard马上使用相机
+        # 这里简单判断一个相机即可
+        while redis_client.get(f"g_bExit_0") == "0":
+            time.sleep(0.1)
+
     def _end_point(self, exec_content, schema, judge_function):
         keep_pic = [2017]
         try:
@@ -178,6 +185,7 @@ class PerformanceMinix(object):
         except APIException as e:
             self.image = performance.tguard_picture_path if hasattr(performance, "tguard_picture_path") else None
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
+            self.wait_end()
             if hasattr(e, 'error_code'):
                 if e.error_code in keep_pic:
                     return 1
@@ -185,10 +193,7 @@ class PerformanceMinix(object):
                     return e.error_code
             return 1
         except Exception as e:
-            # 当发生异常的时候，另一个进程可能还在使用相机，所以这里等待几秒再返回，防止t-guard马上使用相机
-            # 这里简单判断一个相机即可
-            while redis_client.get(f"g_bExit_0") == "0":
-                time.sleep(0.1)
+            self.wait_end()
             raise e
 
     def start_point_with_fps_lost(self, exec_content):

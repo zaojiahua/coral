@@ -64,7 +64,7 @@ class HandSerial:
             return True
         return False
 
-    def recv(self, buffer_size=32, is_init=False):
+    def recv(self, buffer_size=32, is_init=False, **kwargs):
         # print(self.ser.read(buffer_size))
         try:
             rev = self.ser.read(buffer_size).decode()

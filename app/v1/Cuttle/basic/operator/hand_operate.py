@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from app.config.setting import CORAL_TYPE, ARM_MAX_X, arm_com, arm_com_1
+from app.config.setting import CORAL_TYPE, arm_com, arm_com_1
 from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, ChooseSerialObjFail
 from app.libs.http_client import request
@@ -12,9 +12,9 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
+    hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, wait_time, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION
+    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, ARM_MAX_X
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -151,7 +151,7 @@ class HandHandler(Handler, DefaultMixin):
         ignore_reset = self.kwargs.get("ignore_arm_reset")
         self.ignore_reset = ignore_reset
         kwargs["exec_serial_obj"].send_list_order(click_orders, ignore_reset=ignore_reset)
-        click_result = kwargs["exec_serial_obj"].recv()
+        click_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
         return click_result
 
     @allot_serial_obj
@@ -164,7 +164,7 @@ class HandHandler(Handler, DefaultMixin):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
         double_click_orders = self.__double_click_order(axis[0])
         kwargs["exec_serial_obj"].send_list_order(double_click_orders)
-        return kwargs["exec_serial_obj"].recv()
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     @allot_serial_obj
     def long_press(self, axis, swipe_time=SWIPE_TIME, **kwargs):
@@ -180,7 +180,7 @@ class HandHandler(Handler, DefaultMixin):
                                                   other_orders=[long_click_orders[-1]],
                                                   wait=True, wait_time=self.speed)
         self.ignore_reset = True
-        return kwargs["exec_serial_obj"].recv()
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     @allot_serial_obj
     def sliding(self, axis, swipe_time=SWIPE_TIME, **kwargs):
@@ -202,7 +202,7 @@ class HandHandler(Handler, DefaultMixin):
         if swipe_speed == 10000:
             self.ignore_reset = True
 
-        sliding_result = kwargs["exec_serial_obj"].recv()
+        sliding_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
         return sliding_result
 
     @allot_serial_obj
@@ -212,7 +212,7 @@ class HandHandler(Handler, DefaultMixin):
         # 用力滑动，会先计算滑动起始/终止点的  同方向延长线坐标，并做梯形滑动
         sliding_order = self.__sliding_order(axis[0], axis[1], self.speed, normal=False, arm_num=kwargs["arm_num"])
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
-        return kwargs["exec_serial_obj"].recv()
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     def double_hand_swipe(self, axis):
         # Tcab-5D 双指缩放

@@ -360,6 +360,8 @@ class CameraHandler(Handler):
                 with CameraUsbPower(timeout=timeout):
                     while get_global_value(CAMERA_IN_LOOP):
                         self.merge_frame(camera_ids, 5)
+                # 把剩下的图片都合成完毕
+                self.merge_frame(camera_ids)
             else:
                 if self.record_video:
                     timeout = self.record_time

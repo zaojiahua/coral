@@ -144,7 +144,8 @@ class PerformanceMinix(object):
         y = (y1 + y2) / 2
         request_body = {
             "device_label": self._model.pk,
-            "execCmdList": [f"shell input tap {x} {y}"]
+            "execCmdList": [f"shell input tap {x} {y}"],
+            'is_init': True
         }
         # request_body.update({"ignore_arm_reset": True})
         from app.v1.Cuttle.basic.basic_views import UnitFactory

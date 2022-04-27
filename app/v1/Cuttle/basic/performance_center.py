@@ -158,6 +158,10 @@ class PerformanceCenter(object):
 
             if judge_function(picture, pic2, third_pic, self.threshold):
                 print(f"发现了终点: {number} bias：", self.bias)
+                # 多保存几张图片
+                if len(self.back_up_dq) < EXTRA_PIC_NUMBER:
+                    time.sleep(EXTRA_PIC_NUMBER / FpsMax)
+                set_global_value(CAMERA_IN_LOOP, False)
                 self.end_number = number - 1
                 if judge_function.__name__ not in ["_icon_find", "_icon_find_template_match"]:
                     # 判定区域是否有变化时，变化的帧是next_picture/third_pic，当前的picture是不能画框的，需要在另一个存图线程中画框
@@ -175,10 +179,6 @@ class PerformanceCenter(object):
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": self.end_number + EXTRA_PIC_NUMBER - 1,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-                # 多保存几张图片
-                while len(self.back_up_dq) < EXTRA_PIC_NUMBER:
-                    continue
-                set_global_value(CAMERA_IN_LOOP, False)
                 break
             elif number >= CameraMax:
                 self.result = {"start_point": self.start_number + self.bias, "end_point": number,
@@ -344,6 +344,7 @@ class PerformanceCenter(object):
             except IndexError as e:
                 print(repr(e))
                 self.back_up_dq.clear()
+                print('清空 back up dq 队列。。。。')
                 return 0
         # 销毁
         for pic in self.back_up_dq:

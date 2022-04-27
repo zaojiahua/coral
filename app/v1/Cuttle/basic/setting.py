@@ -24,6 +24,7 @@ m_location_center = None
 Z_DOWN = None
 ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
+ARM_MAX_X = None
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
     try:
         from app.config.ip import m_location
@@ -37,11 +38,12 @@ elif CORAL_TYPE == 5.1:
         m_location_center = [157, 202.5, -24]
 elif CORAL_TYPE == 5.3:
     try:
-        from app.config.ip import Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION
+        from app.config.ip import Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION, ARM_MAX_X
     except Exception:
         Z_DOWN = -27
         ARM_MOVE_REGION = [201, 240]
         DOUBLE_ARM_MOVE_REGION = [368, 239]
+        ARM_MAX_X = 340
     set_global_value('Z_DOWN', Z_DOWN)
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来

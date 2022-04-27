@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from app.config.setting import CORAL_TYPE, ARM_MAX_X, arm_com, arm_com_1
+from app.config.setting import CORAL_TYPE, arm_com, arm_com_1
 from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, ChooseSerialObjFail
 from app.libs.http_client import request
@@ -12,9 +12,9 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
+    hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, wait_time, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION
+    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, ARM_MAX_X
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):

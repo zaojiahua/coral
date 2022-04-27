@@ -60,7 +60,7 @@ def rotate_hand_init(arm_com_id, device_obj, **kwargs):
     ]
     for g_orders in hand_reset_orders:
         hand_serial_obj.send_single_order(g_orders)
-        response = hand_serial_obj.recv(buffer_size=64)
+        response = hand_serial_obj.recv(buffer_size=64, is_init=True)
     return 0
 
 

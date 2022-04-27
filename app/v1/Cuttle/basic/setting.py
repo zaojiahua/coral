@@ -30,7 +30,7 @@ if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
         from app.config.ip import m_location
     except Exception:
         m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
-    set_global_value('m_location', m_location)
+    set_global_value('m_location_original', m_location)
 elif CORAL_TYPE == 5.1:
     try:
         from app.config.ip import m_location_center

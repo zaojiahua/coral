@@ -151,6 +151,8 @@ class PerformanceMinix(object):
         executer = ThreadPoolExecutor()
         executer.submit(self.delay_exec, UnitFactory().create, "HandHandler", request_body).add_done_callback(
             executor_callback)
+        if self.kwargs.get("test_running"):
+            return 0
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"), bias=BIAS)

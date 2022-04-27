@@ -212,7 +212,7 @@ set_global_value(CAMERA_IN_LOOP, False)
 
 # 跟性能测试相关的参数
 FpsMax = 240
-for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
+for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10))):
     if key[0] == 'AcquisitionFrameRate':
         FpsMax = key[1]
         break

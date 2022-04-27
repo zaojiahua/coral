@@ -151,7 +151,7 @@ class HandHandler(Handler, DefaultMixin):
         ignore_reset = self.kwargs.get("ignore_arm_reset")
         self.ignore_reset = ignore_reset
         kwargs["exec_serial_obj"].send_list_order(click_orders, ignore_reset=ignore_reset)
-        click_result = kwargs["exec_serial_obj"].recv(self.kwargs)
+        click_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
         return click_result
 
     @allot_serial_obj
@@ -164,7 +164,7 @@ class HandHandler(Handler, DefaultMixin):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
         double_click_orders = self.__double_click_order(axis[0])
         kwargs["exec_serial_obj"].send_list_order(double_click_orders)
-        return kwargs["exec_serial_obj"].recv(self.kwargs)
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     @allot_serial_obj
     def long_press(self, axis, swipe_time=SWIPE_TIME, **kwargs):
@@ -180,7 +180,7 @@ class HandHandler(Handler, DefaultMixin):
                                                   other_orders=[long_click_orders[-1]],
                                                   wait=True, wait_time=self.speed)
         self.ignore_reset = True
-        return kwargs["exec_serial_obj"].recv(self.kwargs)
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     @allot_serial_obj
     def sliding(self, axis, swipe_time=SWIPE_TIME, **kwargs):
@@ -202,7 +202,7 @@ class HandHandler(Handler, DefaultMixin):
         if swipe_speed == 10000:
             self.ignore_reset = True
 
-        sliding_result = kwargs["exec_serial_obj"].recv(self.kwargs)
+        sliding_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
         return sliding_result
 
     @allot_serial_obj
@@ -212,7 +212,7 @@ class HandHandler(Handler, DefaultMixin):
         # 用力滑动，会先计算滑动起始/终止点的  同方向延长线坐标，并做梯形滑动
         sliding_order = self.__sliding_order(axis[0], axis[1], self.speed, normal=False, arm_num=kwargs["arm_num"])
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
-        return kwargs["exec_serial_obj"].recv(self.kwargs)
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     def double_hand_swipe(self, axis):
         # Tcab-5D 双指缩放

@@ -479,7 +479,7 @@ class Device(BaseModel):
                                             m_location_center[1] - float(self.height) / 2,
                                             m_location_center[2] + float(self.ply)])
         else:
-            m_location = get_global_value('m_location')
+            m_location = get_global_value('m_location_original')
             if m_location is not None:
                 set_global_value('m_location', [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
 

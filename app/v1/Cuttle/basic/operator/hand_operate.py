@@ -237,13 +237,15 @@ class HandHandler(Handler, DefaultMixin):
         return 0
 
     def continuous_swipe(self, commend, **kwargs):
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
         # 连续滑动方法，多次滑动之间不抬起，执行完不做等待
         arm_num = 0
         exec_serial_obj = None
-        if kwargs.get('index', 0) == 0:
-            exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
+        if CORAL_TYPE != 5.3:
+            exec_serial_obj = hand_serial_obj_dict.get(self._model.pk)
+        else:
+            if kwargs.get('index', 0) == 0:
+                exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
+
         commend[0] = pre_point(commend[0], arm_num=arm_num)
         commend[1] = pre_point(commend[1], arm_num=arm_num)
         sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0),

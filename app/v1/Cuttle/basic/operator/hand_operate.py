@@ -115,7 +115,7 @@ class HandHandler(Handler, DefaultMixin):
         "input tap": "_relative_point",
         "input swipe": "_relative_swipe",
         "double_point": "_relative_double_point",
-        "double hand": "_relative_double_hand",
+        "double hand zoom": "_relative_double_hand",
     }
     arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power", "cal_swipe_speed"]
 

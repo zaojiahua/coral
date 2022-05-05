@@ -115,6 +115,7 @@ class HandHandler(Handler, DefaultMixin):
         "input tap": "_relative_point",
         "input swipe": "_relative_swipe",
         "double_point": "_relative_double_point",
+        "double hand": "_relative_double_hand",
     }
     arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power", "cal_swipe_speed"]
 
@@ -444,7 +445,7 @@ class HandHandler(Handler, DefaultMixin):
         while exec_t1.is_alive() or exec_t2.is_alive():
             continue
 
-        exec2_t1 = threading.Thread(target=left_obj.send_list_order, args=[left_order[1:]],)
+        exec2_t1 = threading.Thread(target=left_obj.send_list_order, args=[left_order[1:]], )
         exec2_t2 = threading.Thread(target=right_obj.send_list_order, args=[right_order[1:]])
 
         exec2_t2.start()
@@ -478,7 +479,6 @@ class HandHandler(Handler, DefaultMixin):
     def judge_diff_x(left_x, right_x):
         # 防撞机制
         # 距离最近的两个点，x坐标差值不得小于安全值
-        # TODO: 测试安全值是否合适
         if abs(left_x - right_x) > DIFF_X:
             return True
         raise InsufficientSafeDistance

@@ -81,7 +81,7 @@ def pre_point(point, arm_num=0):
     if arm_num == 0:
         return [point[0], -point[1], z_point]
     if arm_num == 1:
-        x_point = ARM_MAX_X - point[0]
+        x_point = HAND_MAX_X - point[0]
         return [-x_point, -point[1], z_point]
     raise ChooseSerialObjFail
 

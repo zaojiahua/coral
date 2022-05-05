@@ -42,7 +42,7 @@ elif CORAL_TYPE == 5.3:
     except Exception:
         Z_DOWN = -27
         ARM_MOVE_REGION = [201, 240]
-        DOUBLE_ARM_MOVE_REGION = [368, 239]
+        DOUBLE_ARM_MOVE_REGION = [365, 239]
         ARM_MAX_X = 340
     set_global_value('Z_DOWN', Z_DOWN)
 

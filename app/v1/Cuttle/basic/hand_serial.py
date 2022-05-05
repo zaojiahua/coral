@@ -56,13 +56,25 @@ class HandSerial:
                 self.write(g_order)
             return 0
 
-    def recv(self, buffer_size=32):
+    def check_hand_status(self, buffer_size=64):
+        # 查询机械臂状态
+        self.ser.write("?? \r\n".encode())
+        rev = self.ser.read(buffer_size).decode()
+        if "Idle" in rev:
+            return True
+        return False
+
+    def recv(self, buffer_size=32, is_init=False, **kwargs):
         # print(self.ser.read(buffer_size))
         try:
             rev = self.ser.read(buffer_size).decode()
         except SerialException:
             raise
         print('返回：', rev, '*' * 10)
+        while not is_init and not self.check_hand_status():
+            print("当前动作未执行完毕")
+            time.sleep(0.2)
+        print("当前动作执行完毕")
         if 'ok' in rev or 'unlock' in rev:
             return 0
         return -1
@@ -123,11 +135,19 @@ class CameraUsbPower(object):
         self.line_number = 1.7
 
     def __enter__(self):
-        print('------发送同步信号-----')
-        self.s.pinOutputHigh(self.line_number)
+        self.open()
         return self.s
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    # 开启同步信号
+    def open(self):
+        print('------发送同步信号-----')
+        self.s.pinOutputHigh(self.line_number)
+
+    # 结束同步信号
+    def close(self):
         time.sleep(self.timeout)
-        print('-------结束同步信号-----')
         self.s.pinSetLow(self.line_number)
+        print('-------结束同步信号-----')

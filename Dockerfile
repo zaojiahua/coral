@@ -11,11 +11,14 @@ RUN apt-get update \
     && apt-get install -y libxrender1 \
     && apt-get install -y --no-install-recommends autoconf automake bzip2 dpkg-dev file g++ gcc imagemagick libbz2-dev libc6-dev libcurl4-openssl-dev libdb-dev libevent-dev libffi-dev libgdbm-dev libglib2.0-dev libgmp-dev libjpeg-dev libkrb5-dev liblzma-dev libmagickcore-dev libmagickwand-dev libmaxminddb-dev libncurses5-dev libncursesw5-dev 	libpng-dev libpq-dev libreadline-dev libsqlite3-dev libssl-dev 	libtool libwebp-dev libxml2-dev libxslt-dev libyaml-dev patch unzip xz-utils zlib1g-dev
 
-RUN apt-get install -y android-tools-adb && apt-get install -y usbutils && apt-get install -y vim \
+RUN sed -i s@/archive.ubuntu.com/@/mirrors.163.com/@g /etc/apt/sources.list \
+    && apt-get update \
+    && apt-get install -y android-tools-adb && apt-get install -y usbutils && apt-get install -y vim \
     && apt-get install -y kmod \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' >/etc/timezone \
     && apt-get install -y tzdata \
-    && apt-get install pngquant
+    && apt-get install pngquant \
+    && apt-get install -y ffmpeg
 
 COPY . /app/coral
 WORKDIR /app/coral

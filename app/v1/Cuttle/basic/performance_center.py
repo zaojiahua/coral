@@ -1,6 +1,8 @@
 import os
 import platform
 import time
+from collections import deque
+import traceback
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
@@ -8,7 +10,7 @@ import cv2
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
-from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, PERFORMANCE_END_LOOP_TIMEOUT, set_global_value, \
+from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
     CAMERA_IN_LOOP
 
 sp = '/' if platform.system() == 'Linux' else '\\'
@@ -16,6 +18,10 @@ EXTRA_PIC_NUMBER = 40
 
 
 class PerformanceCenter(object):
+
+    # dq存储起始点前到终止点后的每一帧图片
+    back_up_dq = deque(maxlen=CameraMax * 4)
+
     # 这部分是性能测试的中心对象，性能测试主要测试启动点 和终止点两个点位，并根据拍照频率计算实际时间
     # 终止点比较简单，但是启动点由于现有机械臂无法确认到具体点压的时间，只能通过机械臂遮挡关键位置时间+补偿时间（机械臂下落按压时间）计算得到
     # 补偿时间又区分出多种情况，点击普通滑动 和用力滑动，第一接触点位置位于屏幕x方向的位置（摄像头角度），需要分别计算补偿的帧数。
@@ -25,11 +31,9 @@ class PerformanceCenter(object):
             cls.instance = super().__new__(cls)
         return cls.instance
 
-    def __init__(self, device_id, icon_area, refer_im_path, scope, threshold, work_path: str, dq, **kwargs):
+    def __init__(self, device_id, icon_area, refer_im_path, scope, threshold, work_path: str, **kwargs):
         self.device_id = device_id
         self.result = 0
-        # dq存储起始点前到终止点后的每一帧图片
-        self.back_up_dq = dq
         # 使用黑色区域时，icon_scope为icon实际出现在snap图中的位置，使用icon surf时icon_scope为编辑时出现在refer图中的位置
         # 使用选区变化/不变时 icon_scope 为None
         # icon 和scope 这里都是相对的坐标
@@ -95,6 +99,7 @@ class PerformanceCenter(object):
                 set_global_value(CAMERA_IN_LOOP, False)
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 raise VideoStartPointNotFound
+            del picture
 
         # 如果能走到这里，代表发现了起始点，该unit结束，但是依然在获取图片
         return 0
@@ -125,8 +130,6 @@ class PerformanceCenter(object):
                     self.end_loop_not_found()
                 number += 1
 
-        # 设置超时时间
-        begin_time = time.time()
         while self.loop_flag:
             # 这个地方写了两遍不是bug，是特意的，一次取了两张
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
@@ -155,6 +158,10 @@ class PerformanceCenter(object):
 
             if judge_function(picture, pic2, third_pic, self.threshold):
                 print(f"发现了终点: {number} bias：", self.bias)
+                # 多保存几张图片
+                if len(self.back_up_dq) < EXTRA_PIC_NUMBER:
+                    time.sleep(EXTRA_PIC_NUMBER / FpsMax)
+                set_global_value(CAMERA_IN_LOOP, False)
                 self.end_number = number - 1
                 if judge_function.__name__ not in ["_icon_find", "_icon_find_template_match"]:
                     # 判定区域是否有变化时，变化的帧是next_picture/third_pic，当前的picture是不能画框的，需要在另一个存图线程中画框
@@ -172,10 +179,6 @@ class PerformanceCenter(object):
                                "time_per_unit": round(1 / FpsMax, 4),
                                "picture_count": self.end_number + EXTRA_PIC_NUMBER - 1,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-                # 多保存几张图片
-                while len(self.back_up_dq) < EXTRA_PIC_NUMBER:
-                    continue
-                set_global_value(CAMERA_IN_LOOP, False)
                 break
             elif number >= CameraMax:
                 self.result = {"start_point": self.start_number + self.bias, "end_point": number,
@@ -186,9 +189,7 @@ class PerformanceCenter(object):
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 print('结束点图片判断超出最大数量')
                 self.end_loop_not_found()
-            elif (time.time() - begin_time) > PERFORMANCE_END_LOOP_TIMEOUT:
-                print('终点超时退出')
-                self.end_loop_not_found()
+            del picture
         return 0
 
     def draw_line_in_pic(self, number, picture):
@@ -260,7 +261,7 @@ class PerformanceCenter(object):
         # use_icon_scope为true时裁剪snap图中真实icon出现的位置
         # use_icon_scope为false时裁剪snap图中refer中标记的configArea选区大致范围
         picture = None
-        max_retry_time = 5
+        max_retry_time = 10
         while max_retry_time >= 0:
             if len(self.back_up_dq) >= 3:
                 try:
@@ -274,7 +275,7 @@ class PerformanceCenter(object):
             max_retry_time -= 1
 
         if picture is not None:
-            picture_save = picture
+            picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
             cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
             h, w = picture.shape[:2]
             scope = self.scope if use_icon_scope is False else self.icon_scope
@@ -314,8 +315,13 @@ class PerformanceCenter(object):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self.device_id)
         # 这里会阻塞，一直在获取图片
-        device_obj.get_snapshot(image_path='', max_retry_time=1,
-                                timeout=10 * 60, back_up_dq=self.back_up_dq)
+        try:
+            device_obj.get_snapshot(image_path='', max_retry_time=1,
+                                    timeout=10 * 60, back_up_dq=self.back_up_dq)
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+            print('获取图片的接口报错。。。。')
 
         # 找到结束点后再继续保存最多40张:
         if not hasattr(self, "end_number"):
@@ -338,5 +344,10 @@ class PerformanceCenter(object):
             except IndexError as e:
                 print(repr(e))
                 self.back_up_dq.clear()
+                print('清空 back up dq 队列。。。。')
                 return 0
+        # 销毁
+        for pic in self.back_up_dq:
+            del pic
         self.back_up_dq.clear()
+        print('清空 back up dq 队列。。。。')

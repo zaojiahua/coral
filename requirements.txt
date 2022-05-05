@@ -51,3 +51,5 @@ func-timeout==4.3.5
 selenium==3.141.0
 pyserial==3.4
 pypinyin==0.39.0
+opencv-python==4.5.5.62
+ImageHash==4.2.1

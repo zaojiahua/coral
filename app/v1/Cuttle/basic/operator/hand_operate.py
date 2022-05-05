@@ -5,7 +5,7 @@ import time
 
 import numpy as np
 
-from app.config.setting import CORAL_TYPE, ARM_MAX_X, arm_com, arm_com_1
+from app.config.setting import CORAL_TYPE, arm_com, arm_com_1
 from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, ChooseSerialObjFail, InvalidCoordinates, \
     InsufficientSafeDistance
@@ -14,9 +14,9 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid, wait_bias, arm_default, arm_wait_position, wait_time, \
+    hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, wait_time, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X
+    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X, ARM_MAX_X
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -44,7 +44,7 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     ]
     for orders in hand_reset_orders:
         hand_serial_obj.send_single_order(orders)
-        hand_serial_obj.recv(buffer_size=64)
+        hand_serial_obj.recv(buffer_size=64, is_init=True)
     return 0
 
 
@@ -62,7 +62,7 @@ def rotate_hand_init(arm_com_id, device_obj, **kwargs):
     ]
     for g_orders in hand_reset_orders:
         hand_serial_obj.send_single_order(g_orders)
-        response = hand_serial_obj.recv(buffer_size=64)
+        response = hand_serial_obj.recv(buffer_size=64, is_init=True)
     return 0
 
 
@@ -154,9 +154,7 @@ class HandHandler(Handler, DefaultMixin):
         ignore_reset = self.kwargs.get("ignore_arm_reset")
         self.ignore_reset = ignore_reset
         kwargs["exec_serial_obj"].send_list_order(click_orders, ignore_reset=ignore_reset)
-        click_result = kwargs["exec_serial_obj"].recv()
-        if not ignore_reset:
-            time.sleep(wait_time)
+        click_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
         return click_result
 
     @allot_serial_obj
@@ -169,8 +167,7 @@ class HandHandler(Handler, DefaultMixin):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
         double_click_orders = self.__double_click_order(axis[0])
         kwargs["exec_serial_obj"].send_list_order(double_click_orders)
-        time.sleep(wait_time)
-        return kwargs["exec_serial_obj"].recv()
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     @allot_serial_obj
     def long_press(self, axis, swipe_time=SWIPE_TIME, **kwargs):
@@ -185,9 +182,8 @@ class HandHandler(Handler, DefaultMixin):
         kwargs["exec_serial_obj"].send_list_order(long_click_orders[:2],
                                                   other_orders=[long_click_orders[-1]],
                                                   wait=True, wait_time=self.speed)
-        time.sleep(wait_time)
         self.ignore_reset = True
-        return kwargs["exec_serial_obj"].recv()
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     @allot_serial_obj
     def sliding(self, axis, swipe_time=SWIPE_TIME, **kwargs):
@@ -207,10 +203,7 @@ class HandHandler(Handler, DefaultMixin):
         if swipe_speed == 10000:
             self.ignore_reset = True
 
-        sliding_result = kwargs["exec_serial_obj"].recv()
-        # ensure low speed swipe can end with true-time(get sleep time according to swipe distance and speed)
-        if swipe_speed < 2000:
-            time.sleep(self.speed + 0.5)
+        sliding_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
         return sliding_result
 
     @allot_serial_obj
@@ -220,11 +213,7 @@ class HandHandler(Handler, DefaultMixin):
         # 用力滑动，会先计算滑动起始/终止点的  同方向延长线坐标，并做梯形滑动
         sliding_order = self.__sliding_order(axis[0], axis[1], self.speed, normal=False, arm_num=kwargs["arm_num"])
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
-        if self.speed < 2000:
-            distance = np.hypot(axis[1][0] - axis[0][0], axis[1][1] - axis[0][1]) * 50
-            time.sleep((distance / self.speed) + 1.5)
-        time.sleep(3.5)  # 因为用力滑动会有惯性,sleep3确保动作执行完成
-        return kwargs["exec_serial_obj"].recv()
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     def reset_hand(self, reset_orders=arm_wait_position, rotate=False, **kwargs):
         # 恢复手臂位置 可能是龙门架也可能是旋转机械臂
@@ -239,17 +228,18 @@ class HandHandler(Handler, DefaultMixin):
                     serial_obj = hand_serial_obj_dict.get(obj_key)
                     serial_obj.send_single_order(reset_orders)
         serial_obj.recv()
-        time.sleep(wait_time)
         return 0
 
     def continuous_swipe(self, commend, **kwargs):
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
         # 连续滑动方法，多次滑动之间不抬起，执行完不做等待
         arm_num = 0
         exec_serial_obj = None
-        if kwargs.get('index', 0) == 0:
-            exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
+        if CORAL_TYPE != 5.3:
+            exec_serial_obj = hand_serial_obj_dict.get(self._model.pk)
+        else:
+            if kwargs.get('index', 0) == 0:
+                exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
+
         commend[0] = pre_point(commend[0], arm_num=arm_num)
         commend[1] = pre_point(commend[1], arm_num=arm_num)
         sliding_order = self._sliding_contious_order(commend[0], commend[1], kwargs.get('index', 0),
@@ -270,7 +260,6 @@ class HandHandler(Handler, DefaultMixin):
             click_orders = self.__single_click_order(point)
         exec_serial_obj.send_list_order(click_orders)
         click_back_result = exec_serial_obj.recv()
-        time.sleep(wait_time * len(click_orders))
         return click_back_result
 
     def double_back(self, _, **kwargs):
@@ -287,7 +276,6 @@ class HandHandler(Handler, DefaultMixin):
         click_orders = self.__single_click_order(point)
         exec_serial_obj.send_list_order(click_orders)
         click_home_result = exec_serial_obj.recv()
-        time.sleep(wait_time * len(click_orders))
         return click_home_result
 
     def menu(self, _, **kwargs):
@@ -303,7 +291,6 @@ class HandHandler(Handler, DefaultMixin):
         else:
             exec_serial_obj.send_list_order(click_orders)
         click_menu_result = exec_serial_obj.recv()
-        time.sleep(wait_time * len(click_orders))
         return click_menu_result
 
     def long_press_menu(self, _, **kwargs):
@@ -323,7 +310,6 @@ class HandHandler(Handler, DefaultMixin):
                                                                     others_orders=press_side_order[3:],
                                                                     wait_time=self.speed)
         rev = hand_serial_obj_dict.get(self._model.pk).recv(buffer_size=64)
-        time.sleep(wait_time)
         return rev
 
     def press_out_screen(self, pix_point, **kwargs):
@@ -331,9 +317,7 @@ class HandHandler(Handler, DefaultMixin):
         hand_serial_obj_dict.get(self._model.pk).send_out_key_order(click_orders[:2],
                                                                     others_orders=[click_orders[-1]],
                                                                     wait_time=self.speed)
-        result = hand_serial_obj_dict.get(self._model.pk).recv()
-        time.sleep(wait_time)
-        return result
+        return hand_serial_obj_dict.get(self._model.pk).recv()
 
     def arm_back_home(self, *args, **kwargs):
         back_order = self.arm_back_home_order()
@@ -382,8 +366,6 @@ class HandHandler(Handler, DefaultMixin):
             commend = commend.replace('<move>', "")
             move = True
         target_hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
-        if float(sleep_time) > 0:
-            time.sleep(float(sleep_time) + wait_bias)
         if move:
             self.reset_hand(reset_orders=arm_move_position if rotate else arm_wait_position, rotate=rotate, **kwargs)
         target_hand_serial_obj_dict.get(self._model.pk).recv()

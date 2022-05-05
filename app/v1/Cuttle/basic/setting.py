@@ -24,12 +24,13 @@ m_location_center = None
 Z_DOWN = None
 ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
+ARM_MAX_X = None
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
     try:
         from app.config.ip import m_location
     except Exception:
-        m_location = [38, 13, -35]  # Tcab-5现有夹具m_location
-    set_global_value('m_location', m_location)
+        m_location = [38, 13, -24]  # Tcab-5现有夹具m_location
+    set_global_value('m_location_original', m_location)
 elif CORAL_TYPE == 5.1:
     try:
         from app.config.ip import m_location_center
@@ -37,11 +38,12 @@ elif CORAL_TYPE == 5.1:
         m_location_center = [157, 202.5, -24]
 elif CORAL_TYPE == 5.3:
     try:
-        from app.config.ip import Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION
+        from app.config.ip import Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION, ARM_MAX_X
     except Exception:
         Z_DOWN = -27
         ARM_MOVE_REGION = [201, 240]
         DOUBLE_ARM_MOVE_REGION = [368, 239]
+        ARM_MAX_X = 340
     set_global_value('Z_DOWN', Z_DOWN)
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
@@ -53,25 +55,27 @@ camera_dq_dict = {}
 
 # 相机的参数和柜子类型紧密相关，所以应该根据柜子类型来区分，而不是功能测试还是性能测试
 # 因为不论功能测试，还是性能测试，用的相机硬件都是一样的
-camera_params_50 = [("OffsetY", 0),
-                    ("OffsetX", 0),
-                    ("Width", 1440),
-                    ("Height", 1080),
-                    ("AcquisitionFrameRate", 180.0),
-                    ("AcquisitionFrameRateEnable", True),
-                    ("ExposureTime", 3500.0),
-                    ("Gain", 2.5),
-                    ('ADCBitDepth', 2, 'enum'),
-                    ('BalanceWhiteAuto', 0, 'enum'),
-                    ('BalanceRatioSelector', 0, 'enum'),
-                    ('BalanceRatio', 1100),
-                    ('BalanceRatioSelector', 1, 'enum'),
-                    ('BalanceRatio', 950),
-                    ('BalanceRatioSelector', 2, 'enum'),
-                    ('BalanceRatio', 1850),
-                    ("PixelFormat", 0x01080009, 'enum')]
-camera_params_52 = camera_params_50 + [('GammaEnable', True), ('Gamma',  0.7000)]
-camera_params_53 = camera_params_50
+camera_params_5 = [("OffsetY", 0),
+                   ("OffsetX", 0),
+                   ("Width", 1440),
+                   ("Height", 1080),
+                   ("AcquisitionFrameRateEnable", True),
+                   ("ExposureTime", 3500.0),
+                   ("Gain", 2.5),
+                   ('ADCBitDepth', 2, 'enum'),
+                   ('BalanceWhiteAuto', 0, 'enum'),
+                   ('BalanceRatioSelector', 0, 'enum'),
+                   ('BalanceRatio', 1100),
+                   ('BalanceRatioSelector', 1, 'enum'),
+                   ('BalanceRatio', 950),
+                   ('BalanceRatioSelector', 2, 'enum'),
+                   ('BalanceRatio', 1850),
+                   ("PixelFormat", 0x01080009, 'enum')]
+camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 240.0),
+                                       ('GammaEnable', True),
+                                       ('Gamma',  0.7000)]
+camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 10.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
                     ("OffsetX", 0),
@@ -138,17 +142,6 @@ last_swipe_end_point = [0, 0]
 
 color_threshold = 4000
 color_rate = 1500
-g_bExit = False
-# BIAS = 0.237  # 机械臂下落--点击--抬起  所用时间。 更改硬件需要重新测量
-FpsMax = 240
-CameraMax = 2400
-BIAS = int(FpsMax / 120 * 19)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
-SWIPE_BIAS_HARD = int(FpsMax / 120 * 9)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
-SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
-
-Continues_Number = 1  # 连续多张判断准则，适用于性能测试
-camera_w = 1280  # 摄像头拍摄分辨率，需要根据具体摄像头设置
-camera_h = 720
 
 # 中文键盘忽略屏幕上半比例内文字
 chinese_ingore = 0.55
@@ -213,12 +206,23 @@ PM_DUMP = 'pm dump'
 
 DEVICE_DETECT_ERROR_MAX_TIME = 30 * 60
 
-# 图片拼接的h矩阵
-set_global_value('merge_image_h', None)
-
-PERFORMANCE_END_LOOP_TIMEOUT = 60 * 3
+# 跟摄像机相关的参数
+set_global_value('merge_image_h', None) # 图片拼接的h矩阵
 COORDINATE_CONFIG_FILE = 'app/config/coordinate.py'
 MERGE_IMAGE_H = 'app/config/merge_image_h.npy'
-# 性能测试控制摄像机是否继续获取图片
-CAMERA_IN_LOOP = 'camera_in_loop'
+CAMERA_IN_LOOP = 'camera_in_loop' # 性能测试控制摄像机是否继续获取图片
 set_global_value(CAMERA_IN_LOOP, False)
+
+# 跟性能测试相关的参数
+FpsMax = 240
+for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)), []):
+    if key[0] == 'AcquisitionFrameRate':
+        FpsMax = key[1]
+        break
+if CORAL_TYPE == 5.1:
+    CameraMax = int(FpsMax * 10)  # 5l可以拍10s
+else:
+    CameraMax = int(FpsMax * 5)  # 5系列其他相机拍5s
+BIAS = int(FpsMax / 120 * 19)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
+SWIPE_BIAS_HARD = int(FpsMax / 120 * 9)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
+SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))

@@ -1,28 +1,21 @@
 import os
 import time
-from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
 import numpy as np
 
-from app.config.setting import CORAL_TYPE
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.imgtool import IconTooWeek, NotFindIcon
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
-from app.v1.Cuttle.basic.operator.camera_operator import CameraMax
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS, SWIPE_BIAS_HARD, \
-    icon_min_template_camera, light_pyramid_setting, light_pyramid_setting_simple
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS_HARD
+from redis_init import redis_client
 
 
-# from skimage.measure import compare_ssim
-# from skimage.metrics.structural_similarity import compare_ssim
 class PerformanceMinix(object):
-    dq = deque(maxlen=CameraMax * 4)
-
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
         return self.swipe_calculate(exec_content, SWIPE_BIAS_HARD)
@@ -37,7 +30,7 @@ class PerformanceMinix(object):
         icon_areas = [(x1 + x2) / 2 - 0.03, (y1 + y2) / 2 - 0.02, (x1 + x2) / 2 + 0.03, (y1 + y2) / 2 + 0.02]
         performance = PerformanceCenter(self._model.pk, [icon_areas], data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=bias)
+                                        self.kwargs.get("work_path"), bias=bias)
         return performance.start_loop(self._black_field)
 
     def start_point_with_swipe_slow(self, exec_content):
@@ -88,7 +81,7 @@ class PerformanceMinix(object):
         # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
+                                        self.kwargs.get("work_path"), bias=BIAS)
         return performance.start_loop(self._black_field)
 
     def start_point_with_point(self, exec_content):
@@ -136,7 +129,7 @@ class PerformanceMinix(object):
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
+                                        self.kwargs.get("work_path"), bias=BIAS)
         return performance.start_loop(self._black_field)
 
     def start_point_with_point_fixed(self, exec_content):
@@ -147,16 +140,19 @@ class PerformanceMinix(object):
         y = (y1 + y2) / 2
         request_body = {
             "device_label": self._model.pk,
-            "execCmdList": [f"shell input tap {x} {y}"]
+            "execCmdList": [f"shell input tap {x} {y}"],
+            'is_init': True
         }
         # request_body.update({"ignore_arm_reset": True})
         from app.v1.Cuttle.basic.basic_views import UnitFactory
         executer = ThreadPoolExecutor()
         executer.submit(self.delay_exec, UnitFactory().create, "HandHandler", request_body).add_done_callback(
             executor_callback)
+        if self.kwargs.get("test_running"):
+            return 0
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
+                                        self.kwargs.get("work_path"), bias=BIAS)
         return performance.start_loop(self._black_field)
 
     # 下面几个就是上面那几个结束点版本
@@ -169,32 +165,42 @@ class PerformanceMinix(object):
     def end_point_with_changed(self, exec_content):
         return self._end_point(exec_content, PerformanceSchemaCompare, self._picture_changed)
 
+    @staticmethod
+    def wait_end():
+        # 当发生异常的时候，另一个进程可能还在使用相机，所以这里等待几秒再返回，防止t-guard马上使用相机
+        # 这里简单判断一个相机即可
+        while redis_client.get(f"g_bExit_0") == "0":
+            time.sleep(0.1)
+
     def _end_point(self, exec_content, schema, judge_function):
         keep_pic = [2017]
         try:
             data = self._validate(exec_content, schema)
             performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                             data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq)
+                                            self.kwargs.get("work_path"))
             performance.end_loop(judge_function)
-            time.sleep(0.5)  # 等待后续30张图片save完成
             self.extra_result = performance.result
             return 0
         except APIException as e:
             self.image = performance.tguard_picture_path if hasattr(performance, "tguard_picture_path") else None
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
+            self.wait_end()
             if hasattr(e, 'error_code'):
                 if e.error_code in keep_pic:
                     return 1
                 else:
                     return e.error_code
             return 1
+        except Exception as e:
+            self.wait_end()
+            raise e
 
     def start_point_with_fps_lost(self, exec_content):
         data = self._validate(exec_content, PerformanceSchemaCompare)
         performance = PerformanceCenter(self._model.pk, None, None,
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq)
+                                        self.kwargs.get("work_path"))
         return performance.start_loop(self._picture_changed)
 
     def end_point_with_fps_lost(self, exec_content):
@@ -202,7 +208,7 @@ class PerformanceMinix(object):
             data = self._validate(exec_content, PerformanceSchemaFps)
             performance = PerformanceCenter(self._model.pk, None, None,
                                             data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq, fps=data.get("fps"))
+                                            self.kwargs.get("work_path"), fps=data.get("fps"))
             performance.test_fps_lost(self._picture_changed)
             self.extra_result = performance.result
             result = 0 if performance.result.get("fps_lost") == False else 1

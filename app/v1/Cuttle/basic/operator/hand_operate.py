@@ -117,7 +117,7 @@ class HandHandler(Handler, DefaultMixin):
         "double_point": "_relative_double_point",
         "double hand zoom": "_relative_double_hand",
     }
-    arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power", "cal_swipe_speed"]
+    arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power", "cal_swipe_speed", "double_hand_swipe"]
 
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)

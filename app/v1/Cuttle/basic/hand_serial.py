@@ -7,7 +7,7 @@ from mcush import *
 
 from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
-from app.v1.Cuttle.basic.setting import Z_UP, arm_wait_position
+from app.v1.Cuttle.basic.setting import arm_wait_position
 
 
 class HandSerial:
@@ -151,3 +151,23 @@ class CameraUsbPower(object):
         time.sleep(self.timeout)
         self.s.pinSetLow(self.line_number)
         print('-------结束同步信号-----')
+
+
+# 传感器控制
+class SensorSerial(HandSerial):
+
+    # 读取按压的力值
+    def query_sensor_value(self):
+        order = "01 03 00 50 00 02 C4 1A"
+        send_data = bytes.fromhex(order)
+        self.ser.write(send_data)
+        return_data = self.ser.read(9)
+        # print("return_data: ", return_data)
+        # bytes（2进制）转换为 hex（16进制）
+        str_return_data = str(return_data.hex())
+        if str_return_data == '':
+            value = 0
+        else:
+            value = int(str_return_data[12:14], 16) / 10
+        print("力值：", value)
+        return value

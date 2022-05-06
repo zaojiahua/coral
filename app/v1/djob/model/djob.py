@@ -152,7 +152,7 @@ class DJob(BaseModel):
 
         # 性能测试用例的测试时间的数据的保存
         for key in self.rds_info_list:
-            if getattr(self, key):
+            if getattr(self, key) is not None:
                 json_data[key] = getattr(self, key)
         if len(rds_result) != 0:
             app_info = []

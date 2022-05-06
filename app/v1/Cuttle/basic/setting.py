@@ -25,26 +25,31 @@ Z_DOWN = None
 ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
+SENSOR = False
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
     try:
         from app.config.ip import m_location
-    except Exception:
+    except ImportError:
         m_location = [38, 13, -24]  # Tcab-5现有夹具m_location
     set_global_value('m_location_original', m_location)
 elif CORAL_TYPE == 5.1:
     try:
         from app.config.ip import m_location_center
-    except Exception:
+    except ImportError:
         m_location_center = [157, 202.5, -24]
 elif CORAL_TYPE == 5.3:
     try:
         from app.config.ip import Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION, ARM_MAX_X
-    except Exception:
+    except ImportError:
         Z_DOWN = -27
         ARM_MOVE_REGION = [201, 240]
         DOUBLE_ARM_MOVE_REGION = [368, 239]
         ARM_MAX_X = 340
     set_global_value('Z_DOWN', Z_DOWN)
+try:
+    from app.config.ip import SENSOR
+except ImportError:
+    pass
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -52,6 +57,7 @@ rotate_hand_serial_obj_dict = {}
 hand_origin_cmd_prefix = 'Hand'
 hand_used_list = []
 camera_dq_dict = {}
+sensor_serial_obj_dict = {}
 
 # 相机的参数和柜子类型紧密相关，所以应该根据柜子类型来区分，而不是功能测试还是性能测试
 # 因为不论功能测试，还是性能测试，用的相机硬件都是一样的

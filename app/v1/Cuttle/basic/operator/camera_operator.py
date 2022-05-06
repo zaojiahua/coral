@@ -209,10 +209,7 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj, camera_id):
     dq.append({'image': image,
                'host_timestamp': stFrameInfo.nHostTimeStamp,
                'frame_num': frame_num})
-    del content
-    del image
-    del data_buf
-    print(f'camera{camera_id}获取到图片了', frame_num)
+    print(f'camera{camera_id}获取到图片了', frame_num, stFrameInfo.nHostTimeStamp)
     # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
     if frame_num >= CameraMax:
         print('达到了取图的最大限制！！！')
@@ -317,9 +314,9 @@ class CameraHandler(Handler):
                 # 停止时刻由外部进行控制，这里负责图像处理即可
                 while get_global_value(CAMERA_IN_LOOP):
                     try:
-                        image = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()['image']
-                        image = np.rot90(image, 3)
-                        self.back_up_dq.append(image)
+                        image_info = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()
+                        image = np.rot90(image_info['image'], 3)
+                        self.back_up_dq.append({'image': image, 'host_timestamp': image_info['host_timestamp']})
                     except IndexError:
                         # 拿的速度太快的话可能还没有存进去
                         time.sleep(1 / FpsMax)
@@ -379,9 +376,9 @@ class CameraHandler(Handler):
                 self.back_up_dq = []
                 self.merge_frame(camera_ids)
 
-                for merged_img in self.back_up_dq:
-                    del merged_img
-                    # cv2.imwrite(f'camera/{index}.png', merged_img)
+                # for merged_img in self.back_up_dq:
+                #     del merged_img
+                # cv2.imwrite(f'camera/{index}.png', merged_img)
                 self.back_up_dq.clear()
 
             # 清空图片内存
@@ -418,7 +415,7 @@ class CameraHandler(Handler):
         self.get_syn_frame(camera_ids)
 
         if len(self.back_up_dq) > 0:
-            image = self.back_up_dq[0]
+            image = self.back_up_dq[0]['image']
             self.src = image
 
             # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
@@ -513,10 +510,9 @@ class CameraHandler(Handler):
             del frames
             del result_copy
 
-            # self.back_up_dq[frame_num] = result
             if not self.original:
                 result = np.rot90(self.get_roi(result))
-            self.back_up_dq.append(result)
+            self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1})
             del result
 
         del xmin, ymin, xmax, ymax, ht, h, rows, cols

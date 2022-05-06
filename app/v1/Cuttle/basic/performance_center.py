@@ -11,7 +11,7 @@ from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
-    CAMERA_IN_LOOP
+    CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 EXTRA_PIC_NUMBER = 40
@@ -61,45 +61,79 @@ class PerformanceCenter(object):
         return picture[area[1]:area[3], area[0]:area[2]]
 
     def start_loop(self, judge_function):
-        # 计算起始点的方法
-        use_icon_scope = True if judge_function.__name__ == "_black_field" else False
-        pic2 = self.judge_icon if judge_function.__name__ in ("_icon_find", "_black_field") else None
-
-        set_global_value(CAMERA_IN_LOOP, True)
-        executer = ThreadPoolExecutor()
-        executer.submit(self.move_src_to_backup)
-
         number = 0
         self.start_number = 0
-        while self.loop_flag:
-            # 裁剪图片获取当前和下两张
-            # start点的确认主要就是判定是否特定位置全部变成了黑色，既_black_field方法 （主要）/丢帧检测时是判定区域内有无变化（稀有）
-            # 这部分如果是判定是否变成黑色（黑色就是机械臂刚要点下的时候，挡住图标所以黑色），其实只用到当前图，下两张没有使用
-            picture, next_picture, third_pic = self.picture_prepare(number, use_icon_scope=use_icon_scope)
-            if picture is None:
-                set_global_value(CAMERA_IN_LOOP, False)
-                raise VideoStartPointNotFound
 
-            number += 1
-            # judge_function 返回True时 即发现了起始点
-            if judge_function(picture, (pic2 if pic2 is not None else next_picture), third_pic, self.threshold):
-                # 这块的bias就是人工补偿的固定值，大致等于机械臂下压时间
-                self.bias = self.kwargs.get("bias") or 0
-                # 减一张得到起始点
-                self.start_number = number - 1
-                print(f"发现了起始点 :{number - 1} start number:{self.start_number}", '!' * 10)
-                if judge_function.__name__ == "_black_field":
-                    # 除了查询丢帧情况，都要计算bias，既补偿的帧数，这部分是根据第一点击点的x位置，给一个线性的补偿（在上面固定下压时间的基础上）。
-                    # 因为视角不同，摄像头在中间，看右侧的遮挡会偏早（所以要多加大bias），左侧的遮挡会偏晚（少加bias）
-                    # 后续可以考虑优化成多项式
-                    self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // (50 / FpsMax))
-                break
-            elif number >= CameraMax / 2:
-                # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
-                set_global_value(CAMERA_IN_LOOP, False)
-                self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                raise VideoStartPointNotFound
-            del picture
+        def camera_loop():
+            set_global_value(CAMERA_IN_LOOP, True)
+            executer = ThreadPoolExecutor()
+            executer.submit(self.move_src_to_backup)
+
+        # 使用传感器获取点击的起始点，精确度更高一些
+        if SENSOR:
+            begin_time = time.time()
+            find_begin_point = False
+            max_force = 0
+            v_index = None
+            while self.loop_flag:
+                # 不管左还是右，全部判断压力值即可
+                for index, sensor_obj in enumerate(sensor_serial_obj_dict.values()):
+                    # 找到到底是哪个机械臂在点击
+                    if v_index is not None and index != v_index:
+                        continue
+
+                    # 力是一个从小变大，又变小的过程
+                    cur_force = sensor_obj.query_sensor_value()
+                    if cur_force < max_force:
+                        camera_loop()
+                        find_begin_point = True
+                        self.bias = 0
+                        break
+                    elif cur_force > max_force:
+                        max_force = cur_force
+                        v_index = index
+
+                if find_begin_point:
+                    break
+                elif (CameraMax / FpsMax) < time.time() - begin_time:
+                    raise VideoStartPointNotFound
+        else:
+            # 使用图像识别的方法计算起始点
+            use_icon_scope = True if judge_function.__name__ == "_black_field" else False
+            pic2 = self.judge_icon if judge_function.__name__ in ("_icon_find", "_black_field") else None
+
+            camera_loop()
+
+            while self.loop_flag:
+                # 裁剪图片获取当前和下两张
+                # start点的确认主要就是判定是否特定位置全部变成了黑色，既_black_field方法 （主要）/丢帧检测时是判定区域内有无变化（稀有）
+                # 这部分如果是判定是否变成黑色（黑色就是机械臂刚要点下的时候，挡住图标所以黑色），其实只用到当前图，下两张没有使用
+                picture, next_picture, third_pic, timestamp = self.picture_prepare(number, use_icon_scope=use_icon_scope)
+                if picture is None:
+                    set_global_value(CAMERA_IN_LOOP, False)
+                    raise VideoStartPointNotFound
+
+                number += 1
+                # judge_function 返回True时 即发现了起始点
+                if judge_function(picture, (pic2 if pic2 is not None else next_picture), third_pic, self.threshold):
+                    # 这块的bias就是人工补偿的固定值，大致等于机械臂下压时间
+                    self.bias = self.kwargs.get("bias") or 0
+                    # 减一张得到起始点
+                    self.start_number = number - 1
+                    self.start_timestamp = timestamp
+                    print(f"发现了起始点 :{number - 1} start number:{self.start_number}", '!' * 10)
+                    if judge_function.__name__ == "_black_field":
+                        # 除了查询丢帧情况，都要计算bias，既补偿的帧数，这部分是根据第一点击点的x位置，给一个线性的补偿（在上面固定下压时间的基础上）。
+                        # 因为视角不同，摄像头在中间，看右侧的遮挡会偏早（所以要多加大bias），左侧的遮挡会偏晚（少加bias）
+                        # 后续可以考虑优化成多项式
+                        self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // (50 / FpsMax))
+                    break
+                elif number >= CameraMax / 2:
+                    # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
+                    set_global_value(CAMERA_IN_LOOP, False)
+                    self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
+                    raise VideoStartPointNotFound
+                del picture
 
         # 如果能走到这里，代表发现了起始点，该unit结束，但是依然在获取图片
         return 0
@@ -117,14 +151,17 @@ class PerformanceCenter(object):
         if len(self.back_up_dq) == 0:
             raise PerformanceNotStart
 
-        number = self.start_number + 1
+        if SENSOR:
+            number = 0
+        else:
+            number = self.start_number + 1
         print("end loop start... now number:", number, "bias:", self.bias)
 
         if self.bias > 0:
             for i in range(self.bias):
                 # 对bias补偿的帧数，先只保存对应图片，不做结果判断，因为不可能在这个阶段出现终止点 主要是加快一些速度。
                 # 这里必须调用，因为里边会保存图片
-                picture, next_picture, _ = self.picture_prepare(number)
+                picture, next_picture, _, _ = self.picture_prepare(number)
                 if picture is None:
                     print('图片不够 bias')
                     self.end_loop_not_found()
@@ -135,13 +172,15 @@ class PerformanceCenter(object):
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
             # 准确度上就是有50%概率晚一帧，不过在240帧水平上，1帧误差可以接受
             # 这部分我们自己知道就好，千万别给客户解释出去了。
-            picture, _, _ = self.picture_prepare(number)
+            picture, _, _, timestamp = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 1')
                 self.end_loop_not_found()
+            if number == 0:
+                self.start_timestamp = timestamp
             number += 1
 
-            picture, next_picture, third_pic = self.picture_prepare(number)
+            picture, next_picture, third_pic, timestamp = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 2')
                 self.end_loop_not_found()
@@ -158,9 +197,12 @@ class PerformanceCenter(object):
 
             if judge_function(picture, pic2, third_pic, self.threshold):
                 print(f"发现了终点: {number} bias：", self.bias)
+
                 # 多保存几张图片
                 if len(self.back_up_dq) < EXTRA_PIC_NUMBER:
-                    time.sleep(EXTRA_PIC_NUMBER / FpsMax)
+                    # 实际帧率达不到，所以按照帧率缩小3倍算，这样基本足够了
+                    time.sleep(EXTRA_PIC_NUMBER * 3 / FpsMax)
+
                 set_global_value(CAMERA_IN_LOOP, False)
                 self.end_number = number - 1
                 if judge_function.__name__ not in ["_icon_find", "_icon_find_template_match"]:
@@ -173,17 +215,27 @@ class PerformanceCenter(object):
                     end = self.end_number
 
                 # 找到终止点后，包装一个json格式，推到reef。
+                # print(timestamp, self.start_timestamp, 'bbbbbbbbbbbbbbbbbbbbb')
+                job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
+                time_per_unit = round(job_duration / (end - self.start_number), 4)
                 self.start_number = int(self.start_number + self.bias)
+                # 实际的job_duration需要加上bias
+                job_duration = time_per_unit * (end - self.start_number)
+
                 self.result = {"start_point": self.start_number, "end_point": end,
-                               "job_duration": max(round((self.end_number - self.start_number) * 1 / FpsMax, 3), 0),
-                               "time_per_unit": round(1 / FpsMax, 4),
+                               "job_duration": job_duration,
+                               "time_per_unit": time_per_unit,
                                "picture_count": self.end_number + EXTRA_PIC_NUMBER - 1,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 break
             elif number >= CameraMax:
+                job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
+                time_per_unit = round(job_duration / (number - self.start_number), 4)
+                job_duration = time_per_unit * (number - self.start_number - self.bias)
+
                 self.result = {"start_point": self.start_number + self.bias, "end_point": number,
-                               "job_duration": max(round((number - self.start_number) * 1 / FpsMax, 3), 0),
-                               "time_per_unit": round(1 / FpsMax, 4),
+                               "job_duration": job_duration,
+                               "time_per_unit": time_per_unit,
                                "picture_count": number,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
@@ -265,15 +317,18 @@ class PerformanceCenter(object):
         while max_retry_time >= 0:
             if len(self.back_up_dq) >= 3:
                 try:
-                    picture = self.back_up_dq.popleft()
-                    pic_next = self.back_up_dq[0]
-                    pic_next_next = self.back_up_dq[1]
+                    picture_info = self.back_up_dq.popleft()
+                    timestamp = picture_info['host_timestamp']
+                    picture = picture_info['image']
+                    pic_next = self.back_up_dq[0]['image']
+                    pic_next_next = self.back_up_dq[1]['image']
                     break
                 except IndexError as e:
                     print("error in picture_prepare", repr(e))
             time.sleep(0.2)
             max_retry_time -= 1
 
+        # print(timestamp, 'aaaaaaaaaaaaaa')
         if picture is not None:
             picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
             cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
@@ -281,9 +336,10 @@ class PerformanceCenter(object):
             scope = self.scope if use_icon_scope is False else self.icon_scope
             area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
                 if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
-            return [p[area[1]:area[3], area[0]:area[2]] for p in [picture, pic_next, pic_next_next]]
+            return [p[area[1]:area[3], area[0]:area[2]]
+                    for p in [picture, pic_next, pic_next_next]] + [timestamp]
         else:
-            return None, None, None
+            return None, None, None, None
 
     def picture_prepare_for_fps_lost(self, number, skip=2):
         for i in range(3):
@@ -323,15 +379,19 @@ class PerformanceCenter(object):
             traceback.print_exc()
             print('获取图片的接口报错。。。。')
 
+        def back_up_clear():
+            self.back_up_dq.clear()
+            print('清空 back up dq 队列。。。。')
+
         # 找到结束点后再继续保存最多40张:
         if not hasattr(self, "end_number"):
-            self.back_up_dq.clear()
+            back_up_clear()
             return 0
 
         number = self.end_number + 1
         for i in range(EXTRA_PIC_NUMBER):
             try:
-                src = self.back_up_dq.popleft()
+                src = self.back_up_dq.popleft()['image']
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)
                 if hasattr(self, "draw_rec") and self.draw_rec:
                     # 这块就是做判断画面在动的时候，最后在临界帧画框
@@ -341,13 +401,11 @@ class PerformanceCenter(object):
                 else:
                     cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
                     number += 1
-            except IndexError as e:
+            except Exception as e:
                 print(repr(e))
-                self.back_up_dq.clear()
-                print('清空 back up dq 队列。。。。')
+                back_up_clear()
                 return 0
+
         # 销毁
-        for pic in self.back_up_dq:
-            del pic
-        self.back_up_dq.clear()
-        print('清空 back up dq 队列。。。。')
+        back_up_clear()
+        print('move src to back up 正常结束')

@@ -88,6 +88,7 @@ class PerformanceCenter(object):
                         camera_loop()
                         find_begin_point = True
                         self.bias = 0
+                        self.start_timestamp = time.time() * 1000
                         break
                     elif cur_force > max_force:
                         max_force = cur_force
@@ -172,12 +173,10 @@ class PerformanceCenter(object):
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
             # 准确度上就是有50%概率晚一帧，不过在240帧水平上，1帧误差可以接受
             # 这部分我们自己知道就好，千万别给客户解释出去了。
-            picture, _, _, timestamp = self.picture_prepare(number)
+            picture, _, _, timestamp_f = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 1')
                 self.end_loop_not_found()
-            if number == 0:
-                self.start_timestamp = timestamp
             number += 1
 
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number)
@@ -215,12 +214,16 @@ class PerformanceCenter(object):
                     end = self.end_number
 
                 # 找到终止点后，包装一个json格式，推到reef。
-                # print(timestamp, self.start_timestamp, 'bbbbbbbbbbbbbbbbbbbbb')
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
-                time_per_unit = round(job_duration / (end - self.start_number), 4)
-                self.start_number = int(self.start_number + self.bias)
-                # 实际的job_duration需要加上bias
-                job_duration = round(time_per_unit * (end - self.start_number), 3)
+                if not SENSOR:
+                    time_per_unit = round(job_duration / (end - self.start_number), 4)
+                    self.start_number = int(self.start_number + self.bias)
+                    # 实际的job_duration需要加上bias
+                    job_duration = round(time_per_unit * (end - self.start_number), 3)
+                else:
+                    time_per_unit = round((timestamp - timestamp_f) / 1000, 4)
+                    # 在win上第一张图片有问题，可能是上次拍照留在相机内存中的图片，所以用第一张
+                    self.start_number = 1
 
                 self.result = {"start_point": self.start_number, "end_point": end,
                                "job_duration": job_duration,
@@ -230,8 +233,12 @@ class PerformanceCenter(object):
                 break
             elif number >= CameraMax:
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
-                time_per_unit = round(job_duration / (number - self.start_number), 4)
-                job_duration = round(time_per_unit * (number - self.start_number - self.bias), 3)
+                if not SENSOR:
+                    time_per_unit = round(job_duration / (number - self.start_number), 4)
+                    job_duration = round(time_per_unit * (number - self.start_number - self.bias), 3)
+                else:
+                    time_per_unit = round((timestamp - timestamp_f) / 1000, 4)
+                    self.start_number = 1
 
                 self.result = {"start_point": self.start_number + self.bias, "end_point": number,
                                "job_duration": job_duration,
@@ -328,7 +335,6 @@ class PerformanceCenter(object):
             time.sleep(0.2)
             max_retry_time -= 1
 
-        # print(timestamp, 'aaaaaaaaaaaaaa')
         if picture is not None:
             picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
             cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)

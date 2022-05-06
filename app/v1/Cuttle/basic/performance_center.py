@@ -220,7 +220,7 @@ class PerformanceCenter(object):
                 time_per_unit = round(job_duration / (end - self.start_number), 4)
                 self.start_number = int(self.start_number + self.bias)
                 # 实际的job_duration需要加上bias
-                job_duration = time_per_unit * (end - self.start_number)
+                job_duration = round(time_per_unit * (end - self.start_number), 3)
 
                 self.result = {"start_point": self.start_number, "end_point": end,
                                "job_duration": job_duration,
@@ -231,7 +231,7 @@ class PerformanceCenter(object):
             elif number >= CameraMax:
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 time_per_unit = round(job_duration / (number - self.start_number), 4)
-                job_duration = time_per_unit * (number - self.start_number - self.bias)
+                job_duration = round(time_per_unit * (number - self.start_number - self.bias), 3)
 
                 self.result = {"start_point": self.start_number + self.bias, "end_point": number,
                                "job_duration": job_duration,

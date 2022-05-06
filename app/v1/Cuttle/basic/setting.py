@@ -92,6 +92,16 @@ camera_params_51 = [("OffsetY", 0),
                     ("AcquisitionFrameRate", 60.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
+# 5L改进版参数
+# camera_params_51 = [("OffsetY", 0),
+#                     ("OffsetX", 0),
+#                     ("Width", 1440),
+#                     ("Height", 1080),
+#                     ("ExposureTime", 3500.0),
+#                     ("Gain", 2.5),
+#                     ("AcquisitionFrameRate", 240.0),
+#                     ("AcquisitionFrameRateEnable", True),
+#                     ("PixelFormat", 0x01080009, 'enum')]
 
 high_exposure_params = [("ExposureTime", 200000.0),
                         ("Gain", 15)]

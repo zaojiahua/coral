@@ -85,7 +85,7 @@ elif CORAL_TYPE == 3.1:
 elif CORAL_TYPE == 4:
     HARDWARE_MAPPING_LIST = [arm_com]
 elif CORAL_TYPE == 5.3:
-    HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_1]
+    HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_1, arm_com_sensor]
 else:
     HARDWARE_MAPPING_LIST = ['1', arm_com, arm_com_sensor]
 

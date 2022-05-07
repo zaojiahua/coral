@@ -286,6 +286,8 @@ class Complex_Center(object):
             request_body.update({"ignore_arm_reset": True})
         if kwargs.get('performance_start_point'):
             request_body.update({'performance_start_point': True})
+        if kwargs.get('is_init'):
+            request_body.update({'is_init': True})
         self.logger.info(
             f"in coral cor ready to point{max(self.cx + self.x_shift, 0)},{max(self.cy + self.y_shift, 0)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])

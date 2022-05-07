@@ -141,7 +141,7 @@ class PerformanceCenter(object):
         return 0
 
     @staticmethod
-    def end_loop_not_found(exp=VideoEndPointNotFound):
+    def end_loop_not_found(exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
         raise exp
 
@@ -149,12 +149,12 @@ class PerformanceCenter(object):
         # 计算终止点的方法
         if not hasattr(self, "start_number") or not hasattr(self, "bias"):
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
-            self.end_loop_not_found(VideoStartPointNotFound)
+            self.end_loop_not_found(VideoStartPointNotFound())
         # 如果使用压力传感器，有可能里边还没有图片，所以选择等待一段时间
         if len(self.back_up_dq) == 0:
             time.sleep(10 / FpsMax)
         if len(self.back_up_dq) == 0:
-            self.end_loop_not_found(PerformanceNotStart)
+            self.end_loop_not_found(PerformanceNotStart())
 
         if SENSOR:
             number = 0

@@ -81,7 +81,7 @@ camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
 camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 240.0),
                                        ('GammaEnable', True),
                                        ('Gamma',  0.7000)]
-camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 60.0)]
+camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 180.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
                     ("OffsetX", 0),

@@ -359,10 +359,10 @@ class CameraHandler(Handler):
                         # 必须等待，否则while死循环导致其他线程没有机会执行
                         time.sleep(1)
                         if get_global_value(CAMERA_IN_LOOP):
-                            self.merge_frame(camera_ids)
+                            self.merge_frame(camera_ids, 60)
                 # 把剩下的图片都合成完毕
                 if get_global_value(CAMERA_IN_LOOP):
-                    self.merge_frame(camera_ids)
+                    self.merge_frame(camera_ids, 60)
             else:
                 if self.record_video:
                     timeout = self.record_time

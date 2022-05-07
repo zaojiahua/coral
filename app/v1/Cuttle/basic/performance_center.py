@@ -89,6 +89,7 @@ class PerformanceCenter(object):
                         find_begin_point = True
                         self.bias = 0
                         self.start_timestamp = time.time() * 1000
+                        print('找到了起始点', self.start_timestamp)
                         break
                     elif cur_force > max_force:
                         max_force = cur_force
@@ -149,6 +150,9 @@ class PerformanceCenter(object):
         if not hasattr(self, "start_number") or not hasattr(self, "bias"):
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             raise VideoStartPointNotFound
+        # 如果使用压力传感器，有可能里边还没有图片，所以选择等待一段时间
+        if len(self.back_up_dq) == 0:
+            time.sleep(10 / FpsMax)
         if len(self.back_up_dq) == 0:
             raise PerformanceNotStart
 

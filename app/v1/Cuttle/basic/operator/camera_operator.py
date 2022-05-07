@@ -356,9 +356,13 @@ class CameraHandler(Handler):
                 # 发送同步信号
                 with CameraUsbPower(timeout=timeout):
                     while get_global_value(CAMERA_IN_LOOP):
-                        self.merge_frame(camera_ids, 5)
+                        # 必须等待，否则while死循环导致其他线程没有机会执行
+                        time.sleep(1)
+                        if get_global_value(CAMERA_IN_LOOP):
+                            self.merge_frame(camera_ids)
                 # 把剩下的图片都合成完毕
-                self.merge_frame(camera_ids)
+                if get_global_value(CAMERA_IN_LOOP):
+                    self.merge_frame(camera_ids)
             else:
                 if self.record_video:
                     timeout = self.record_time

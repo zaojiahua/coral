@@ -143,6 +143,8 @@ class PerformanceCenter(object):
     @staticmethod
     def end_loop_not_found(exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
+        # 后续可能涉及到t-guard的相关操作，会使用相机，所以这里加个等待，让取图的线程完全终止了
+        time.sleep(2)
         raise exp
 
     def end_loop(self, judge_function):

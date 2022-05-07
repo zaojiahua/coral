@@ -120,7 +120,8 @@ else:
     HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
 HAND_MAX_Z = 5
 if CORAL_TYPE == 5.3:
-    Z_UP = -22
+    # Z_UP = -22
+    Z_UP = 0
     Z_START = -32
     arm_wait_position = f"G01 X0Y0Z{Z_UP}F15000 \r\n"
     HAND_MAX_X = DOUBLE_ARM_MOVE_REGION[0]

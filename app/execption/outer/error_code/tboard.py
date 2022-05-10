@@ -26,4 +26,4 @@ class CreateTboardError(NotFound):
 class DutNotExist(NotFound):
     error_code = 8004
     code = 404
-    description = 'Dut not exist'
+    description = '该设备不在Busy状态中'

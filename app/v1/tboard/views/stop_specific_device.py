@@ -1,3 +1,5 @@
+from flask import jsonify
+
 from app.execption.outer.error_code.tboard import DutNotExist
 from app.v1.tboard.model.dut import Dut
 from app.v1.tboard.views import tborad_router
@@ -7,11 +9,13 @@ from app.v1.tboard.views import tborad_router
 def stop_specific_device(device_label):
     return stop_specific_device_inner(device_label)
 
+
 # 停止单个device 执行的 dut
 def stop_specific_device_inner(device_label):
     dut_list = Dut.all(device_label=device_label)
     if len(dut_list) > 0:
         for dut in dut_list:
-            dut.stop_dut()
-        return {"status": f"{device_label} stop  device success"}
+            dut.stop_dut(False if len(dut_list) == 1 else True)
+        return jsonify(dict(error_code=0, description=f'{device_label} stop  device success'))
+    # busy 状态的device肯定有dut
     raise DutNotExist(description=f"device_label({device_label}) is not in tboard")

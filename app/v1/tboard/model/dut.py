@@ -121,6 +121,8 @@ class Dut(BaseModel):
         except Exception as e:
             logger.error(f"stop djob {self.device_label, self.current_job_label} error :{e}")
         finally:
+            # 这里设置状态为idle
+            self.update_device_status(self.device_label)
             self.remove()
             # 手动停止的话，由reef自己判断，防止循环调用
             if not manual_stop:

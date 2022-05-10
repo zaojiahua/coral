@@ -16,6 +16,6 @@ def stop_specific_device_inner(device_label):
     if len(dut_list) > 0:
         for dut in dut_list:
             dut.stop_dut(False if len(dut_list) == 1 else True)
-        return jsonify(dict(error_code=0, description=f'{device_label} stop  device success'))
+        return jsonify(dict(error_code=0, description=f'设备停止成功'))
     # busy 状态的device肯定有dut
-    raise DutNotExist(description=f"device_label({device_label}) is not in tboard")
+    raise DutNotExist(description=f"该设备({device_label})未在运行")

@@ -89,34 +89,35 @@ class ChineseMixin(object):
                 three_point.append(contour_points)
                 # cv2.putText(img, '1', contour_points[0], cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
         # 直接使用最上面的三个
-        three_point = sorted(three_point, key=lambda x: x[0][1])
-        if len(three_point) > 2:
-            three_point = three_point[:3]
-        else:
-            three_point = []
+        origin_three_point = sorted(three_point, key=lambda x: x[0][1])
 
         # 查找和3个点位于同一水平面的点，然后从这些点中找俩个距离最近且距离几乎相等的点，这样就把查找和验证放到一块了
         THREE_POINT = 3
-        result_contours = []
-        for point in three_point:
-            point_level = []
-            for contour_points in target_contours:
-                if abs(point[0][1] - contour_points[0][1]) < 10:
-                    point_level.append((contour_points, np.sqrt(np.sum((point[0] - contour_points[0]) ** 2))))
-                    # cv2.putText(img, '1', contour_points[0], cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
-            if len(point_level) >= THREE_POINT:
-                point_level = sorted(point_level, key=lambda x: x[1])
-                # 第一个点是point本身
-                if abs(point_level[1][1] - point_level[2][1]) < 10:
-                    point_level = point_level[:THREE_POINT]
-                    order_point = sorted(point_level, key=lambda x: x[0][0][0])
-                    # print(order_point)
-                    result_contours += [point[0] for point in order_point]
+        for i in range(len(origin_three_point)):
+            if i + THREE_POINT > len(origin_three_point):
+                break
+            three_point = origin_three_point[i:i + THREE_POINT]
 
-        if len(result_contours) == THREE_POINT * 3:
-            # 画出轮廓，方便测试
-            # img = cv2.drawContours(img, result_contours, -1, (0, 255, 0), 30)
-            return result_contours
+            result_contours = []
+            for point in three_point:
+                point_level = []
+                for contour_points in target_contours:
+                    if abs(point[0][1] - contour_points[0][1]) < 10:
+                        point_level.append((contour_points, np.sqrt(np.sum((point[0] - contour_points[0]) ** 2))))
+                        # cv2.putText(img, '1', contour_points[0], cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
+                if len(point_level) >= THREE_POINT:
+                    point_level = sorted(point_level, key=lambda x: x[1])
+                    # 第一个点是point本身
+                    if abs(point_level[1][1] - point_level[2][1]) < 10:
+                        point_level = point_level[:THREE_POINT]
+                        order_point = sorted(point_level, key=lambda x: x[0][0][0])
+                        # print(order_point)
+                        result_contours += [point[0] for point in order_point]
+
+            if len(result_contours) == THREE_POINT * 3:
+                # 画出轮廓，方便测试
+                # img = cv2.drawContours(img, result_contours, -1, (0, 255, 0), 30)
+                return result_contours
 
     def pinyin_2_coordinate(self, pinyin, device_obj, coor_tuple_list, keyboard_pos=None):
         # 把拼音转换成9宫格上的位置。

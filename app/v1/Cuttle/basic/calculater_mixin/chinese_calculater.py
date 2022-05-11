@@ -54,13 +54,13 @@ class ChineseMixin(object):
 
         # 通过腐蚀和膨胀使得文字部分成为一块一块的区域，方便获取轮廓
         element1 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 15))
         dilation = cv2.dilate(sobel, element2, iterations=1)
         erosion = cv2.erode(dilation, element1, iterations=1)
-        dilation = cv2.dilate(erosion, element2, iterations=1)
+        # dilation = cv2.dilate(erosion, element2, iterations=1)
 
         # 获取轮廓之前，需要先是二值图像
-        ret, binary = cv2.threshold(dilation, 100, 255, cv2.THRESH_BINARY)
+        ret, binary = cv2.threshold(erosion, 100, 255, cv2.THRESH_BINARY)
 
         _, contours, hierarchy = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -112,9 +112,16 @@ class ChineseMixin(object):
                         point_level = point_level[:THREE_POINT]
                         order_point = sorted(point_level, key=lambda x: x[0][0][0])
                         # print(order_point)
-                        result_contours += [point[0] for point in order_point]
+                        result_contours += order_point
 
             if len(result_contours) == THREE_POINT * 3:
+                distance = [point[1] for point in result_contours if point[1] != 0]
+                min_val, max_val = min(distance), max(distance)
+                # 几对点距离相差太大，代表y的位置不对
+                if max_val - min_val > 20:
+                    continue
+
+                result_contours = [point[0] for point in result_contours]
                 # 画出轮廓，方便测试
                 # img = cv2.drawContours(img, result_contours, -1, (0, 255, 0), 30)
                 return result_contours

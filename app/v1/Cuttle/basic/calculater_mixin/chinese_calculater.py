@@ -46,7 +46,7 @@ class ChineseMixin(object):
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        ret, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+        ret, binary = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
 
         # 通过sobel算子，获取高频部分
         sobel_x = cv2.Scharr(binary, cv2.CV_64F, 1, 0)
@@ -57,7 +57,7 @@ class ChineseMixin(object):
 
         # 通过腐蚀和膨胀使得文字部分成为一块一块的区域，方便获取轮廓
         element1 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 15))
+        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (23, 23))
         dilation = cv2.dilate(sobel, element2, iterations=1)
         erosion = cv2.erode(dilation, element1, iterations=1)
         # dilation = cv2.dilate(erosion, element2, iterations=1)

@@ -1,3 +1,4 @@
+import datetime
 import time
 
 import pypinyin
@@ -37,7 +38,9 @@ class ChineseMixin(object):
 
     @staticmethod
     def keyboard_pos_dict(img):
-        # cv2.imwrite('1.png', img)
+        # 将图片保存下来，方便以后做优化
+        now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        cv2.imwrite(f'app/config/{now}.png', img)
         # 取一半以下的区域进行判断
         h, w, _ = img.shape
 

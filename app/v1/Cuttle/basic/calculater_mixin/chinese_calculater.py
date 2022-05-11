@@ -40,7 +40,7 @@ class ChineseMixin(object):
     def keyboard_pos_dict(img):
         # 将图片保存下来，方便以后做优化
         now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        cv2.imwrite(f'app/config/{now}.png', img)
+        cv2.imwrite(f'app/source/{now}.png', img)
         # 取一半以下的区域进行判断
         h, w, _ = img.shape
 

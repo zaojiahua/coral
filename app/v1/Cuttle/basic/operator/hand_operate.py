@@ -230,13 +230,16 @@ class HandHandler(Handler, DefaultMixin):
 
     def repeat_sliding(self, *args, **kwargs):
         # 传入滑动重复次数
-        if isinstance(int, self.speed) and 1 <= self.speed <= 10:
+        if isinstance(self.speed, int) and 1 <= self.speed <= 10:
             repeat_time = self.speed  # 为整型，且需在1-10之间
         else:
             raise RepeatTimeInvalid
         for i in range(repeat_time):
-            self.kwargs["exec_repeat_sliding_obj"].send_list_order(self.kwargs["repeat_sliding_order"])
-        kwargs["exec_serial_obj"].recv(buffer_size=repeat_time * 8)
+            ignore_reset = False if i == (repeat_time - 1) else True
+            self.kwargs["exec_repeat_sliding_obj"].send_list_order(self.kwargs["repeat_sliding_order"],
+                                                                   ignore_reset=ignore_reset)
+
+        self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=repeat_time * 8)
         return 0
 
     @allot_serial_obj

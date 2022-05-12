@@ -72,7 +72,6 @@ class HandSerial:
             raise
         print('返回：', rev, '*' * 10)
         while not is_init and not self.check_hand_status():
-            print("当前动作未执行完毕")
             time.sleep(0.2)
         print("当前动作执行完毕")
         if 'ok' in rev or 'unlock' in rev:

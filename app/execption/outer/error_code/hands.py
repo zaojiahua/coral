@@ -90,3 +90,9 @@ class InsufficientSafeDistance(APIException):
     error_code = 3011
     code = 400
     description = "To Increased the last two point's x-coordinate"
+
+
+class RepeatTimeInvalid(APIException):
+    error_code = 3012
+    code = 400
+    description = "Repeat Time Invalid"

@@ -8,7 +8,7 @@ import numpy as np
 from app.config.setting import CORAL_TYPE, arm_com, arm_com_1
 from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, ChooseSerialObjFail, InvalidCoordinates, \
-    InsufficientSafeDistance
+    InsufficientSafeDistance, RepeatTimeInvalid
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower, SensorSerial
@@ -16,8 +16,7 @@ from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, ARM_MAX_X, \
-    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X, ARM_MAX_X
+    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -125,7 +124,8 @@ class HandHandler(Handler, DefaultMixin):
         "double_point": "_relative_double_point",
         "double hand zoom": "_relative_double_hand",
     }
-    arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power", "cal_swipe_speed", "double_hand_swipe"]
+    arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power", "cal_swipe_speed",
+                            "double_hand_swipe", "repeat_sliding"]
 
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)
@@ -216,6 +216,34 @@ class HandHandler(Handler, DefaultMixin):
 
         sliding_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
         return sliding_result
+
+    @allot_serial_obj
+    def repeat_slide_order(self, axis, *args, **kwargs):
+        """
+        :param axis: [[起点坐标], [终点坐标]]
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        # 对坐标进行预处理
+        for axis_index in range(len(axis)):
+            axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
+        # 计算滑动速度
+        swipe_speed = self.cal_swipe_speed(axis)
+        # 生成滑动指令集
+        self.repeat_sliding_order = self.__sliding_order(axis[0], axis[1], swipe_speed, arm_num=kwargs["arm_num"])
+        return 0
+
+    def repeat_sliding(self, *args, **kwargs):
+        # 传入滑动重复次数
+        if isinstance(int, self.speed) and 1<=self.speed<=10:
+            repeat_time = self.speed  # 为整型，且需在1-10之间
+        else:
+            raise RepeatTimeInvalid
+        for i in range(repeat_time):
+            kwargs["exec_serial_obj"].send_list_order(self.repeat_sliding_order)
+        kwargs["exec_serial_obj"].recv(buffer_size=repeat_time * 8)
+        return 0
 
     @allot_serial_obj
     def trapezoid_slide(self, axis, **kwargs):

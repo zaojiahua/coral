@@ -66,9 +66,14 @@ class DefaultMixin(object):
                 opt_type = 'continuous_swipe'
             elif self.kwargs.get('trapezoid'):
                 opt_type = 'trapezoid_slide'
+            elif self.kwargs.get('repeat'):
+                opt_type = 'repeat_slide_order'
             else:
                 opt_type = "sliding"
         # 下面这堆主要支持机械臂去点击一些固定操作（已经做的adb unit），写的有点难看，有时间可以改成dict的配置形式
+        elif "repeat sliding time" in raw_commend:
+            speed = int(raw_commend.strip(" ").split(" ")[-1])  # 此时speed存储的是重复次数
+            opt_type = 'repeat_sliding'
         elif "input keyevent 4" in raw_commend:
             opt_type = "back"
             pix_points = 0

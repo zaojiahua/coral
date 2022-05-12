@@ -107,6 +107,12 @@ class DefaultMixin(object):
             opt_type = "close_usb_power"
         elif "openUSBPower" in raw_commend:
             opt_type = "open_usb_power"
+        elif "double hand" in raw_commend and "time" in raw_commend:
+            opt_type = "double_hand_swipe"
+            speed = int(raw_commend.strip(" ").split(" ")[-1])
+        elif "double hand" in raw_commend:
+            opt_type = "record_double_hand_point"
+            pix_points = [float(i) for i in raw_commend.strip(" ").split(" ")[-8:]]
         else:
             pix_points = [float(i) for i in raw_commend.split("double_point")[-1].strip().split(" ")]
             opt_type = "double_click"
@@ -130,6 +136,10 @@ class DefaultMixin(object):
             return k
         if len(k) == 3:
             return self.calculate(k, absolute)
+        if len(k) == 8:
+            # 双指滑动
+            pix_point = [k[0:2], k[2:4], k[4:6], k[6:8]]
+            return [self.calculate(i) for i in pix_point]
         if len(k) != 2 and len(k) != 4:
             raise CoordinateWrongFormat
         pix_point = [k] if len(k) == 2 else [k[:2], k[2:]]
@@ -144,10 +154,6 @@ class DefaultMixin(object):
 
     @staticmethod
     def judge_coordinates_reasonable(coordinates, max_x, min_x, min_z):
-        print("==="*10)
-        print(coordinates)  # 223
-        print(max_x)  # 224
-        print(min_x)  # 90
         # 如果侧边键坐标在屏幕内，超出一定范围，判断不合理
         if coordinates[2] < (min_z + Z_MIN_VALUE):
             raise CoordinatesNotReasonable

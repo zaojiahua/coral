@@ -43,7 +43,7 @@ elif CORAL_TYPE == 5.3:
     except ImportError:
         Z_DOWN = -27
         ARM_MOVE_REGION = [201, 240]
-        DOUBLE_ARM_MOVE_REGION = [368, 239]
+        DOUBLE_ARM_MOVE_REGION = [365, 239]
         ARM_MAX_X = 340
     set_global_value('Z_DOWN', Z_DOWN)
 try:
@@ -126,6 +126,7 @@ if CORAL_TYPE == 5.3:
     arm_wait_position = f"G01 X0Y0Z{Z_UP}F15000 \r\n"
     HAND_MAX_X = DOUBLE_ARM_MOVE_REGION[0]
     HAND_MAX_Y = DOUBLE_ARM_MOVE_REGION[1]
+    DIFF_X = 30
 else:
     Z_UP = 0
     Z_START = 0

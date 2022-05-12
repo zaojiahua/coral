@@ -95,4 +95,4 @@ class InsufficientSafeDistance(APIException):
 class RepeatTimeInvalid(APIException):
     error_code = 3012
     code = 400
-    description = "Repeat Time Invalid"
+    description = "Repeat Time Out of Range 1-10"

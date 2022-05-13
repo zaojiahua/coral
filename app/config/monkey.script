@@ -1,0 +1,17 @@
+type= raw events
+count= 1
+speed= 1.0
+start data >>
+
+ProfileWait()
+ProfileWait()
+ProfileWait()
+ProfileWait()
+ProfileWait()
+ProfileWait()
+ProfileWait()
+ProfileWait()
+ProfileWait()
+ProfileWait()
+ProfileWait()
+ProfileWait()

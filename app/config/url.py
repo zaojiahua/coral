@@ -42,6 +42,7 @@ device_logout = "/api/v1/coral/logout_device/"
 coordinate_url = "/api/v1/cedar/control_device_cut_coordinate/"
 device_assis_url = "/api/v1/cedar/subsidiary_device/"
 device_phone_model_coordinate = '/api/v1/cedar/phone_model_custom_coordinate/'
+monkey_url = '/api/v1/cedar/create_exception_data/'
 
 # ==================================device_power=======================================
 

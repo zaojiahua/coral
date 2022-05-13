@@ -252,6 +252,15 @@ class HandHandler(Handler, DefaultMixin):
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
         return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
+    @allot_serial_obj
+    def straight_swipe(self, axis, **kwargs):
+        # 采用直角梯形滑动，目前仅支持上滑
+        for axis_index in range(len(axis)):
+            axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
+        sliding_order = self.__straight_sliding_order(axis[0], axis[1], self.speed, arm_num=kwargs["arm_num"])
+        kwargs["exec_serial_obj"].send_list_order(sliding_order)
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
+
     def reset_hand(self, reset_orders=arm_wait_position, rotate=False, **kwargs):
         # 恢复手臂位置 可能是龙门架也可能是旋转机械臂
         self._model.logger.info(f"reset hand order:{reset_orders}")
@@ -584,6 +593,19 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 3, speed),
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
             ]
+
+    @staticmethod
+    def __straight_sliding_order(start_point, end_point, speed=MOVE_SPEED, arm_num=0):
+        # 目前仅支持上滑
+        start_x, start_y, start_z = start_point
+        end_x, end_y, _ = end_point
+        y = end_y+8
+        return [
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z - 1, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z - 1, speed),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, y, Z_UP, MOVE_SPEED),
+        ]
 
     @staticmethod
     def _sliding_contious_order(start_point, end_point, commend_index, commend_length, arm_num=0):

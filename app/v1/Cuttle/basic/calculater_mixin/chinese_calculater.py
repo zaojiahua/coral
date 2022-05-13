@@ -96,6 +96,7 @@ class ChineseMixin(object):
 
         # 查找和3个点位于同一水平面的点，然后从这些点中找俩个距离最近且距离几乎相等的点，这样就把查找和验证放到一块了
         THREE_POINT = 3
+        all_result_contours = []
         for i in range(len(origin_three_point)):
             if i + THREE_POINT > len(origin_three_point):
                 break
@@ -127,7 +128,24 @@ class ChineseMixin(object):
                 result_contours = [point[0] for point in result_contours]
                 # 画出轮廓，方便测试
                 # img = cv2.drawContours(img, result_contours, -1, (0, 255, 0), 30)
-                return result_contours
+                all_result_contours.append(result_contours)
+
+        if len(all_result_contours) == 1:
+            return all_result_contours[0]
+        elif len(all_result_contours) > 1:
+            min_abs_y_dis = None
+            final_result_contours = None
+            for result_contours in all_result_contours:
+                abs_y_dis = abs(result_contours[3][0][1] - result_contours[0][0][1])
+                if min_abs_y_dis is None:
+                    min_abs_y_dis = abs_y_dis
+                    final_result_contours = result_contours
+                elif abs_y_dis < min_abs_y_dis:
+                    min_abs_y_dis = abs_y_dis
+                    final_result_contours = result_contours
+            return final_result_contours
+        else:
+            return None
 
     def pinyin_2_coordinate(self, pinyin, device_obj, coor_tuple_list, keyboard_pos=None):
         # 把拼音转换成9宫格上的位置。

@@ -306,6 +306,23 @@ class Handler():
 
         return normal_result
 
+    def _relative_double_hand(self):
+        regex = re.compile(
+            "double hand zoom in and out ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*) ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*) ")
+        result = re.search(regex, self.exec_content)
+        x1 = float(result.group(1))
+        y1 = float(result.group(2))
+        x2 = float(result.group(3))
+        y2 = float(result.group(4))
+        x3 = float(result.group(5))
+        y3 = float(result.group(6))
+        x4 = float(result.group(7))
+        y4 = float(result.group(8))
+        self._replace_relative_pos(x1, y1, result.group(1), result.group(2))
+        self._replace_relative_pos(x2, y2, result.group(3), result.group(4))
+        self._replace_relative_pos(x3, y3, result.group(5), result.group(6))
+        self._replace_relative_pos(x4, y4, result.group(7), result.group(8))
+
     def _replace_relative_pos(self, x, y, result_group_1, result_group_2):
         if any((0 < x < 1, 0 < y < 1)):
             w, h = self._get_screen_point(x, y, self.portrait)
@@ -324,6 +341,8 @@ class ListHandler(Handler):
         flag = 0
         result = None
         for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
+            if "onlyShow" in single_cmd:
+                continue
             try:
                 self.child.exec_content = single_cmd
                 kwargs['index'] = index

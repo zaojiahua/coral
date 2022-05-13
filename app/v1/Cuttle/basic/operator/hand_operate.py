@@ -1,12 +1,14 @@
 import math
 import re
+import threading
 import time
 
 import numpy as np
 
 from app.config.setting import CORAL_TYPE, arm_com, arm_com_1
 from app.config.url import phone_model_url
-from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, ChooseSerialObjFail
+from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, ChooseSerialObjFail, InvalidCoordinates, \
+    InsufficientSafeDistance, RepeatTimeInvalid
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower, SensorSerial
@@ -14,8 +16,7 @@ from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, ARM_MAX_X, \
-    sensor_serial_obj_dict
+    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -44,7 +45,6 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     for orders in hand_reset_orders:
         hand_serial_obj.send_single_order(orders)
         hand_serial_obj.recv(buffer_size=64, is_init=True)
-
     return 0
 
 
@@ -63,7 +63,6 @@ def rotate_hand_init(arm_com_id, device_obj, **kwargs):
     for g_orders in hand_reset_orders:
         hand_serial_obj.send_single_order(g_orders)
         hand_serial_obj.recv(buffer_size=64, is_init=True)
-
     return 0
 
 
@@ -89,7 +88,7 @@ def pre_point(point, arm_num=0):
     if arm_num == 0:
         return [point[0], -point[1], z_point]
     if arm_num == 1:
-        x_point = ARM_MAX_X - point[0]
+        x_point = HAND_MAX_X - point[0]
         return [-x_point, -point[1], z_point]
     raise ChooseSerialObjFail
 
@@ -123,11 +122,14 @@ class HandHandler(Handler, DefaultMixin):
         "input tap": "_relative_point",
         "input swipe": "_relative_swipe",
         "double_point": "_relative_double_point",
+        "double hand zoom": "_relative_double_hand",
     }
-    arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power"]
+    arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power", "cal_swipe_speed",
+                            "double_hand_swipe", "repeat_sliding"]
 
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)
+        self.double_hand_point = None
         self.ignore_reset = False
         self.performance_start_point = kwargs.get('performance_start_point')
         self.kwargs = kwargs
@@ -204,9 +206,7 @@ class HandHandler(Handler, DefaultMixin):
         for axis_index in range(len(axis)):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
 
-        swipe_distance = np.hypot(axis[1][0] - axis[0][0], axis[1][1] - axis[0][1])
-        cal_swipe_speed = swipe_distance / (self.speed * 0.00002)
-        swipe_speed = cal_swipe_speed if cal_swipe_speed < 10000 else 10000
+        swipe_speed = self.cal_swipe_speed(axis)
 
         sliding_order = self.__sliding_order(axis[0], axis[1], swipe_speed, arm_num=kwargs["arm_num"])
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
@@ -218,6 +218,40 @@ class HandHandler(Handler, DefaultMixin):
         return sliding_result
 
     @allot_serial_obj
+    def repeat_slide_order(self, axis, *args, **kwargs):
+        """
+        :param axis: [[起点坐标], [终点坐标]]
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        # 对坐标进行预处理
+        for axis_index in range(len(axis)):
+            axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
+        # 计算滑动速度
+        swipe_speed = self.cal_swipe_speed(axis)
+        # 生成滑动指令集
+        self.kwargs["repeat_sliding_order"] = self.__sliding_order(axis[0], axis[1], swipe_speed,
+                                                                   arm_num=kwargs["arm_num"])
+
+        self.kwargs["exec_repeat_sliding_obj"] = kwargs["exec_serial_obj"]
+        return 0
+
+    def repeat_sliding(self, *args, **kwargs):
+        # 传入滑动重复次数
+        if isinstance(self.speed, int) and 1 <= self.speed <= 10:
+            repeat_time = self.speed  # 为整型，且需在1-10之间
+        else:
+            raise RepeatTimeInvalid
+        for i in range(repeat_time):
+            ignore_reset = False if i == (repeat_time - 1) else True
+            self.kwargs["exec_repeat_sliding_obj"].send_list_order(self.kwargs["repeat_sliding_order"],
+                                                                   ignore_reset=ignore_reset)
+
+        self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=repeat_time * 8)
+        return 0
+
+    @allot_serial_obj
     def trapezoid_slide(self, axis, **kwargs):
         for axis_index in range(len(axis)):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
@@ -225,13 +259,6 @@ class HandHandler(Handler, DefaultMixin):
         sliding_order = self.__sliding_order(axis[0], axis[1], self.speed, normal=False, arm_num=kwargs["arm_num"])
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
         return kwargs["exec_serial_obj"].recv(**self.kwargs)
-
-    def double_hand_swipe(self, axis):
-        # Tcab-5D 双指缩放
-        """
-        axis:[[左机械臂起点],[左机械臂终点],[右机械臂起点],[右机械臂终点]]
-        """
-        pass
 
     def reset_hand(self, reset_orders=arm_wait_position, rotate=False, **kwargs):
         # 恢复手臂位置 可能是龙门架也可能是旋转机械臂
@@ -406,7 +433,100 @@ class HandHandler(Handler, DefaultMixin):
         if self.ignore_reset is False and math.floor(CORAL_TYPE) == 5:
             self.reset_hand(**kwargs)
 
-    # TODO 怎样处理如果传入点中有一个或多个计算出的坐标超过操作台范围
+    def double_hand_swipe(self, *args, **kwargs):
+        """
+        # 计算滑动速度
+        # 生成指令
+        # 执行指令
+        :return:
+        """
+        left_swipe_speed = self.cal_swipe_speed(self.double_hand_point[0])
+        right_swipe_speed = self.cal_swipe_speed(self.double_hand_point[1])
+        left_order = self.__sliding_order(self.double_hand_point[0][0], self.double_hand_point[0][1],
+                                          speed=left_swipe_speed)
+        right_order = self.__sliding_order(self.double_hand_point[1][0], self.double_hand_point[1][1],
+                                           speed=right_swipe_speed)
+        self.exec_double_hand_swipe(left_order, right_order)
+        if min(left_swipe_speed, right_swipe_speed) < 2000:
+            time.sleep(self.speed + 0.5)
+        hand_serial_obj_dict.get(self._model.pk + arm_com).recv(64)
+        hand_serial_obj_dict.get(self._model.pk + arm_com_1).recv(64)
+        return 0
+
+    def record_double_hand_point(self, axis, *args, **kwargs):
+        """
+        判断坐标的合理性，对双指滑动的坐标进行转换，并记录
+        :param axis: [[左机械臂点],[左机械臂点],[右机械臂点],[右机械臂点]]
+        """
+        self.judge_axis_reasonable(axis)
+        left_point = [pre_point(axis[0]), pre_point(axis[1])]
+        right_point = [pre_point(axis[2], arm_num=1), pre_point(axis[3], arm_num=1)]
+        self.double_hand_point = [left_point, right_point]
+        return 0
+
+    def cal_swipe_speed(self, axis, *args, **kwargs):
+        """
+        :param axis: [[起点坐标], [终点坐标]]
+        :return:
+        """
+        swipe_distance = np.hypot(axis[1][0] - axis[0][0], axis[1][1] - axis[0][1])
+        cal_swipe_speed = swipe_distance / (self.speed * 0.00002)
+        swipe_speed = cal_swipe_speed if cal_swipe_speed < 10000 else 10000
+        return swipe_speed
+
+    def exec_double_hand_swipe(self, left_order, right_order):
+        left_obj = hand_serial_obj_dict.get(self._model.pk + arm_com)
+        right_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1)
+
+        exec_t1 = threading.Thread(target=left_obj.send_list_order, args=[left_order[0]],
+                                   kwargs={"ignore_reset": True})
+        exec_t2 = threading.Thread(target=right_obj.send_list_order, args=[right_order[0]],
+                                   kwargs={"ignore_reset": True})
+
+        exec_t2.start()
+        exec_t1.start()
+
+        while exec_t1.is_alive() or exec_t2.is_alive():
+            continue
+
+        exec2_t1 = threading.Thread(target=left_obj.send_list_order, args=[left_order[1:]], )
+        exec2_t2 = threading.Thread(target=right_obj.send_list_order, args=[right_order[1:]])
+
+        exec2_t2.start()
+        exec2_t1.start()
+
+        while exec2_t2.is_alive() or exec2_t1.is_alive():
+            continue
+
+        return 0
+
+    def judge_axis_reasonable(self, axis):
+        """
+        判断双指滑动坐标的合理性,
+        2022.4.22 目前仅支持双指缩小和放大的坐标合理性判断
+        axis：[[左机械臂起点],[左机械臂终点],[右机械臂起点],[右机械臂终点]]
+        :return:
+        """
+        if axis[1][0] < axis[0][0] < axis[2][0] < axis[3][0]:
+            # 放大，起点x坐标大于终点x坐标
+            # 距离最近的是两个起点
+            diff_ret = self.judge_diff_x(axis[0][0], axis[2][0])
+        elif axis[0][0] < axis[1][0] < axis[3][0] < axis[2][0]:
+            # 缩小
+            # 距离最近的两个是终点
+            diff_ret = self.judge_diff_x(axis[1][0], axis[3][0])
+        else:
+            raise InvalidCoordinates
+        return diff_ret
+
+    @staticmethod
+    def judge_diff_x(left_x, right_x):
+        # 防撞机制
+        # 距离最近的两个点，x坐标差值不得小于安全值
+        if abs(left_x - right_x) > DIFF_X:
+            return True
+        raise InsufficientSafeDistance
+
     def __list_click_order(self, axis_list):
         click_orders = []
         for axis in axis_list:

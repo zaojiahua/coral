@@ -247,7 +247,8 @@ class HandHandler(Handler, DefaultMixin):
         for axis_index in range(len(axis)):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
         # 用力滑动，会先计算滑动起始/终止点的  同方向延长线坐标，并做梯形滑动
-        sliding_order = self.__sliding_order(axis[0], axis[1], self.speed, normal=False, arm_num=kwargs["arm_num"])
+        speed = self.cal_swipe_speed(axis)
+        sliding_order = self.__sliding_order(axis[0], axis[1], speed, normal=False, arm_num=kwargs["arm_num"])
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
         return kwargs["exec_serial_obj"].recv(**self.kwargs)
 

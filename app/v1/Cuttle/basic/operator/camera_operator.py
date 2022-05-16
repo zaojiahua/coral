@@ -12,6 +12,7 @@ import func_timeout
 import numpy as np
 from func_timeout import func_set_timeout
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import pickle
 
 from app.execption.outer.error_code.camera import NoSrc, CameraInitFail, CameraInUse
 from app.v1.Cuttle.basic.MvImport.HK_import import *
@@ -329,6 +330,12 @@ class CameraHandler(Handler):
             else:
                 for _ in as_completed(futures):
                     image = camera_dq_dict.get(self._model.pk + camera_ids[0])[-1]['image']
+                    # 读取矫正参数
+                    f = pickle.load(open('app/config/camera_correct', 'rb'))
+                    ret, mtx, dist, rvecs, tvecs = f['ret'], f['mtx'], f['dist'], f['rvecs'], f['tvecs']
+                    h, w = image.shape[:2]
+                    new_camera_mtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+                    image = cv2.undistort(image, mtx, dist, None, new_camera_mtx)
                     if not self.original:
                         image = np.rot90(image, 3)
 

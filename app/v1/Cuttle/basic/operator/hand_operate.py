@@ -599,12 +599,13 @@ class HandHandler(Handler, DefaultMixin):
         # 目前仅支持上滑
         start_x, start_y, start_z = start_point
         end_x, end_y, _ = end_point
-        y = end_y+8
+        x4 = min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
+        y4 = min(max(end_y + (end_y - start_y) * trapezoid, 0), 150)
         return [
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z - 1, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z - 1, speed),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, y, Z_UP, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 3, speed),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
         ]
 
     @staticmethod

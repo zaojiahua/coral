@@ -26,6 +26,11 @@ ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
+    # 5的升级版是中心对齐的
+    try:
+        from app.config.ip import m_location_center
+    except ImportError:
+        m_location_center = None
     try:
         from app.config.ip import m_location
     except Exception:

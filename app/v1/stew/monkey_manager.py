@@ -121,7 +121,8 @@ class MonkeyManager(object):
                             del self.device_dict[device.connect_number]
                     # 加入
                     else:
-                        if device.connect_number not in self.device_dict or self.device_dict[device.connect_number] is None:
+                        if device.connect_number and (device.connect_number not in self.device_dict or
+                                                      self.device_dict[device.connect_number] is None):
                             print('monkey加入设备', device.device_label)
                             self.add_device(device.connect_number)
 

@@ -256,7 +256,17 @@ class HandHandler(Handler, DefaultMixin):
         for axis_index in range(len(axis)):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
         # 用力滑动，会先计算滑动起始/终止点的  同方向延长线坐标，并做梯形滑动
+        # speed = self.cal_swipe_speed(axis)
         sliding_order = self.__sliding_order(axis[0], axis[1], self.speed, normal=False, arm_num=kwargs["arm_num"])
+        kwargs["exec_serial_obj"].send_list_order(sliding_order)
+        return kwargs["exec_serial_obj"].recv(**self.kwargs)
+
+    @allot_serial_obj
+    def straight_swipe(self, axis, **kwargs):
+        # 采用直角梯形滑动，目前仅支持上滑
+        for axis_index in range(len(axis)):
+            axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
+        sliding_order = self.__straight_sliding_order(axis[0], axis[1], self.speed, arm_num=kwargs["arm_num"])
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
         return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
@@ -594,6 +604,20 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 3, speed),
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
             ]
+
+    @staticmethod
+    def __straight_sliding_order(start_point, end_point, speed=MOVE_SPEED, arm_num=0):
+        # 目前仅支持上滑
+        start_x, start_y, start_z = start_point
+        end_x, end_y, _ = end_point
+        x4 = min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
+        y4 = min(max(end_y + (end_y - start_y) * trapezoid, 0), 150)
+        return [
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z - 1, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 3, speed),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
+        ]
 
     @staticmethod
     def _sliding_contious_order(start_point, end_point, commend_index, commend_length, arm_num=0):

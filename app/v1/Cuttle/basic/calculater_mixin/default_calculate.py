@@ -68,6 +68,8 @@ class DefaultMixin(object):
                 opt_type = 'trapezoid_slide'
             elif self.kwargs.get('repeat'):
                 opt_type = 'repeat_slide_order'
+            elif self.kwargs.get('straight'):
+                opt_type = 'straight_swipe'
             else:
                 opt_type = "sliding"
         # 下面这堆主要支持机械臂去点击一些固定操作（已经做的adb unit），写的有点难看，有时间可以改成dict的配置形式

@@ -474,7 +474,8 @@ class Device(BaseModel):
                             set_global_value(key, m_l)
                         else:
                             set_global_value(key, eval(value))
-        elif CORAL_TYPE == 5.1:
+        # 5型柜升级版是中心对齐，这个时候如果配置了center，就用中心对齐的方案
+        elif CORAL_TYPE == 5.1 or m_location_center:
             set_global_value('m_location', [m_location_center[0] - float(self.width) / 2,
                                             m_location_center[1] - float(self.height) / 2,
                                             m_location_center[2] + float(self.ply)])

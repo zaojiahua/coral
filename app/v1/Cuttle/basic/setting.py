@@ -26,6 +26,11 @@ ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
+    # 5的升级版是中心对齐的
+    try:
+        from app.config.ip import m_location_center
+    except ImportError:
+        m_location_center = None
     try:
         from app.config.ip import m_location
     except Exception:
@@ -98,18 +103,21 @@ sync_camera_params = [('TriggerMode', 1, 'enum'),
 
 # 机械臂完全固定的参数
 HAND_MAX_X = 315
-if CORAL_TYPE == 5.1:
-    HAND_MAX_Y = 420  # 5L机械臂Y最大行程
-else:
-    HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
+try:
+    from app.config.ip import HAND_MAX_Y
+except ImportError:
+    if CORAL_TYPE == 5.1:
+        HAND_MAX_Y = 420  # 5L机械臂Y最大行程
+    else:
+        HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
 HAND_MAX_Z = 5
+
 if CORAL_TYPE == 5.3:
     Z_UP = -22
     Z_START = -32
     arm_wait_position = f"G01 X0Y0Z{Z_UP}F15000 \r\n"
     HAND_MAX_X = DOUBLE_ARM_MOVE_REGION[0]
     HAND_MAX_Y = DOUBLE_ARM_MOVE_REGION[1]
-
 else:
     Z_UP = 0
     Z_START = 0

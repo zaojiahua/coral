@@ -65,30 +65,21 @@ camera_params_5 = [("OffsetY", 0),
                    ("Width", 1440),
                    ("Height", 1080),
                    ("AcquisitionFrameRateEnable", True),
-                   # ("ExposureTime", 3500.0),
+                   ("ExposureTime", 3500.0),
                    ("Gain", 2.5),
-                   # ('ADCBitDepth', 2, 'enum'),
+                   ('ADCBitDepth', 2, 'enum'),
                    ('BalanceWhiteAuto', 0, 'enum'),
                    ('BalanceRatioSelector', 0, 'enum'),
                    ('BalanceRatio', 1100),
                    ('BalanceRatioSelector', 1, 'enum'),
                    ('BalanceRatio', 950),
                    ('BalanceRatioSelector', 2, 'enum'),
-                   ('BalanceRatio', 1850)]
-# ("PixelFormat", 0x02180014, 'enum')]
-if CORAL_TYPE == 5.2:
-    camera_params_5 = camera_params_5 + [('ADCBitDepth', 0, 'enum'),
-                                         ("PixelFormat", 0x02180014, 'enum'),
-                                         ("ExposureTime", 8000.0)]
-else:
-    camera_params_5 = camera_params_5 + [('ADCBitDepth', 2, 'enum'),
-                                         ("PixelFormat", 0x01080009, 'enum'),
-                                         ("ExposureTime", 3500.0)]
-
+                   ('BalanceRatio', 1850),
+                   ("PixelFormat", 0x01080009, 'enum')]
 camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
-camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 24.0),
-                                      ('GammaEnable', True),
-                                      ('Gamma', 0.7000)]
+camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 240.0),
+                                       ('GammaEnable', True),
+                                       ('Gamma',  0.7000)]
 camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 10.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
@@ -225,10 +216,10 @@ PM_DUMP = 'pm dump'
 DEVICE_DETECT_ERROR_MAX_TIME = 30 * 60
 
 # 跟摄像机相关的参数
-set_global_value('merge_image_h', None)  # 图片拼接的h矩阵
+set_global_value('merge_image_h', None) # 图片拼接的h矩阵
 COORDINATE_CONFIG_FILE = 'app/config/coordinate.py'
 MERGE_IMAGE_H = 'app/config/merge_image_h.npy'
-CAMERA_IN_LOOP = 'camera_in_loop'  # 性能测试控制摄像机是否继续获取图片
+CAMERA_IN_LOOP = 'camera_in_loop' # 性能测试控制摄像机是否继续获取图片
 set_global_value(CAMERA_IN_LOOP, False)
 
 # 跟性能测试相关的参数

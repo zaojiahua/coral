@@ -58,7 +58,7 @@ class JobCacheProxy:
         # 判断所有文件是否成功
         sync_success = True
         # 开启的线程数不要太多
-        step = 10
+        step = 8
         for i in range(0, len(update_job_list), step):
             all_task = [executer.submit(self.download, update_job, self.tboard_path) for update_job in update_job_list[i:i + step]]
             wait(all_task)
@@ -79,7 +79,7 @@ class JobCacheProxy:
     def download(job_msg, tboard_path):
         # 通过重试的方式解决异常，可能遇到的异常：1、多个tboard里边有相同的job或者inner job，虽然一个tboard做了去重，但是多个tboard并没有去重
         # 2、一次请求大量zip包的时候，部分线程request_file的时候，timeout以后才返回
-        max_retry = 3
+        max_retry = 6
         retry = 0
         while retry <= max_retry:
             try:
@@ -89,7 +89,7 @@ class JobCacheProxy:
                 job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job_label}.zip")
                 job_msg_temp_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job_label}_temp.zip")
                 # 设置超时时间，否则会一直等待
-                file_content = request_file(url, timeout=60)
+                file_content = request_file(url, timeout=120)
                 with open(job_msg_temp_name, "wb") as code:
                     code.write(file_content.content)
                 if os.path.exists(job_msg_name):

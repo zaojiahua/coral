@@ -255,6 +255,8 @@ class HandHandler(Handler, DefaultMixin):
     @allot_serial_obj
     def straight_swipe(self, axis, **kwargs):
         # 采用直角梯形滑动，目前仅支持上滑
+        if axis[1][1] <= axis[0][1]:
+            raise InvalidCoordinates
         for axis_index in range(len(axis)):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
         sliding_order = self.__straight_sliding_order(axis[0], axis[1], self.speed, arm_num=kwargs["arm_num"])
@@ -596,16 +598,28 @@ class HandHandler(Handler, DefaultMixin):
 
     @staticmethod
     def __straight_sliding_order(start_point, end_point, speed=MOVE_SPEED, arm_num=0):
-        # 目前仅支持上滑
+        """
+        目前仅支持上滑
+        最后一点的Y值目前限制在 [0, 150]范围内
+        X值也限制在[0,150]范围内
+        后续优化，可将y值范围限制在[0, end_y]
+        x值限制在[0, m_location[0]+手机宽度] 或者 [0, hand_x-max(m_location[0], 30)]
+        """
         start_x, start_y, start_z = start_point
         end_x, end_y, _ = end_point
-        x4 = min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
+        start_y, end_y = abs(start_y), abs(end_y)
         y4 = min(max(end_y + (end_y - start_y) * trapezoid, 0), 150)
+        if arm_num == 0:
+            x4 = min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
+        else:
+            start_x, end_x = abs(start_x), abs(end_x)
+            x4 = -min(max(end_x + (end_x - start_x) * trapezoid, 0), 150)
+            start_x, end_x = -start_x, -end_x
         return [
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, Z_START, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z - 1, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 3, speed),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, -start_y, Z_START, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, -start_y, start_z - 1, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, -end_y, start_z + 3, speed),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, -y4, Z_UP, MOVE_SPEED),
         ]
 
     @staticmethod

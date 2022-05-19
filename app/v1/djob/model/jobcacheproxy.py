@@ -37,14 +37,19 @@ class JobCacheProxy:
         update_json_content = copy.deepcopy(job_syn_resource_massage)
         update_job_list = []
         update_job_labels = []
+        transition_inner_job = None
 
-        def find_update_job_list(job):
+        # 优先下载inner job，优先解压
+        def find_update_job_list(job, inner_job=False):
             job_label = job['job_label']
             if not os.path.exists(os.path.join(JOB_SYN_RESOURCE_DIR, f"{job_label}.zip")) \
                     or job_syn_resource_massage.get(job_label) != job["updated_time"]:
                 # 多个线程同时使用同一个文件，会报“另一个程序正在使用此文件，进程无法访问。”的错误，同时防止多次下载同一个资源
                 if job_label not in update_job_labels:
-                    update_job_list.append(job)
+                    if inner_job:
+                        update_job_list.insert(0, job)
+                    else:
+                        update_job_list.append(job)
                     update_job_labels.append(job_label)
                     temp[job_label] = job["updated_time"]
 
@@ -53,14 +58,27 @@ class JobCacheProxy:
             find_update_job_list(job)
             if job.get("inner_job", []):
                 for inner_job in job["inner_job"]:
-                    find_update_job_list(inner_job)
+                    find_update_job_list(inner_job, inner_job=True)
+                    if transition_inner_job is None:
+                        transition_inner_job = inner_job['job_label']
 
         # 判断所有文件是否成功
         sync_success = True
         # 开启的线程数不要太多
         step = 8
         for i in range(0, len(update_job_list), step):
-            all_task = [executer.submit(self.download, update_job, self.tboard_path) for update_job in update_job_list[i:i + step]]
+            begin_index = i
+            for j, update_job in enumerate(update_job_list[i:i + step]):
+                # inner job 之前的先下载
+                if transition_inner_job == update_job['job_label'] and j != (step - 1):
+                    print('inner job 先下载')
+                    all_task = [executer.submit(self.download, update_job, self.tboard_path) for update_job in
+                                update_job_list[begin_index:begin_index + j + 1]]
+                    wait(all_task)
+                    begin_index = begin_index + j + 1
+                    print('inner job 先下载的已经完成', begin_index)
+                    break
+            all_task = [executer.submit(self.download, update_job, self.tboard_path) for update_job in update_job_list[begin_index:i + step]]
             wait(all_task)
 
             # 根据是否下载下来更新json文件
@@ -118,8 +136,9 @@ class JobCacheProxy:
 
     @staticmethod
     def unzip_job(job, tboard_path):
+        # 这里解压会遇到问题，子包还没有下载下来的话，解压子包就是用的旧包
         job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job['job_label']}.zip")
-        logger.info(job_msg_name)
+        logger.info('解压中----', job_msg_name)
         if not os.path.exists(os.path.join(tboard_path, job["job_label"])):
             with zipfile.ZipFile(job_msg_name, 'r') as zip_ref:
                 zip_ref.extractall(os.path.join(tboard_path, job["job_label"]))

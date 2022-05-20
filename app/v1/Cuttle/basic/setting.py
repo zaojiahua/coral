@@ -75,18 +75,19 @@ camera_params_5 = [("OffsetY", 0),
                    ('BalanceRatio', 950),
                    ('BalanceRatioSelector', 2, 'enum'),
                    ('BalanceRatio', 1850)]
-# ("PixelFormat", 0x02180014, 'enum')]
+# ("PixelFormat", 0x01080009, 'enum')]
+
 if CORAL_TYPE == 5.2:
     camera_params_5 = camera_params_5 + [('ADCBitDepth', 0, 'enum'),
                                          ("PixelFormat", 0x02180014, 'enum'),
-                                         ("ExposureTime", 8000.0)]
+                                         ("ExposureTime", 6000.0)]
 else:
     camera_params_5 = camera_params_5 + [('ADCBitDepth', 2, 'enum'),
                                          ("PixelFormat", 0x01080009, 'enum'),
                                          ("ExposureTime", 3500.0)]
 
 camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
-camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 24.0),
+camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
                                       ('GammaEnable', True),
                                       ('Gamma', 0.7000)]
 camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 10.0)]

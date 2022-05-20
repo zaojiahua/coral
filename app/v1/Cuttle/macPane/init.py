@@ -76,8 +76,8 @@ def recover_device(executer, logger):
             print(repr(e))
             pass
 
-        # 开启执行任务的线程和获取电量信息的线程
-        if device_obj.status != DeviceStatus.ERROR and math.floor(CORAL_TYPE) != 5:
+        # 开启执行任务的线程和获取电量信息的线程 五型柜可能有僚机
+        if device_obj.status != DeviceStatus.ERROR:
             recover_root(device_obj.device_label, device_obj.connect_number)
 
         aide_monitor_instance = AideMonitor(device_obj)

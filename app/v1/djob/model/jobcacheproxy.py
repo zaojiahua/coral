@@ -138,7 +138,7 @@ class JobCacheProxy:
     def unzip_job(job, tboard_path):
         # 这里解压会遇到问题，子包还没有下载下来的话，解压子包就是用的旧包
         job_msg_name = os.path.join(JOB_SYN_RESOURCE_DIR, f"{job['job_label']}.zip")
-        logger.info('解压中----', job_msg_name)
+        logger.info(f'解压中----{job_msg_name}')
         if not os.path.exists(os.path.join(tboard_path, job["job_label"])):
             with zipfile.ZipFile(job_msg_name, 'r') as zip_ref:
                 zip_ref.extractall(os.path.join(tboard_path, job["job_label"]))

@@ -52,16 +52,18 @@ class JobCacheProxy:
                         update_job_list.append(job)
                     update_job_labels.append(job_label)
                     temp[job_label] = job["updated_time"]
+                    return 1
+            return 0
 
         for job in self.jobs:
             # 没有缓存的zip或zip需要更新
             find_update_job_list(job)
             if job.get("inner_job", []):
                 for inner_job in job["inner_job"]:
-                    find_update_job_list(inner_job, inner_job=True)
-                    if transition_inner_job is None:
+                    is_find = find_update_job_list(inner_job, inner_job=True)
+                    if transition_inner_job is None and is_find:
                         transition_inner_job = inner_job['job_label']
-                        print('transition inner job is:', transition_inner_job)
+                        print('中间的inner job是:', transition_inner_job)
 
         # 判断所有文件是否成功
         sync_success = True

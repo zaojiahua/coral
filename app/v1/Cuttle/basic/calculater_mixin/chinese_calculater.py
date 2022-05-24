@@ -46,7 +46,7 @@ class ChineseMixin(object):
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        ret, binary = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
+        ret, binary = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
 
         # 通过sobel算子，获取高频部分
         sobel_x = cv2.Scharr(binary, cv2.CV_64F, 1, 0)
@@ -57,7 +57,7 @@ class ChineseMixin(object):
 
         # 通过腐蚀和膨胀使得文字部分成为一块一块的区域，方便获取轮廓
         element1 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (23, 23))
+        element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 25))
         dilation = cv2.dilate(sobel, element2, iterations=1)
         erosion = cv2.erode(dilation, element1, iterations=1)
         # dilation = cv2.dilate(erosion, element2, iterations=1)
@@ -88,7 +88,7 @@ class ChineseMixin(object):
         # 查找位于中心线上的三个点
         three_point = []
         for contour_points in target_contours:
-            if abs(contour_points[0][0] - w / 2) < 10:
+            if abs(contour_points[0][0] - w / 2) < 20:
                 three_point.append(contour_points)
                 # cv2.putText(img, '1', contour_points[0], cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
         # 直接使用最上面的三个
@@ -112,7 +112,7 @@ class ChineseMixin(object):
                 if len(point_level) >= THREE_POINT:
                     point_level = sorted(point_level, key=lambda x: x[1])
                     # 第一个点是point本身
-                    if abs(point_level[1][1] - point_level[2][1]) < 10:
+                    if abs(point_level[1][1] - point_level[2][1]) < 15:
                         point_level = point_level[:THREE_POINT]
                         order_point = sorted(point_level, key=lambda x: x[0][0][0])
                         # print(order_point)

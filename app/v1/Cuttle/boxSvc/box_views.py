@@ -73,7 +73,7 @@ class SetPort(MethodView):
             return jsonify({"status": "fail"}), 400
         power_total_nums = power_box_obj.total_number
         try:
-            if power_total_nums == 16:
+            if power_total_nums == 16 or power_total_nums == 8:
                 params_dict['action'] = True if params_dict['action'] == 'on' else False
             else:
                 params_dict['action'] = True if params_dict['action'] == 'off' else False
@@ -188,7 +188,10 @@ def parse_rev_data(port, rev_data, init_status, num):
     if num == 8:
         s = hexToBinary(rev_data[6:8])
         portState = int(s[num - int(port[-2:])])
-        status = bool(portState) ^ init_status
+        if init_status:
+            status = True if portState == 1 else False
+        else:
+            status = False if portState == 1 else True
         return status
     else:
         s8 = hexToBinary(rev_data[6:8])

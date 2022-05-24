@@ -284,6 +284,8 @@ class AdbHandler(Handler, ChineseMixin):
         if battery_level is None:
             self._model.logger.error("Get the battery.dat file but unable to obtain power")
             return
+        print("battery fail mark, 根据充电策略充电.....battery_level: ", battery_level)
+        self.set_power_port_status_by_battery(battery_level)
         from app.v1.device_common.device_model import Device
         from app.libs.http_client import request
         json_data = {

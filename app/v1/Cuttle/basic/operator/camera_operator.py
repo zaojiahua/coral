@@ -137,10 +137,10 @@ def camera_init_hk(camera_id, device_object, **kwargs):
             pass
         else:
             # 这里的4和16是软件设置的时候，必须是4和16的倍数
-            width = int(device_object.x2) - int(device_object.x1)
-            offset_x = int(device_object.x1)
-            height = int(device_object.y2) - int(device_object.y1)
-            offset_y = int(device_object.y1)
+            width = int(device_object.roi_x2) - int(device_object.roi_x1)
+            offset_x = int(device_object.roi_x1)
+            height = int(device_object.roi_y2) - int(device_object.roi_y1)
+            offset_y = int(device_object.roi_y1)
             print('设置的roi是：', width, offset_x, height, offset_y)
             check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
             check_result(CamObj.MV_CC_SetIntValue, 'Height', height)
@@ -317,7 +317,7 @@ class CameraHandler(Handler):
                 while get_global_value(CAMERA_IN_LOOP):
                     try:
                         image = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()['image']
-                        image = np.rot90(image, 3)
+                        image = np.rot90(self.get_roi(image, False), 3)
                         self.back_up_dq.append(image)
                     except IndexError:
                         # 拿的速度太快的话可能还没有存进去
@@ -335,7 +335,7 @@ class CameraHandler(Handler):
                     # new_camera_mtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
                     # image = cv2.undistort(image, mtx, dist, None, new_camera_mtx)
                     if not self.original:
-                        image = np.rot90(image, 3)
+                        image = np.rot90(self.get_roi(image, False), 3)
 
                 try:
                     self.src = image
@@ -447,12 +447,17 @@ class CameraHandler(Handler):
             del frame
         self.frames.clear()
 
-    def get_roi(self, src):
+    def get_roi(self, src, multi=True):
         if int(self._model.y1) == 0 and int(self._model.y2) == 0 and int(self._model.x1) == 0 and int(
                 self._model.x2) == 0:
             return src
-        # 只针对多摄像机，多摄像机没有把参数设置到摄像机上，后续有需求可以直接设置到相机的参数上
-        return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
+        if multi:
+            # 只针对多摄像机，多摄像机没有把参数设置到摄像机上，后续有需求可以直接设置到相机的参数上
+            return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
+        else:
+            # 硬件roi获取的是一个较大的区域，需要再次通过软件roi将区域缩到用户设置的roi大小
+            return src[int(self._model.y1) - int(self._model.roi_y1): int(self._model.roi_y2) - int(self._model.y2),
+                       int(self._model.x1) - int(self._model.roi_x1): int(self._model.roi_x2) - int(self._model.x2)]
 
     # 从多个相机中获取同步的内容
     def get_syn_frame(self, camera_ids):

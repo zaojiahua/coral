@@ -264,7 +264,7 @@ class HandHandler(Handler, DefaultMixin):
     @allot_serial_obj
     def straight_swipe(self, axis, **kwargs):
         # 采用直角梯形滑动，目前仅支持上滑
-        if axis[1][1] <= axis[0][1]:
+        if axis[1][1] >= axis[0][1]:
             raise InvalidCoordinates
         for axis_index in range(len(axis)):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])

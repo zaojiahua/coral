@@ -64,10 +64,6 @@ def send_device_leave_to_reef(device, logger):
 
 
 def recover_device(executer, logger):
-    # monkey监控策略
-    if math.floor(CORAL_TYPE) < 5:
-        executer.submit(MonkeyManager().monkey_loop)
-
     res = Device.request_device_info()
     for device_dict in res.get("devices"):
         device_label = device_dict.get('device_label')
@@ -82,6 +78,10 @@ def recover_device(executer, logger):
         except (AttributeError, APIException) as e:
             print(repr(e))
             pass
+
+        # 开启执行任务的线程和获取电量信息的线程 五型柜可能有僚机
+        if device_obj.status != DeviceStatus.ERROR:
+            recover_root(device_obj.device_label, device_obj.connect_number)
 
         aide_monitor_instance = AideMonitor(device_obj)
 

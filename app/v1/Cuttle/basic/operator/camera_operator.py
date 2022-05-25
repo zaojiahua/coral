@@ -141,7 +141,7 @@ def camera_init_hk(camera_id, device_object, **kwargs):
             offset_x = int(device_object.roi_x1)
             height = int(device_object.roi_y2) - int(device_object.roi_y1)
             offset_y = int(device_object.roi_y1)
-            print('设置的roi是：', width, offset_x, height, offset_y)
+            print('设置的roi是：', width, height, offset_x, offset_y)
             check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
             check_result(CamObj.MV_CC_SetIntValue, 'Height', height)
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offset_x)
@@ -456,8 +456,8 @@ class CameraHandler(Handler):
             return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
         else:
             # 硬件roi获取的是一个较大的区域，需要再次通过软件roi将区域缩到用户设置的roi大小
-            return src[int(self._model.y1) - int(self._model.roi_y1): int(self._model.roi_y2) - int(self._model.y2),
-                       int(self._model.x1) - int(self._model.roi_x1): int(self._model.roi_x2) - int(self._model.x2)]
+            return src[int(self._model.y1) - int(self._model.roi_y1): int(self._model.y2) - int(self._model.roi_y1),
+                       int(self._model.x1) - int(self._model.roi_x1): int(self._model.x2) - int(self._model.roi_x1)]
 
     # 从多个相机中获取同步的内容
     def get_syn_frame(self, camera_ids):

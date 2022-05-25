@@ -87,8 +87,6 @@ def recover_device(executer, logger):
 
         # 5类型的柜子，都没有ADB
         if device_obj.status != DeviceStatus.ERROR and math.floor(CORAL_TYPE) < 5:
-            # 获取root权限
-            recover_root(device_obj.device_label, device_obj.connect_number)
             # 获取电量信息
             executer.submit(device_obj.start_device_async_loop, aide_monitor_instance)
 

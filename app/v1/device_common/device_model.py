@@ -387,6 +387,11 @@ class Device(BaseModel):
         self.y1 = str(int(data.get("inside_upper_left_y") or 0))
         self.x2 = str(int(data.get("inside_under_right_x") or 0))
         self.y2 = str(int(data.get("inside_under_right_y") or 0))
+        # 这里将所有的值，设置为16的倍数，因为相机设置roi的时候，要求必须是16的倍数
+        self.x1 = str(int(self.x1) - int(self.x1) % 16)
+        self.y1 = str(int(self.y1) - int(self.y1) % 16)
+        self.x2 = str(int(self.x2) - int(self.x2) % 16)
+        self.y2 = str(int(self.y2) - int(self.y2) % 16)
 
         return 0
 
@@ -517,6 +522,8 @@ class Device(BaseModel):
         else:
             # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
             if absolute:
+                # absolute为真的时候，代表的是要通过截图到的图片计算 该图片是相机在roi模式下拍摄到的图片
+                # 但是宽高不一定是roi简单的相减 因为相机要求roi设置的时候，需要是4和16的倍数
                 x_location_per = x / (roi[3] - roi[1])
                 y_location_per = y / (roi[2] - roi[0])
             else:

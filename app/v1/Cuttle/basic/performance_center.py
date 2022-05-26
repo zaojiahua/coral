@@ -18,7 +18,6 @@ EXTRA_PIC_NUMBER = 40
 
 
 class PerformanceCenter(object):
-
     # dq存储起始点前到终止点后的每一帧图片
     back_up_dq = deque(maxlen=CameraMax * 4)
 
@@ -110,7 +109,8 @@ class PerformanceCenter(object):
                 # 裁剪图片获取当前和下两张
                 # start点的确认主要就是判定是否特定位置全部变成了黑色，既_black_field方法 （主要）/丢帧检测时是判定区域内有无变化（稀有）
                 # 这部分如果是判定是否变成黑色（黑色就是机械臂刚要点下的时候，挡住图标所以黑色），其实只用到当前图，下两张没有使用
-                picture, next_picture, third_pic, timestamp = self.picture_prepare(number, use_icon_scope=use_icon_scope)
+                picture, next_picture, third_pic, timestamp = self.picture_prepare(number,
+                                                                                   use_icon_scope=use_icon_scope)
                 if picture is None:
                     set_global_value(CAMERA_IN_LOOP, False)
                     raise VideoStartPointNotFound
@@ -262,8 +262,12 @@ class PerformanceCenter(object):
         # 在结尾图片上画上选框（可能是画图标，也可能是画判定选区）
         is_icon = not (self.icon_scope is None or len(self.icon_scope) < 1)
         scope = self.icon_scope if is_icon else self.scope
-        h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0].shape[:2]
-        area = [int(i) if i > 0 else 0 for i in
+        if isinstance(self.back_up_dq[0], dict):
+            h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0][
+                                                                                              'image'].shape[:2]
+        else:
+            h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0].shape[:2]
+        area = [int(i) if i > 0 else 0 for i in \
                 [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
             if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
         x1, y1 = area[:2]

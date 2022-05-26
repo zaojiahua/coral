@@ -131,6 +131,15 @@ def camera_init_hk(camera_id, device_object, **kwargs):
     else:
         check_result(CamObj.MV_CC_SetEnumValue, 'TriggerMode', 0)
 
+
+    if kwargs.get("modify_fps") and CORAL_TYPE == 5.2:
+        # Tcab-5se在进行性能测试时需要相机帧率
+        for key in camera_params_52_performance:
+            if len(key) == 3 and key[2] == 'enum':
+                check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
+            elif isinstance(key[1], float):
+                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
+
     # 设置roi 多摄像机暂时不设置
     if not kwargs.get('original') and CORAL_TYPE != 5.3:
         if int(device_object.x1) == int(device_object.x2) == 0:
@@ -260,6 +269,7 @@ class CameraHandler(Handler):
         self.record_time = kwargs.get('record_time') or 1
         # 性能测试的时候，用来实时的存放图片，如果传入这个参数，则可以实时的获取dp里边的图片
         self.back_up_dq = kwargs.get('back_up_dq')
+        self.modify_fps = kwargs.get("modify_fps")
 
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
@@ -301,7 +311,8 @@ class CameraHandler(Handler):
                                      temporary=temporary,
                                      original=self.original,
                                      sync_camera=sync_camera,
-                                     feature_test=feature_test)
+                                     feature_test=feature_test,
+                                     modify_fps=self.modify_fps)
             if camera_id not in CamObjList and camera_id != camera_ids[-1]:
                 # 必须等待一段时间 同时初始化有bug发生 以后解决吧
                 time.sleep(0.5)
@@ -509,7 +520,9 @@ class CameraHandler(Handler):
 
             for r in range(-ymin, rows):
                 weight = weights[r]
-                result[r, -xmin: cols, :] = result_copy[r, -xmin: cols, :] * (1 - weight) + img1[r - (-ymin), 0: cols - (-xmin), :] * weight
+                result[r, -xmin: cols, :] = result_copy[r, -xmin: cols, :] * (1 - weight) + img1[r - (-ymin),
+                                                                                            0: cols - (-xmin),
+                                                                                            :] * weight
 
             # 释放内存
             del img1

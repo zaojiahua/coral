@@ -84,6 +84,7 @@ camera_params_5 = [("OffsetY", 0),
 # ("PixelFormat", 0x01080009, 'enum')]
 
 if CORAL_TYPE == 5.2:
+    # Tcab-5se进行功能测试的相机参数
     camera_params_5 = camera_params_5 + [('ADCBitDepth', 0, 'enum'),
                                          ("PixelFormat", 0x02180014, 'enum'),
                                          ("ExposureTime", 6000.0)]
@@ -93,9 +94,15 @@ else:
                                          ("ExposureTime", 3500.0)]
 
 camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+# Tcab-5se功能测试使用的参数
 camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
                                       ('GammaEnable', True),
                                       ('Gamma', 0.7000)]
+# Tcab-5se切换到性能测试时，相机需要修改的帧率相关参数
+camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
+                                ("PixelFormat", 0x01080009, 'enum'),
+                                ("ExposureTime", 3500.0),
+                                ("AcquisitionFrameRate", 240.0)]
 camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 10.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),

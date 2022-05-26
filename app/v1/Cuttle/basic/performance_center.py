@@ -386,7 +386,7 @@ class PerformanceCenter(object):
         # 这里会阻塞，一直在获取图片
         try:
             device_obj.get_snapshot(image_path='', max_retry_time=1,
-                                    timeout=10 * 60, back_up_dq=self.back_up_dq)
+                                    timeout=10 * 60, back_up_dq=self.back_up_dq, modify_fps=True)
         except Exception as e:
             print(e)
             traceback.print_exc()

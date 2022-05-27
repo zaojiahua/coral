@@ -516,7 +516,7 @@ class DJobFlow(BaseModel):
         if self.rds.last_node == INNER_DJOB_TYPE:
             self.inner_job_list[-1].stop_flow()
         else:
-            stop_eblock(self.current_djob_flow.rds.eblock_list[-1].pk)
+            stop_eblock(self.current_eblock.pk)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
 from app.v1.Cuttle.paneDoor.door_keeper import DoorKeeper
+from app.v1.stew.monkey_manager import MonkeyManager
 
 key_parameter_list = ["camera", "robot_arm"]
 
@@ -65,13 +66,15 @@ def send_device_leave_to_reef(device, logger):
 def recover_device(executer, logger):
     res = Device.request_device_info()
     for device_dict in res.get("devices"):
-        print('获取到的设备信息有：', device_dict.get('device_label'))
-        device_obj = Device(pk=device_dict.get("device_label"))
+        device_label = device_dict.get('device_label')
+        print('获取到的设备信息有：', device_label)
+        device_obj = Device(pk=device_label)
         device_obj.update_attr(**device_dict)
+
         try:
             # 1和2类型的柜子，不涉及到其他硬件，3往上的会涉及到其他硬件，所以需要初始化
             if CORAL_TYPE >= 3:
-                DoorKeeper.set_arm_or_camera(device_dict.get("device_label"))
+                DoorKeeper.set_arm_or_camera(device_label)
         except (AttributeError, APIException) as e:
             print(repr(e))
             pass
@@ -81,13 +84,16 @@ def recover_device(executer, logger):
             recover_root(device_obj.device_label, device_obj.connect_number)
 
         aide_monitor_instance = AideMonitor(device_obj)
-        t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
-        t.setName(device_dict.get("device_label"))
-        t.start()
 
         # 5类型的柜子，都没有ADB
-        if math.floor(CORAL_TYPE) != 5:
+        if device_obj.status != DeviceStatus.ERROR and math.floor(CORAL_TYPE) < 5:
+            # 获取电量信息
             executer.submit(device_obj.start_device_async_loop, aide_monitor_instance)
+
+        # 开启执行任务的线程
+        t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
+        t.setName(device_label)
+        t.start()
 
 
 def recover_root(device_label, connect_num):

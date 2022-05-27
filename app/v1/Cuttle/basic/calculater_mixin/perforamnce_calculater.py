@@ -11,7 +11,7 @@ from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS_HARD
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS_HARD, SENSOR
 from redis_init import redis_client
 
 
@@ -71,7 +71,11 @@ class PerformanceMinix(object):
             ocr_obj.add_bias(snap_x0, snap_y0)
             executer = ThreadPoolExecutor()
             # 异步延迟执行点击操作，确保另外一个线程的照片可以涵盖到这个操作
-            exec_task = executer.submit(self.delay_exec, ocr_obj.point).add_done_callback(executor_callback)
+            executer.submit(self.delay_exec,
+                            ocr_obj.point,
+                            is_init=True,
+                            performance_start_point=True if SENSOR else False)\
+                .add_done_callback(executor_callback)
             # 兼容其他多选区的格式，增加一层
             # 因为PerformanceCenter内部需要根据起点icon x方向位置，计算阴影补偿，所以此处再统一换回摄像头下的相对坐标
             data["icon_areas"] = [[icon_real_position_camera[0] / w, icon_real_position_camera[1] / h,

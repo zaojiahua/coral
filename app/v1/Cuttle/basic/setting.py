@@ -25,6 +25,7 @@ Z_DOWN = None
 ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
+SENSOR = False
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
     # 5的升级版是中心对齐的
     try:
@@ -33,23 +34,27 @@ if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
         m_location_center = None
     try:
         from app.config.ip import m_location
-    except Exception:
+    except ImportError:
         m_location = [38, 13, -24]  # Tcab-5现有夹具m_location
     set_global_value('m_location_original', m_location)
 elif CORAL_TYPE == 5.1:
     try:
         from app.config.ip import m_location_center
-    except Exception:
+    except ImportError:
         m_location_center = [157, 202.5, -24]
 elif CORAL_TYPE == 5.3:
     try:
         from app.config.ip import Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION, ARM_MAX_X
-    except Exception:
+    except ImportError:
         Z_DOWN = -27
         ARM_MOVE_REGION = [201, 240]
         DOUBLE_ARM_MOVE_REGION = [365, 239]
         ARM_MAX_X = 340
     set_global_value('Z_DOWN', Z_DOWN)
+try:
+    from app.config.ip import SENSOR
+except ImportError:
+    pass
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -57,6 +62,7 @@ rotate_hand_serial_obj_dict = {}
 hand_origin_cmd_prefix = 'Hand'
 hand_used_list = []
 camera_dq_dict = {}
+sensor_serial_obj_dict = {}
 
 # 相机的参数和柜子类型紧密相关，所以应该根据柜子类型来区分，而不是功能测试还是性能测试
 # 因为不论功能测试，还是性能测试，用的相机硬件都是一样的
@@ -78,6 +84,7 @@ camera_params_5 = [("OffsetY", 0),
 # ("PixelFormat", 0x01080009, 'enum')]
 
 if CORAL_TYPE == 5.2:
+    # Tcab-5se进行功能测试的相机参数
     camera_params_5 = camera_params_5 + [('ADCBitDepth', 0, 'enum'),
                                          ("PixelFormat", 0x02180014, 'enum'),
                                          ("ExposureTime", 6000.0)]
@@ -87,9 +94,15 @@ else:
                                          ("ExposureTime", 3500.0)]
 
 camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+# Tcab-5se功能测试使用的参数
 camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
                                       ('GammaEnable', True),
                                       ('Gamma', 0.7000)]
+# Tcab-5se切换到性能测试时，相机需要修改的帧率相关参数
+camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
+                                ("PixelFormat", 0x01080009, 'enum'),
+                                ("ExposureTime", 3500.0),
+                                ("AcquisitionFrameRate", 240.0)]
 camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 10.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
@@ -101,6 +114,16 @@ camera_params_51 = [("OffsetY", 0),
                     ("AcquisitionFrameRate", 60.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
+# 5L改进版参数
+# camera_params_51 = [("OffsetY", 0),
+#                     ("OffsetX", 0),
+#                     ("Width", 1440),
+#                     ("Height", 1080),
+#                     ("ExposureTime", 3500.0),
+#                     ("Gain", 2.5),
+#                     ("AcquisitionFrameRate", 240.0),
+#                     ("AcquisitionFrameRateEnable", True),
+#                     ("PixelFormat", 0x01080009, 'enum')]
 
 high_exposure_params = [("ExposureTime", 200000.0),
                         ("Gain", 15)]
@@ -123,7 +146,8 @@ except ImportError:
 HAND_MAX_Z = 5
 
 if CORAL_TYPE == 5.3:
-    Z_UP = -22
+    # Z_UP = -22
+    Z_UP = 0
     Z_START = -32
     arm_wait_position = f"G01 X0Y0Z{Z_UP}F15000 \r\n"
     HAND_MAX_X = DOUBLE_ARM_MOVE_REGION[0]

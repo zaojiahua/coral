@@ -131,6 +131,15 @@ def camera_init_hk(camera_id, device_object, **kwargs):
     else:
         check_result(CamObj.MV_CC_SetEnumValue, 'TriggerMode', 0)
 
+
+    if kwargs.get("modify_fps") and CORAL_TYPE == 5.2:
+        # Tcab-5se在进行性能测试时需要相机帧率
+        for key in camera_params_52_performance:
+            if len(key) == 3 and key[2] == 'enum':
+                check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
+            elif isinstance(key[1], float):
+                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
+
     # 设置roi 多摄像机暂时不设置
     if not kwargs.get('original') and CORAL_TYPE != 5.3:
         if int(device_object.x1) == int(device_object.x2) == 0:
@@ -261,6 +270,7 @@ class CameraHandler(Handler):
         self.record_time = kwargs.get('record_time') or 1
         # 性能测试的时候，用来实时的存放图片，如果传入这个参数，则可以实时的获取dp里边的图片
         self.back_up_dq = kwargs.get('back_up_dq')
+        self.modify_fps = kwargs.get("modify_fps")
 
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
@@ -302,7 +312,8 @@ class CameraHandler(Handler):
                                      temporary=temporary,
                                      original=self.original,
                                      sync_camera=sync_camera,
-                                     feature_test=feature_test)
+                                     feature_test=feature_test,
+                                     modify_fps=self.modify_fps)
             if camera_id not in CamObjList and camera_id != camera_ids[-1]:
                 # 必须等待一段时间 同时初始化有bug发生 以后解决吧
                 time.sleep(0.5)
@@ -364,9 +375,13 @@ class CameraHandler(Handler):
                 # 发送同步信号
                 with CameraUsbPower(timeout=timeout):
                     while get_global_value(CAMERA_IN_LOOP):
-                        self.merge_frame(camera_ids, 5)
+                        # 必须等待，否则while死循环导致其他线程没有机会执行
+                        time.sleep(1)
+                        if get_global_value(CAMERA_IN_LOOP):
+                            self.merge_frame(camera_ids, 60)
                 # 把剩下的图片都合成完毕
-                self.merge_frame(camera_ids)
+                if get_global_value(CAMERA_IN_LOOP):
+                    self.merge_frame(camera_ids, 60)
             else:
                 if self.record_video:
                     timeout = self.record_time
@@ -384,9 +399,9 @@ class CameraHandler(Handler):
                 self.back_up_dq = []
                 self.merge_frame(camera_ids)
 
-                for merged_img in self.back_up_dq:
-                    del merged_img
-                    # cv2.imwrite(f'camera/{index}.png', merged_img)
+                # for merged_img in self.back_up_dq:
+                #     del merged_img
+                # cv2.imwrite(f'camera/{index}.png', merged_img)
                 self.back_up_dq.clear()
 
             # 清空图片内存
@@ -423,7 +438,7 @@ class CameraHandler(Handler):
         self.get_syn_frame(camera_ids)
 
         if len(self.back_up_dq) > 0:
-            image = self.back_up_dq[0]
+            image = self.back_up_dq[0]['image']
             self.src = image
 
             # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
@@ -511,7 +526,9 @@ class CameraHandler(Handler):
 
             for r in range(-ymin, rows):
                 weight = weights[r]
-                result[r, -xmin: cols, :] = result_copy[r, -xmin: cols, :] * (1 - weight) + img1[r - (-ymin), 0: cols - (-xmin), :] * weight
+                result[r, -xmin: cols, :] = result_copy[r, -xmin: cols, :] * (1 - weight) + img1[r - (-ymin),
+                                                                                            0: cols - (-xmin),
+                                                                                            :] * weight
 
             # 释放内存
             del img1
@@ -523,10 +540,9 @@ class CameraHandler(Handler):
             del frames
             del result_copy
 
-            # self.back_up_dq[frame_num] = result
             if not self.original:
                 result = np.rot90(self.get_roi(result))
-            self.back_up_dq.append(result)
+            self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1})
             del result
 
         del xmin, ymin, xmax, ymax, ht, h, rows, cols

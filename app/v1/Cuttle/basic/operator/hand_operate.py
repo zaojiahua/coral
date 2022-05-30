@@ -11,12 +11,12 @@ from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, Choo
     InsufficientSafeDistance, RepeatTimeInvalid
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
-from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower
+from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower, SensorSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, wait_time, \
+    hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X
+    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -62,8 +62,15 @@ def rotate_hand_init(arm_com_id, device_obj, **kwargs):
     ]
     for g_orders in hand_reset_orders:
         hand_serial_obj.send_single_order(g_orders)
-        response = hand_serial_obj.recv(buffer_size=64, is_init=True)
+        hand_serial_obj.recv(buffer_size=64, is_init=True)
     return 0
+
+
+def sensor_init(arm_com_id, device_obj, **kwargs):
+    print('初始化传感器', arm_com_id, '&' * 10)
+    sensor_obj = SensorSerial(baud_rate=9600, timeout=2)
+    sensor_obj.connect(arm_com_id)
+    sensor_serial_obj_dict[device_obj.pk + arm_com_id] = sensor_obj
 
 
 def pre_point(point, arm_num=0):
@@ -124,6 +131,8 @@ class HandHandler(Handler, DefaultMixin):
         super(HandHandler, self).__init__(*args, **kwargs)
         self.double_hand_point = None
         self.ignore_reset = False
+        self.performance_start_point = kwargs.get('performance_start_point')
+        self.kwargs = kwargs
 
     def before_execute(self):
         # 先转换相对坐标到绝对坐标
@@ -537,8 +546,10 @@ class HandHandler(Handler, DefaultMixin):
             click_orders.extend(click_order)
         return click_orders
 
-    @staticmethod
-    def __single_click_order(axis):
+    def __single_click_order(self, axis):
+        performance_start_speed = MOVE_SPEED
+        if self.performance_start_point:
+            performance_start_speed = 500
         return [
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2] + 5, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2], MOVE_SPEED),
@@ -575,7 +586,7 @@ class HandHandler(Handler, DefaultMixin):
         if normal:
             commend_list = [
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z + 5, MOVE_SPEED),
-                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z - 1, MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
                 'G01 X%0.1fY%0.1fF%d \r\n' % (end_x, end_y, speed),
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
             ]
@@ -617,7 +628,7 @@ class HandHandler(Handler, DefaultMixin):
             start_x, end_x = -start_x, -end_x
         return [
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, -start_y, Z_START, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, -start_y, start_z - 1, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, -start_y, start_z, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, -end_y, start_z + 3, speed),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, -y4, Z_UP, MOVE_SPEED),
         ]

@@ -5,7 +5,6 @@ import shutil
 import subprocess
 import sys
 import time
-import traceback
 
 import cv2
 import numpy as np
@@ -16,14 +15,15 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com
-from app.execption.outer.error_code.camera import ArmReInit, NoCamera, PerformancePicNotFound
+    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor
+from app.execption.outer.error_code.camera import PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.hand_serial import controlUsbPower
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
-from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler, judge_start_x, pre_point
+from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler, judge_start_x, \
+    pre_point, sensor_init
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
@@ -36,7 +36,6 @@ from app.v1.tboard.views.get_dut_progress import get_dut_progress_inner
 from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
 from redis_init import redis_client
 
-from concurrent.futures._base import TimeoutError
 import copy
 
 ip = copy.copy(HOST_IP)
@@ -186,8 +185,16 @@ class PaneConfigView(MethodView):
             function, attribute = (rotate_hand_init, "has_rotate_arm")
         elif port.split("/")[-1].isdigit():
             function, attribute = (camera_start, "has_camera")
+        # 传感器
+        elif port.startswith('/dev/arm_sensor_'):
+            com_index = arm_com_1_sensor.split('_')[-1]
+            function, attribute = (sensor_init, "has_sensor_" + com_index)
+        # or是针对win的条件，方便测试
+        elif port.startswith('/dev/arm_sensor') or port == 'COM27':
+            function, attribute = (sensor_init, 'has_sensor')
         elif port.startswith('/dev/arm_'):
-            function, attribute = (hand_init, "has_arm_" + arm_com_1.split('_')[-1])
+            com_index = arm_com_1.split('_')[-1]
+            function, attribute = (hand_init, "has_arm_" + com_index)
         else:
             function, attribute = (hand_init, "has_arm")
             controlUsbPower(status='init')

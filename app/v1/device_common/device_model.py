@@ -36,7 +36,8 @@ class DeviceStatus(object):
 class Device(BaseModel):
     # attribute that only coral have
     exclude_list = ["src_list", "has_camera", "has_arm", "flag", "is_bind", "x_border", "y_border", "kx1", "kx2", "ky1",
-                    "ky2", "assis_1", "assis_2", "assis_3", "x1", "x2", "y1", "y2", 'subsidiarydevice', 'disconnect_times_timestamp']
+                    "ky2", "assis_1", "assis_2", "assis_3", "x1", "x2", "y1", "y2", 'subsidiarydevice',
+                    'disconnect_times_timestamp']
     # device basic attribute
     device_label = models.CharField()
     ip_address = models.CharField()
@@ -351,7 +352,8 @@ class Device(BaseModel):
         self._set_char("ply", kwargs, "phone_model", "ply")
 
         kwargs["manufacturer"] = kwargs.pop("phone_model").get("manufacturer") if kwargs.get("phone_model") else ""
-        self.manufacturer = kwargs.pop("manufacturer").get("manufacturer_name", "") if kwargs.get("manufacturer") else ""
+        self.manufacturer = kwargs.pop("manufacturer").get("manufacturer_name", "") if kwargs.get(
+            "manufacturer") else ""
         self.android_version = kwargs.pop("android_version").get("version", "") if kwargs.get("android_version") else ""
         self.rom_version = kwargs.pop("rom_version").get("version", "") if kwargs.get("rom_version") else ""
         self.monitor_index = kwargs.pop("monitor_index")[0].get("port", "") if kwargs.get("monitor_index") else ""
@@ -491,7 +493,8 @@ class Device(BaseModel):
         else:
             m_location = get_global_value('m_location_original')
             if m_location is not None:
-                set_global_value('m_location', [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
+                set_global_value('m_location',
+                                 [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
 
         if get_global_value('m_location'):
             self.screen_z = str(get_global_value('m_location')[2])
@@ -544,10 +547,12 @@ class Device(BaseModel):
 
     # 将截图获取统一到这里
     def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None,
-                     max_retry_time=None, record_video=False, record_time=0, timeout=None, back_up_dq=None):
+                     max_retry_time=None, record_video=False, record_time=0, timeout=None, back_up_dq=None,
+                     modify_fps=False):
         jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
-                       "execCmdList": [f"adb -s {connect_number if connect_number is not None else self.connect_number} "
-                                       f"exec-out screencap -p > {image_path}"],
+                       "execCmdList": [
+                           f"adb -s {connect_number if connect_number is not None else self.connect_number} "
+                           f"exec-out screencap -p > {image_path}"],
                        "device_label": self.device_label,
                        'high_exposure': high_exposure,
                        'original': original,
@@ -555,7 +560,8 @@ class Device(BaseModel):
                        'record_time': record_time,
                        'max_retry_time': max_retry_time,
                        'timeout': timeout,
-                       'back_up_dq': back_up_dq})
+                       'back_up_dq': back_up_dq,
+                       'modify_fps': modify_fps})
         if self.has_camera and connect_number is None:
             handler_type = "CameraHandler"
         else:

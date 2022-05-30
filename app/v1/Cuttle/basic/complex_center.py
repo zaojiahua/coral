@@ -174,10 +174,10 @@ class Complex_Center(object):
         if math.floor(CORAL_TYPE) == 5:
             if self.crop_offset != [0, 0, device.device_width, device.device_height]:
                 # 带有摄像头的中文输入，需要先恢复到整张图上的位置
-                pic_x = int(pic_x + int(self.crop_offset[0]))
-                pic_y = int(pic_y + int(self.crop_offset[1]))
-            self.cx = int(pic_x)
-            self.cy = int(pic_y)
+                pic_x = pic_x + self.crop_offset[0]
+                pic_y = pic_y + self.crop_offset[1]
+            self.cx = pic_x
+            self.cy = pic_y
         elif device.has_camera and device.has_arm:
             # 摄像头识别到的文字位置，需要根据手机屏幕与摄像头照片分辨率换算回实际手机上像素位置，带选区的识别需要在具体方法再做选区内坐标到完整图坐标的变换
             if self.crop_offset != [0, 0, device.device_width, device.device_height]:
@@ -379,7 +379,9 @@ class Complex_Center(object):
             cmd_list = [
                 f"bugreport {self.work_path}bugreport.zip"
             ]
-            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, BUG_REPORT_TIMEOUT, **self.kwargs)
+            # 传了俩个timeout 改成1个
+            self.kwargs['timeout'] = BUG_REPORT_TIMEOUT
+            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, **self.kwargs)
             handler_exec(request_body, kwargs.get("handler")[0])
             self.logger.debug("bug report finished ")
 

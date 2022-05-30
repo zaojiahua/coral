@@ -79,6 +79,10 @@ class Device(BaseModel):
     y1 = models.CharField()
     x2 = models.CharField()
     y2 = models.CharField()
+    roi_x1 = models.CharField()
+    roi_y1 = models.CharField()
+    roi_x2 = models.CharField()
+    roi_y2 = models.CharField()
     # 摄像头下多个按键的位置,储存的是屏幕截图中的坐标（paneview设置&重启服务恢复设备时，需要读取数据库中存的摄像头的下坐标值，并换算回截图中的坐标值）
     back_x = models.CharField()
     back_y = models.CharField()
@@ -389,6 +393,11 @@ class Device(BaseModel):
         self.y1 = str(int(data.get("inside_upper_left_y") or 0))
         self.x2 = str(int(data.get("inside_under_right_x") or 0))
         self.y2 = str(int(data.get("inside_under_right_y") or 0))
+        # 这里将所有的值，设置为16的倍数，因为相机设置roi的时候，要求必须是16的倍数
+        self.roi_x1 = str(int(self.x1) - int(self.x1) % 16)
+        self.roi_y1 = str(int(self.y1) - int(self.y1) % 16)
+        self.roi_x2 = str(int(self.x2) - int(self.x2) % 16 + 16)
+        self.roi_y2 = str(int(self.y2) - int(self.y2) % 16 + 16)
 
         return 0
 
@@ -520,6 +529,8 @@ class Device(BaseModel):
         else:
             # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
             if absolute:
+                # absolute为真的时候，代表的是要通过截图到的图片计算 该图片是相机在roi模式下拍摄到的图片
+                # 但是宽高不一定是roi简单的相减 因为相机要求roi设置的时候，需要是4和16的倍数
                 x_location_per = x / (roi[3] - roi[1])
                 y_location_per = y / (roi[2] - roi[0])
             else:

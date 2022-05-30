@@ -46,7 +46,7 @@ class ChineseMixin(object):
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        ret, binary = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
+        ret, binary = cv2.threshold(gray, 75, 255, cv2.THRESH_BINARY)
 
         # 通过sobel算子，获取高频部分
         sobel_x = cv2.Scharr(binary, cv2.CV_64F, 1, 0)

@@ -586,7 +586,7 @@ class HandHandler(Handler, DefaultMixin):
         if normal:
             commend_list = [
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z + 5, MOVE_SPEED),
-                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z - 1, MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
                 'G01 X%0.1fY%0.1fF%d \r\n' % (end_x, end_y, speed),
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
             ]
@@ -628,7 +628,7 @@ class HandHandler(Handler, DefaultMixin):
             start_x, end_x = -start_x, -end_x
         return [
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, -start_y, Z_START, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, -start_y, start_z - 1, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, -start_y, start_z, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, -end_y, start_z + 3, speed),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, -y4, Z_UP, MOVE_SPEED),
         ]

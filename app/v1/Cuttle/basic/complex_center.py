@@ -375,7 +375,9 @@ class Complex_Center(object):
             cmd_list = [
                 f"bugreport {self.work_path}bugreport.zip"
             ]
-            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, BUG_REPORT_TIMEOUT, **self.kwargs)
+            # 传了俩个timeout 改成1个
+            self.kwargs['timeout'] = BUG_REPORT_TIMEOUT
+            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, **self.kwargs)
             handler_exec(request_body, kwargs.get("handler")[0])
             self.logger.debug("bug report finished ")
 

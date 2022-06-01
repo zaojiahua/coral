@@ -8,13 +8,25 @@ from app.libs.http_client import request
 # 将自己的ip，机柜类型上报到数据库
 def cabinet_register():
     try:
+        """
+        这里的m_location用于传到reef，展示到前端并对其进行微调
+        且Reef和Cedar对柜子类型不敏感
+        所以左上角对齐和中心对齐都作为m_location 传出
+        """
+        from app.config.setting import m_location_center
+        m_location = m_location_center
+    except ImportError:
+        from app.config.setting import m_location
+        m_location = m_location
+        m_location_center = None
+    try:
         cabinet_id = HOST_IP.split(".")[-1]
-
         jsdata = {"cabinet_name": f"I'M {cabinet_id}#",
                   "ip_address": HOST_IP,
                   "is_delete": False,
                   "type": CORAL_TYPE_NAME[CORAL_TYPE],
-                  "id": cabinet_id}
+                  "id": cabinet_id,
+                  "m_location": m_location}
     except:
         cabinet_id = REEF_IP.split(".")[-1]
         jsdata = {"cabinet_name": "default_name"}

@@ -1,5 +1,6 @@
 import logging
 import os.path
+import platform
 import random
 import shutil
 import subprocess
@@ -15,7 +16,7 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor
+    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, PROJECT_SIBLING_DIR
 from app.execption.outer.error_code.camera import PerformancePicNotFound
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -349,6 +350,72 @@ class PaneClickTestView(MethodView):
                                                                   others_orders=press_orders[3:],
                                                                   wait_time=0)
         hand_serial_obj_dict.get(device_label).recv()
+
+
+class PaneUpdateMLocation(MethodView):
+    """
+    更新 5系列柜子的m_location
+    1. 接收从reef推送的最新的m_location数据
+        如果是中心点对齐，这里实际传入的是m_location_center的值
+        如果是左上角对齐，则是m_location的值
+    2. 更新注册设备的m_location相关信息
+    3. 更新至宿主机的/TMach_source/source/ip.py
+    """
+
+    def post(self):
+        """
+        {"m_location":[], "device_lable":""}
+        """
+        new_location_data = request.get_json()["m_location"]
+        device_label = request.get_json()["device_label"]
+        if get_global_value('m_location_center'):
+            set_global_value('m_location_center', new_location_data)
+            self.update_ip_file("m_location_center", new_location_data)
+        else:
+            set_global_value('m_location_original', new_location_data)
+            self.update_ip_file("m_location", new_location_data)
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=device_label)
+        device_obj.update_m_location()
+        return jsonify(dict(error_code=0))
+
+    @staticmethod
+    def update_ip_file(location_name, new_data):
+
+        if platform.system() == 'Linux':
+            file = '/app/source/ip.py'
+        else:
+            file = os.path.join(PROJECT_SIBLING_DIR, "app/config", "ip.py")
+        old_data = None
+        with open(file, "r", encoding="utf-8") as f:
+            content = ""
+            for line in f:
+                if location_name in line and not line.startswith("#"):
+                    old_data = line.split("=")[1].split("]")[0].strip(" ")
+                    print("老数据：", old_data)
+                content += line
+
+        if not old_data:
+            raise Exception("ip.py 配置文件有问题，请检查!")
+
+        new_content = content.replace(old_data, str(new_data).split("]")[0])
+
+        with open(file, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
+            f2.write(new_content)  # 将替换后的内容写入到test.txt文本文件中
+
+
+class PaneClickMLocation(MethodView):
+    """
+    点击m_location坐标，Z值需+设备厚度后再点击
+    """
+
+    def post(self):
+        m_location_data = request.get_json()["m_location"]
+        device_label = request.get_json()["device_label"]
+        device_obj = Device(pk=device_label)
+        m_location_data[2] = m_location_data[2] + device_obj.plyp
+        PaneClickTestView().click(device_label, m_location_data[0], m_location_data[1], m_location_data[2])
+        return jsonify(dict(error_code=0))
 
 
 # 5D等自动建立坐标系统

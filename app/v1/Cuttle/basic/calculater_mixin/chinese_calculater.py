@@ -43,10 +43,9 @@ class ChineseMixin(object):
         cv2.imwrite(f'/app/source/{now}.png', img)
         # 取一半以下的区域进行判断
         h, w, _ = img.shape
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         for thresh in [75, 60]:
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
             ret, binary = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)
 
             # 通过sobel算子，获取高频部分
@@ -145,8 +144,7 @@ class ChineseMixin(object):
                         min_abs_y_dis = abs_y_dis
                         final_result_contours = result_contours
                 return final_result_contours
-            else:
-                return None
+        return None
 
     def pinyin_2_coordinate(self, pinyin, device_obj, coor_tuple_list, keyboard_pos=None):
         # 把拼音转换成9宫格上的位置。

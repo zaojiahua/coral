@@ -74,6 +74,7 @@ class BouncedWordsView(MethodView):
 
     def post(self):
         request_data = request.get_json()
+        print('收到的干扰词更新是：', request_data)
 
         # add new bounced words
         bounced_words = BouncedWords.first()
@@ -87,6 +88,7 @@ class BouncedWordsView(MethodView):
     def delete(self):
         # 删除的时候遍历id
         request_data = request.get_json()
+        print('delete 收到的干扰词更新是：', request_data)
 
         # delete bounced words
         bounced_words = BouncedWords.first()

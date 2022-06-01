@@ -263,7 +263,7 @@ for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)), []):
         FpsMax = key[1]
         break
 # 性能测试参数有可能单独设置
-for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10) + '_performance'), []):
+for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)) + '_performance', []):
     if key[0] == 'AcquisitionFrameRate':
         FpsMax = key[1]
         break

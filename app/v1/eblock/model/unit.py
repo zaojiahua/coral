@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import time
+import zipfile
 from functools import lru_cache
 
 import cv2
@@ -312,6 +313,18 @@ class Unit(BaseModel):
                         cv2.imwrite(target_path, compress_pic)
                         # 后压缩
                         self.pngquant_compress(target_path)
+
+        # 压缩log文件
+        for file in os.listdir(handler.rds_path):
+            if file.endswith('.log'):
+                target_path = os.path.join(handler.rds_path, file)
+                filename = os.path.splitext(file)[0] + '.zip'
+                zip_file_name = os.path.join(handler.rds_path, filename)
+                with zipfile.ZipFile(zip_file_name, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+                    _, name = os.path.split(target_path)
+                    zf.write(target_path, arcname=name)
+                # 删除原来的文件
+                os.remove(target_path)
 
     @staticmethod
     def pngquant_compress(fp):

@@ -410,11 +410,13 @@ class PaneClickMLocation(MethodView):
     """
 
     def post(self):
-        m_location_data = request.get_json()["m_location"]
+        m_location_data_x = request.get_json()["m_location_x"]
+        m_location_data_y = request.get_json()["m_location_y"]
+        m_location_data_z = request.get_json()["m_location_z"]
         device_label = request.get_json()["device_label"]
         device_obj = Device(pk=device_label)
-        m_location_data[2] = m_location_data[2] + device_obj.plyp
-        PaneClickTestView().click(device_label, m_location_data[0], m_location_data[1], m_location_data[2])
+        m_location_data_z = m_location_data_z + device_obj.plyp
+        PaneClickTestView().click(device_label, m_location_data_x, m_location_data_y, m_location_data_z)
         return jsonify(dict(error_code=0))
 
 

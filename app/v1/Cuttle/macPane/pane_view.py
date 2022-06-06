@@ -5,6 +5,7 @@ import random
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 import cv2
@@ -18,6 +19,7 @@ from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
     arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, PROJECT_SIBLING_DIR
 from app.execption.outer.error_code.camera import PerformancePicNotFound
+from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.hand_serial import controlUsbPower
@@ -29,7 +31,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
-    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP
+    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, CLICK_LOOP_STOP_FLAG
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -277,6 +279,12 @@ class FilePushView(MethodView):
 
 # 测试点击
 class PaneClickTestView(MethodView):
+    """
+    支持Pane界面的：
+        测试点击
+        测试点击多次（click_count）
+        停止正在进行的【测试点击多次】线程（stop_loop_flag）
+    """
 
     def post(self):
         random_dir = str(random.randint(0, 100))
@@ -300,56 +308,94 @@ class PaneClickTestView(MethodView):
         click_x, click_y, click_z = device_obj.get_click_position(request_data.get('x'),
                                                                   request_data.get('y'),
                                                                   request_data.get('z'),
-                                                                  device_point)
+                                                                   device_point)
 
-        if CORAL_TYPE == 5.3:
-            self.click(device_label, click_x, click_y, click_z)
+        if request_data.get("stop_loop_flag"):
+            CLICK_LOOP_STOP_FLAG = True
+        # 获取执行信息,如果柜子正在使用中，则无法执行动作
+        exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label)
+        if not exec_serial_obj.check_hand_status():
+            shutil.rmtree(random_dir)
+            return jsonify(dict(error_code=UsingHandFail.error_code, description="机械臂正在使用中，请稍后重试！"))
+
+        # 判断是否执行测试点击多次
+        if request_data.get("click_count"):
+            # 开启线程,并保存线程对象,方便后续停止线程
+            CLICK_LOOP_STOP_FLAG = False
+            exec_t1 = threading.Thread(target=self.exec_hand_action, args=[exec_serial_obj, orders, exec_action],
+                                       kwargs={"ignore_reset": True})
+            exec_t1.start()
+            return jsonify(dict(error_code=0))
         else:
-            # 判断是否是按压侧边键
-            location = get_global_value("m_location")
-            try:
-                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                          location[0] + float(device_obj.width), location[0],
-                                                          location[2])
-                is_side = True
-            except Exception as e:
-                is_side = False
-
-            if is_side:
-                is_left_side = False
-                if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
-                    is_left_side = True
-                self.press(device_label, click_x, click_y, click_z, is_left_side)
-            else:
-                self.click(device_label, click_x, click_y, click_z)
-
+            self.exec_hand_action(exec_serial_obj, orders, exec_action)
         shutil.rmtree(random_dir)
         return jsonify(dict(error_code=0))
 
     @staticmethod
-    def click(device_label, x, y, z):
-        exec_serial_obj, arm_num = judge_start_x(x, device_label)
-        axis = pre_point([x, y, z], arm_num=arm_num)
-        orders = [
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2] + 5, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2], MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], Z_UP, MOVE_SPEED),
-        ]
-        exec_serial_obj.send_list_order(orders)
+    def get_exec_info(click_x, click_y, click_z, device_label):
+        """
+        return: serial_obj, orders
+        """
+        is_left_side = False
+        if CORAL_TYPE == 5.3:
+            exec_action = "click"
+        else:
+            # 判断是否是按压侧边键
+            location = get_global_value("m_location")
+            try:
+                device_obj = Device(pk=device_label)
+                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                          location[0] + float(device_obj.width), location[0],
+                                                          location[2])
+                if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                    is_left_side = True
+                exec_action = "press"
+            except CoordinatesNotReasonable:
+                exec_action = "click"
+
+        if exec_action == "click":
+            exec_serial_obj, arm_num = judge_start_x(click_x, device_label)
+            axis = pre_point([click_x, click_y, click_z], arm_num=arm_num)
+            orders = [
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2] + 5, MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2], MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], Z_UP, MOVE_SPEED),
+            ]
+        else:
+            # exec_action: press
+            speed = MOVE_SPEED - 10000
+            press_side_speed = PRESS_SIDE_KEY_SPEED / 2
+            orders = HandHandler.press_side_order([click_x, click_y, click_z], is_left=is_left_side, speed=speed,
+                                                  press_side_speed=press_side_speed)
+            exec_serial_obj = hand_serial_obj_dict.get(device_label)
+
+        return exec_serial_obj, orders, exec_action
+
+    @staticmethod
+    def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False):
+        """
+        is_exec_loop: 是否正在执行测试点击多次
+        """
+        if exec_action == "click":
+            exec_serial_obj.send_list_order(orders, ignore_reset=ignore_reset)
+        elif exec_action == "press":
+            exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=0,
+                                               ignore_reset=ignore_reset)
+        else:
+            pass
         exec_serial_obj.recv()
 
     @staticmethod
-    def press(device_label, x, y, z, is_left):
-        speed = MOVE_SPEED - 10000
-        press_side_speed = PRESS_SIDE_KEY_SPEED / 2
-        # 生成指令
-        press_orders = HandHandler.press_side_order([x, y, z], is_left=is_left, speed=speed,
-                                                    press_side_speed=press_side_speed)
-        # 执行指令
-        hand_serial_obj_dict.get(device_label).send_out_key_order(press_orders[:3],
-                                                                  others_orders=press_orders[3:],
-                                                                  wait_time=0)
-        hand_serial_obj_dict.get(device_label).recv()
+    def exec_action_loop(self, exec_serial_obj, orders, exec_action, click_count, random_dir):
+        for num in range(click_count):
+            if CLICK_LOOP_STOP_FLAG:
+                exec_serial_obj.send_single_order(arm_wait_position)
+                exec_serial_obj.recv()
+                break
+            ignore_reset = False if num == click_count - 1 else True
+            self.exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=ignore_reset)
+        shutil.rmtree(random_dir)
+        return 0
 
 
 class PaneUpdateMLocation(MethodView):

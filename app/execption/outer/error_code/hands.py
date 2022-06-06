@@ -97,3 +97,12 @@ class RepeatTimeInvalid(APIException):
     error_code = 3012
     code = 400
     description = "Repeat Time Out of Range 1-10"
+
+
+class UsingHandFail(APIException):
+    """
+    机械臂正在使用中，无法下发新指令
+    """
+    error_code = 3013
+    code = 400
+    description = "The Arm is Using"

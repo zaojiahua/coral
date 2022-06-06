@@ -128,6 +128,8 @@ class ClickTestSchema(Schema):
     x = fields.Float(required=True)
     y = fields.Float(required=True)
     z = fields.Float(required=True)
+    click_count = fields.Int(required=False)
+    stop_loop_flag = fields.Bool(required=False)
 
     class Meta:
         unknown = INCLUDE

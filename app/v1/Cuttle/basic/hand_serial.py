@@ -69,8 +69,10 @@ class HandSerial:
         # print(self.ser.read(buffer_size))
         try:
             rev = self.ser.read(buffer_size).decode()
-        except SerialException:
-            raise
+        except SerialException as se:
+            print("handSerial Exception: ", se)
+            if "no data" not in se.args[0]:
+                raise
         print('返回：', rev, '*' * 10)
         while not is_init and not self.check_hand_status():
             time.sleep(0.2)

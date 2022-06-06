@@ -327,9 +327,10 @@ class CameraHandler(Handler):
                 # 停止时刻由外部进行控制，这里负责图像处理即可
                 while get_global_value(CAMERA_IN_LOOP):
                     try:
-                        image = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()['image']
+                        image_info = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()
+                        image = image_info['image']
                         image = np.rot90(self.get_roi(image, False), 3)
-                        self.back_up_dq.append(image)
+                        self.back_up_dq.append({'image': image, 'host_timestamp': image_info['host_timestamp']})
                     except IndexError:
                         # 拿的速度太快的话可能还没有存进去
                         time.sleep(1 / FpsMax)

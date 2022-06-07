@@ -105,4 +105,4 @@ class UsingHandFail(APIException):
     """
     error_code = 3013
     code = 400
-    description = "The Arm is Using"
+    description = "机械臂正在使用中，请稍后重试！"

@@ -17,7 +17,7 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, PROJECT_SIBLING_DIR
+    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, PROJECT_SIBLING_DIR, BASE_DIR
 from app.execption.outer.error_code.camera import PerformancePicNotFound
 from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable
 from app.libs.log import setup_logger
@@ -31,7 +31,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
-    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, CLICK_LOOP_STOP_FLAG
+    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -284,6 +284,10 @@ class PaneClickTestView(MethodView):
         测试点击
         测试点击多次（click_count）
         停止正在进行的【测试点击多次】线程（stop_loop_flag）
+
+    如果发过来的请求时测试点击，那么先判断机械臂是否在使用，则返回错误码
+    如果发过来的请求中包含stop_loop_flag，
+
     """
 
     def post(self):
@@ -308,21 +312,30 @@ class PaneClickTestView(MethodView):
         click_x, click_y, click_z = device_obj.get_click_position(request_data.get('x'),
                                                                   request_data.get('y'),
                                                                   request_data.get('z'),
-                                                                   device_point)
+                                                                  device_point)
 
-        if request_data.get("stop_loop_flag"):
-            CLICK_LOOP_STOP_FLAG = True
-        # 获取执行信息,如果柜子正在使用中，则无法执行动作
+        # 获取执行动作需要的信息
         exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label)
+
+        # 判断机械臂状态
         if not exec_serial_obj.check_hand_status():
-            shutil.rmtree(random_dir)
-            return jsonify(dict(error_code=UsingHandFail.error_code, description="机械臂正在使用中，请稍后重试！"))
+            # 机械臂状态running,且有stop_loop_flag标志值，需要停止机械臂正在执行的动作
+            if request_data.get("stop_loop_flag"):
+                set_global_value("click_loop_stop_flag", True)
+                time.sleep(1)
+                while not exec_serial_obj.check_hand_status():
+                    time.sleep(0.2)
+                shutil.rmtree(random_dir)
+                return jsonify(dict(error_code=0))
+            else:
+                shutil.rmtree(random_dir)
+                raise UsingHandFail
 
         # 判断是否执行测试点击多次
         if request_data.get("click_count"):
-            # 开启线程,并保存线程对象,方便后续停止线程
-            CLICK_LOOP_STOP_FLAG = False
-            exec_t1 = threading.Thread(target=self.exec_hand_action, args=[exec_serial_obj, orders, exec_action],
+            set_global_value("click_loop_stop_flag", False)
+            exec_t1 = threading.Thread(target=self.exec_action_loop,
+                                       args=[exec_serial_obj, orders, exec_action, request_data.get("click_count")],
                                        kwargs={"ignore_reset": True})
             exec_t1.start()
             return jsonify(dict(error_code=0))
@@ -388,7 +401,7 @@ class PaneClickTestView(MethodView):
     @staticmethod
     def exec_action_loop(self, exec_serial_obj, orders, exec_action, click_count, random_dir):
         for num in range(click_count):
-            if CLICK_LOOP_STOP_FLAG:
+            if get_global_value("click_loop_stop_flag"):
                 exec_serial_obj.send_single_order(arm_wait_position)
                 exec_serial_obj.recv()
                 break
@@ -400,7 +413,7 @@ class PaneClickTestView(MethodView):
 
 class PaneUpdateMLocation(MethodView):
     """
-    更新 5系列柜子的m_location
+    更新 5系列柜子的m_location（不包含Tcab-5D）
     1. 接收从reef推送的最新的m_location数据
         如果是中心点对齐，这里实际传入的是m_location_center的值
         如果是左上角对齐，则是m_location的值
@@ -427,11 +440,10 @@ class PaneUpdateMLocation(MethodView):
 
     @staticmethod
     def update_ip_file(location_name, new_data):
-
         if platform.system() == 'Linux':
             file = '/app/source/ip.py'
         else:
-            file = os.path.join(PROJECT_SIBLING_DIR, "app/config", "ip.py")
+            file = os.path.join(BASE_DIR, "app", "config", "ip.py")
         old_data = None
         with open(file, "r", encoding="utf-8") as f:
             content = ""
@@ -461,8 +473,10 @@ class PaneClickMLocation(MethodView):
         m_location_data_z = request.get_json()["m_location_z"]
         device_label = request.get_json()["device_label"]
         device_obj = Device(pk=device_label)
-        m_location_data_z = m_location_data_z + device_obj.plyp
-        PaneClickTestView().click(device_label, m_location_data_x, m_location_data_y, m_location_data_z)
+        m_location_data_z = m_location_data_z + device_obj.ply
+        exec_serial_obj, orders, exec_action = PaneClickTestView().get_exec_info(m_location_data_x, m_location_data_y,
+                                                                                 m_location_data_z, device_label)
+        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action)
         return jsonify(dict(error_code=0))
 
 

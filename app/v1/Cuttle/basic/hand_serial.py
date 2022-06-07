@@ -59,6 +59,7 @@ class HandSerial:
 
     def check_hand_status(self, buffer_size=64):
         # 查询机械臂状态
+        self.ser.write("G04 P0.1 \r\n".encode())
         self.ser.write("?? \r\n".encode())
         try:
             rev = self.ser.read(buffer_size).decode()

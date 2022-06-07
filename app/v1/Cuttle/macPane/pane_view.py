@@ -317,12 +317,11 @@ class PaneClickTestView(MethodView):
         # 获取执行动作需要的信息
         exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label)
 
-        # 判断机械臂状态
-        if not exec_serial_obj.check_hand_status():
+        # 判断机械臂状态是否在执行循环
+        if not get_global_value("click_loop_stop_flag"):
             # 机械臂状态running,且有stop_loop_flag标志值，需要停止机械臂正在执行的动作
             if request_data.get("stop_loop_flag"):
                 set_global_value("click_loop_stop_flag", True)
-                time.sleep(1)
                 while not exec_serial_obj.check_hand_status():
                     time.sleep(0.2)
                 shutil.rmtree(random_dir)
@@ -335,8 +334,9 @@ class PaneClickTestView(MethodView):
         if request_data.get("click_count"):
             set_global_value("click_loop_stop_flag", False)
             exec_t1 = threading.Thread(target=self.exec_action_loop,
-                                       args=[exec_serial_obj, orders, exec_action, request_data.get("click_count")],
-                                       kwargs={"ignore_reset": True})
+                                       args=[exec_serial_obj, orders, exec_action, int(request_data.get("click_count")),
+                                             random_dir]
+                                       )
             exec_t1.start()
             return jsonify(dict(error_code=0))
         else:
@@ -399,14 +399,14 @@ class PaneClickTestView(MethodView):
         exec_serial_obj.recv()
 
     @staticmethod
-    def exec_action_loop(self, exec_serial_obj, orders, exec_action, click_count, random_dir):
+    def exec_action_loop(exec_serial_obj, orders, exec_action, click_count, random_dir):
         for num in range(click_count):
             if get_global_value("click_loop_stop_flag"):
                 exec_serial_obj.send_single_order(arm_wait_position)
                 exec_serial_obj.recv()
                 break
             ignore_reset = False if num == click_count - 1 else True
-            self.exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=ignore_reset)
+            PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=ignore_reset)
         shutil.rmtree(random_dir)
         return 0
 
@@ -473,7 +473,7 @@ class PaneClickMLocation(MethodView):
         m_location_data_z = request.get_json()["m_location_z"]
         device_label = request.get_json()["device_label"]
         device_obj = Device(pk=device_label)
-        m_location_data_z = m_location_data_z + device_obj.ply
+        m_location_data_z = m_location_data_z + float(device_obj.ply)
         exec_serial_obj, orders, exec_action = PaneClickTestView().get_exec_info(m_location_data_x, m_location_data_y,
                                                                                  m_location_data_z, device_label)
         PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action)

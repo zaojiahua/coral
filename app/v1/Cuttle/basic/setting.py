@@ -272,5 +272,5 @@ BIAS = int(FpsMax / 120 * 19)  # 机械臂下落--点击--抬起  所用帧数�
 SWIPE_BIAS_HARD = int(FpsMax / 120 * 9)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
 SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
 
-click_loop_stop_flag = False  # 如果为True, 则停止多次点击
+click_loop_stop_flag = True  # 如果为True, 则停止多次点击
 set_global_value("click_loop_stop_flag", click_loop_stop_flag)

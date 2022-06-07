@@ -49,8 +49,9 @@ class AdbHandler(Handler, ChineseMixin):
         Abnormal("battery mark", "save_battery", 0),
         Abnormal("cpu", "save_cpu_info", 0),
         Abnormal("battery fail mark", "_get_battery_detail", 0),
-        Abnormal(f"generating {Bugreport_file_name}", "_get_zipfile", 0)  # pulling bug_report.zip
+        Abnormal(f"generating {Bugreport_file_name}", "_get_zipfile", 0),  # pulling bug_report.zip
         #     adb: device failed to take a zipped bugreport: Bugreport read terminated abnormally
+        Abnormal('Bug report finished but could not be copied to', 'pull_bugreport', 0)
     ]
     before_match_rules = {
         # 根据cmd中内容，执行对应的预处理方法
@@ -229,6 +230,17 @@ class AdbHandler(Handler, ChineseMixin):
     def _get_zipfile(self, *args):
         if os.path.exists(f"./{Bugreport_file_name}"):
             shutil.move(f"./{Bugreport_file_name}", self.kwargs.get("work_path"))
+
+    def pull_bugreport(self, result, *args):
+        print('bugreport 重新拉取')
+        # bug report 可能拉取不成功 一种情况是手机内存满 这个没法处理 需要用户自己删除 另一种是写入到本地目录不成功 这个时候重新拉取试试
+        command = re.findall(r'but could not be copied to \'(.*)\'[\s\S]*Try to run \'(.*)\'', result)
+        if command and len(command[0]) == 2:
+            target_command = command[0][1].replace('<directory>', command[0][0])
+            print(target_command)
+            from app.v1.device_common.device_model import Device
+            device_ip = Device(pk=self._model.pk).connect_number
+            self.str_func(adb_cmd_prefix + "-s " + device_ip + f" {target_command}")
 
     @func_set_timeout(timeout=ADB_DEFAULT_TIMEOUT)
     def _get_battery_detail(self, *args):

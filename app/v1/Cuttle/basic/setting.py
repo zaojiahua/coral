@@ -175,7 +175,7 @@ icon_rate = 500
 icon_min_template = 0.005
 icon_min_template_camera = 0.05
 wait_bias = 1.1  # 从发给旋转机械臂-到触碰到开关键的时间补偿
-adb_disconnect_threshold = 3
+adb_disconnect_threshold = 10
 # 和旋转机械臂相关
 arm_default_y = '33'
 arm_default = f"G01 X0Y{arm_default_y}Z0F5000 \r\n"

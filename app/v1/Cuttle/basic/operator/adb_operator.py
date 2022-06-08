@@ -11,7 +11,7 @@ from threading import Lock
 from func_timeout import func_set_timeout
 
 from app.config.ip import HOST_IP, ADB_TYPE
-from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name
+from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name, CORAL_TYPE_NAME
 from app.config.url import battery_url
 from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
@@ -19,9 +19,9 @@ from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, get_lock_cmd, unlock_cmd, \
     adb_cmd_prefix, RESTART_SERVER, KILL_SERVER, START_SERVER, DEVICE_DETECT_ERROR_MAX_TIME, get_global_value
-from app.v1.Cuttle.boxSvc.box_setting import port_charge_strategy
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 from app.v1.eblock.config.setting import ADB_DEFAULT_TIMEOUT
+from app.libs.email_manager import EmailManager
 
 if sys.platform.startswith("win"):
     coding = "utf-8"
@@ -128,6 +128,10 @@ class AdbHandler(Handler, ChineseMixin):
 
     def reconnect(self, *args):
         if CORAL_TYPE < 5:
+            from app.v1.device_common.device_model import Device
+            device = Device(pk=self._model.pk)
+            connect_number = device.connect_number
+
             if ADB_TYPE == 1:
                 pass
                 # 有线模式下无论主僚机都做kill&start处理 其他线程也在使用adb server，这里kill掉的话，会导致其他unit执行失败
@@ -137,8 +141,7 @@ class AdbHandler(Handler, ChineseMixin):
                     # 无线模式下主僚机分别取对应的ip进行重连
                     device_ip = self.kwargs.get("assist_device_serial_number")
                 else:
-                    from app.v1.device_common.device_model import Device
-                    device_ip = Device(pk=self._model.pk).ip_address
+                    device_ip = device.ip_address
                 if len(device_ip) < 2:
                     return -1
                 self.str_func(adb_cmd_prefix + "disconnect " + device_ip)
@@ -154,6 +157,14 @@ class AdbHandler(Handler, ChineseMixin):
             if self._model.disconnect_times == 1:
                 self._model.disconnect_times_timestamp.ltrim(1, 0)
             self._model.disconnect_times_timestamp.rpush(int(time.time()))
+
+            # 发送邮件进行通知，这个时候可以查看网络，检查原因
+            if self._model.disconnect_times == int(adb_disconnect_threshold / 2):
+                # 多次尝试重连不成功，说明这个时候发生了问题
+                email = EmailManager()
+                email.send_email(['gh@anhereef.com', 'lx@anhereef.com', 'jy@anhereef.com'], '设备连接断开，请检查！',
+                                 f'设备{device.device_name}：{connect_number} 机柜：I\'M {HOST_IP.split(".")[-1]}（{CORAL_TYPE_NAME[CORAL_TYPE]}）')
+
             # 次数和时间双保险
             if self._model.disconnect_times >= adb_disconnect_threshold and \
                     self._model.disconnect_times_timestamp[-1] - self._model.disconnect_times_timestamp[0] > \

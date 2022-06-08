@@ -407,6 +407,7 @@ class PaneClickTestView(MethodView):
                 break
             ignore_reset = False if num == click_count - 1 else True
             PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=ignore_reset)
+        set_global_value("click_loop_stop_flag", True)
         shutil.rmtree(random_dir)
         return 0
 

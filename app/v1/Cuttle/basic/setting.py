@@ -37,11 +37,6 @@ if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
     except ImportError:
         m_location = [38, 13, -24]  # Tcab-5现有夹具m_location
     set_global_value('m_location_original', m_location)
-elif CORAL_TYPE == 5.1:
-    try:
-        from app.config.ip import m_location_center
-    except ImportError:
-        m_location_center = [157, 202.5, -24]
 elif CORAL_TYPE == 5.3:
     try:
         from app.config.ip import Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION, ARM_MAX_X
@@ -51,6 +46,11 @@ elif CORAL_TYPE == 5.3:
         DOUBLE_ARM_MOVE_REGION = [365, 239]
         ARM_MAX_X = 340
     set_global_value('Z_DOWN', Z_DOWN)
+else:
+    try:
+        from app.config.ip import m_location_center
+    except ImportError:
+        m_location_center = [157, 202.5, -24]
 try:
     from app.config.ip import SENSOR
 except ImportError:

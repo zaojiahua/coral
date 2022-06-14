@@ -131,7 +131,6 @@ def camera_init_hk(camera_id, device_object, **kwargs):
     else:
         check_result(CamObj.MV_CC_SetEnumValue, 'TriggerMode', 0)
 
-
     if kwargs.get("modify_fps") and CORAL_TYPE == 5.2:
         # Tcab-5se在进行性能测试时需要相机帧率
         for key in camera_params_52_performance:
@@ -141,7 +140,7 @@ def camera_init_hk(camera_id, device_object, **kwargs):
                 check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
 
     # 设置roi 多摄像机暂时不设置
-    if not kwargs.get('original') and CORAL_TYPE != 5.3:
+    if not kwargs.get('original') and not kwargs.get('sync_camera'):
         if int(device_object.x1) == int(device_object.x2) == 0:
             pass
         else:
@@ -294,8 +293,8 @@ class CameraHandler(Handler):
             camera_ids.append(camera_id)
 
         futures = []
-        temporary = False if CORAL_TYPE == 5.3 else self.back_up_dq is None
-        sync_camera = True if CORAL_TYPE == 5.3 else False
+        temporary = False if len(camera_ids) > 1 else self.back_up_dq is None
+        sync_camera = True if len(camera_ids) > 1 else False
         # 如果录像的话，则按照性能测试来录像
         feature_test = False if self.record_video else self.back_up_dq is None
         for camera_id in camera_ids:
@@ -320,7 +319,7 @@ class CameraHandler(Handler):
             futures.append(future)
 
         # 默认使用第一个相机中的截图
-        if len(camera_ids) == 1 or CORAL_TYPE != 5.3:
+        if len(camera_ids) == 1:
             image = None
             # 实时的获取到图片
             if self.back_up_dq is not None:
@@ -482,8 +481,6 @@ class CameraHandler(Handler):
         max_frame_num = 0
 
         h = get_global_value(MERGE_IMAGE_H)
-        xmin = ymin = xmax = ymax = ht = rows = cols = None
-        weights = {}
         for frame_num, frames in self.frames.items():
             if len(frames) != len(camera_ids):
                 del frames
@@ -500,54 +497,18 @@ class CameraHandler(Handler):
             host_t_2 = frames[1]['host_timestamp']
             print(frame_num, host_t_2 - host_t_1)
 
-            h1, w1 = img1.shape[:2]
-            h2, w2 = img2.shape[:2]
-
             if h is None:
+                # 调试的时候打开
+                # cv2.imwrite('camera/camera_1.png', img1)
+                # cv2.imwrite('camera/camera_2.png', img2)
                 h = self.get_homography(img1, img2)
 
-            if ht is None:
-                pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
-                pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
-                pts2_ = cv2.perspectiveTransform(pts2, h)
-                pts = np.concatenate((pts1, pts2_), axis=0)
-                xmin, ymin = np.int32(pts.min(axis=0).ravel() - 0.5)
-                xmax, ymax = np.int32(pts.max(axis=0).ravel() + 0.5)
-                ht = np.array([[1, 0, -xmin], [0, 1, -ymin], [0, 0, 1]])
-                rows = int(pts2_.max(axis=0).ravel()[1] - pts2_.min(axis=0).ravel()[1])
-                cols = int(pts2_.max(axis=0).ravel()[0] - pts2_.min(axis=0).ravel()[0])
-
-            result = cv2.warpPerspective(img2, ht.dot(h), (xmax - xmin, ymax - ymin))
-            result_copy = np.array(result)
-            result[-ymin:h1 + (-ymin), -xmin:w1 + (-xmin)] = img1
-
-            if not weights:
-                for r in range(-ymin, rows):
-                    weights[r] = (r - (-ymin)) / (rows - (-ymin))
-
-            for r in range(-ymin, rows):
-                weight = weights[r]
-                result[r, -xmin: cols, :] = result_copy[r, -xmin: cols, :] * (1 - weight) + img1[r - (-ymin),
-                                                                                            0: cols - (-xmin),
-                                                                                            :] * weight
-
-            # 释放内存
-            del img1
-            del img2
-            del frames[0]['image']
-            del frames[0]
-            del frames[0]['image']
-            del frames[0]
-            del frames
-            del result_copy
+            result = self.warp_two_images(img2, img1, h)
 
             if not self.original:
                 result = np.rot90(self.get_roi(result))
             self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1})
             del result
-
-        del xmin, ymin, xmax, ymax, ht, h, rows, cols
-        del weights
 
         lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
         if lost_frames and self.back_up_dq is None:
@@ -567,6 +528,61 @@ class CameraHandler(Handler):
             set_global_value(MERGE_IMAGE_H, h)
         del img1, img2
         return h
+
+    @staticmethod
+    def warp_two_images(img1, img2, H):
+        h1, w1 = img1.shape[:2]
+        h2, w2 = img2.shape[:2]
+        pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
+        pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
+        pts2_ = cv2.perspectiveTransform(pts2, H)
+        pts = np.concatenate((pts1, pts2_), axis=0)
+        # print(pts)
+        [xmin, ymin] = np.int32(pts.min(axis=0).ravel() - 0.5)
+        [xmax, ymax] = np.int32(pts.max(axis=0).ravel() + 0.5)
+        t = [-xmin, -ymin]
+        Ht = np.array([[1, 0, t[0]], [0, 1, t[1]], [0, 0, 1]])
+
+        result = cv2.warpPerspective(img2, Ht.dot(H), (xmax - xmin, ymax - ymin))
+        # cv2.imwrite('D:\\code\\coral-local\\camera\\result_1.png', result)
+
+        result_copy = np.array(result)
+        result[t[1]:h1 + t[1], t[0]:w1 + t[0]] = img1
+        # print(t)
+
+        sorted_pts = [(int(pos[0][0] + t[0]), int(pos[0][1] + t[1])) for pos in pts]
+        # 5D的相机组装方式不一样
+        if CORAL_TYPE == 5.3:
+            sorted_pts = sorted(sorted_pts, key=lambda x: x[1])[2:6]
+        else:
+            # 取中间的四个点
+            sorted_pts = sorted(sorted_pts)[2:6]
+        # 调试的时候打开
+        # for pos in sorted_pts:
+        #     cv2.circle(result, pos, 10, (0, 0, 255), -1)
+
+        sorted_pts = np.array(sorted_pts)
+        merge_min_x, merge_min_y = sorted_pts.min(axis=0).ravel()
+        merge_max_x, merge_max_y = sorted_pts.max(axis=0).ravel()
+        # print(sorted_pts)
+        # print(merge_min_x, merge_min_y)
+        # print(merge_max_x, merge_max_y)
+        if CORAL_TYPE == 5.3:
+            for y in range(merge_min_y, merge_max_y):
+                weight = (y - merge_min_y) / (merge_max_y - merge_min_y)
+                result[y, merge_min_x: merge_max_x, :] = result_copy[y, merge_min_x: merge_max_x, :] * (
+                        1 - weight) + result[y, merge_min_x: merge_max_x, :] * weight
+        else:
+            for r in range(merge_min_x, merge_max_x):
+                weight = (r - merge_min_x) / (merge_max_x - merge_min_x)
+                if t[0] < merge_min_x:
+                    result[merge_min_y: merge_max_y, r, :] = result_copy[merge_min_y: merge_max_y, r, :] * (
+                        weight) + result[merge_min_y: merge_max_y, r, :] * (1 - weight)
+                else:
+                    result[merge_min_y: merge_max_y, r, :] = result_copy[merge_min_y: merge_max_y, r, :] * (
+                            1 - weight) + result[merge_min_y: merge_max_y, r, :] * (weight)
+
+        return result
 
     def move(self, *args, **kwargs):
         if hasattr(self, "src") and args[0]:

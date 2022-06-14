@@ -64,6 +64,10 @@ def send_device_leave_to_reef(device, logger):
 
 
 def recover_device(executer, logger):
+    # monkey监控策略
+    if math.floor(CORAL_TYPE) < 5:
+        executer.submit(MonkeyManager().monkey_loop)
+
     res = Device.request_device_info()
     for device_dict in res.get("devices"):
         device_label = device_dict.get('device_label')

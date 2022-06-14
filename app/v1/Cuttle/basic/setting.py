@@ -124,6 +124,15 @@ camera_params_51 = [("OffsetY", 0),
 #                     ("AcquisitionFrameRate", 240.0),
 #                     ("AcquisitionFrameRateEnable", True),
 #                     ("PixelFormat", 0x01080009, 'enum')]
+camera_params_54 = [("OffsetY", 0),
+                    ("OffsetX", 0),
+                    ("Width", 720),
+                    ("Height", 540),
+                    ("ExposureTime", 2000.0),
+                    ("Gain", 2.5),
+                    ("AcquisitionFrameRate", 10.0),
+                    ("AcquisitionFrameRateEnable", True),
+                    ("PixelFormat", 0x01080009, 'enum')]
 
 high_exposure_params = [("ExposureTime", 200000.0),
                         ("Gain", 15)]

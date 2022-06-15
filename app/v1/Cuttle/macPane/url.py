@@ -2,7 +2,7 @@ from flask import Blueprint
 
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
     AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView, \
-    PaneLocateDeviceView, PaneVideoView
+    PaneLocateDeviceView, PaneVideoView, PaneUpdateMLocation, PaneClickMLocation
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, \
     PaneBorderView
 
@@ -37,3 +37,8 @@ pane.add_url_rule('/reset_h/', view_func=PaneMergePicView.as_view('reset_h'))
 pane.add_url_rule('/locate_device/', view_func=PaneLocateDeviceView.as_view('locate_device'))
 # 录制视频
 pane.add_url_rule('/video/', view_func=PaneVideoView.as_view('record_video'))
+
+# 更新m_location
+pane.add_url_rule('/update_m_location/', view_func=PaneUpdateMLocation.as_view('update_m_location'))
+# 测试点击m_location
+pane.add_url_rule("/click_m_location/", view_func=PaneClickMLocation.as_view('click_m_location'))

@@ -58,6 +58,7 @@ else:
         from app.config.ip import m_location_center
     except ImportError:
         m_location_center = [157, 202.5, -24]
+    set_global_value('m_location_center', m_location_center)
 try:
     from app.config.ip import SENSOR
 except ImportError:

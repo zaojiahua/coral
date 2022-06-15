@@ -1,3 +1,4 @@
+import re
 import time
 
 import serial
@@ -158,18 +159,26 @@ class CameraUsbPower(object):
 # 传感器控制
 class SensorSerial(HandSerial):
 
-    # 读取按压的力值
-    def query_sensor_value(self):
+    def send_read_order(self):
         order = "01 03 00 50 00 02 C4 1A"
         send_data = bytes.fromhex(order)
         self.ser.write(send_data)
-        return_data = self.ser.read(9)
-        # print("return_data: ", return_data)
-        # bytes（2进制）转换为 hex（16进制）
-        str_return_data = str(return_data.hex())
-        if str_return_data == '':
-            value = 0
-        else:
-            value = int(str_return_data[12:14], 16) / 10
-        print("力值：", value)
-        return value
+
+    # 读取按压的力值
+    def query_sensor_value(self):
+        regex = re.compile("fe0150[\w+]*cffcccff")
+
+        for i in range(3):
+            return_data = self.ser.read(24)
+            str_return_data = str(return_data.hex())
+            result = re.search(regex, str_return_data)
+            if result is None:
+                pass
+            data = result.group(0)[:24]
+            print("data: ", data)
+            if len(data) != 12 or data[8:16] == "f" * 8:
+                pass
+            value = int(data[14:16], 16) / 10
+            print("取到的力值：", value)
+            return value
+        return 0

@@ -20,8 +20,7 @@ from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
-from app.v1.Cuttle.basic.setting import m_location_center, set_global_value, get_global_value, \
-    COORDINATE_CONFIG_FILE, Z_DOWN
+from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, Z_DOWN
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 
 
@@ -486,7 +485,8 @@ class Device(BaseModel):
                         else:
                             set_global_value(key, eval(value))
         # 5型柜升级版是中心对齐，这个时候如果配置了center，就用中心对齐的方案
-        elif CORAL_TYPE == 5.1 or m_location_center:
+        elif CORAL_TYPE == 5.1 or get_global_value('m_location_center'):
+            m_location_center = get_global_value('m_location_center')
             set_global_value('m_location', [m_location_center[0] - float(self.width) / 2,
                                             m_location_center[1] - float(self.height) / 2,
                                             m_location_center[2] + float(self.ply)])

@@ -1,9 +1,11 @@
 import logging
 import os.path
+import platform
 import random
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 import cv2
@@ -15,8 +17,9 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor
+    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, PROJECT_SIBLING_DIR, BASE_DIR
 from app.execption.outer.error_code.camera import PerformancePicNotFound
+from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.hand_serial import controlUsbPower
@@ -276,6 +279,16 @@ class FilePushView(MethodView):
 
 # 测试点击
 class PaneClickTestView(MethodView):
+    """
+    支持Pane界面的：
+        测试点击
+        测试点击多次（click_count）
+        停止正在进行的【测试点击多次】线程（stop_loop_flag）
+
+    如果发过来的请求时测试点击，那么先判断机械臂是否在使用，则返回错误码
+    如果发过来的请求中包含stop_loop_flag，
+
+    """
 
     def post(self):
         random_dir = str(random.randint(0, 100))
@@ -301,54 +314,171 @@ class PaneClickTestView(MethodView):
                                                                   request_data.get('z'),
                                                                   device_point)
 
-        if CORAL_TYPE == 5.3:
-            self.click(device_label, click_x, click_y, click_z)
-        else:
-            # 判断是否是按压侧边键
-            location = get_global_value("m_location")
-            try:
-                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                          location[0] + float(device_obj.width), location[0],
-                                                          location[2])
-                is_side = True
-            except Exception as e:
-                is_side = False
+        # 获取执行动作需要的信息
+        exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label)
 
-            if is_side:
-                is_left_side = False
-                if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
-                    is_left_side = True
-                self.press(device_label, click_x, click_y, click_z, is_left_side)
+        # 判断机械臂状态是否在执行循环
+        if not get_global_value("click_loop_stop_flag"):
+            # 机械臂状态running,且有stop_loop_flag标志值，需要停止机械臂正在执行的动作
+            if request_data.get("stop_loop_flag"):
+                set_global_value("click_loop_stop_flag", True)
+                while not exec_serial_obj.check_hand_status():
+                    time.sleep(0.2)
+                shutil.rmtree(random_dir)
+                return jsonify(dict(error_code=0))
             else:
-                self.click(device_label, click_x, click_y, click_z)
+                shutil.rmtree(random_dir)
+                raise UsingHandFail
 
+        # 判断是否执行测试点击多次
+        if request_data.get("click_count"):
+            set_global_value("click_loop_stop_flag", False)
+            exec_t1 = threading.Thread(target=self.exec_action_loop,
+                                       args=[exec_serial_obj, orders, exec_action, int(request_data.get("click_count")),
+                                             random_dir]
+                                       )
+            exec_t1.start()
+            return jsonify(dict(error_code=0))
+        else:
+            self.exec_hand_action(exec_serial_obj, orders, exec_action)
         shutil.rmtree(random_dir)
         return jsonify(dict(error_code=0))
 
     @staticmethod
-    def click(device_label, x, y, z):
-        exec_serial_obj, arm_num = judge_start_x(x, device_label)
-        axis = pre_point([x, y, z], arm_num=arm_num)
-        orders = [
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2] + 5, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2], MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], Z_UP, MOVE_SPEED),
-        ]
-        exec_serial_obj.send_list_order(orders)
+    def get_exec_info(click_x, click_y, click_z, device_label):
+        """
+        return: serial_obj, orders
+        """
+        is_left_side = False
+        if CORAL_TYPE == 5.3:
+            exec_action = "click"
+        else:
+            # 判断是否是按压侧边键
+            location = get_global_value("m_location")
+            try:
+                device_obj = Device(pk=device_label)
+                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                          location[0] + float(device_obj.width), location[0],
+                                                          location[2])
+                if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                    is_left_side = True
+                exec_action = "press"
+            except CoordinatesNotReasonable:
+                exec_action = "click"
+
+        if exec_action == "click":
+            exec_serial_obj, arm_num = judge_start_x(click_x, device_label)
+            axis = pre_point([click_x, click_y, click_z], arm_num=arm_num)
+            orders = [
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2] + 5, MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2], MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], Z_UP, MOVE_SPEED),
+            ]
+        else:
+            # exec_action: press
+            speed = MOVE_SPEED - 10000
+            press_side_speed = PRESS_SIDE_KEY_SPEED / 2
+            orders = HandHandler.press_side_order([click_x, click_y, click_z], is_left=is_left_side, speed=speed,
+                                                  press_side_speed=press_side_speed)
+            exec_serial_obj = hand_serial_obj_dict.get(device_label)
+
+        return exec_serial_obj, orders, exec_action
+
+    @staticmethod
+    def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False):
+        """
+        is_exec_loop: 是否正在执行测试点击多次
+        """
+        if exec_action == "click":
+            exec_serial_obj.send_list_order(orders, ignore_reset=ignore_reset)
+        elif exec_action == "press":
+            exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=0,
+                                               ignore_reset=ignore_reset)
+        else:
+            pass
         exec_serial_obj.recv()
 
     @staticmethod
-    def press(device_label, x, y, z, is_left):
-        speed = MOVE_SPEED - 10000
-        press_side_speed = PRESS_SIDE_KEY_SPEED / 2
-        # 生成指令
-        press_orders = HandHandler.press_side_order([x, y, z], is_left=is_left, speed=speed,
-                                                    press_side_speed=press_side_speed)
-        # 执行指令
-        hand_serial_obj_dict.get(device_label).send_out_key_order(press_orders[:3],
-                                                                  others_orders=press_orders[3:],
-                                                                  wait_time=0)
-        hand_serial_obj_dict.get(device_label).recv()
+    def exec_action_loop(exec_serial_obj, orders, exec_action, click_count, random_dir):
+        for num in range(click_count):
+            if get_global_value("click_loop_stop_flag"):
+                exec_serial_obj.send_single_order(arm_wait_position)
+                exec_serial_obj.recv()
+                break
+            ignore_reset = False if num == click_count - 1 else True
+            PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=ignore_reset)
+        set_global_value("click_loop_stop_flag", True)
+        shutil.rmtree(random_dir)
+        return 0
+
+
+class PaneUpdateMLocation(MethodView):
+    """
+    更新 5系列柜子的m_location（不包含Tcab-5D）
+    1. 接收从reef推送的最新的m_location数据
+        如果是中心点对齐，这里实际传入的是m_location_center的值
+        如果是左上角对齐，则是m_location的值
+    2. 更新注册设备的m_location相关信息
+    3. 更新至宿主机的/TMach_source/source/ip.py
+    """
+
+    def post(self):
+        """
+        {"m_location":[], "device_lable":""}
+        """
+        new_location_data = request.get_json()["m_location"]
+        device_label = request.get_json()["device_label"]
+        if get_global_value('m_location_center'):
+            set_global_value('m_location_center', new_location_data)
+            self.update_ip_file("m_location_center", new_location_data)
+        else:
+            set_global_value('m_location_original', new_location_data)
+            self.update_ip_file("m_location", new_location_data)
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=device_label)
+        device_obj.update_m_location()
+        return jsonify(dict(error_code=0))
+
+    @staticmethod
+    def update_ip_file(location_name, new_data):
+        if platform.system() == 'Linux':
+            file = '/app/source/ip.py'
+        else:
+            file = os.path.join(BASE_DIR, "app", "config", "ip.py")
+        old_data = None
+        with open(file, "r", encoding="utf-8") as f:
+            content = ""
+            for line in f:
+                if location_name in line and not line.startswith("#"):
+                    old_data = line.split("=")[1].split("]")[0].strip(" ")
+                    print("老数据：", old_data)
+                content += line
+
+        if not old_data:
+            raise Exception("ip.py 配置文件有问题，请检查!")
+
+        new_content = content.replace(old_data, str(new_data).split("]")[0])
+
+        with open(file, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
+            f2.write(new_content)  # 将替换后的内容写入到test.txt文本文件中
+
+
+class PaneClickMLocation(MethodView):
+    """
+    点击m_location坐标，Z值需+设备厚度后再点击
+    """
+
+    def post(self):
+        m_location_data_x = request.get_json()["m_location_x"]
+        m_location_data_y = request.get_json()["m_location_y"]
+        m_location_data_z = request.get_json()["m_location_z"]
+        device_label = request.get_json()["device_label"]
+        device_obj = Device(pk=device_label)
+        m_location_data_z = m_location_data_z + float(device_obj.ply)
+        exec_serial_obj, orders, exec_action = PaneClickTestView().get_exec_info(m_location_data_x, m_location_data_y,
+                                                                                 m_location_data_z, device_label)
+        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action)
+        return jsonify(dict(error_code=0))
 
 
 # 5D等自动建立坐标系统

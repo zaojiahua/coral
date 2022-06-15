@@ -145,6 +145,7 @@ class CameraUsbPower(object):
     # 开启同步信号
     def open(self):
         print('------发送同步信号-----')
+        self.s.pinSetHigh(self.line_number)
         self.s.pinOutputHigh(self.line_number)
 
     # 结束同步信号

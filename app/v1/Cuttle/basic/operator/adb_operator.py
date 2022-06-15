@@ -51,7 +51,8 @@ class AdbHandler(Handler, ChineseMixin):
         Abnormal("battery fail mark", "_get_battery_detail", 0),
         Abnormal(f"generating {Bugreport_file_name}", "_get_zipfile", 0),  # pulling bug_report.zip
         #     adb: device failed to take a zipped bugreport: Bugreport read terminated abnormally
-        Abnormal('Bug report finished but could not be copied to', 'pull_bugreport', 0)
+        Abnormal('Bug report finished but could not be copied to', 'pull_bugreport', 0),
+        Abnormal('device failed to take a zipped bugreport', 'retry_bugreport', 0)
     ]
     before_match_rules = {
         # 根据cmd中内容，执行对应的预处理方法
@@ -241,6 +242,10 @@ class AdbHandler(Handler, ChineseMixin):
     def _get_zipfile(self, *args):
         if os.path.exists(f"./{Bugreport_file_name}"):
             shutil.move(f"./{Bugreport_file_name}", self.kwargs.get("work_path"))
+
+    def retry_bugreport(self, result):
+        print('bugreport 重新拉取 retry bugreport', result)
+        self.str_func(self.exec_content)
 
     def pull_bugreport(self, result, *args):
         print('bugreport 重新拉取')

@@ -68,7 +68,7 @@ def rotate_hand_init(arm_com_id, device_obj, **kwargs):
 
 def sensor_init(arm_com_id, device_obj, **kwargs):
     print('初始化传感器', arm_com_id, '&' * 10)
-    sensor_obj = SensorSerial(baud_rate=9600, timeout=2)
+    sensor_obj = SensorSerial(baud_rate=115200, timeout=2)
     sensor_obj.connect(arm_com_id)
     sensor_obj.send_read_order()
     sensor_serial_obj_dict[device_obj.pk + arm_com_id] = sensor_obj

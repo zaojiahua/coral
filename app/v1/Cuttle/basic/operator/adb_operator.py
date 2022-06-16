@@ -198,7 +198,7 @@ class AdbHandler(Handler, ChineseMixin):
         #         "action": True
         #     })
         # 2022.3.31  根据充电口的充电策略进行充电
-        print("根据充电策略充电.....battery_level: ", battery_level)
+        self._model.logger.debug("根据充电策略充电.....battery_level: ", battery_level)
         self.set_power_port_status_by_battery(battery_level)
 
         self._model.disconnect_times = 0
@@ -296,7 +296,7 @@ class AdbHandler(Handler, ChineseMixin):
         if battery_level is None:
             self._model.logger.error("Get the battery.dat file but unable to obtain power")
             return
-        print("battery fail mark, 根据充电策略充电.....battery_level: ", battery_level)
+        self._model.logger.debug("battery fail mark, 根据充电策略充电.....battery_level: ", battery_level)
         self.set_power_port_status_by_battery(battery_level)
         from app.v1.device_common.device_model import Device
         from app.libs.http_client import request
@@ -365,12 +365,12 @@ class AdbHandler(Handler, ChineseMixin):
                 if slg["timer"][0] <= current_time < slg["timer"][1]:
                     is_use_slgs_by_user = True
                     print("当前使用了定时充电策略： ", slg)
-                    compare_battery_level(slg["max_value"], slg["min_value"], battery_level)
+                    compare_battery_level(int(slg["max_value"]), int(slg["min_value"]), int(battery_level))
 
         if not is_use_slgs_by_user:
             # 未找到包含当前时间点的定时充电策略，或者当前充电端口不存在定时充电策略
             # 则使用默认充电策略
             print("当前使用了默认充电策略： ", port_slg["default_slg"])
-            compare_battery_level(port_slg["default_slg"]["max_value"], port_slg["default_slg"]["min_value"],
-                                  battery_level)
+            compare_battery_level(int(port_slg["default_slg"]["max_value"]), int(port_slg["default_slg"]["min_value"]),
+                                  int(battery_level))
         return 0

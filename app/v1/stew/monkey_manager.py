@@ -156,6 +156,7 @@ class MonkeyManager(object):
                 abnormal_type = 4
                 package_name = exception_type
 
+        start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # 代表找到了异常信息
         if abnormal_type is not None:
             target_device = None
@@ -175,7 +176,7 @@ class MonkeyManager(object):
                                url=monkey_url,
                                data={'abnormity_type': abnormal_type,
                                      'device': target_device.device_label,
-                                     'start_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                     'start_time': start_time,
                                      'result_data': json.dumps({'pkg_name': package_name})},
                                files=files)
             print(response)

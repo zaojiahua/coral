@@ -16,14 +16,14 @@ def get_homography(img1, img2):
 
     # 调试的时候打开，看特征点匹配的怎么样
     # for m, n in matches:
-    #     if m.distance < 0.1 * n.distance:
+    #     if m.distance < 0.3 * n.distance:
     #         goods.append([m])
     # result = cv2.drawMatchesKnn(img1, kp1_origin, img2, kp2_origin, goods[:10], None, flags=2)
     # cv2.imwrite('camera/matches.png', result)
     # goods = []
 
     for m in matches:
-        if len(m) == 2 and m[0].distance < 0.1 * m[1].distance:
+        if len(m) == 2 and m[0].distance < 0.3 * m[1].distance:
             goods.append((m[0].queryIdx, m[0].trainIdx))
 
     if len(goods) > 4:

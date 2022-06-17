@@ -506,7 +506,10 @@ class CameraHandler(Handler):
             result = self.warp_two_images(img2, img1, h)
 
             if not self.original:
-                result = np.rot90(self.get_roi(result), 3)
+                if CORAL_TYPE == 5.3:
+                    result = np.rot90(self.get_roi(result))
+                else:
+                    result = np.rot90(self.get_roi(result), 3)
             self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1})
             del result
 

@@ -199,7 +199,7 @@ class AdbHandler(Handler, ChineseMixin):
         #         "action": True
         #     })
         # 2022.3.31  根据充电口的充电策略进行充电
-        self._model.logger.debug("根据充电策略充电.....battery_level: ", battery_level)
+        self._model.logger.debug(f"根据充电策略充电.....battery_level: {battery_level}")
         self.set_power_port_status_by_battery(battery_level)
 
         self._model.disconnect_times = 0
@@ -301,7 +301,7 @@ class AdbHandler(Handler, ChineseMixin):
         if battery_level is None:
             self._model.logger.error("Get the battery.dat file but unable to obtain power")
             return
-        self._model.logger.debug("battery fail mark, 根据充电策略充电.....battery_level: ", battery_level)
+        self._model.logger.debug(f"battery fail mark, 根据充电策略充电.....battery_level: {battery_level}")
         self.set_power_port_status_by_battery(battery_level)
         from app.v1.device_common.device_model import Device
         from app.libs.http_client import request

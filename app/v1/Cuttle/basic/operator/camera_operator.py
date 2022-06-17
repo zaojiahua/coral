@@ -492,6 +492,8 @@ class CameraHandler(Handler):
             # 目前只支持拼接俩个相机的数据
             img1 = frames[0]['image']
             img2 = frames[1]['image']
+            if CORAL_TYPE == 5.3:
+                img1, img2 = img2, img1
 
             host_t_1 = frames[0]['host_timestamp']
             host_t_2 = frames[1]['host_timestamp']

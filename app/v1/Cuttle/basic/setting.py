@@ -195,7 +195,7 @@ icon_rate = 500
 icon_min_template = 0.005
 icon_min_template_camera = 0.05
 wait_bias = 1.1  # 从发给旋转机械臂-到触碰到开关键的时间补偿
-adb_disconnect_threshold = 5
+adb_disconnect_threshold = 20
 # 和旋转机械臂相关
 arm_default_y = '33'
 arm_default = f"G01 X0Y{arm_default_y}Z0F5000 \r\n"
@@ -267,7 +267,7 @@ SCREENCAP_CMD_VERSION_THRESHOLD = 6
 FIND_APP_VERSION = 'versionName'
 PM_DUMP = 'pm dump'
 
-DEVICE_DETECT_ERROR_MAX_TIME = 5 * 60
+DEVICE_DETECT_ERROR_MAX_TIME = 30 * 60
 
 # 跟摄像机相关的参数
 set_global_value('merge_image_h', None)  # 图片拼接的h矩阵

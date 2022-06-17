@@ -384,7 +384,7 @@ class HandHandler(Handler, DefaultMixin):
                 serial_obj = hand_serial_obj_dict.get(obj_key)
                 for order in back_order:
                     serial_obj.send_single_order(order)
-                    serial_obj.recv(buffer_size=64)
+                    serial_obj.recv(buffer_size=32, is_init=True)
         return 0
 
     def _find_key_point(self, name):

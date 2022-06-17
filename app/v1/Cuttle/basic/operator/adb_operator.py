@@ -10,7 +10,7 @@ from threading import Lock
 
 from func_timeout import func_set_timeout
 
-from app.config.ip import HOST_IP, ADB_TYPE
+from app.config.ip import HOST_IP, ADB_TYPE, REEF_IP
 from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name, CORAL_TYPE_NAME
 from app.config.url import battery_url
 from app.execption.outer.error_code.total import ServerError
@@ -164,7 +164,9 @@ class AdbHandler(Handler, ChineseMixin):
                 # 多次尝试重连不成功，说明这个时候发生了问题
                 email = EmailManager()
                 email.send_email(['gh@anhereef.com', 'lx@anhereef.com', 'jy@anhereef.com'], '设备连接断开，请检查！',
-                                 f'设备{device.device_name}：{connect_number} 机柜：I\'M {HOST_IP.split(".")[-1]}（{CORAL_TYPE_NAME[CORAL_TYPE]}）')
+                                 f'设备{device.device_name}：{connect_number} '
+                                 f'机柜：{REEF_IP.split(".")[-2]}号机 I\'M {HOST_IP.split(".")[-1]}'
+                                 f'（{CORAL_TYPE_NAME[CORAL_TYPE]}）')
 
             # 次数和时间双保险
             if self._model.disconnect_times >= adb_disconnect_threshold and \

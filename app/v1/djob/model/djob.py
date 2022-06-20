@@ -223,8 +223,11 @@ class DJob(BaseModel):
     # 性能测试图片的推送。目前一个job中只能有一对性能测试的起点和终点，这些数据是在最外层的数据结构中定义的，不在job_flow中
     def push_performance_file(self, rds_id):
         # 存在数据的时候再操作
-        if hasattr(self, PERFORMANCE_PICTURE_WORK_PATH):
-            work_path = getattr(self, PERFORMANCE_PICTURE_WORK_PATH)
+        work_path_start = self.url_prefix.find('path=')
+        if work_path_start == -1:
+            return
+        work_path = self.url_prefix[work_path_start + len('path='):]
+        if work_path:
             all_files = []
 
             for filename in os.listdir(work_path):

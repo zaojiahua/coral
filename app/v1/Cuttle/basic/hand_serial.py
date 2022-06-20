@@ -59,8 +59,12 @@ class HandSerial:
 
     def check_hand_status(self, buffer_size=64):
         # 查询机械臂状态
+        self.ser.write("G04 P0.1 \r\n".encode())
         self.ser.write("?? \r\n".encode())
-        rev = self.ser.read(buffer_size).decode()
+        try:
+            rev = self.ser.read(buffer_size).decode()
+        except SerialException:
+            return False
         if "Idle" in rev:
             return True
         return False
@@ -70,9 +74,9 @@ class HandSerial:
         try:
             rev = self.ser.read(buffer_size).decode()
         except SerialException as se:
-            print("handSerial Exception: ", se)
             if "no data" not in se.args[0]:
                 raise
+            rev = "ok"
         print('返回：', rev, '*' * 10)
         while not is_init and not self.check_hand_status():
             time.sleep(0.2)

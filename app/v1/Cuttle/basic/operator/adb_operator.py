@@ -1,4 +1,5 @@
 import os
+import random
 import re
 import shutil
 import subprocess
@@ -233,16 +234,17 @@ class AdbHandler(Handler, ChineseMixin):
             shutil.move(f"./{Bugreport_file_name}", self.kwargs.get("work_path"))
 
     def retry_bugreport(self, result):
-        print('bugreport 重新拉取 retry bugreport', result)
+        self._model.logger.info(f'bugreport 重新拉取 retry bugreport {result}')
+        time.sleep(random.randint(30, 120))
         self.str_func(self.exec_content)
 
     def pull_bugreport(self, result, *args):
-        print('bugreport 重新拉取')
+        self._model.logger.info('bugreport 重新拉取')
         # bug report 可能拉取不成功 一种情况是手机内存满 这个没法处理 需要用户自己删除 另一种是写入到本地目录不成功 这个时候重新拉取试试
         command = re.findall(r'but could not be copied to \'(.*)\'[\s\S]*Try to run \'(.*)\'', result)
         if command and len(command[0]) == 2:
             target_command = command[0][1].replace('<directory>', command[0][0])
-            print(target_command)
+            self._model.logger.info(target_command)
             from app.v1.device_common.device_model import Device
             device_ip = Device(pk=self._model.pk).connect_number
             self.str_func(adb_cmd_prefix + "-s " + device_ip + f" {target_command}")

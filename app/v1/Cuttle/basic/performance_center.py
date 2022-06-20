@@ -15,6 +15,7 @@ from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 EXTRA_PIC_NUMBER = 40
+PERFORMANCE_PICTURE_WORK_PATH = 'picture_work_path'
 
 
 class PerformanceCenter(object):
@@ -236,7 +237,8 @@ class PerformanceCenter(object):
                                "job_duration": job_duration,
                                "time_per_unit": time_per_unit,
                                "picture_count": self.end_number + EXTRA_PIC_NUMBER - 1,
-                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path,
+                               PERFORMANCE_PICTURE_WORK_PATH: self.work_path}
                 break
             elif number >= CameraMax:
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
@@ -251,7 +253,8 @@ class PerformanceCenter(object):
                                "job_duration": job_duration,
                                "time_per_unit": time_per_unit,
                                "picture_count": number,
-                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path,
+                               PERFORMANCE_PICTURE_WORK_PATH: self.work_path}
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 print('结束点图片判断超出最大数量')
                 self.end_loop_not_found()

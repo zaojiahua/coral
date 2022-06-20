@@ -236,7 +236,8 @@ class AdbHandler(Handler, ChineseMixin):
     def retry_bugreport(self, result):
         self._model.logger.info(f'bugreport 重新拉取 retry bugreport {result}')
         time.sleep(random.randint(30, 120))
-        self.str_func(self.exec_content)
+        ret_str = self.str_func(self.exec_content)
+        self._model.logger.info(f'bugreport 返回 {ret_str}')
 
     def pull_bugreport(self, result, *args):
         self._model.logger.info('bugreport 重新拉取')

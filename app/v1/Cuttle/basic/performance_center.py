@@ -10,6 +10,8 @@ import cv2
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
+from app.v1.Cuttle.basic.hand_serial import SensorSerial
+from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_all_sensor_connect
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
     CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict
 
@@ -76,13 +78,16 @@ class PerformanceCenter(object):
             v_index = None
             while self.loop_flag:
                 # 不管左还是右，全部判断压力值即可
-                for index, sensor_obj in enumerate(sensor_serial_obj_dict.values()):
+                for index, sensor_key in enumerate(sensor_serial_obj_dict.keys()):
+                    if sensor_serial_obj_dict[sensor_key] is None:
+                        sensor_com = sensor_key.split(self.device_id)[1]
+                        sensor_serial_obj_dict[sensor_key] = creat_sensor_obj(sensor_com)
                     # 找到到底是哪个机械臂在点击
                     if v_index is not None and index != v_index:
                         continue
 
                     # 力是一个从小变大，又变小的过程
-                    cur_force = sensor_obj.query_sensor_value()
+                    cur_force = sensor_serial_obj_dict[sensor_key].query_sensor_value()
                     if cur_force < max_force:
                         camera_loop()
                         find_begin_point = True
@@ -95,9 +100,12 @@ class PerformanceCenter(object):
                         v_index = index
 
                 if find_begin_point:
+                    close_all_sensor_connect()
                     break
                 elif (CameraMax / FpsMax) < time.time() - begin_time:
+                    close_all_sensor_connect()
                     raise VideoStartPointNotFound
+            close_all_sensor_connect()
         else:
             # 使用图像识别的方法计算起始点
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False

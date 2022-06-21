@@ -271,7 +271,6 @@ class CameraHandler(Handler):
         self.back_up_dq = kwargs.get('back_up_dq')
         self.modify_fps = kwargs.get("modify_fps")
         # 图片拼接时候用到的几个参数
-        self.ht = None
         self.x_min = None
         self.y_min = None
         self.x_max = None
@@ -540,7 +539,7 @@ class CameraHandler(Handler):
         return h
 
     def warp_two_images(self, img1, img2, h):
-        if self.ht is None:
+        if self.pts is None:
             # 有些参数应该只计算一遍，这样加快处理速度
             h1, w1 = img1.shape[:2]
             h2, w2 = img2.shape[:2]
@@ -551,18 +550,18 @@ class CameraHandler(Handler):
             # print(pts)
             [x_min, y_min] = np.int32(pts.min(axis=0).ravel() - 0.5)
             [x_max, y_max] = np.int32(pts.max(axis=0).ravel() + 0.5)
-            t = [-x_min, -y_min]
-            ht = np.array([[1, 0, t[0]], [0, 1, t[1]], [0, 0, 1]])
 
             # 把数据保存一下，下次直接使用
-            self.ht = ht
             self.x_min = x_min
             self.y_min = y_min
             self.x_max = x_max
             self.y_max = y_max
             self.pts = pts
 
-        result = cv2.warpPerspective(img2, self.ht.dot(h), (self.x_max - self.x_min, self.y_max - self.y_min))
+        t = [-self.x_min, -self.y_min]
+        ht = np.array([[1, 0, t[0]], [0, 1, t[1]], [0, 0, 1]])
+
+        result = cv2.warpPerspective(img2, ht.dot(h), (self.x_max - self.x_min, self.y_max - self.y_min))
         # cv2.imwrite('D:\\code\\coral-local\\camera\\result_1.png', result)
 
         result_copy = np.array(result)

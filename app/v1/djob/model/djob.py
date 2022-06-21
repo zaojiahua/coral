@@ -1,5 +1,6 @@
 import json
 import math
+import os
 import re
 from datetime import datetime
 from typing import List
@@ -7,7 +8,7 @@ from typing import List
 from astra import models
 
 from app.config.setting import DEFAULT_DATE_TIME_FORMAT
-from app.config.url import rds_create_or_update_url
+from app.config.url import rds_create_or_update_url, rds_performance_pic
 from app.execption.outer.error import APIException
 from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, OwnerList, OwnerFloatField, OwnerForeignKey
 from app.libs.extension.model import BaseModel
@@ -18,6 +19,7 @@ from app.v1.djob.model.djobflow import DJobFlow
 from app.libs.adbutil import get_room_version
 from app.config.ip import ADB_TYPE
 from app.config.setting import CORAL_TYPE
+from app.libs.ospathutil import deal_dir_file
 
 """
 inner job 只有一个 job flow
@@ -154,6 +156,7 @@ class DJob(BaseModel):
         for key in self.rds_info_list:
             if getattr(self, key):
                 json_data[key] = getattr(self, key)
+
         if len(rds_result) != 0:
             app_info = []
 
@@ -180,8 +183,8 @@ class DJob(BaseModel):
                 json_data['app_info'] = json.dumps(app_info)
 
             json_data["rds_dict"] = json.dumps(rds_result)  # type  str
-        from app.v1.device_common.device_model import Device
 
+        from app.v1.device_common.device_model import Device
         device_cache = Device(self.device_label)
         if device_cache.is_exist():
             if math.floor(CORAL_TYPE) != 5:
@@ -204,6 +207,7 @@ class DJob(BaseModel):
                 f"the djob (device: {self.device_label}job: {self.job_label}) send api(rds_create_or_update) failed.{e}")
         else:
             self.push_file()  # 需要先创建rds，保证创建完成后上传关联数据并与之关联
+            self.push_performance_file(result['id'])
 
     def push_file(self):
         json_data = {  # 与reef 通信异常忽略
@@ -214,3 +218,29 @@ class DJob(BaseModel):
         }
         for djob_flow in self.djob_flow_list:
             djob_flow.push_log_and_pic(json_data, self.job_assessment_value)
+
+    # 性能测试图片的推送。目前一个job中只能有一对性能测试的起点和终点，这些数据是在最外层的数据结构中定义的，不在job_flow中
+    def push_performance_file(self, rds_id):
+        # 存在数据的时候再操作
+        work_path_start = self.url_prefix.find('path=')
+        if work_path_start == -1:
+            return
+        work_path = self.url_prefix[work_path_start + len('path='):]
+        if work_path:
+            all_files = []
+
+            for filename in os.listdir(work_path):
+                file_path = os.path.join(work_path, filename)
+                all_files.append(file_path)
+
+            # 控制一次传输图片的数量
+            step = 20
+            for i in range(0, len(all_files), step):
+                files = [('files', (os.path.split(file_path)[-1], open(file_path, 'rb'), 'file'))
+                         for file_path in all_files[i: i + step]]
+
+                response = request(method="POST", url=rds_performance_pic, data={'rds': rds_id}, files=files)
+                print('performance pic', response)
+
+            # 删除掉原始图片
+            deal_dir_file(work_path)

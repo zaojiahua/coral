@@ -458,8 +458,6 @@ class CameraHandler(Handler):
                     os.mkdir('camera')
 
         # 清理内存
-        for frame in self.frames.values():
-            del frame
         self.frames.clear()
 
     def get_roi(self, src, multi=True):

@@ -247,7 +247,8 @@ class PerformanceCenter(object):
                                "picture_count": self.end_number + EXTRA_PIC_NUMBER - 1,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 break
-            elif number >= CameraMax:
+            # 最后一张在prepare的时候就拿不到了
+            elif number >= CameraMax - 1:
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 if not SENSOR:
                     time_per_unit = round(job_duration / (number - self.start_number), 4)

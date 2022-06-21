@@ -270,6 +270,13 @@ class CameraHandler(Handler):
         # 性能测试的时候，用来实时的存放图片，如果传入这个参数，则可以实时的获取dp里边的图片
         self.back_up_dq = kwargs.get('back_up_dq')
         self.modify_fps = kwargs.get("modify_fps")
+        # 图片拼接时候用到的几个参数
+        self.ht = None
+        self.x_min = None
+        self.y_min = None
+        self.x_max = None
+        self.y_max = None
+        self.pts = None
 
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
@@ -532,28 +539,37 @@ class CameraHandler(Handler):
         del img1, img2
         return h
 
-    @staticmethod
-    def warp_two_images(img1, img2, H):
-        h1, w1 = img1.shape[:2]
-        h2, w2 = img2.shape[:2]
-        pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
-        pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
-        pts2_ = cv2.perspectiveTransform(pts2, H)
-        pts = np.concatenate((pts1, pts2_), axis=0)
-        # print(pts)
-        [xmin, ymin] = np.int32(pts.min(axis=0).ravel() - 0.5)
-        [xmax, ymax] = np.int32(pts.max(axis=0).ravel() + 0.5)
-        t = [-xmin, -ymin]
-        Ht = np.array([[1, 0, t[0]], [0, 1, t[1]], [0, 0, 1]])
+    def warp_two_images(self, img1, img2, h):
+        if self.ht is None:
+            # 有些参数应该只计算一遍，这样加快处理速度
+            h1, w1 = img1.shape[:2]
+            h2, w2 = img2.shape[:2]
+            pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
+            pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
+            pts2_ = cv2.perspectiveTransform(pts2, h)
+            pts = np.concatenate((pts1, pts2_), axis=0)
+            # print(pts)
+            [x_min, y_min] = np.int32(pts.min(axis=0).ravel() - 0.5)
+            [x_max, y_max] = np.int32(pts.max(axis=0).ravel() + 0.5)
+            t = [-x_min, -y_min]
+            ht = np.array([[1, 0, t[0]], [0, 1, t[1]], [0, 0, 1]])
 
-        result = cv2.warpPerspective(img2, Ht.dot(H), (xmax - xmin, ymax - ymin))
+            # 把数据保存一下，下次直接使用
+            self.ht = ht
+            self.x_min = x_min
+            self.y_min = y_min
+            self.x_max = x_max
+            self.y_max = y_max
+            self.pts = pts
+
+        result = cv2.warpPerspective(img2, self.ht.dot(h), (self.x_max - self.x_min, self.y_max - self.y_min))
         # cv2.imwrite('D:\\code\\coral-local\\camera\\result_1.png', result)
 
         result_copy = np.array(result)
         result[t[1]:h1 + t[1], t[0]:w1 + t[0]] = img1
         # print(t)
 
-        sorted_pts = [(int(pos[0][0] + t[0]), int(pos[0][1] + t[1])) for pos in pts]
+        sorted_pts = [(int(pos[0][0] + t[0]), int(pos[0][1] + t[1])) for pos in self.pts]
         # 5D的相机组装方式不一样
         if CORAL_TYPE == 5.3:
             sorted_pts = sorted(sorted_pts, key=lambda x: x[1])[2:6]

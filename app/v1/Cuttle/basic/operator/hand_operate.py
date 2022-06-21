@@ -66,12 +66,28 @@ def rotate_hand_init(arm_com_id, device_obj, **kwargs):
     return 0
 
 
-def sensor_init(arm_com_id, device_obj, **kwargs):
-    print('初始化传感器', arm_com_id, '&' * 10)
+def creat_sensor_obj(arm_com_id):
+    print("创建传感器对象，", arm_com_id)
     sensor_obj = SensorSerial(baud_rate=115200, timeout=2)
     sensor_obj.connect(arm_com_id)
+    sensor_obj.send_read_order()
+    return sensor_obj
+
+
+def sensor_init(arm_com_id, device_obj, **kwargs):
+    print('初始化传感器', arm_com_id, '&' * 10)
+    sensor_obj = creat_sensor_obj(arm_com_id)
     sensor_obj.close()
     sensor_serial_obj_dict[device_obj.pk + arm_com_id] = None
+
+
+def close_all_sensor_connect():
+    print("关闭传感器连接....")
+    for sensor_key, sensor_obj in sensor_serial_obj_dict.items():
+        if isinstance(sensor_obj, SensorSerial):
+            sensor_obj.close()
+        sensor_serial_obj_dict[sensor_key] = None
+    return 0
 
 
 def pre_point(point, arm_num=0):

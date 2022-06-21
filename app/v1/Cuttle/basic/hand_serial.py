@@ -178,11 +178,11 @@ class SensorSerial(HandSerial):
             result = re.search(regex, str_return_data)
             if result is None:
                 continue
-            data = result.group(0)[:24]
+            data = result.group(0)[:23]
             print("data: ", data)
-            if len(data) != 12 or data[8:16] == "f" * 8:
+            if len(data) != 22 or data[6:16] == "f" * 8:
                 pass
-            value = int(data[14:16], 16) / 10
+            value = int(data[12:14], 16) / 10
             print("取到的力值：", value)
             return value
         return 0

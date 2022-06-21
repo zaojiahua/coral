@@ -178,7 +178,7 @@ class SensorSerial(HandSerial):
             result = re.search(regex, str_return_data)
             if result is None:
                 continue
-            data = result.group(0)[:23]
+            data = result.group(0)[:22]
             print("data: ", data)
             if len(data) != 22 or data[6:16] == "f" * 8:
                 pass

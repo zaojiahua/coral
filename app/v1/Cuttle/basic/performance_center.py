@@ -214,7 +214,7 @@ class PerformanceCenter(object):
                 print(f"发现了终点: {number} bias：", self.bias)
 
                 # 多保存几张图片
-                if len(self.back_up_dq) < EXTRA_PIC_NUMBER:
+                if len(self.back_up_dq) < number + EXTRA_PIC_NUMBER:
                     # 实际帧率达不到，所以按照帧率缩小3倍算，这样基本足够了
                     time.sleep(EXTRA_PIC_NUMBER * 3 / FpsMax)
 
@@ -344,22 +344,19 @@ class PerformanceCenter(object):
         picture = None
         max_retry_time = 10
         while max_retry_time >= 0:
-            if len(self.back_up_dq) >= 3:
-                try:
-                    picture_info = self.back_up_dq.popleft()
-                    timestamp = picture_info['host_timestamp']
-                    picture = picture_info['image']
-                    pic_next = self.back_up_dq[0]['image']
-                    pic_next_next = self.back_up_dq[1]['image']
-                    break
-                except IndexError as e:
-                    print("error in picture_prepare", repr(e))
+            try:
+                picture_info = self.back_up_dq[number]
+                timestamp = picture_info['host_timestamp']
+                picture = picture_info['image']
+                pic_next = self.back_up_dq[number + 1]['image']
+                pic_next_next = self.back_up_dq[number + 2]['image']
+                break
+            except IndexError as e:
+                print("error in picture_prepare", repr(e))
             time.sleep(0.2)
             max_retry_time -= 1
 
         if picture is not None:
-            picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
-            cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
             h, w = picture.shape[:2]
             scope = self.scope if use_icon_scope is False else self.icon_scope
             area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
@@ -411,6 +408,12 @@ class PerformanceCenter(object):
             self.back_up_dq.clear()
             print('清空 back up dq 队列。。。。')
 
+        # 性能测试结束的最后再保存图片，可以加快匹配目标查找的速度
+        end_number = self.end_number + 1 if hasattr(self, 'end_number') else len(self.back_up_dq)
+        for cur_index in range(end_number):
+            picture_save = cv2.resize(self.back_up_dq[cur_index], dsize=(0, 0), fx=0.7, fy=0.7)
+            cv2.imwrite(os.path.join(self.work_path, f"{cur_index}.jpg"), picture_save)
+
         # 找到结束点后再继续保存最多40张:
         if not hasattr(self, "end_number"):
             back_up_clear()
@@ -419,7 +422,7 @@ class PerformanceCenter(object):
         number = self.end_number + 1
         for i in range(EXTRA_PIC_NUMBER):
             try:
-                src = self.back_up_dq.popleft()['image']
+                src = self.back_up_dq[number]['image']
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)
                 if hasattr(self, "draw_rec") and self.draw_rec:
                     # 这块就是做判断画面在动的时候，最后在临界帧画框

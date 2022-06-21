@@ -148,11 +148,12 @@ class PerformanceCenter(object):
         # 如果能走到这里，代表发现了起始点，该unit结束，但是依然在获取图片
         return 0
 
-    @staticmethod
-    def end_loop_not_found(exp=VideoEndPointNotFound()):
+    def end_loop_not_found(self, exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
         # 后续可能涉及到t-guard的相关操作，会使用相机，所以这里加个等待，让取图的线程完全终止了
         time.sleep(2)
+        self.back_up_dq.clear()
+        print('清空 back up dq 队列。。。。')
         raise exp
 
     def end_loop(self, judge_function):

@@ -330,6 +330,7 @@ class PerformanceCenter(object):
     def picture_prepare(self, number, use_icon_scope=False):
         # use_icon_scope为true时裁剪snap图中真实icon出现的位置
         # use_icon_scope为false时裁剪snap图中refer中标记的configArea选区大致范围
+        print('准备图片：', number)
         picture = None
         max_retry_time = 10
         while max_retry_time >= 0:

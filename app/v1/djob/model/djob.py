@@ -19,7 +19,6 @@ from app.v1.djob.model.djobflow import DJobFlow
 from app.libs.adbutil import get_room_version
 from app.config.ip import ADB_TYPE
 from app.config.setting import CORAL_TYPE
-from app.v1.Cuttle.basic.performance_center import PERFORMANCE_PICTURE_WORK_PATH
 from app.libs.ospathutil import deal_dir_file
 
 """

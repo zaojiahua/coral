@@ -142,7 +142,7 @@ class HandHandler(Handler, DefaultMixin):
         "double hand zoom": "_relative_double_hand",
     }
     arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power", "cal_swipe_speed",
-                            "double_hand_swipe", "repeat_sliding"]
+                            "double_hand_swipe", "repeat_sliding", "record_repeat_count"]
 
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)
@@ -150,6 +150,8 @@ class HandHandler(Handler, DefaultMixin):
         self.ignore_reset = False
         self.performance_start_point = kwargs.get('performance_start_point')
         self.kwargs = kwargs
+        self.repeat_count = 0
+        self.repeat_click_dict = {}
 
     def before_execute(self):
         # 先转换相对坐标到绝对坐标
@@ -266,6 +268,32 @@ class HandHandler(Handler, DefaultMixin):
                                                                    ignore_reset=ignore_reset)
 
         self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=repeat_time * 8)
+        return 0
+
+    def record_repeat_count(self, *args, **kwargs):
+        if isinstance(self.speed, int) and 1 <= self.speed <= 10:
+            self.repeat_count = self.speed  # 为整型，且需在1-10之间
+        else:
+            raise RepeatTimeInvalid
+        return 0
+
+    @allot_serial_obj
+    def repeat_click(self, axis, *args, **kwargs):
+        # 连续多次点击, 先记录所有要点击的点，记录完成后，进行重复点击
+        axis = pre_point(axis[0], arm_num=kwargs["arm_num"])
+        exec_serial_obj = kwargs["exec_serial_obj"]
+        self.repeat_click_dict.update({kwargs.get("index"):{"exec_obj": exec_serial_obj, "axis": axis}})
+        if kwargs.get("index") == kwargs.get("length") - 1:
+            # 说明是最后一个坐标了
+            self.exec_repeat_click()
+            return 0
+
+    def exec_repeat_click(self):
+        for count in range(self.repeat_count):
+            for exec_info in self.repeat_click_dict.values():
+                order = self.__single_click_order(exec_info["axis"])
+                exec_info["exec_obj"].send_list_order(order, ignore_reset=True)
+                exec_info["exec_obj"].recv()
         return 0
 
     @allot_serial_obj

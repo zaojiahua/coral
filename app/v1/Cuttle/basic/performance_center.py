@@ -3,14 +3,13 @@ import platform
 import time
 from collections import deque
 import traceback
-from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
-from app.v1.Cuttle.basic.hand_serial import SensorSerial
 from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_all_sensor_connect
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
     CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict
@@ -68,7 +67,7 @@ class PerformanceCenter(object):
         def camera_loop():
             set_global_value(CAMERA_IN_LOOP, True)
             executer = ThreadPoolExecutor()
-            executer.submit(self.move_src_to_backup)
+            self.move_src_future = executer.submit(self.move_src_to_backup)
 
         # 使用传感器获取点击的起始点，精确度更高一些
         if SENSOR:
@@ -150,6 +149,9 @@ class PerformanceCenter(object):
 
     def end_loop_not_found(self, exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
+        # 判断取图的线程是否完全终止
+        for _ in as_completed([self.move_src_future]):
+            pass
         # 后续可能涉及到t-guard的相关操作，会使用相机，所以这里加个等待，让取图的线程完全终止了
         time.sleep(2)
         self.back_up_dq.clear()
@@ -265,7 +267,9 @@ class PerformanceCenter(object):
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 print('结束点图片判断超出最大数量')
                 self.end_loop_not_found()
-            del picture
+        # 判断取图的线程是否完全终止
+        for _ in as_completed([self.move_src_future]):
+            pass
         return 0
 
     def draw_line_in_pic(self, number, picture):

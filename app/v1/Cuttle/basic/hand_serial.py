@@ -164,7 +164,7 @@ class CameraUsbPower(object):
 class SensorSerial(HandSerial):
 
     def send_read_order(self):
-        order = "01 03 00 50 00 02 C4 1A"
+        order = "FE 01 07 01 02 00 01 cf fc cc ff"
         send_data = bytes.fromhex(order)
         self.ser.write(send_data)
 

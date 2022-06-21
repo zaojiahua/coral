@@ -10,6 +10,7 @@ import cv2
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
+from app.v1.Cuttle.basic.hand_serial import SensorSerial
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
     CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict
 
@@ -74,30 +75,42 @@ class PerformanceCenter(object):
             find_begin_point = False
             max_force = 0
             v_index = None
+            exec_sensor = None
+            for index, sensor_obj in enumerate(sensor_serial_obj_dict.values()):
+                # 找到到底是哪个机械臂在点击
+                if v_index is not None and index != v_index:
+                    continue
+                exec_sensor_com = index.split(self.device_id)[1]
+                exec_sensor = SensorSerial(baud_rate=115200, timeout=2)
+                exec_sensor.connect(exec_sensor_com)
+                exec_sensor.send_read_order()
             while self.loop_flag:
                 # 不管左还是右，全部判断压力值即可
-                for index, sensor_obj in enumerate(sensor_serial_obj_dict.values()):
-                    # 找到到底是哪个机械臂在点击
-                    if v_index is not None and index != v_index:
-                        continue
+                # for index, sensor_obj in enumerate(sensor_serial_obj_dict.values()):
+                #     # 找到到底是哪个机械臂在点击
+                #     if v_index is not None and index != v_index:
+                #         continue
 
-                    # 力是一个从小变大，又变小的过程
-                    cur_force = sensor_obj.query_sensor_value()
-                    if cur_force < max_force:
-                        camera_loop()
-                        find_begin_point = True
-                        self.bias = 0
-                        self.start_timestamp = time.time() * 1000
-                        print('找到了起始点', self.start_timestamp)
-                        break
-                    elif cur_force > max_force:
-                        max_force = cur_force
-                        v_index = index
+                # 力是一个从小变大，又变小的过程
+                cur_force = exec_sensor.query_sensor_value()
+                if cur_force < max_force:
+                    camera_loop()
+                    find_begin_point = True
+                    self.bias = 0
+                    self.start_timestamp = time.time() * 1000
+                    print('找到了起始点', self.start_timestamp)
+                    break
+                elif cur_force > max_force:
+                    max_force = cur_force
+                    v_index = index
 
                 if find_begin_point:
+                    exec_sensor.close()
                     break
                 elif (CameraMax / FpsMax) < time.time() - begin_time:
+                    exec_sensor.close()
                     raise VideoStartPointNotFound
+            exec_sensor.close()
         else:
             # 使用图像识别的方法计算起始点
             use_icon_scope = True if judge_function.__name__ == "_black_field" else False

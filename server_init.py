@@ -11,6 +11,7 @@ from app.v1.Cuttle.boxSvc import box_init
 from app.v1.cabinet_register import cabinet_register
 from app.v1.djob import djob_init
 from app.v1.tboard import tboard_init
+from app.libs.ospathutil import deal_dir_file
 from redis_init import redis_client
 
 PROJECT_SIBLING_DIR = os.path.dirname((os.path.dirname(os.path.abspath(__file__))))
@@ -28,6 +29,12 @@ init_func = [
 def server_init():
     check_reef_exist()
     redis_client.flushdb()
+
+    # 删除老的日志文件，只保留上次的日志，再久的从来没有看过，还占用存储空间
+    for dirname in os.listdir(os.path.join(PROJECT_SIBLING_DIR, "coral-log")):
+        if dirname != 'log':
+            deal_dir_file(os.path.join(PROJECT_SIBLING_DIR, "coral-log", dirname))
+
     log_path = os.path.join(PROJECT_SIBLING_DIR, "coral-log", "log")
     if os.path.exists(log_path):
         os.rename(log_path, log_path + f"_{time.strftime('%Y_%m_%d_%H_%M_%S', time.localtime())}")

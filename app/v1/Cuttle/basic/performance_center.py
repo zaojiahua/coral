@@ -148,11 +148,12 @@ class PerformanceCenter(object):
         # 如果能走到这里，代表发现了起始点，该unit结束，但是依然在获取图片
         return 0
 
-    @staticmethod
-    def end_loop_not_found(exp=VideoEndPointNotFound()):
+    def end_loop_not_found(self, exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
         # 后续可能涉及到t-guard的相关操作，会使用相机，所以这里加个等待，让取图的线程完全终止了
         time.sleep(2)
+        self.back_up_dq.clear()
+        print('清空 back up dq 队列。。。。')
         raise exp
 
     def end_loop(self, judge_function):
@@ -246,7 +247,8 @@ class PerformanceCenter(object):
                                "picture_count": self.end_number + EXTRA_PIC_NUMBER - 1,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 break
-            elif number >= CameraMax:
+            # 最后一张在prepare的时候就拿不到了
+            elif number >= CameraMax - 1:
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 if not SENSOR:
                     time_per_unit = round(job_duration / (number - self.start_number), 4)
@@ -338,6 +340,7 @@ class PerformanceCenter(object):
     def picture_prepare(self, number, use_icon_scope=False):
         # use_icon_scope为true时裁剪snap图中真实icon出现的位置
         # use_icon_scope为false时裁剪snap图中refer中标记的configArea选区大致范围
+        print('准备图片：', number)
         picture = None
         max_retry_time = 10
         while max_retry_time >= 0:

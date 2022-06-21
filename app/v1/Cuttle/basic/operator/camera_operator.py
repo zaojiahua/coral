@@ -276,6 +276,7 @@ class CameraHandler(Handler):
         self.x_max = None
         self.y_max = None
         self.pts = None
+        self.weights = None
 
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
@@ -539,9 +540,9 @@ class CameraHandler(Handler):
         return h
 
     def warp_two_images(self, img1, img2, h):
+        h1, w1 = img1.shape[:2]
         if self.pts is None:
             # 有些参数应该只计算一遍，这样加快处理速度
-            h1, w1 = img1.shape[:2]
             h2, w2 = img2.shape[:2]
             pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
             pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
@@ -585,20 +586,49 @@ class CameraHandler(Handler):
         # print(sorted_pts)
         # print(merge_min_x, merge_min_y)
         # print(merge_max_x, merge_max_y)
+
         if CORAL_TYPE == 5.3:
-            for y in range(merge_min_y, merge_max_y):
-                weight = (y - merge_min_y) / (merge_max_y - merge_min_y)
-                result[y, merge_min_x: merge_max_x, :] = result_copy[y, merge_min_x: merge_max_x, :] * (
-                        1 - weight) + result[y, merge_min_x: merge_max_x, :] * weight
+            # 最耗时的地方，所以提前计算出来权重
+            if self.weights is None:
+                self.weights = np.ones(result.shape)
+                for y in range(merge_min_y, merge_max_y):
+                    weight = (y - merge_min_y) / (merge_max_y - merge_min_y)
+                    result[y, merge_min_x: merge_max_x, :] = result_copy[y, merge_min_x: merge_max_x, :] * (
+                            1 - weight) + result[y, merge_min_x: merge_max_x, :] * weight
+                    self.weights[y, merge_min_x: merge_max_x, :] = 1 - weight
+            else:
+                result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] = \
+                    result_copy[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                    self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] + \
+                    result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                    (1 - self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :])
         else:
-            for r in range(merge_min_x, merge_max_x):
-                weight = (r - merge_min_x) / (merge_max_x - merge_min_x)
+            if self.weights is None:
+                self.weights = np.ones(result.shape)
+                for r in range(merge_min_x, merge_max_x):
+                    weight = (r - merge_min_x) / (merge_max_x - merge_min_x)
+                    if t[0] < merge_min_x:
+                        result[merge_min_y: merge_max_y, r, :] = \
+                            result_copy[merge_min_y: merge_max_y, r, :] * \
+                            weight + result[merge_min_y: merge_max_y, r, :] * (1 - weight)
+                    else:
+                        result[merge_min_y: merge_max_y, r, :] = \
+                            result_copy[merge_min_y: merge_max_y, r, :] * \
+                            (1 - weight) + result[merge_min_y: merge_max_y, r, :] * weight
+                    self.weights[merge_min_y: merge_max_y, r, :] = weight
+            else:
                 if t[0] < merge_min_x:
-                    result[merge_min_y: merge_max_y, r, :] = result_copy[merge_min_y: merge_max_y, r, :] * (
-                        weight) + result[merge_min_y: merge_max_y, r, :] * (1 - weight)
+                    result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] = \
+                        result_copy[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                        self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] + \
+                        result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                        (1 - self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :])
                 else:
-                    result[merge_min_y: merge_max_y, r, :] = result_copy[merge_min_y: merge_max_y, r, :] * (
-                            1 - weight) + result[merge_min_y: merge_max_y, r, :] * (weight)
+                    result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] = \
+                        result_copy[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                        (1 - self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :]) + \
+                        result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                        self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :]
 
         return result
 

@@ -431,7 +431,10 @@ class CameraHandler(Handler):
             merge_number = merge_number if merge_number < camera_length else camera_length
 
         # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
-        for frame_index in range(merge_number):
+        cur_frame_num = 0
+        frame_index = 0
+        # 当前处理的最后一帧一定要满足同步条件，否则后边处理的数据会丢帧
+        while len(self.frames[cur_frame_num]) == 1 or frame_index < merge_number:
             for camera_id in camera_ids:
                 # 在这里进行运算，选出一张图片，赋给self.src
                 src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
@@ -439,6 +442,8 @@ class CameraHandler(Handler):
                 src['camera_id'] = camera_id
                 self.frames[src['frame_num']].append(src)
                 del src
+                cur_frame_num = src['frame_num']
+                frame_index += 1
 
         if len(self.frames) == 0:
             return
@@ -483,17 +488,14 @@ class CameraHandler(Handler):
     # 从多个相机中获取同步的内容
     def get_syn_frame(self, camera_ids):
         # 判断是否丢帧
-        frame_nums = []
-        max_frame_num = 0
+        lost_frame_nums = []
 
         h = get_global_value(MERGE_IMAGE_H)
         for frame_num, frames in self.frames.items():
             if len(frames) != len(camera_ids):
+                lost_frame_nums.append(frame_num)
                 del frames
                 continue
-
-            frame_nums.append(frame_num)
-            max_frame_num = frame_num if frame_num > max_frame_num else max_frame_num
 
             # 目前只支持拼接俩个相机的数据
             img1 = frames[0]['image']
@@ -521,9 +523,8 @@ class CameraHandler(Handler):
             self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1})
             del result
 
-        lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
-        if lost_frames and self.back_up_dq is None:
-            print('发生了丢帧:', lost_frames, '&' * 10)
+        if lost_frame_nums:
+            print('发生了丢帧:', lost_frame_nums, '&' * 10)
 
     @staticmethod
     def get_homography(img1, img2):

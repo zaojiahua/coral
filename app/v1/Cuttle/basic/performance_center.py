@@ -341,15 +341,16 @@ class PerformanceCenter(object):
         picture = None
         max_retry_time = 10
         while max_retry_time >= 0:
-            try:
-                picture_info = self.back_up_dq[number]
-                timestamp = picture_info['host_timestamp']
-                picture = picture_info['image']
-                pic_next = self.back_up_dq[number + 1]['image']
-                pic_next_next = self.back_up_dq[number + 2]['image']
-                break
-            except IndexError as e:
-                print("error in picture_prepare", repr(e))
+            if len(self.back_up_dq) > number + 2:
+                try:
+                    picture_info = self.back_up_dq[number]
+                    timestamp = picture_info['host_timestamp']
+                    picture = picture_info['image']
+                    pic_next = self.back_up_dq[number + 1]['image']
+                    pic_next_next = self.back_up_dq[number + 2]['image']
+                    break
+                except IndexError as e:
+                    print("error in picture_prepare", repr(e))
             time.sleep(0.5)
             max_retry_time -= 1
 

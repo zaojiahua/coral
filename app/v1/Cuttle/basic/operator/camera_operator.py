@@ -12,7 +12,6 @@ import func_timeout
 import numpy as np
 from func_timeout import func_set_timeout
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import pickle
 
 from app.execption.outer.error_code.camera import NoSrc, CameraInitFail, CameraInUse
 from app.v1.Cuttle.basic.MvImport.HK_import import *
@@ -386,7 +385,9 @@ class CameraHandler(Handler):
                         time.sleep(1)
                         if get_global_value(CAMERA_IN_LOOP):
                             self.merge_frame(camera_ids, 60)
-                # 把剩下的图片都合成完毕
+                # 后续再保存一些图片，因为结束点之后还需要一些图片
+                self.merge_frame(camera_ids, 60)
+                # 如果依然在loop中，也就是达到了取图的最大限制，还没来得及处理图片，则把剩下的图片都合成完毕
                 if get_global_value(CAMERA_IN_LOOP):
                     self.merge_frame(camera_ids, 60)
             else:

@@ -226,7 +226,7 @@ class PerformanceCenter(object):
                     end = self.end_number + 1
                 else:
                     # 判定终止图标出现时，出现的帧就是当前picture，所以直接在这个图上画就可以
-                    self.draw_line_in_pic(number, picture)
+                    self.draw_rec = True
                     end = self.end_number
 
                 # 找到终止点后，包装一个json格式，推到reef。
@@ -274,13 +274,8 @@ class PerformanceCenter(object):
         # 在结尾图片上画上选框（可能是画图标，也可能是画判定选区）
         is_icon = not (self.icon_scope is None or len(self.icon_scope) < 1)
         scope = self.icon_scope if is_icon else self.scope
-        if isinstance(self.back_up_dq[0], dict):
-            h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0][
-                                                                                              'image'].shape[:2]
-        else:
-            h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0].shape[:2]
-        area = [int(i) if i > 0 else 0 for i in \
-                [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
+        h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0]['image'].shape[:2]
+        area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
             if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
         x1, y1 = area[:2]
         x4, y4 = area[2:]
@@ -291,7 +286,7 @@ class PerformanceCenter(object):
             x4 = x4 - int(self.scope[0] * w)
             y4 = y4 - int(self.scope[1] * h)
         cv2.rectangle(pic, (x1, y1), (x4, y4), (0, 255, 0), 4)
-        cv2.imwrite(os.path.join(self.work_path, f"{number + 1}.jpg"), pic)
+        cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), pic)
 
     def test_fps_lost(self, judge_function):
         # 这个方法还没完全做好，这仅当个思路吧

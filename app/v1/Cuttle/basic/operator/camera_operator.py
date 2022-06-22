@@ -435,15 +435,18 @@ class CameraHandler(Handler):
         frame_index = 0
         # 当前处理的最后一帧一定要满足同步条件，否则后边处理的数据会丢帧
         while len(self.frames[cur_frame_num]) == 1 or frame_index < merge_number:
-            for camera_id in camera_ids:
-                # 在这里进行运算，选出一张图片，赋给self.src
-                src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
-                # 记录来源于哪个相机，方便后续处理
-                src['camera_id'] = camera_id
-                self.frames[src['frame_num']].append(src)
-                del src
-                cur_frame_num = src['frame_num']
-                frame_index += 1
+            try:
+                for camera_id in camera_ids:
+                    # 在这里进行运算，选出一张图片，赋给self.src
+                    src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
+                    # 记录来源于哪个相机，方便后续处理
+                    src['camera_id'] = camera_id
+                    self.frames[src['frame_num']].append(src)
+                    cur_frame_num = src['frame_num']
+                    frame_index += 1
+            except IndexError:
+                # 如果有一个没有图了，直接退出，这样只是丢有限的几张图，后边能同步过来就ok
+                break
 
         if len(self.frames) == 0:
             return

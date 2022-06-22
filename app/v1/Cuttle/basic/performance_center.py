@@ -226,7 +226,7 @@ class PerformanceCenter(object):
                     end = self.end_number + 1
                 else:
                     # 判定终止图标出现时，出现的帧就是当前picture，所以直接在这个图上画就可以
-                    self.draw_rec = True
+                    self.draw_line_in_pic(number=number, picture=picture)
                     end = self.end_number
 
                 # 找到终止点后，包装一个json格式，推到reef。
@@ -286,7 +286,7 @@ class PerformanceCenter(object):
             x4 = x4 - int(self.scope[0] * w)
             y4 = y4 - int(self.scope[1] * h)
         cv2.rectangle(pic, (x1, y1), (x4, y4), (0, 255, 0), 4)
-        cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), pic)
+        cv2.imwrite(os.path.join(self.work_path, f"{number + 1}.jpg"), pic)
 
     def test_fps_lost(self, judge_function):
         # 这个方法还没完全做好，这仅当个思路吧
@@ -420,7 +420,9 @@ class PerformanceCenter(object):
                     self.draw_line_in_pic(number=cur_index, picture=picture_save)
                     self.draw_rec = False
                 else:
-                    cv2.imwrite(os.path.join(self.work_path, f"{cur_index + 1}.jpg"), picture_save)
+                    # 已经在结束点画了图
+                    if cur_index != (end_number - 1):
+                        cv2.imwrite(os.path.join(self.work_path, f"{cur_index + 1}.jpg"), picture_save)
         except Exception as e:
             print(e)
             traceback.print_exc()

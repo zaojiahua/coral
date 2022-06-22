@@ -151,9 +151,7 @@ class PerformanceCenter(object):
         set_global_value(CAMERA_IN_LOOP, False)
         # 判断取图的线程是否完全终止
         for _ in as_completed([self.move_src_future]):
-            pass
-        # 后续可能涉及到t-guard的相关操作，会使用相机，所以这里加个等待，让取图的线程完全终止了
-        time.sleep(2)
+            print('move src 线程结束')
         self.back_up_dq.clear()
         print('清空 back up dq 队列。。。。')
         raise exp
@@ -269,7 +267,7 @@ class PerformanceCenter(object):
                 self.end_loop_not_found()
         # 判断取图的线程是否完全终止
         for _ in as_completed([self.move_src_future]):
-            pass
+            print('move src 线程结束')
         return 0
 
     def draw_line_in_pic(self, number, picture):
@@ -293,7 +291,7 @@ class PerformanceCenter(object):
             x4 = x4 - int(self.scope[0] * w)
             y4 = y4 - int(self.scope[1] * h)
         cv2.rectangle(pic, (x1, y1), (x4, y4), (0, 255, 0), 4)
-        cv2.imwrite(os.path.join(self.work_path, f"{number - 1}.jpg"), pic)
+        cv2.imwrite(os.path.join(self.work_path, f"{number + 1}.jpg"), pic)
 
     def test_fps_lost(self, judge_function):
         # 这个方法还没完全做好，这仅当个思路吧
@@ -413,13 +411,27 @@ class PerformanceCenter(object):
             print('清空 back up dq 队列。。。。')
 
         # 性能测试结束的最后再保存图片，可以加快匹配目标查找的速度
-        end_number = self.end_number + 1 if hasattr(self, 'end_number') else len(self.back_up_dq)
-        for cur_index in range(end_number):
-            picture_save = cv2.resize(self.back_up_dq[cur_index], dsize=(0, 0), fx=0.7, fy=0.7)
-            cv2.imwrite(os.path.join(self.work_path, f"{cur_index}.jpg"), picture_save)
+        find_end = False
+        if hasattr(self, 'end_number'):
+            find_end = True
+
+        end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
+        try:
+            for cur_index in range(end_number):
+                picture_save = cv2.resize(self.back_up_dq[cur_index]['image'], dsize=(0, 0), fx=0.7, fy=0.7)
+                if find_end and hasattr(self, "draw_rec") and \
+                        self.draw_rec and cur_index == (end_number - 1):
+                    # 这块就是做判断画面在动的时候，最后在临界帧画框
+                    self.draw_line_in_pic(number=cur_index, picture=picture_save)
+                    self.draw_rec = False
+                else:
+                    cv2.imwrite(os.path.join(self.work_path, f"{cur_index + 1}.jpg"), picture_save)
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
 
         # 找到结束点后再继续保存最多40张:
-        if not hasattr(self, "end_number"):
+        if not find_end:
             back_up_clear()
             return 0
 
@@ -428,16 +440,10 @@ class PerformanceCenter(object):
             try:
                 src = self.back_up_dq[number]['image']
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)
-                if hasattr(self, "draw_rec") and self.draw_rec:
-                    # 这块就是做判断画面在动的时候，最后在临界帧画框
-                    number += 1
-                    self.draw_line_in_pic(number=number, picture=picture_save)
-                    self.draw_rec = False
-                else:
-                    cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
-                    number += 1
+                cv2.imwrite(os.path.join(self.work_path, f"{number + 1}.jpg"), picture_save)
+                number += 1
             except Exception as e:
-                print(repr(e))
+                traceback.print_exc()
                 back_up_clear()
                 return 0
 

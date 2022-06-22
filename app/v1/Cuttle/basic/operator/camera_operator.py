@@ -431,10 +431,10 @@ class CameraHandler(Handler):
             merge_number = merge_number if merge_number < camera_length else camera_length
 
         # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
-        cur_frame_num = 0
+        cur_frame_num = -1
         frame_index = 0
         # 当前处理的最后一帧一定要满足同步条件，否则后边处理的数据会丢帧
-        while len(self.frames[cur_frame_num]) == 1 or frame_index < merge_number:
+        while (cur_frame_num != -1 and len(self.frames[cur_frame_num]) == 1) or frame_index < merge_number:
             try:
                 for camera_id in camera_ids:
                     # 在这里进行运算，选出一张图片，赋给self.src

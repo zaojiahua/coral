@@ -500,9 +500,13 @@ class CameraHandler(Handler):
                 del frames
                 continue
 
-            # 目前只支持拼接俩个相机的数据
-            img1 = frames[0]['image']
-            img2 = frames[1]['image']
+            # 目前只支持拼接俩个相机的数据 1和2中的数据不能乱，因为h矩阵不同
+            if int(frames[0]['camera_id']) < int(frames[1]['camera_id']):
+                img1 = frames[0]['image']
+                img2 = frames[1]['image']
+            else:
+                img2 = frames[0]['image']
+                img1 = frames[1]['image']
             if CORAL_TYPE == 5.3:
                 img1, img2 = img2, img1
 

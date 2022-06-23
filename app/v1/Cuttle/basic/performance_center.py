@@ -119,8 +119,7 @@ class PerformanceCenter(object):
                 picture, next_picture, third_pic, timestamp = self.picture_prepare(number,
                                                                                    use_icon_scope=use_icon_scope)
                 if picture is None:
-                    set_global_value(CAMERA_IN_LOOP, False)
-                    raise VideoStartPointNotFound
+                    self.start_end_loop_not_found(VideoStartPointNotFound())
 
                 number += 1
                 # judge_function 返回True时 即发现了起始点
@@ -139,15 +138,14 @@ class PerformanceCenter(object):
                     break
                 elif number >= CameraMax / 2:
                     # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
-                    set_global_value(CAMERA_IN_LOOP, False)
                     self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                    raise VideoStartPointNotFound
+                    self.start_end_loop_not_found(VideoStartPointNotFound())
                 del picture
 
         # 如果能走到这里，代表发现了起始点，该unit结束，但是依然在获取图片
         return 0
 
-    def end_loop_not_found(self, exp=VideoEndPointNotFound()):
+    def start_end_loop_not_found(self, exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
         # 判断取图的线程是否完全终止
         for _ in as_completed([self.move_src_future]):
@@ -160,13 +158,13 @@ class PerformanceCenter(object):
         # 计算终止点的方法
         if not hasattr(self, "start_number") or not hasattr(self, "bias"):
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
-            self.end_loop_not_found(VideoStartPointNotFound())
+            self.start_end_loop_not_found(VideoStartPointNotFound())
         # 如果使用压力传感器，有可能里边还没有图片，所以选择等待一段时间
         if SENSOR:
             # 这里需要至少等待1s，因为1s以后才开始合并图片
             time.sleep(2)
         if len(self.back_up_dq) == 0:
-            self.end_loop_not_found(PerformanceNotStart())
+            self.start_end_loop_not_found(PerformanceNotStart())
 
         if SENSOR:
             number = 0
@@ -181,7 +179,7 @@ class PerformanceCenter(object):
                 picture, next_picture, _, _ = self.picture_prepare(number)
                 if picture is None:
                     print('图片不够 bias')
-                    self.end_loop_not_found()
+                    self.start_end_loop_not_found()
                 number += 1
 
         while self.loop_flag:
@@ -192,13 +190,13 @@ class PerformanceCenter(object):
             picture, _, _, timestamp_f = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 1')
-                self.end_loop_not_found()
+                self.start_end_loop_not_found()
             number += 1
 
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 2')
-                self.end_loop_not_found()
+                self.start_end_loop_not_found()
             number += 1
 
             if judge_function.__name__ in ["_icon_find", "_icon_find_template_match"]:
@@ -264,7 +262,7 @@ class PerformanceCenter(object):
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 print('结束点图片判断超出最大数量')
-                self.end_loop_not_found()
+                self.start_end_loop_not_found()
         # 判断取图的线程是否完全终止
         for _ in as_completed([self.move_src_future]):
             print('move src 线程结束')

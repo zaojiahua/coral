@@ -12,7 +12,6 @@ import func_timeout
 import numpy as np
 from func_timeout import func_set_timeout
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import pickle
 
 from app.execption.outer.error_code.camera import NoSrc, CameraInitFail, CameraInUse
 from app.v1.Cuttle.basic.MvImport.HK_import import *
@@ -270,6 +269,13 @@ class CameraHandler(Handler):
         # 性能测试的时候，用来实时的存放图片，如果传入这个参数，则可以实时的获取dp里边的图片
         self.back_up_dq = kwargs.get('back_up_dq')
         self.modify_fps = kwargs.get("modify_fps")
+        # 图片拼接时候用到的几个参数
+        self.x_min = None
+        self.y_min = None
+        self.x_max = None
+        self.y_max = None
+        self.pts = None
+        self.weights = None
 
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
@@ -379,7 +385,9 @@ class CameraHandler(Handler):
                         time.sleep(1)
                         if get_global_value(CAMERA_IN_LOOP):
                             self.merge_frame(camera_ids, 60)
-                # 把剩下的图片都合成完毕
+                # 后续再保存一些图片，因为结束点之后还需要一些图片
+                self.merge_frame(camera_ids, 60)
+                # 如果依然在loop中，也就是达到了取图的最大限制，还没来得及处理图片，则把剩下的图片都合成完毕
                 if get_global_value(CAMERA_IN_LOOP):
                     self.merge_frame(camera_ids, 60)
             else:
@@ -423,14 +431,22 @@ class CameraHandler(Handler):
             merge_number = merge_number if merge_number < camera_length else camera_length
 
         # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
-        for frame_index in range(merge_number):
-            for camera_id in camera_ids:
-                # 在这里进行运算，选出一张图片，赋给self.src
-                src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
-                # 记录来源于哪个相机，方便后续处理
-                src['camera_id'] = camera_id
-                self.frames[src['frame_num']].append(src)
-                del src
+        cur_frame_num = -1
+        frame_index = 0
+        # 当前处理的最后一帧一定要满足同步条件，否则后边处理的数据会丢帧
+        while (cur_frame_num != -1 and len(self.frames[cur_frame_num]) == 1) or frame_index < merge_number:
+            try:
+                for camera_id in camera_ids:
+                    # 在这里进行运算，选出一张图片，赋给self.src
+                    src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
+                    # 记录来源于哪个相机，方便后续处理
+                    src['camera_id'] = camera_id
+                    self.frames[src['frame_num']].append(src)
+                    cur_frame_num = src['frame_num']
+                    frame_index += 1
+            except IndexError:
+                # 如果有一个没有图了，直接退出，这样只是丢有限的几张图，后边能同步过来就ok
+                break
 
         if len(self.frames) == 0:
             return
@@ -475,21 +491,22 @@ class CameraHandler(Handler):
     # 从多个相机中获取同步的内容
     def get_syn_frame(self, camera_ids):
         # 判断是否丢帧
-        frame_nums = []
-        max_frame_num = 0
+        lost_frame_nums = []
 
         h = get_global_value(MERGE_IMAGE_H)
         for frame_num, frames in self.frames.items():
             if len(frames) != len(camera_ids):
+                lost_frame_nums.append(frame_num)
                 del frames
                 continue
 
-            frame_nums.append(frame_num)
-            max_frame_num = frame_num if frame_num > max_frame_num else max_frame_num
-
-            # 目前只支持拼接俩个相机的数据
-            img1 = frames[0]['image']
-            img2 = frames[1]['image']
+            # 目前只支持拼接俩个相机的数据 1和2中的数据不能乱，因为h矩阵不同
+            if int(frames[0]['camera_id']) < int(frames[1]['camera_id']):
+                img1 = frames[0]['image']
+                img2 = frames[1]['image']
+            else:
+                img2 = frames[0]['image']
+                img1 = frames[1]['image']
             if CORAL_TYPE == 5.3:
                 img1, img2 = img2, img1
 
@@ -513,9 +530,8 @@ class CameraHandler(Handler):
             self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1})
             del result
 
-        lost_frames = set(range(max_frame_num + 1)) - set(frame_nums)
-        if lost_frames and self.back_up_dq is None:
-            print('发生了丢帧:', lost_frames, '&' * 10)
+        if lost_frame_nums:
+            print('发生了丢帧:', lost_frame_nums, '&' * 10)
 
     @staticmethod
     def get_homography(img1, img2):
@@ -532,28 +548,37 @@ class CameraHandler(Handler):
         del img1, img2
         return h
 
-    @staticmethod
-    def warp_two_images(img1, img2, H):
+    def warp_two_images(self, img1, img2, h):
         h1, w1 = img1.shape[:2]
-        h2, w2 = img2.shape[:2]
-        pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
-        pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
-        pts2_ = cv2.perspectiveTransform(pts2, H)
-        pts = np.concatenate((pts1, pts2_), axis=0)
-        # print(pts)
-        [xmin, ymin] = np.int32(pts.min(axis=0).ravel() - 0.5)
-        [xmax, ymax] = np.int32(pts.max(axis=0).ravel() + 0.5)
-        t = [-xmin, -ymin]
-        Ht = np.array([[1, 0, t[0]], [0, 1, t[1]], [0, 0, 1]])
+        if self.pts is None:
+            # 有些参数应该只计算一遍，这样加快处理速度
+            h2, w2 = img2.shape[:2]
+            pts1 = np.float32([[0, 0], [0, h1], [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
+            pts2 = np.float32([[0, 0], [0, h2], [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
+            pts2_ = cv2.perspectiveTransform(pts2, h)
+            pts = np.concatenate((pts1, pts2_), axis=0)
+            # print(pts)
+            [x_min, y_min] = np.int32(pts.min(axis=0).ravel() - 0.5)
+            [x_max, y_max] = np.int32(pts.max(axis=0).ravel() + 0.5)
 
-        result = cv2.warpPerspective(img2, Ht.dot(H), (xmax - xmin, ymax - ymin))
+            # 把数据保存一下，下次直接使用
+            self.x_min = x_min
+            self.y_min = y_min
+            self.x_max = x_max
+            self.y_max = y_max
+            self.pts = pts
+
+        t = [-self.x_min, -self.y_min]
+        ht = np.array([[1, 0, t[0]], [0, 1, t[1]], [0, 0, 1]])
+
+        result = cv2.warpPerspective(img2, ht.dot(h), (self.x_max - self.x_min, self.y_max - self.y_min))
         # cv2.imwrite('D:\\code\\coral-local\\camera\\result_1.png', result)
 
         result_copy = np.array(result)
         result[t[1]:h1 + t[1], t[0]:w1 + t[0]] = img1
         # print(t)
 
-        sorted_pts = [(int(pos[0][0] + t[0]), int(pos[0][1] + t[1])) for pos in pts]
+        sorted_pts = [(int(pos[0][0] + t[0]), int(pos[0][1] + t[1])) for pos in self.pts]
         # 5D的相机组装方式不一样
         if CORAL_TYPE == 5.3:
             sorted_pts = sorted(sorted_pts, key=lambda x: x[1])[2:6]
@@ -570,20 +595,49 @@ class CameraHandler(Handler):
         # print(sorted_pts)
         # print(merge_min_x, merge_min_y)
         # print(merge_max_x, merge_max_y)
+
         if CORAL_TYPE == 5.3:
-            for y in range(merge_min_y, merge_max_y):
-                weight = (y - merge_min_y) / (merge_max_y - merge_min_y)
-                result[y, merge_min_x: merge_max_x, :] = result_copy[y, merge_min_x: merge_max_x, :] * (
-                        1 - weight) + result[y, merge_min_x: merge_max_x, :] * weight
+            # 最耗时的地方，所以提前计算出来权重
+            if self.weights is None:
+                self.weights = np.ones(result.shape)
+                for y in range(merge_min_y, merge_max_y):
+                    weight = (y - merge_min_y) / (merge_max_y - merge_min_y)
+                    result[y, merge_min_x: merge_max_x, :] = result_copy[y, merge_min_x: merge_max_x, :] * (
+                            1 - weight) + result[y, merge_min_x: merge_max_x, :] * weight
+                    self.weights[y, merge_min_x: merge_max_x, :] = 1 - weight
+            else:
+                result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] = \
+                    result_copy[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                    self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] + \
+                    result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                    (1 - self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :])
         else:
-            for r in range(merge_min_x, merge_max_x):
-                weight = (r - merge_min_x) / (merge_max_x - merge_min_x)
+            if self.weights is None:
+                self.weights = np.ones(result.shape)
+                for r in range(merge_min_x, merge_max_x):
+                    weight = (r - merge_min_x) / (merge_max_x - merge_min_x)
+                    if t[0] < merge_min_x:
+                        result[merge_min_y: merge_max_y, r, :] = \
+                            result_copy[merge_min_y: merge_max_y, r, :] * \
+                            weight + result[merge_min_y: merge_max_y, r, :] * (1 - weight)
+                    else:
+                        result[merge_min_y: merge_max_y, r, :] = \
+                            result_copy[merge_min_y: merge_max_y, r, :] * \
+                            (1 - weight) + result[merge_min_y: merge_max_y, r, :] * weight
+                    self.weights[merge_min_y: merge_max_y, r, :] = weight
+            else:
                 if t[0] < merge_min_x:
-                    result[merge_min_y: merge_max_y, r, :] = result_copy[merge_min_y: merge_max_y, r, :] * (
-                        weight) + result[merge_min_y: merge_max_y, r, :] * (1 - weight)
+                    result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] = \
+                        result_copy[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                        self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] + \
+                        result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                        (1 - self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :])
                 else:
-                    result[merge_min_y: merge_max_y, r, :] = result_copy[merge_min_y: merge_max_y, r, :] * (
-                            1 - weight) + result[merge_min_y: merge_max_y, r, :] * (weight)
+                    result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] = \
+                        result_copy[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                        (1 - self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :]) + \
+                        result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
+                        self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :]
 
         return result
 

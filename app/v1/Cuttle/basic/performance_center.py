@@ -3,14 +3,13 @@ import platform
 import time
 from collections import deque
 import traceback
-from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
-from app.v1.Cuttle.basic.hand_serial import SensorSerial
 from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_all_sensor_connect
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
     CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict
@@ -68,7 +67,7 @@ class PerformanceCenter(object):
         def camera_loop():
             set_global_value(CAMERA_IN_LOOP, True)
             executer = ThreadPoolExecutor()
-            executer.submit(self.move_src_to_backup)
+            self.move_src_future = executer.submit(self.move_src_to_backup)
 
         # 使用传感器获取点击的起始点，精确度更高一些
         if SENSOR:
@@ -120,8 +119,7 @@ class PerformanceCenter(object):
                 picture, next_picture, third_pic, timestamp = self.picture_prepare(number,
                                                                                    use_icon_scope=use_icon_scope)
                 if picture is None:
-                    set_global_value(CAMERA_IN_LOOP, False)
-                    raise VideoStartPointNotFound
+                    self.start_end_loop_not_found(VideoStartPointNotFound())
 
                 number += 1
                 # judge_function 返回True时 即发现了起始点
@@ -140,32 +138,33 @@ class PerformanceCenter(object):
                     break
                 elif number >= CameraMax / 2:
                     # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
-                    set_global_value(CAMERA_IN_LOOP, False)
                     self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                    raise VideoStartPointNotFound
+                    self.start_end_loop_not_found(VideoStartPointNotFound())
                 del picture
 
         # 如果能走到这里，代表发现了起始点，该unit结束，但是依然在获取图片
         return 0
 
-    @staticmethod
-    def end_loop_not_found(exp=VideoEndPointNotFound()):
+    def start_end_loop_not_found(self, exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
-        # 后续可能涉及到t-guard的相关操作，会使用相机，所以这里加个等待，让取图的线程完全终止了
-        time.sleep(2)
+        # 判断取图的线程是否完全终止
+        for _ in as_completed([self.move_src_future]):
+            print('move src 线程结束')
+        self.back_up_dq.clear()
+        print('清空 back up dq 队列。。。。')
         raise exp
 
     def end_loop(self, judge_function):
         # 计算终止点的方法
         if not hasattr(self, "start_number") or not hasattr(self, "bias"):
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
-            self.end_loop_not_found(VideoStartPointNotFound())
+            self.start_end_loop_not_found(VideoStartPointNotFound())
         # 如果使用压力传感器，有可能里边还没有图片，所以选择等待一段时间
         if SENSOR:
             # 这里需要至少等待1s，因为1s以后才开始合并图片
             time.sleep(2)
         if len(self.back_up_dq) == 0:
-            self.end_loop_not_found(PerformanceNotStart())
+            self.start_end_loop_not_found(PerformanceNotStart())
 
         if SENSOR:
             number = 0
@@ -180,7 +179,7 @@ class PerformanceCenter(object):
                 picture, next_picture, _, _ = self.picture_prepare(number)
                 if picture is None:
                     print('图片不够 bias')
-                    self.end_loop_not_found()
+                    self.start_end_loop_not_found()
                 number += 1
 
         while self.loop_flag:
@@ -191,13 +190,13 @@ class PerformanceCenter(object):
             picture, _, _, timestamp_f = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 1')
-                self.end_loop_not_found()
+                self.start_end_loop_not_found()
             number += 1
 
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 2')
-                self.end_loop_not_found()
+                self.start_end_loop_not_found()
             number += 1
 
             if judge_function.__name__ in ["_icon_find", "_icon_find_template_match"]:
@@ -213,7 +212,7 @@ class PerformanceCenter(object):
                 print(f"发现了终点: {number} bias：", self.bias)
 
                 # 多保存几张图片
-                if len(self.back_up_dq) < EXTRA_PIC_NUMBER:
+                if len(self.back_up_dq) < number + EXTRA_PIC_NUMBER:
                     # 实际帧率达不到，所以按照帧率缩小3倍算，这样基本足够了
                     time.sleep(EXTRA_PIC_NUMBER * 3 / FpsMax)
 
@@ -225,7 +224,7 @@ class PerformanceCenter(object):
                     end = self.end_number + 1
                 else:
                     # 判定终止图标出现时，出现的帧就是当前picture，所以直接在这个图上画就可以
-                    self.draw_line_in_pic(number, picture)
+                    self.draw_line_in_pic(number=self.end_number, picture=picture)
                     end = self.end_number
 
                 # 找到终止点后，包装一个json格式，推到reef。
@@ -246,7 +245,8 @@ class PerformanceCenter(object):
                                "picture_count": self.end_number + EXTRA_PIC_NUMBER - 1,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 break
-            elif number >= CameraMax:
+            # 最后一张在prepare的时候就拿不到了 一次拿俩张图
+            elif number >= CameraMax - 2:
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 if not SENSOR:
                     time_per_unit = round(job_duration / (number - self.start_number), 4)
@@ -262,21 +262,18 @@ class PerformanceCenter(object):
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 print('结束点图片判断超出最大数量')
-                self.end_loop_not_found()
-            del picture
+                self.start_end_loop_not_found()
+        # 判断取图的线程是否完全终止
+        for _ in as_completed([self.move_src_future]):
+            print('move src 线程结束')
         return 0
 
     def draw_line_in_pic(self, number, picture):
         # 在结尾图片上画上选框（可能是画图标，也可能是画判定选区）
         is_icon = not (self.icon_scope is None or len(self.icon_scope) < 1)
         scope = self.icon_scope if is_icon else self.scope
-        if isinstance(self.back_up_dq[0], dict):
-            h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0][
-                                                                                              'image'].shape[:2]
-        else:
-            h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0].shape[:2]
-        area = [int(i) if i > 0 else 0 for i in \
-                [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
+        h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0]['image'].shape[:2]
+        area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
             if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
         x1, y1 = area[:2]
         x4, y4 = area[2:]
@@ -287,7 +284,7 @@ class PerformanceCenter(object):
             x4 = x4 - int(self.scope[0] * w)
             y4 = y4 - int(self.scope[1] * h)
         cv2.rectangle(pic, (x1, y1), (x4, y4), (0, 255, 0), 4)
-        cv2.imwrite(os.path.join(self.work_path, f"{number - 1}.jpg"), pic)
+        cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), pic)
 
     def test_fps_lost(self, judge_function):
         # 这个方法还没完全做好，这仅当个思路吧
@@ -342,22 +339,20 @@ class PerformanceCenter(object):
         picture = None
         max_retry_time = 10
         while max_retry_time >= 0:
-            if len(self.back_up_dq) >= 3:
+            if len(self.back_up_dq) > number + 2:
                 try:
-                    picture_info = self.back_up_dq.popleft()
+                    picture_info = self.back_up_dq[number]
                     timestamp = picture_info['host_timestamp']
                     picture = picture_info['image']
-                    pic_next = self.back_up_dq[0]['image']
-                    pic_next_next = self.back_up_dq[1]['image']
+                    pic_next = self.back_up_dq[number + 1]['image']
+                    pic_next_next = self.back_up_dq[number + 2]['image']
                     break
                 except IndexError as e:
                     print("error in picture_prepare", repr(e))
-            time.sleep(0.2)
+            time.sleep(0.5)
             max_retry_time -= 1
 
         if picture is not None:
-            picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
-            cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
             h, w = picture.shape[:2]
             scope = self.scope if use_icon_scope is False else self.icon_scope
             area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
@@ -409,26 +404,42 @@ class PerformanceCenter(object):
             self.back_up_dq.clear()
             print('清空 back up dq 队列。。。。')
 
+        # 性能测试结束的最后再保存图片，可以加快匹配目标查找的速度
+        find_end = False
+        if hasattr(self, 'end_number'):
+            find_end = True
+
+        end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
+        try:
+            for cur_index in range(end_number):
+                picture_save = cv2.resize(self.back_up_dq[cur_index]['image'], dsize=(0, 0), fx=0.7, fy=0.7)
+                if find_end and hasattr(self, "draw_rec") and \
+                        self.draw_rec and cur_index == (end_number - 1):
+                    # 这块就是做判断画面在动的时候，最后在临界帧画框
+                    self.draw_line_in_pic(number=cur_index, picture=picture_save)
+                    self.draw_rec = False
+                else:
+                    # 已经在结束点画了图
+                    if find_end and cur_index != (end_number - 1):
+                        cv2.imwrite(os.path.join(self.work_path, f"{cur_index}.jpg"), picture_save)
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+
         # 找到结束点后再继续保存最多40张:
-        if not hasattr(self, "end_number"):
+        if not find_end:
             back_up_clear()
             return 0
 
         number = self.end_number + 1
         for i in range(EXTRA_PIC_NUMBER):
             try:
-                src = self.back_up_dq.popleft()['image']
+                src = self.back_up_dq[number]['image']
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)
-                if hasattr(self, "draw_rec") and self.draw_rec:
-                    # 这块就是做判断画面在动的时候，最后在临界帧画框
-                    number += 1
-                    self.draw_line_in_pic(number=number, picture=picture_save)
-                    self.draw_rec = False
-                else:
-                    cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
-                    number += 1
+                cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
+                number += 1
             except Exception as e:
-                print(repr(e))
+                traceback.print_exc()
                 back_up_clear()
                 return 0
 

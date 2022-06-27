@@ -329,6 +329,7 @@ class CameraHandler(Handler):
             image = None
             # 实时的获取到图片
             if self.back_up_dq is not None:
+                empty_times = 0
                 # 停止时刻由外部进行控制，这里负责图像处理即可
                 while get_global_value(CAMERA_IN_LOOP):
                     try:
@@ -338,7 +339,11 @@ class CameraHandler(Handler):
                         self.back_up_dq.append({'image': image, 'host_timestamp': image_info['host_timestamp']})
                     except IndexError:
                         # 拿的速度太快的话可能还没有存进去
-                        time.sleep(1 / FpsMax)
+                        time.sleep(1)
+                        empty_times += 1
+                        if empty_times > 3:
+                            set_global_value(CAMERA_IN_LOOP, False)
+                            break
                 redis_client.set(f"g_bExit_{camera_ids[0]}", "1")
                 for _ in as_completed(futures):
                     print('已经停止获取图片了')
@@ -380,11 +385,17 @@ class CameraHandler(Handler):
                 need_back_up_dq = False
                 # 发送同步信号
                 with CameraUsbPower(timeout=timeout):
+                    empty_times = 0
                     while get_global_value(CAMERA_IN_LOOP):
                         # 必须等待，否则while死循环导致其他线程没有机会执行
                         time.sleep(1)
                         if get_global_value(CAMERA_IN_LOOP):
-                            self.merge_frame(camera_ids, 60)
+                            # 判断图片是否全部处理完毕
+                            if self.merge_frame(camera_ids, 60) == -1:
+                                empty_times += 1
+                                if empty_times > 3:
+                                    set_global_value(CAMERA_IN_LOOP, False)
+                                    break
                 # 后续再保存一些图片，因为结束点之后还需要一些图片
                 self.merge_frame(camera_ids, 60)
                 # 如果依然在loop中，也就是达到了取图的最大限制，还没来得及处理图片，则把剩下的图片都合成完毕
@@ -406,10 +417,6 @@ class CameraHandler(Handler):
             if need_back_up_dq:
                 self.back_up_dq = []
                 self.merge_frame(camera_ids)
-
-                # for merged_img in self.back_up_dq:
-                #     del merged_img
-                # cv2.imwrite(f'camera/{index}.png', merged_img)
                 self.back_up_dq.clear()
 
             # 清空图片内存
@@ -449,7 +456,7 @@ class CameraHandler(Handler):
                 break
 
         if len(self.frames) == 0:
-            return
+            return -1
 
         self.get_syn_frame(camera_ids)
 

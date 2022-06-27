@@ -241,9 +241,13 @@ class DJob(BaseModel):
                 files = [('files', (os.path.split(file_path)[-1], open(file_path, 'rb'), 'file'))
                          for file_path in all_files[i: i + step]]
 
-                response = request(method="POST", url=rds_performance_pic, data={'rds': rds_id}, files=files)
-                # print('performance pic', response)
                 print('性能测试图片上传中')
+                try:
+                    response = request(method="POST", url=rds_performance_pic, data={'rds': rds_id}, files=files)
+                    # print('performance pic', response)
+                except Exception as e:
+                    print(e)
+                    print('本次图片上传失败！')
                 # 随机一个时间再上传，防止同一时间并发太多
                 time.sleep(random.random())
 

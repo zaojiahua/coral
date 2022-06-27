@@ -339,7 +339,8 @@ class CameraHandler(Handler):
                         self.back_up_dq.append({'image': image, 'host_timestamp': image_info['host_timestamp']})
                     except IndexError:
                         # 拿的速度太快的话可能还没有存进去
-                        time.sleep(1)
+                        if redis_client.get(f"g_bExit_{camera_ids[0]}") == "0":
+                            time.sleep(1)
                         empty_times += 1
                         if empty_times > 3:
                             set_global_value(CAMERA_IN_LOOP, False)
@@ -388,7 +389,8 @@ class CameraHandler(Handler):
                     empty_times = 0
                     while get_global_value(CAMERA_IN_LOOP):
                         # 必须等待，否则while死循环导致其他线程没有机会执行
-                        time.sleep(1)
+                        if redis_client.get(f"g_bExit_{camera_ids[0]}") == "0":
+                            time.sleep(1)
                         if get_global_value(CAMERA_IN_LOOP):
                             # 判断图片是否全部处理完毕
                             if self.merge_frame(camera_ids, 60) == -1:

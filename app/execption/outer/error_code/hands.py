@@ -39,12 +39,18 @@ class KeyPositionUsedBeforesSet(APIException):
 
 
 class SerialLostConnection(APIException):
+    """
+    与机械臂失去连接
+    """
     error_code = 3004
     code = 400
     description = 'Arm Serial lost connection'
 
 
 class SideKeyNotFound(APIException):
+    """
+    未在设备地图中添加侧边键坐标值
+    """
     error_code = 3005
     code = 400
     description = 'Press Side Key Not Found'
@@ -57,18 +63,27 @@ class ExecContentFormatError(APIException):
 
 
 class CoordinatesNotReasonable(APIException):
+    """
+    侧边键坐标应在屏幕外
+    """
     error_code = 3007
     code = 400
     description = 'The Side Key Coordinates Should Not be In the Screen'
 
 
 class ControlUSBPowerFail(APIException):
+    """
+    控制USB通断模块失败
+    """
     error_code = 3008
     code = 400
     description = 'Control USB Power Fail'
 
 
 class ChooseSerialObjFail(APIException):
+    """
+    未知的机械臂执行对象
+    """
     error_code = 3009
     code = 400
     description = 'Unknown Execution G code Serial object '
@@ -94,9 +109,21 @@ class InsufficientSafeDistance(APIException):
 
 
 class RepeatTimeInvalid(APIException):
+    """
+    重复次数超过限制
+    """
     error_code = 3012
     code = 400
     description = "Repeat Time Out of Range 1-10"
+
+
+class TcabNotAllowExecThisUnit(APIException):
+    """
+    目前该Tcab柜子类型不支持这个unit的执行
+    """
+    error_code = 3013
+    code = 400
+    description = "This Tcab Type Not Allow Exec This Unit"
 
 
 class UsingHandFail(APIException):

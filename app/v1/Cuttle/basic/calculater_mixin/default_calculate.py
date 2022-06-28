@@ -53,6 +53,8 @@ class DefaultMixin(object):
         if "tap" in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
             opt_type = "click"
+            if self.kwargs.get('repeat'):
+                opt_type = "repeat_click"
         elif "swipe" in raw_commend:
             position_args_list = raw_commend.split("swipe")[-1].strip().split(' ')
             try:
@@ -76,6 +78,9 @@ class DefaultMixin(object):
         elif "repeat sliding time" in raw_commend:
             speed = int(raw_commend.strip(" ").split(" ")[-1])  # 此时speed存储的是重复次数
             opt_type = 'repeat_sliding'
+        elif "repeat click time" in raw_commend:
+            speed = int(raw_commend.strip(" ").split(" ")[-1])  # 此时speed存储的是重复次数
+            opt_type = "record_repeat_count"
         elif "input keyevent 4" in raw_commend:
             opt_type = "back"
             pix_points = 0

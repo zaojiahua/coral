@@ -185,6 +185,8 @@ class HandHandler(Handler, DefaultMixin):
         self.ignore_reset = ignore_reset
         kwargs["exec_serial_obj"].send_list_order(click_orders, ignore_reset=ignore_reset)
         click_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
+        if CORAL_TYPE == 5.3:
+            time.sleep(1)
         return click_result
 
     @allot_serial_obj

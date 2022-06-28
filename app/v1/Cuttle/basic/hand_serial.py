@@ -57,6 +57,16 @@ class HandSerial:
                 self.write(g_order)
             return 0
 
+    def send_and_read(self, g_orders, **kwargs):
+        for order in g_orders:
+            self.write(order)
+            rev = self.ser.read(8).decode()
+            print("rev: ", rev)
+        self.write(arm_wait_position)
+        self.ser.read(8).deocde()
+        time.sleep(2)
+        return 0
+
     def check_hand_status(self, buffer_size=64):
         # 查询机械臂状态
         self.ser.write("G04 P0.1 \r\n".encode())

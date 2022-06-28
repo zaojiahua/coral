@@ -228,6 +228,9 @@ class HandHandler(Handler, DefaultMixin):
         swipe_speed = self.cal_swipe_speed(axis)
 
         sliding_order = self.__sliding_order(axis[0], axis[1], swipe_speed, arm_num=kwargs["arm_num"])
+
+        if CORAL_TYPE == 5.3:
+            return kwargs["exec_serial_obj"].send_and_read(sliding_order)
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
 
         if swipe_speed == 10000:

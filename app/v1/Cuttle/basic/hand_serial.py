@@ -63,7 +63,7 @@ class HandSerial:
             rev = self.ser.read(8).decode()
             print("rev: ", rev)
         self.write(arm_wait_position)
-        self.ser.read(8).deocde()
+        self.ser.read(8).decode()
         time.sleep(2)
         return 0
 

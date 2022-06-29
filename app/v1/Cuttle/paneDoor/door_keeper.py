@@ -180,12 +180,12 @@ class DoorKeeper(object):
         if not_found in room_version or not_found in android_version or not_found in manufacturer:
             raise AdbConnectFail()
 
-        self.open_wifi_service(f"-s {s_id}")
-
         # 获取分辨率 有的手机升级版本以后，分辨率会发生变化，所以需要重新更新分辨率
         screen_size = self.get_screen_size_internal(f"-s {s_id}")
         width_resolution = screen_size[0]
         height_resolution = screen_size[1]
+
+        self.open_wifi_service(f"-s {s_id}")
 
         # 如果是在error状态下点击重连，重连成功以后设置为idle状态
         from app.v1.device_common.device_model import Device, DeviceStatus

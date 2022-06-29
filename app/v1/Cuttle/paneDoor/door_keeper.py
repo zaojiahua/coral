@@ -14,7 +14,7 @@ from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
-    device_assis_url, device_update_url
+    device_assis_url, device_update_url, device_resolution_url
 from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevice, DeviceCannotSetprop, \
     DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough, AdbConnectFail
 from app.execption.outer.error_code.total import RequestException
@@ -180,6 +180,11 @@ class DoorKeeper(object):
         if not_found in room_version or not_found in android_version or not_found in manufacturer:
             raise AdbConnectFail()
 
+        # 获取分辨率 有的手机升级版本以后，分辨率会发生变化，所以需要重新更新分辨率
+        screen_size = self.get_screen_size_internal(f"-s {s_id}")
+        width_resolution = screen_size[0]
+        height_resolution = screen_size[1]
+
         self.open_wifi_service(f"-s {s_id}")
 
         # 如果是在error状态下点击重连，重连成功以后设置为idle状态
@@ -191,7 +196,8 @@ class DoorKeeper(object):
             device_obj.disconnect_times = 0
 
         return {'ip_address': ip, 'rom_version': room_version, 'device_label': device_label,
-                'manufacturer': manufacturer, 'android_version': android_version}
+                'manufacturer': manufacturer, 'android_version': android_version,
+                'width_resolution': width_resolution, 'height_resolution': height_resolution}
 
     def update_device_info(self, request_data):
         device_label = request_data.get('device_label')
@@ -199,6 +205,8 @@ class DoorKeeper(object):
         rom_version = request_data.get('rom_version')
         android_version = request_data.get('android_version')
         manufacturer = request_data.get('manufacturer')
+        width_resolution = request_data.get('width_resolution')
+        height_resolution = request_data.get('height_resolution')
         res = request(method="POST", url=device_update_url,
                       json={"ip_address": ip,
                             "rom_version": rom_version,
@@ -206,12 +214,22 @@ class DoorKeeper(object):
                             "manufacturer": request_data.get('manufacturer'),
                             "android_version": android_version})
         logger.info(f"response from reef: {res}")
+
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=device_label)
         device_obj.ip_address = ip
         device_obj.android_version = android_version
         device_obj.manufacturer = manufacturer
         device_obj.rom_version = rom_version
+        device_obj.pix_width = width_resolution
+        device_obj.pix_height = height_resolution
+
+        # 修改机型属性
+        res = request(method="POST", url=device_resolution_url, json={'device_label': device_label,
+                                                                      'width_resolution': width_resolution,
+                                                                      'height_resolution': height_resolution})
+        print('修改机型属性', res)
+
         return 0
 
     def open_wifi_service(self, num="-d"):

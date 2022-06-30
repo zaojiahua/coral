@@ -58,13 +58,16 @@ class DoorKeeper(object):
             #     raise DeviceBindFail
         else:
             self.is_device_rootable(num=f"-s {s_id}")
-        if CORAL_TYPE > 2:
-            self.set_arm_or_camera(dev_info_dict["device_label"])
+
         # 设备注册成功的话，设置状态为idle
         dev_info_dict['status'] = DeviceStatus.IDLE
         self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"),
                                    dev_info_dict)  # now report dev_info_dict to reef directly
         logger.info(f"set device success")
+
+        if CORAL_TYPE > 2:
+            self.set_arm_or_camera(dev_info_dict["device_label"])
+
         return 0
 
     @staticmethod

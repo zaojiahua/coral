@@ -292,6 +292,12 @@ class Device(BaseModel):
                     return device_obj
         return None
 
+    @staticmethod
+    def get_device_width_height(serial_number):
+        device_width = Device(pk=serial_number).device_width
+        device_height = Device(pk=serial_number).device_height
+        return device_width, device_height
+
     def set_border(self, device_dict):
         # 设置roi区域
         if math.floor(CORAL_TYPE) == 5:

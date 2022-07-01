@@ -106,8 +106,8 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     def icon_found_with_direction(self, content, click=True):
         # 自动找icon
         from app.v1.device_common.device_model import Device
-        device_width = Device(pk=self._model.pk).device_width
-        device_height = Device(pk=self._model.pk).device_height
+        device_width, device_height = Device.get_device_width_height(self.kwargs.get("assist_device_serial_number")
+                                                                     or self._model.pk)
         center_x = int(device_width / 2)
         center_y = int(device_height / 2)
         mapping_dict = {"left": ((device_width * 0.9), center_y, (device_width * 0.1), center_y),

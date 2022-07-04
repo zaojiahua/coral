@@ -159,10 +159,10 @@ HAND_MAX_X = 315
 try:
     from app.config.ip import HAND_MAX_Y
 except ImportError:
-    if CORAL_TYPE == 5.1:
-        HAND_MAX_Y = 420  # 5L机械臂Y最大行程
-    else:
+    if CORAL_TYPE == 5.2:
         HAND_MAX_Y = 245  # Tcab-5机械臂Y最大行程
+    else:
+        HAND_MAX_Y = 420  # 5L机械臂Y最大行程
 HAND_MAX_Z = 5
 
 if CORAL_TYPE == 5.3:

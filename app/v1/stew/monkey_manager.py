@@ -96,8 +96,8 @@ class MonkeyManager(object):
 
     # 监控的循环
     def monkey_loop(self):
-        try:
-            while True:
+        while True:
+            try:
                 if self.device_dict:
                     device_labels = copy.deepcopy(list(self.device_dict.keys()))
                     for device_label in device_labels:
@@ -128,8 +128,9 @@ class MonkeyManager(object):
 
                 # 隔一秒再检测，不要太快
                 time.sleep(1)
-        except Exception as e:
-            print(traceback.format_exc())
+            except Exception as e:
+                print('anr 发生了异常')
+                print(traceback.format_exc())
 
     # 检测是否有异常情况发生
     def check_exception(self, connect_number):
@@ -189,4 +190,4 @@ class MonkeyManager(object):
         cmd_list = [f"bugreport {log_path}/bugreport.zip"]
         request_body = adb_unit_maker(cmd_list, device_label, connect_number, BUG_REPORT_TIMEOUT)
         handler_exec(request_body, 'AdbHandler')
-        print("bug report finished ")
+        print("anr bug report finished ")

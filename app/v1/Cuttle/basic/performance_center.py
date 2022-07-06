@@ -157,6 +157,8 @@ class PerformanceCenter(object):
     def end_loop(self, judge_function):
         # 计算终止点的方法
         if not hasattr(self, "start_number") or not hasattr(self, "bias"):
+            self.result = {'picture_count': int(CameraMax / 2),
+                           "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             self.start_end_loop_not_found(VideoStartPointNotFound())
         # 如果使用压力传感器，有可能里边还没有图片，所以选择等待一段时间
@@ -420,7 +422,7 @@ class PerformanceCenter(object):
                     self.draw_rec = False
                 else:
                     # 已经在结束点画了图
-                    if find_end and cur_index != (end_number - 1):
+                    if cur_index != (end_number - 1):
                         cv2.imwrite(os.path.join(self.work_path, f"{cur_index}.jpg"), picture_save)
         except Exception as e:
             print(e)

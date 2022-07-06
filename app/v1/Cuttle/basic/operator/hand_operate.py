@@ -231,7 +231,7 @@ class HandHandler(Handler, DefaultMixin):
 
         sliding_order = self.__sliding_order(axis[0], axis[1], swipe_speed, arm_num=kwargs["arm_num"])
 
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE == 5.3 or CORAL_TYPE == 5.1:
             return kwargs["exec_serial_obj"].send_and_read(sliding_order)
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
 
@@ -410,6 +410,8 @@ class HandHandler(Handler, DefaultMixin):
         return self.menu(is_long_press=True)
 
     def press_side(self, pix_point, **kwargs):
+        if CORAL_TYPE == 5.3:
+            raise TcabNotAllowExecThisUnit
         # 按压侧边键
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
@@ -425,7 +427,10 @@ class HandHandler(Handler, DefaultMixin):
         return rev
 
     def press_out_screen(self, pix_point, **kwargs):
-        click_orders = self.__single_click_order(pix_point, z_point=pix_point[2])
+        if CORAL_TYPE == 5.3:
+            raise TcabNotAllowExecThisUnit
+        pix_point[1] = -pix_point[1]
+        click_orders = self.__single_click_order(pix_point)
         hand_serial_obj_dict.get(self._model.pk).send_out_key_order(click_orders[:2],
                                                                     others_orders=[click_orders[-1]],
                                                                     wait_time=self.speed)

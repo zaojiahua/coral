@@ -12,7 +12,8 @@ from threading import Lock
 from func_timeout import func_set_timeout
 
 from app.config.ip import HOST_IP, ADB_TYPE, REEF_IP
-from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name, CORAL_TYPE_NAME
+from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name, CORAL_TYPE_NAME, email_addresses, \
+    default_email_address, REEF_DATE_TIME_FORMAT
 from app.config.url import battery_url
 from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
@@ -164,10 +165,12 @@ class AdbHandler(Handler, ChineseMixin):
             if self._model.disconnect_times == int(adb_disconnect_threshold / 2):
                 # 多次尝试重连不成功，说明这个时候发生了问题
                 email = EmailManager()
-                email.send_email(['gh@anhereef.com', 'lx@anhereef.com', 'jy@anhereef.com'], '设备连接断开，请检查！',
-                                 f'设备{device.device_name}：{connect_number} '
+                email.send_email(email_addresses.get(int(REEF_IP.split(".")[-2]), default_email_address),
+                                 '设备连接即将断开，请检查！',
+                                 f'设备{device.device_name}：{connect_number} \n'
                                  f'机柜：{REEF_IP.split(".")[-2]}号机 I\'M {HOST_IP.split(".")[-1]}'
-                                 f'（{CORAL_TYPE_NAME[CORAL_TYPE]}）')
+                                 f'（{CORAL_TYPE_NAME[CORAL_TYPE]}）\n'
+                                 f'{datetime.now().strftime(REEF_DATE_TIME_FORMAT)}')
 
             # 次数和时间双保险
             if self._model.disconnect_times >= adb_disconnect_threshold and \

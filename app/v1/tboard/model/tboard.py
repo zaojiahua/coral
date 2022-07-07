@@ -1,10 +1,11 @@
+import datetime
 import json
 import logging
 import time
 
 from astra import models
 
-from app.config.ip import HOST_IP
+from app.config.ip import HOST_IP, REEF_IP
 from app.config.log import TBOARD_LOG_NAME
 from app.config.url import tboard_id_url
 from app.execption.outer.error import APIException
@@ -13,6 +14,9 @@ from app.libs.http_client import request
 from app.libs.ospathutil import deal_dir_file
 from app.v1.djob.model.jobcacheproxy import JobCacheProxy
 from app.v1.tboard.model.dut import Dut
+from app.config.setting import email_addresses, default_email_address, REEF_DATE_TIME_FORMAT, CORAL_TYPE, \
+    CORAL_TYPE_NAME
+from app.libs.email_manager import EmailManager
 
 logger = logging.getLogger(TBOARD_LOG_NAME)
 
@@ -58,6 +62,14 @@ class TBoard(BaseModel):
                 dut.update_device_status()
             # 解压失败，停止 tboard，释放device
             self.send_tborad_finish()
+            # 发送邮件，通知对应的人员
+            email = EmailManager()
+            email.send_email(email_addresses.get(int(REEF_IP.split(".")[-2]), default_email_address),
+                             '任务发起失败，请检查！',
+                             f'Tboard: {self.board_name}（{self.pk}）\n'
+                             f'机柜：{REEF_IP.split(".")[-2]}号机 I\'M {HOST_IP.split(".")[-1]}'
+                             f'（{CORAL_TYPE_NAME[CORAL_TYPE]}）\n'
+                             f'{datetime.datetime.now().strftime(REEF_DATE_TIME_FORMAT)}')
 
     def send_tborad_finish(self):
         # 在多线程模式下，当前线程执行send_tborad_finish 会将tboard_id删除，tboard_id default 为0

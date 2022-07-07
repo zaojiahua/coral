@@ -251,6 +251,12 @@ class AdbHandler(Handler, ChineseMixin):
         time.sleep(random.randint(60, 120))
         ret_str = self.str_func(self.exec_content)
         self._model.logger.info(f'bugreport 返回 {ret_str}')
+        retry_time = 2
+        while 'file pulled' not in ret_str and retry_time > 0:
+            ret_str = self.str_func(self.exec_content)
+            self._model.logger.info(f'bugreport 返回 {ret_str}')
+            retry_time -= 1
+            time.sleep(random.randint(60, 120))
 
     def pull_bugreport(self, result, *args):
         self._model.logger.info('bugreport 重新拉取')

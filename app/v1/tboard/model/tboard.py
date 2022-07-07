@@ -66,7 +66,7 @@ class TBoard(BaseModel):
             email = EmailManager()
             email.send_email(email_addresses.get(int(REEF_IP.split(".")[-2]), default_email_address),
                              '任务发起失败，请检查！',
-                             f'Tboard: {self.board_name}（{self.pk}）\n'
+                             f'任务名称：{self.board_name}（{self.pk}）\n'
                              f'机柜：{REEF_IP.split(".")[-2]}号机 I\'M {HOST_IP.split(".")[-1]}'
                              f'（{CORAL_TYPE_NAME[CORAL_TYPE]}）\n'
                              f'{datetime.datetime.now().strftime(REEF_DATE_TIME_FORMAT)}')

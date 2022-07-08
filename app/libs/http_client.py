@@ -72,7 +72,7 @@ def _response_exec(response, filter_unique_key, error_log_hide, **kwargs):
                          f"url: {response.url} status_code: {response.status_code} detail: {getattr(response,'content', response)}")
             raise ServerError()
     try:
-        result: dict = response.json()  # result 默认返回json
+        result = response.json()  # result 默认返回json
     except Exception:
         return 2, {}
     if filter_unique_key:

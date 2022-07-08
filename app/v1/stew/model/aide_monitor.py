@@ -9,7 +9,7 @@ from app.config.setting import PROJECT_SIBLING_DIR
 from app.config.url import rds_url, job_url, device_power_url, device_temper_url, insert_tboard_url, device_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.stew import GetResourceFail
-from app.libs.functools import execute_limit
+from app.libs.func_tools import execute_limit
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory

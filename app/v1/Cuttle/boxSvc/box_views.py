@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import jsonify, request
 from flask.views import MethodView
 
-from app.libs.functools import execute_limit
+from app.libs.func_tools import execute_limit
 from app.execption.outer.error_code.box import ConnectPowerFail
 from app.v1.Cuttle.basic.setting import set_global_value, get_global_value
 from app.v1.Cuttle.boxSvc import box_setting

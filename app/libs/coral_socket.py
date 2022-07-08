@@ -2,7 +2,7 @@ import socket
 
 import func_timeout
 
-from app.libs.functools import async_timeout
+from app.libs.func_tools import async_timeout
 
 # 封装的socket通信，主要用来与继电器和温感箱通信，只有1型柜会用到
 

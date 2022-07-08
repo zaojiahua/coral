@@ -13,7 +13,7 @@ from app.config.setting import CORAL_TYPE
 from app.config.url import coral_ocr_url
 from app.execption.outer.error_code.imgtool import OcrRetryTooManyTimes, OcrParseFail, OcrWorkPathNotFound, \
     ComplexSnapShotFail, NotFindIcon, OcrShiftWrongFormat
-from app.libs.functools import handler_switcher
+from app.libs.func_tools import handler_switcher
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec, get_file_name

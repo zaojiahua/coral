@@ -9,7 +9,7 @@ from app.config import setting
 from app.config.log import TOTAL_LOG_NAME
 from app.execption.inner.total import FilterUniqueKeyError, RequestMethodError
 from app.execption.outer.error_code.total import ServerError, RequestException
-from app.libs.functools import run_time
+from app.libs.func_tools import run_time
 
 METH_GET = 'GET'
 METH_DELETE = 'DELETE'

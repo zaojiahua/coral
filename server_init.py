@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 import requests
 
 from app.config.url import job_url_filter
-from app.libs.functools import async_timeout
+from app.libs.func_tools import async_timeout
 from app.libs.http_client import _parse_url
 from app.v1.Cuttle.boxSvc import box_init
 from app.v1.cabinet_register import cabinet_register

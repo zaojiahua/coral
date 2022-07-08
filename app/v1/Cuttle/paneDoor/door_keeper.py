@@ -11,7 +11,7 @@ from typing import Dict
 import numpy as np
 
 from app.config.ip import HOST_IP, ADB_TYPE
-from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com
+from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com, REEF_DATE_TIME_FORMAT
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url, device_update_url, device_resolution_url
@@ -134,7 +134,7 @@ class DoorKeeper(object):
             length = np.hypot(kwargs.get("height_resolution"), kwargs.get("width_resolution"))
             # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
             kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
-        kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        kwargs["start_time_key"] = datetime.now().strftime(REEF_DATE_TIME_FORMAT)
         kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + '-' + kwargs.get("device_name")
         try:
             response = request(url=phone_model_url, params={"fields": "manufacturer.manufacturer_name",
@@ -276,7 +276,7 @@ class DoorKeeper(object):
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
                 f"adb -s {s_id} shell getprop ro.build.version.release"),
             "width_resolution": screen_size[0],
-            "height_resolution": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}
+            "height_resolution": screen_size[1], "start_time_key": datetime.now().strftime(REEF_DATE_TIME_FORMAT)}
         ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         ret_dict.update(device_info_fict)
         return ret_dict

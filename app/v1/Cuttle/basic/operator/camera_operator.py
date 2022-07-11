@@ -533,9 +533,13 @@ class CameraHandler(Handler):
 
             if not self.original:
                 if CORAL_TYPE == 5.3:
-                    result = np.rot90(self.get_roi(result))
+                    result = np.rot90(self.get_roi(result), 3)
                 else:
                     result = np.rot90(self.get_roi(result), 3)
+            else:
+                if CORAL_TYPE == 5.3:
+                    result = np.rot90(self.get_roi(result), 3)
+
             self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1})
             del result
 

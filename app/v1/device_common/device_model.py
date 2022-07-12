@@ -22,7 +22,7 @@ from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, Z_DOWN
 from app.v1.Cuttle.basic.basic_views import UnitFactory
-from app.execption.outer.error_code.camera import CoordinateConvert
+from app.execption.outer.error_code.camera import CoordinateConvert, MergeShapeNone
 
 
 class DeviceStatus(object):
@@ -520,7 +520,13 @@ class Device(BaseModel):
             if dpi is None:
                 raise CoordinateConvert()
 
-            h, w, _ = get_global_value('merge_shape')
+            try:
+                h, w, _ = get_global_value('merge_shape')
+            except Exception:
+                raise MergeShapeNone()
+            if h is None or w is None:
+                raise MergeShapeNone()
+
             if absolute:
                 x = x + roi[1]
                 y = y + w - roi[2]

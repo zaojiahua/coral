@@ -66,3 +66,9 @@ class CoordinateConvertFail(APIException):
     error_code = 5009
     code = 400
     description = "坐标换算失败！"
+
+
+class MergeShapeNone(APIException):
+    error_code = 5010
+    code = 400
+    description = "请先进行图像拼接！"

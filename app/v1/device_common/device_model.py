@@ -22,6 +22,7 @@ from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, Z_DOWN
 from app.v1.Cuttle.basic.basic_views import UnitFactory
+from app.execption.outer.error_code.camera import CoordinateConvert
 
 
 class DeviceStatus(object):
@@ -516,6 +517,9 @@ class Device(BaseModel):
 
         if CORAL_TYPE == 5.3:
             dpi = get_global_value('pane_dpi')
+            if dpi is None:
+                raise CoordinateConvert()
+
             h, w, _ = get_global_value('merge_shape')
             if absolute:
                 x = x + roi[1]
@@ -528,7 +532,7 @@ class Device(BaseModel):
                 if not test:
                     x = float(x) * (roi[2] - roi[0]) + roi[0]
                     y = float(y) * (roi[3] - roi[1]) + roi[1]
-                # 程序自己的测试走的这里
+                # 程序自己的测试（获得dpi以后，自己自动执行了一个测试）走的这里
                 click_x = m_location[0] + y / dpi
                 click_y = abs(m_location[1] - (w - x) / dpi)
                 click_z = m_location[2] + float(z)

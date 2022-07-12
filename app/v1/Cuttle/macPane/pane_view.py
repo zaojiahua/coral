@@ -18,8 +18,8 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, PROJECT_SIBLING_DIR, BASE_DIR
-from app.execption.outer.error_code.camera import PerformancePicNotFound
+    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, BASE_DIR
+from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail
 from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -519,6 +519,8 @@ class PaneCoordinateView(MethodView):
                 if ret_code == 0:
                     print('拍到照片了')
                     dpi, m_location = self.get_scale(filename, pos_a, pos_b)
+                    if dpi is None:
+                        raise CoordinateConvertFail()
                     # if dpi is not None:
                     #     # 测试计算的是否正确 点击左上角
                     #     points = AutoPaneBorderView.get_suitable_area(cv2.imread(filename), 60)
@@ -578,7 +580,7 @@ class PaneCoordinateView(MethodView):
                 cy = int(m['m01'] / m['m00'])
                 if w * 0.3 < cx < w * 0.6:
                     bx, by, bw, bh = cv2.boundingRect(contour_points)
-                    if 0.9 < bw / bh < 1.1:
+                    if 0.7 < bw / bh < 1.3:
                         target_contours.append(np.array([[int(cx), int(cy)]]))
 
         if len(target_contours) == 2:
@@ -604,6 +606,8 @@ class PaneCoordinateView(MethodView):
             # img = cv2.drawContours(img, target_contours, -1, (0, 255, 0), 30)
 
             return dpi, [m_x, m_y, Z_DOWN]
+        # 没有找到的话抛出异常
+        return None, None
 
 
 # 重置5D等拼接图像的参数

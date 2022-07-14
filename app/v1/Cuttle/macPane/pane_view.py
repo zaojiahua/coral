@@ -364,8 +364,9 @@ class PaneClickTestView(MethodView):
             location = get_global_value("m_location")
             try:
                 device_obj = Device(pk=device_label)
+                # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
                 DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                          location[0] + float(device_obj.width), location[0],
+                                                          location[0] + float(device_obj.device_width), location[0],
                                                           location[2])
                 if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
                     is_left_side = True
@@ -498,10 +499,16 @@ class PaneCoordinateView(MethodView):
         # 计算A、B俩点的像素距离，和实际距离的比，就得到了比例。根据比例，计算原点的坐标值。
         # 找到主机械臂，让主机械臂移动即可
         for obj_key in hand_serial_obj_dict.keys():
-            if arm_com in obj_key and not obj_key[-1].isdigit():
+            # 单指机械臂直接进来
+            if (arm_com in obj_key and not obj_key[-1].isdigit()) or CORAL_TYPE != 5.3:
                 hand_obj = hand_serial_obj_dict[obj_key]
-                pos_a = [100, -100]
-                pos_b = [200, -100]
+                # 双指的范围更大，点击的时候尽量在中间点击即可
+                if CORAL_TYPE == 5.3:
+                    pos_a = [100, -100]
+                    pos_b = [200, -100]
+                else:
+                    pos_a = [50, -170]
+                    pos_b = [100, -170]
                 for click_pos in [pos_a, pos_b]:
                     self.click(*click_pos, hand_obj)
                 request_data = request.get_json() or request.args
@@ -517,7 +524,7 @@ class PaneCoordinateView(MethodView):
                 filename = 'coordinate.png'
                 ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=True)
                 if ret_code == 0:
-                    print('拍到照片了')
+                    print('dpi计算拍到照片了')
                     dpi, m_location = self.get_scale(filename, pos_a, pos_b)
                     if dpi is None:
                         raise CoordinateConvertFail()
@@ -549,7 +556,7 @@ class PaneCoordinateView(MethodView):
     @staticmethod
     def get_scale(filename, pos_a, pos_b):
         img = cv2.imread(filename)
-        _, w, _ = img.shape
+        h, w, _ = img.shape
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         # 机械臂点下的点需要是红色的
@@ -576,31 +583,53 @@ class PaneCoordinateView(MethodView):
             # m00代表面积
             if m['m00'] > 50:
                 # 获取对象的质心
-                cx = int(m['m10'] / m['m00'])
-                cy = int(m['m01'] / m['m00'])
-                if w * 0.3 < cx < w * 0.6:
+                cx = round(m['m10'] / m['m00'], 2)
+                cy = round(m['m01'] / m['m00'], 2)
+                if w * 0.3 < cx < w * 0.9:
                     bx, by, bw, bh = cv2.boundingRect(contour_points)
                     if 0.7 < bw / bh < 1.3:
-                        target_contours.append(np.array([[int(cx), int(cy)]]))
+                        target_contours.append(np.array([[cx, cy]]))
 
-        if len(target_contours) == 2:
+        def find_tow_related_point(all_contours):
+            for i in range(len(all_contours)):
+                for j in range(i + 1, len(all_contours)):
+                    # x坐标基本一样
+                    if abs(all_contours[i][0][0] - all_contours[j][0][0]) < 5:
+                        return [all_contours[i], all_contours[j]]
+
+        print(target_contours)
+        target_contours = find_tow_related_point(target_contours)
+        if target_contours and len(target_contours) == 2:
+            print('相机的倾斜程度：', target_contours)
             # A、B俩点的x像素坐标默认是相等的。根据这个默认条件执行以下的逻辑。实际上得出来的A、B俩点的x像素坐标不一样，原因是相机是歪的。
             dis = abs(target_contours[0][0][1] - target_contours[1][0][1])
             # 实际上就是dpi 代表1毫米多少个像素点
-            dpi = dis / abs(pos_a[0] - pos_b[0])
+            dpi = round(dis / abs(pos_a[0] - pos_b[0]), 3)
             print(f'dpi:{dpi}', '&' * 10)
-            # 计算图片的右上角对应的坐标点，也就是得出来m_location
-            cal_point = target_contours[0] if target_contours[0][0][1] < target_contours[1][0][1] else target_contours[
-                1]
-            m_x = pos_a[0] - cal_point[0][1] / dpi
-            m_y = pos_a[1] + (w - cal_point[0][0]) / dpi
+            # 计算图片的右上角（5D）或者左下角（5系列的其他相机）对应的坐标点，也就是得出来m_location
+            if CORAL_TYPE == 5.3:
+                cal_point = target_contours[0] if target_contours[0][0][1] < target_contours[1][0][1] else \
+                    target_contours[1]
+                m_x = round(pos_a[0] - cal_point[0][1] / dpi, 2)
+                m_y = round(pos_a[1] + (w - cal_point[0][0]) / dpi, 2)
+            else:
+                cal_point = target_contours[1] if target_contours[0][0][1] < target_contours[1][0][1] else \
+                    target_contours[0]
+                m_x = round(pos_a[0] - (h - cal_point[0][1]) / dpi, 2)
+                # 计算左上角的m_location
+                m_y = round(pos_a[1] + cal_point[0][0] / dpi, 2)
+                # 计算左下角的m_location
+                # m_y = round(pos_a[1] - (w - cal_point[0][0]) / dpi, 2)
 
             # 写入到文件中，方便初始化的时候获取，这里也是这俩个值更新的唯一地方
-            set_global_value('m_location', [m_x, m_y, Z_DOWN])
+            z_down = get_global_value('m_location')[-1]
+            set_global_value('m_location', [m_x, m_y, z_down])
             set_global_value('pane_dpi', dpi)
+            merge_shape = get_global_value('merge_shape')
             with open(COORDINATE_CONFIG_FILE, 'wt') as f:
                 f.writelines(f'm_location=[{m_x},{m_y}]\n')
                 f.writelines(f'pane_dpi={dpi}\n')
+                f.writelines(f'merge_shape={merge_shape}\n')
 
             # 画出轮廓，方便测试
             # img = cv2.drawContours(img, target_contours, -1, (0, 255, 0), 30)

@@ -425,6 +425,14 @@ class CameraHandler(Handler):
             for camera_id in camera_ids:
                 camera_dq_dict[self._model.pk + camera_id].clear()
 
+        # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
+        if self.original and self.src is not None:
+            merge_shape = get_global_value('merge_shape')
+            if merge_shape is None:
+                set_global_value('merge_shape', self.src.shape)
+                with open(COORDINATE_CONFIG_FILE, 'at') as f:
+                    f.writelines(f'merge_shape={self.src.shape}\n')
+
         return 0
 
     def merge_frame(self, camera_ids, merge_number=None):
@@ -465,14 +473,6 @@ class CameraHandler(Handler):
         if len(self.back_up_dq) > 0:
             image = self.back_up_dq[0]['image']
             self.src = image
-
-            # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
-            if self.original:
-                merge_shape = get_global_value('merge_shape')
-                if merge_shape is None:
-                    set_global_value('merge_shape', image.shape)
-                    with open(COORDINATE_CONFIG_FILE, 'at') as f:
-                        f.writelines(f'merge_shape={image.shape}\n')
 
             # 写入到文件夹中，测试用
             if self.record_video:

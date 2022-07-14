@@ -20,8 +20,10 @@ from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
-from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, Z_DOWN
+from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, Z_DOWN, \
+    COMPUTE_M_LOCATION
 from app.v1.Cuttle.basic.basic_views import UnitFactory
+from app.execption.outer.error_code.camera import CoordinateConvert, MergeShapeNone
 
 
 class DeviceStatus(object):
@@ -477,16 +479,21 @@ class Device(BaseModel):
 
     # 更新5l机柜的m_location信息，没有机械臂对象，所以方法先写到这里
     def update_m_location(self):
-        if CORAL_TYPE == 5.3:
+        # 新的坐标换算和5D保持一样，也可以使用原始的坐标换算方式
+        if CORAL_TYPE == 5.3 or COMPUTE_M_LOCATION:
             if not os.path.exists(COORDINATE_CONFIG_FILE):
-                self.logger.error('多机械臂缺少必要的坐标配置文件, 请注意先配置坐标！！！')
+                self.logger.error('缺少必要的坐标配置文件, 请注意先配置坐标！！！')
             else:
                 with open(COORDINATE_CONFIG_FILE, 'rt') as f:
                     for line in f.readlines():
                         key, value = line.strip('\n').split('=')
                         if key == 'm_location':
                             m_l = eval(value)
-                            m_l.append(Z_DOWN)
+                            # 5D的z_down用户可以手调，其他柜子确定一个底部的z_down，然后根据不同的厚度动态算
+                            if CORAL_TYPE == 5.3:
+                                m_l.append(Z_DOWN)
+                            else:
+                                m_l.append(Z_DOWN + float(self.ply))
                             set_global_value(key, m_l)
                         else:
                             set_global_value(key, eval(value))
@@ -514,24 +521,49 @@ class Device(BaseModel):
 
         m_location = get_global_value('m_location')
 
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE == 5.3 or COMPUTE_M_LOCATION:
             dpi = get_global_value('pane_dpi')
-            h, w, _ = get_global_value('merge_shape')
+            if dpi is None:
+                raise CoordinateConvert()
+
+            try:
+                h, w, _ = get_global_value('merge_shape')
+            except Exception:
+                raise MergeShapeNone()
+            if h is None or w is None:
+                raise MergeShapeNone()
+
+            # 5D的原点在右上角，其他在左下角，所以计算方法有所不同
             if absolute:
-                x = x + roi[1]
-                y = y + w - roi[2]
+                if CORAL_TYPE == 5.3:
+                    x = x + roi[1]
+                    y = y + w - roi[2]
+                else:
+                    x = x + h - roi[3]
+                    y = y + roi[0]
+                    # 以左下角为m_location的时候
+                    # y = w - (y + roi[0])
                 click_x = m_location[0] + x / dpi
+                # 以左上角为m_location的时候
                 click_y = abs(m_location[1] - y / dpi)
+                # 以左下角为m_location的时候
+                # click_y = abs(m_location[1] + y / dpi)
                 click_z = m_location[2] + float(z)
             else:
                 # 从pane测试点击的时候走这里
                 if not test:
                     x = float(x) * (roi[2] - roi[0]) + roi[0]
                     y = float(y) * (roi[3] - roi[1]) + roi[1]
-                # 程序自己的测试走的这里
-                click_x = m_location[0] + y / dpi
-                click_y = abs(m_location[1] - (w - x) / dpi)
-                click_z = m_location[2] + float(z)
+                # 程序自己的测试（获得dpi以后，自己自动执行了一个测试）走的这里
+                if CORAL_TYPE == 5.3:
+                    click_x = m_location[0] + y / dpi
+                    click_y = abs(m_location[1] - (w - x) / dpi)
+                    click_z = m_location[2] + float(z)
+                else:
+                    click_x = m_location[0] + (h - y) / dpi
+                    click_y = abs(m_location[1] - x / dpi)
+                    click_z = m_location[2] + float(z)
+        # 5系列柜子原始的计算方法
         else:
             # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
             if absolute:

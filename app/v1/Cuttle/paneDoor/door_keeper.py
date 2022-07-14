@@ -148,9 +148,9 @@ class DoorKeeper(object):
         kwargs["ip_address"] = "0.0.0.0"
         kwargs["auto_test"] = False
         kwargs["device_type"] = "test_box"
-        self.send_dev_info_to_reef(kwargs.pop("device_name"), kwargs, with_monitor=False)
         if CORAL_TYPE > 2:
             self.set_arm_or_camera(kwargs["device_label"])
+        self.send_dev_info_to_reef(kwargs.pop("device_name"), kwargs, with_monitor=False)
         return 0
 
     def open_device_wifi_service(self, device_id=""):

@@ -28,6 +28,8 @@ ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
 SENSOR = False
+# 通过算法计算出来m_location
+COMPUTE_M_LOCATION = False
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
     # 5的升级版是中心对齐的
     try:
@@ -48,13 +50,11 @@ elif CORAL_TYPE == 5.1:
     set_global_value('m_location_center', m_location_center)
 elif CORAL_TYPE == 5.3:
     try:
-        from app.config.ip import Z_DOWN, ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION, ARM_MAX_X
+        from app.config.ip import ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION, ARM_MAX_X
     except ImportError:
-        Z_DOWN = -27
         ARM_MOVE_REGION = [201, 240]
         DOUBLE_ARM_MOVE_REGION = [365, 239]
         ARM_MAX_X = 340
-    set_global_value('Z_DOWN', Z_DOWN)
 elif math.floor(CORAL_TYPE) == 5:
     try:
         from app.config.ip import m_location_center
@@ -63,6 +63,14 @@ elif math.floor(CORAL_TYPE) == 5:
     set_global_value('m_location_center', m_location_center)
 try:
     from app.config.ip import SENSOR
+except ImportError:
+    pass
+try:
+    from app.config.ip import COMPUTE_M_LOCATION
+except ImportError:
+    pass
+try:
+    from app.config.ip import Z_DOWN
 except ImportError:
     pass
 

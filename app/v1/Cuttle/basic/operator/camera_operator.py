@@ -338,6 +338,7 @@ class CameraHandler(Handler):
                         print('帧号：', image_info['frame_num'])
                         image = np.rot90(self.get_roi(image, False), 3)
                         self.back_up_dq.append({'image': image, 'host_timestamp': image_info['host_timestamp']})
+                        empty_times = 0
                     except IndexError:
                         # 拿的速度太快的话可能还没有存进去
                         if redis_client.get(f"g_bExit_{camera_ids[0]}") == "0":
@@ -404,6 +405,8 @@ class CameraHandler(Handler):
                                 if empty_times > 3:
                                     set_global_value(CAMERA_IN_LOOP, False)
                                     break
+                            else:
+                                empty_times = 0
                 # 后续再保存一些图片，因为结束点之后还需要一些图片
                 self.merge_frame(camera_ids, 60)
                 # 如果依然在loop中，也就是达到了取图的最大限制，还没来得及处理图片，则把剩下的图片都合成完毕

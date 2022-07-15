@@ -147,6 +147,7 @@ class PerformanceCenter(object):
 
     def start_end_loop_not_found(self, exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
+        self.result['url_prefix'] = "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path
         # 判断取图的线程是否完全终止
         for _ in as_completed([self.move_src_future]):
             print('move src 线程结束')
@@ -157,8 +158,7 @@ class PerformanceCenter(object):
     def end_loop(self, judge_function):
         # 计算终止点的方法
         if not hasattr(self, "start_number") or not hasattr(self, "bias"):
-            self.result = {'picture_count': int(CameraMax / 2),
-                           "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+            self.result = {'picture_count': int(CameraMax / 2)}
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             self.start_end_loop_not_found(VideoStartPointNotFound())
         # 如果使用压力传感器，有可能里边还没有图片，所以选择等待一段时间
@@ -192,12 +192,14 @@ class PerformanceCenter(object):
             picture, _, _, timestamp_f = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 1')
+                self.result = {'picture_count': number - 1}
                 self.start_end_loop_not_found()
             number += 1
 
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 2')
+                self.result = {'picture_count': number - 1}
                 self.start_end_loop_not_found()
             number += 1
 

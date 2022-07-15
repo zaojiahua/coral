@@ -344,6 +344,7 @@ class CameraHandler(Handler):
                             time.sleep(1)
                         empty_times += 1
                         if empty_times > 3:
+                            print('相机没图片了')
                             set_global_value(CAMERA_IN_LOOP, False)
                             break
                 redis_client.set(f"g_bExit_{camera_ids[0]}", "1")
@@ -367,6 +368,7 @@ class CameraHandler(Handler):
                     raise CameraNotResponse
 
             # 清空内存
+            print('清空 camera_dq_dict 内存')
             camera_dq_dict.get(self._model.pk + camera_ids[0]).clear()
         else:
             # 判断俩个相机都已经进入到了循环中

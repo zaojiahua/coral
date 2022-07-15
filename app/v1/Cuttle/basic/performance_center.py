@@ -192,14 +192,14 @@ class PerformanceCenter(object):
             picture, _, _, timestamp_f = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 1')
-                self.result = {'picture_count': number - 1}
+                self.result = {'picture_count': number - 1, "start_point": self.start_number + self.bias}
                 self.start_end_loop_not_found()
             number += 1
 
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 2')
-                self.result = {'picture_count': number - 1}
+                self.result = {'picture_count': number - 1, "start_point": self.start_number + self.bias}
                 self.start_end_loop_not_found()
             number += 1
 

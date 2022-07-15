@@ -335,6 +335,7 @@ class CameraHandler(Handler):
                     try:
                         image_info = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()
                         image = image_info['image']
+                        print('帧号：', image_info['frame_num'])
                         image = np.rot90(self.get_roi(image, False), 3)
                         self.back_up_dq.append({'image': image, 'host_timestamp': image_info['host_timestamp']})
                     except IndexError:

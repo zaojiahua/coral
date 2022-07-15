@@ -365,6 +365,9 @@ class CameraHandler(Handler):
                     self.src = image
                 except UnboundLocalError:
                     raise CameraNotResponse
+
+            # 清空内存
+            camera_dq_dict.get(self._model.pk + camera_ids[0]).clear()
         else:
             # 判断俩个相机都已经进入到了循环中
             while True:

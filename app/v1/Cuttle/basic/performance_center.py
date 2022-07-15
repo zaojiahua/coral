@@ -12,7 +12,7 @@ from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_all_sensor_connect
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
-    CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict
+    CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict, get_global_value
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 EXTRA_PIC_NUMBER = 40
@@ -407,6 +407,10 @@ class PerformanceCenter(object):
         def back_up_clear():
             self.back_up_dq.clear()
             print('清空 back up dq 队列。。。。')
+
+        # 有可能图片全部拿完了，但是还没来得及处理图片呢
+        while get_global_value(CAMERA_IN_LOOP):
+            time.sleep(0.5)
 
         # 性能测试结束的最后再保存图片，可以加快匹配目标查找的速度
         find_end = False

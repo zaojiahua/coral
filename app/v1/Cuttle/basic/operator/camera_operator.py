@@ -346,7 +346,6 @@ class CameraHandler(Handler):
                         empty_times += 1
                         if empty_times > 3:
                             print('相机没图片了')
-                            set_global_value(CAMERA_IN_LOOP, False)
                             break
                 redis_client.set(f"g_bExit_{camera_ids[0]}", "1")
                 for _ in as_completed(futures):
@@ -403,7 +402,6 @@ class CameraHandler(Handler):
                             if self.merge_frame(camera_ids, 60) == -1:
                                 empty_times += 1
                                 if empty_times > 3:
-                                    set_global_value(CAMERA_IN_LOOP, False)
                                     break
                             else:
                                 empty_times = 0

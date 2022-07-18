@@ -335,15 +335,17 @@ class CameraHandler(Handler):
                     try:
                         image_info = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()
                         image = image_info['image']
+                        print('帧号：', image_info['frame_num'])
                         image = np.rot90(self.get_roi(image, False), 3)
                         self.back_up_dq.append({'image': image, 'host_timestamp': image_info['host_timestamp']})
+                        empty_times = 0
                     except IndexError:
                         # 拿的速度太快的话可能还没有存进去
                         if redis_client.get(f"g_bExit_{camera_ids[0]}") == "0":
                             time.sleep(1)
                         empty_times += 1
                         if empty_times > 3:
-                            set_global_value(CAMERA_IN_LOOP, False)
+                            print('相机没图片了')
                             break
                 redis_client.set(f"g_bExit_{camera_ids[0]}", "1")
                 for _ in as_completed(futures):
@@ -364,6 +366,10 @@ class CameraHandler(Handler):
                     self.src = image
                 except UnboundLocalError:
                     raise CameraNotResponse
+
+            # 清空内存
+            print('清空 camera_dq_dict 内存')
+            camera_dq_dict.get(self._model.pk + camera_ids[0]).clear()
         else:
             # 判断俩个相机都已经进入到了循环中
             while True:
@@ -396,8 +402,9 @@ class CameraHandler(Handler):
                             if self.merge_frame(camera_ids, 60) == -1:
                                 empty_times += 1
                                 if empty_times > 3:
-                                    set_global_value(CAMERA_IN_LOOP, False)
                                     break
+                            else:
+                                empty_times = 0
                 # 后续再保存一些图片，因为结束点之后还需要一些图片
                 self.merge_frame(camera_ids, 60)
                 # 如果依然在loop中，也就是达到了取图的最大限制，还没来得及处理图片，则把剩下的图片都合成完毕

@@ -542,9 +542,10 @@ class PaneCoordinateView(MethodView):
     @staticmethod
     def get_click_orders(pos_x, pos_y):
         z_down = get_global_value('Z_DOWN')
-        return [f"G01 X{pos_x}Y{pos_y}Z{z_down + 10}F15000\r\n",
+        z_up = round(z_down + 10, 2)
+        return [f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
                 f"G01 X{pos_x}Y{pos_y}Z{z_down}F15000\r\n",
-                f"G01 X{pos_x}Y{pos_y}Z{z_down + 10}F15000\r\n",
+                f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
                 arm_wait_position]
 
     def click(self, pos_x, pos_y, hand_obj):

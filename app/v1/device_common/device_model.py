@@ -493,7 +493,7 @@ class Device(BaseModel):
                             if CORAL_TYPE == 5.3:
                                 m_l.append(Z_DOWN)
                             else:
-                                m_l.append(Z_DOWN + float(self.ply))
+                                m_l.append(round(Z_DOWN + float(self.ply), 2))
                             set_global_value(key, m_l)
                         else:
                             set_global_value(key, eval(value))
@@ -517,7 +517,7 @@ class Device(BaseModel):
             if CORAL_TYPE == 5.3:
                 set_global_value('Z_DOWN', Z_DOWN)
             else:
-                set_global_value('Z_DOWN', Z_DOWN + float(self.ply))
+                set_global_value('Z_DOWN', round(Z_DOWN + float(self.ply), 2))
             print('new Z_DOWN', get_global_value('Z_DOWN'))
 
     # 获取5l柜的点击坐标

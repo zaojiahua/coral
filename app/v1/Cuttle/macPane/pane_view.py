@@ -622,7 +622,7 @@ class PaneCoordinateView(MethodView):
                 # m_y = round(pos_a[1] - (w - cal_point[0][0]) / dpi, 2)
 
             # 写入到文件中，方便初始化的时候获取，这里也是这俩个值更新的唯一地方
-            z_down = get_global_value('m_location')[-1]
+            z_down = get_global_value('Z_DOWN')
             set_global_value('m_location', [m_x, m_y, z_down])
             set_global_value('pane_dpi', dpi)
             merge_shape = get_global_value('merge_shape')

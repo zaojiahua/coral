@@ -8,7 +8,7 @@ from mcush import *
 
 from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
-from app.v1.Cuttle.basic.setting import arm_wait_position
+from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open
 
 
 class HandSerial:
@@ -168,6 +168,36 @@ class CameraUsbPower(object):
         time.sleep(self.timeout)
         self.s.pinSetLow(self.line_number)
         print('-------结束同步信号-----')
+
+
+class CameraPower(HandSerial, CameraUsbPower):
+    def __init__(self, power_com=camera_power_com, baud_rate=9600):
+        HandSerial.__init__(self, baud_rate)
+        if self.ser is None:
+            self.connect(power_com)
+
+    def __enter__(self):
+        self.open()
+        return self.ser
+
+    def open(self):
+        print('------发送同步信号-----')
+        self.send_data()
+
+    def close(self):
+        self.send_data(action="close")
+        print('-------结束同步信号-----')
+
+    def send_data(self, action="open"):
+        order = camera_power_open if action == "open" else camera_power_close
+        send_order = bytes.fromhex(order)
+        self.ser.write(send_order)  # 发送数据
+        return_data = self.ser.read(24)  # 读取缓冲数据
+        str_return_data = str(return_data.hex())
+        print("收到的回复是：", str_return_data)
+        if str_return_data == order:
+            return 0
+        raise Exception("外触发控制器出现问题")
 
 
 # 传感器控制

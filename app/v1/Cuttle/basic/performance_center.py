@@ -12,7 +12,8 @@ from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_all_sensor_connect
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
-    CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict, get_global_value
+    CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict, get_global_value, camera_dq_dict
+from app.config.setting import CORAL_TYPE
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 EXTRA_PIC_NUMBER = 40
@@ -20,7 +21,7 @@ EXTRA_PIC_NUMBER = 40
 
 class PerformanceCenter(object):
     # dq存储起始点前到终止点后的每一帧图片
-    back_up_dq = deque(maxlen=CameraMax * 4)
+    inner_back_up_dq = deque(maxlen=CameraMax * 4)
 
     # 这部分是性能测试的中心对象，性能测试主要测试启动点 和终止点两个点位，并根据拍照频率计算实际时间
     # 终止点比较简单，但是启动点由于现有机械臂无法确认到具体点压的时间，只能通过机械臂遮挡关键位置时间+补偿时间（机械臂下落按压时间）计算得到
@@ -48,6 +49,15 @@ class PerformanceCenter(object):
             os.makedirs(work_path)
         self.work_path = work_path
         self.kwargs = kwargs
+
+    @property
+    def back_up_dq(self):
+        if CORAL_TYPE == 5.3:
+            return self.inner_back_up_dq
+        else:
+            # 其他类型的柜子就一个相机
+            for camera_key in camera_dq_dict:
+                return camera_dq_dict.get(camera_key)
 
     def get_icon(self, refer_im_path):
         # 在使用黑色区域计算时，self.icon_scope为实际出现在snap图中的位置，此方法无意义

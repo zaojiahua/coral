@@ -329,24 +329,25 @@ class CameraHandler(Handler):
             image = None
             # 实时的获取到图片
             if self.back_up_dq is not None:
-                empty_times = 0
+                # empty_times = 0
                 # 停止时刻由外部进行控制，这里负责图像处理即可
                 while get_global_value(CAMERA_IN_LOOP):
-                    try:
-                        image_info = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()
-                        image = image_info['image']
-                        print('帧号：', image_info['frame_num'])
-                        image = np.rot90(self.get_roi(image, False), 3)
-                        self.back_up_dq.append({'image': image, 'host_timestamp': image_info['host_timestamp']})
-                        empty_times = 0
-                    except IndexError:
-                        # 拿的速度太快的话可能还没有存进去
-                        if redis_client.get(f"g_bExit_{camera_ids[0]}") == "0":
-                            time.sleep(1)
-                        empty_times += 1
-                        if empty_times > 3:
-                            print('相机没图片了')
-                            break
+                    time.sleep(0.5)
+                    # try:
+                    #     image_info = camera_dq_dict.get(self._model.pk + camera_ids[0]).popleft()
+                    #     image = image_info['image']
+                    #     print('帧号：', image_info['frame_num'])
+                    #     image = np.rot90(self.get_roi(image, False), 3)
+                    #     self.back_up_dq.append({'image': image, 'host_timestamp': image_info['host_timestamp']})
+                    #     empty_times = 0
+                    # except IndexError:
+                    #     # 拿的速度太快的话可能还没有存进去
+                    #     if redis_client.get(f"g_bExit_{camera_ids[0]}") == "0":
+                    #         time.sleep(1)
+                    #     empty_times += 1
+                    #     if empty_times > 3:
+                    #         print('相机没图片了')
+                    #         break
                 redis_client.set(f"g_bExit_{camera_ids[0]}", "1")
                 for _ in as_completed(futures):
                     print('已经停止获取图片了')
@@ -367,9 +368,9 @@ class CameraHandler(Handler):
                 except UnboundLocalError:
                     raise CameraNotResponse
 
-            # 清空内存
-            print('清空 camera_dq_dict 内存')
-            camera_dq_dict.get(self._model.pk + camera_ids[0]).clear()
+                # 清空内存
+                print('清空 camera_dq_dict 内存')
+                camera_dq_dict.get(self._model.pk + camera_ids[0]).clear()
         else:
             # 判断俩个相机都已经进入到了循环中
             while True:

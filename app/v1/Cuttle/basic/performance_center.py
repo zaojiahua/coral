@@ -34,7 +34,7 @@ class PerformanceCenter(object):
 
     def __init__(self, device_id, icon_area, refer_im_path, scope, threshold, work_path: str, **kwargs):
         self.device_id = device_id
-        self.result = 0
+        self.result = {}
         # 使用黑色区域时，icon_scope为icon实际出现在snap图中的位置，使用icon surf时icon_scope为编辑时出现在refer图中的位置
         # 使用选区变化/不变时 icon_scope 为None
         # icon 和scope 这里都是相对的坐标

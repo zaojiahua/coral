@@ -3,9 +3,11 @@ import platform
 import time
 from collections import deque
 import traceback
+import gc
 
 import cv2
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import numpy as np
 
 from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
@@ -58,6 +60,19 @@ class PerformanceCenter(object):
             # 其他类型的柜子就一个相机
             for camera_key in camera_dq_dict:
                 return camera_dq_dict.get(camera_key)
+
+    def get_back_up_image(self, image):
+        if CORAL_TYPE == 5.3:
+            return image
+        else:
+            return np.rot90(self.get_roi(image), 3)
+
+    # 这的逻辑和camera operator中有些重复
+    def get_roi(self, src):
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=self.device_id)
+        return src[int(device_obj.y1) - int(device_obj.roi_y1): int(device_obj.y2) - int(device_obj.roi_y1),
+                   int(device_obj.x1) - int(device_obj.roi_x1): int(device_obj.x2) - int(device_obj.roi_x1)]
 
     def get_icon(self, refer_im_path):
         # 在使用黑色区域计算时，self.icon_scope为实际出现在snap图中的位置，此方法无意义
@@ -161,7 +176,7 @@ class PerformanceCenter(object):
         # 判断取图的线程是否完全终止
         for _ in as_completed([self.move_src_future]):
             print('move src 线程结束')
-        self.back_up_dq.clear()
+        self.back_up_clear()
         print('清空 back up dq 队列。。。。')
         raise exp
 
@@ -286,7 +301,7 @@ class PerformanceCenter(object):
         # 在结尾图片上画上选框（可能是画图标，也可能是画判定选区）
         is_icon = not (self.icon_scope is None or len(self.icon_scope) < 1)
         scope = self.icon_scope if is_icon else self.scope
-        h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.back_up_dq[0]['image'].shape[:2]
+        h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.get_back_up_image(self.back_up_dq[0]['image']).shape[:2]
         area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
             if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
         x1, y1 = area[:2]
@@ -357,9 +372,9 @@ class PerformanceCenter(object):
                 try:
                     picture_info = self.back_up_dq[number]
                     timestamp = picture_info['host_timestamp']
-                    picture = picture_info['image']
-                    pic_next = self.back_up_dq[number + 1]['image']
-                    pic_next_next = self.back_up_dq[number + 2]['image']
+                    picture = self.get_back_up_image(picture_info['image'])
+                    pic_next = self.get_back_up_image(self.back_up_dq[number + 1]['image'])
+                    pic_next_next = self.get_back_up_image(self.back_up_dq[number + 2]['image'])
                     break
                 except IndexError as e:
                     print("error in picture_prepare", repr(e))
@@ -401,6 +416,14 @@ class PerformanceCenter(object):
         pic_compare_2 = pic_compare_2[area[1]:area[3], area[0]:area[2]]
         return number, pic_original, pic_compare_1, pic_compare_2
 
+    def back_up_clear(self):
+        while len(self.back_up_dq) > 0:
+            image_info = self.back_up_dq.popleft()
+            del image_info['image']
+        self.back_up_dq.clear()
+        gc.collect()
+        print('清空 back up dq 队列。。。。')
+
     def move_src_to_backup(self):
         self.back_up_dq.clear()
         from app.v1.device_common.device_model import Device
@@ -414,10 +437,6 @@ class PerformanceCenter(object):
             traceback.print_exc()
             print('获取图片的接口报错。。。。')
 
-        def back_up_clear():
-            self.back_up_dq.clear()
-            print('清空 back up dq 队列。。。。')
-
         # 有可能图片全部拿完了，但是还没来得及处理图片呢
         while get_global_value(CAMERA_IN_LOOP):
             time.sleep(0.5)
@@ -430,7 +449,7 @@ class PerformanceCenter(object):
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
         try:
             for cur_index in range(end_number):
-                picture_save = cv2.resize(self.back_up_dq[cur_index]['image'], dsize=(0, 0), fx=0.7, fy=0.7)
+                picture_save = cv2.resize(self.get_back_up_image(self.back_up_dq[cur_index]['image']), dsize=(0, 0), fx=0.7, fy=0.7)
                 if find_end and hasattr(self, "draw_rec") and \
                         self.draw_rec and cur_index == (end_number - 1):
                     # 这块就是做判断画面在动的时候，最后在临界帧画框
@@ -446,21 +465,21 @@ class PerformanceCenter(object):
 
         # 找到结束点后再继续保存最多40张:
         if not find_end:
-            back_up_clear()
+            self.back_up_clear()
             return 0
 
         number = self.end_number + 1
         for i in range(EXTRA_PIC_NUMBER):
             try:
-                src = self.back_up_dq[number]['image']
+                src = self.get_back_up_image(self.back_up_dq[number]['image'])
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)
                 cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), picture_save)
                 number += 1
             except Exception as e:
                 traceback.print_exc()
-                back_up_clear()
+                self.back_up_clear()
                 return 0
 
         # 销毁
-        back_up_clear()
+        self.back_up_clear()
         print('move src to back up 正常结束')

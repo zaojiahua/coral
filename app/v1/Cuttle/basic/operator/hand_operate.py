@@ -8,7 +8,7 @@ import numpy as np
 from app.config.setting import CORAL_TYPE, arm_com, arm_com_1
 from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, ChooseSerialObjFail, InvalidCoordinates, \
-    InsufficientSafeDistance, RepeatTimeInvalid, TcabNotAllowExecThisUnit
+    RepeatTimeInvalid, TcabNotAllowExecThisUnit
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower, SensorSerial
@@ -579,17 +579,15 @@ class HandHandler(Handler, DefaultMixin):
         axis：[[左机械臂起点],[左机械臂终点],[右机械臂起点],[右机械臂终点]]
         :return:
         """
-        if axis[1][0] < axis[0][0] < axis[2][0] < axis[3][0]:
-            # 放大，起点x坐标大于终点x坐标
-            # 距离最近的是两个起点
-            diff_ret = self.judge_diff_x(axis[0][0], axis[2][0])
-        elif axis[0][0] < axis[1][0] < axis[3][0] < axis[2][0]:
-            # 缩小
-            # 距离最近的两个是终点
-            diff_ret = self.judge_diff_x(axis[1][0], axis[3][0])
-        else:
+        self.judge_diff_x(axis[0][0], axis[2][0])
+        self.judge_diff_x(axis[1][0], axis[2][0])
+        self.judge_diff_x(axis[0][0], axis[3][0])
+        self.judge_diff_x(axis[1][0], axis[3][0])
+        judge_result = DefaultMixin.judge_cross([axis[0][0], axis[0][1], axis[1][0], axis[1][1]],
+                                                [axis[2][0], axis[2][1], axis[3][0], axis[3][1]])
+        if not judge_result:
             raise InvalidCoordinates
-        return diff_ret
+        return 0
 
     @staticmethod
     def judge_diff_x(left_x, right_x):
@@ -597,7 +595,7 @@ class HandHandler(Handler, DefaultMixin):
         # 距离最近的两个点，x坐标差值不得小于安全值
         if abs(left_x - right_x) > DIFF_X:
             return True
-        raise InsufficientSafeDistance
+        raise InvalidCoordinates
 
     def __list_click_order(self, axis_list):
         click_orders = []

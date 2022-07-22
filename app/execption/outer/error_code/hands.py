@@ -91,21 +91,13 @@ class ChooseSerialObjFail(APIException):
 
 class InvalidCoordinates(APIException):
     """
-     当使用双指缩小与放大unit时，各点的x坐标必须满足
-        【放大】左机械臂终点x坐标 < 左机械臂起点x坐标 < 右机械臂起点x坐标 < 右机械臂终点x坐标
-    或者：
-        【缩小】左机械臂起点x坐标 < 左机械臂终点x坐标 < 右机械臂终点x坐标 < 右机械臂起点x坐标
+     当使用双指缩小与放大unit时，必须满足：
+        4个点的x坐标均需保持安全距离且两条线段不能相交、
     当使用回到桌面（全面屏）时，需|起点坐标|大于|终点坐标|
     """
     error_code = 3010
     code = 400
     description = "Invalid Coordinates "
-
-
-class InsufficientSafeDistance(APIException):
-    error_code = 3011
-    code = 400
-    description = "To Increased the last two point's x-coordinate"
 
 
 class RepeatTimeInvalid(APIException):

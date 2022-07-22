@@ -176,6 +176,35 @@ class DefaultMixin(object):
             raise CoordinatesNotReasonable
         return True
 
+    @staticmethod
+    def judge_cross(axis1, axis2):
+        """
+        该函数用来判断两条线段是否相交
+        axis1: [起点x坐标，起点y坐标，终点x坐标，终点y坐标]
+        axis2: [起点x坐标，起点y坐标，终点x坐标，终点y坐标]
+        """
+        point_is_exist = False
+        x1, y1, x2, y2 = axis1
+        x3, y3, x4, y4 = axis2
+
+        if (x2 - x1) == 0:
+            k1 = None
+        else:
+            k1 = (y2 - y1) * 1.0 / (x2 - x1)  # 计算k1,由于点均为整数，需要进行浮点数转化
+
+        if (x4 - x3) == 0:  # L2直线斜率不存在
+            k2 = None
+        else:
+            k2 = (y4 - y3) * 1.0 / (x4 - x3)  # 斜率存在
+
+        if k1 is None:
+            if not k2 is None:
+                point_is_exist = True
+        elif not k2 == k1:
+            point_is_exist = True
+
+        return point_is_exist
+
 
 class CameraMixin(DefaultMixin):
     def calculate(self, pix_point):

@@ -21,7 +21,7 @@ from app.execption.outer.error_code.imgtool import CameraNotResponse
 from app.config.setting import HARDWARE_MAPPING_LIST
 from app.libs import image_utils
 from redis_init import redis_client
-from app.v1.Cuttle.basic.hand_serial import CameraUsbPower
+from app.v1.Cuttle.basic.hand_serial import CameraPower
 
 MoveToPress = 9
 ImageNumberFile = "__number.txt"
@@ -391,7 +391,7 @@ class CameraHandler(Handler):
             if self.back_up_dq is not None:
                 need_back_up_dq = False
                 # 发送同步信号
-                with CameraUsbPower(timeout=timeout):
+                with CameraPower(timeout=timeout):
                     empty_times = 0
                     while get_global_value(CAMERA_IN_LOOP):
                         # 必须等待，否则while死循环导致其他线程没有机会执行
@@ -414,7 +414,7 @@ class CameraHandler(Handler):
                 if self.record_video:
                     timeout = self.record_time
                 # 发送同步信号
-                with CameraUsbPower(timeout=timeout):
+                with CameraPower(timeout=timeout):
                     pass
 
             for camera_id in camera_ids:

@@ -171,8 +171,9 @@ class CameraUsbPower(object):
 
 
 class CameraPower(HandSerial, CameraUsbPower):
-    def __init__(self, power_com=camera_power_com, baud_rate=9600):
+    def __init__(self, power_com=camera_power_com, baud_rate=9600, timeout=1):
         HandSerial.__init__(self, baud_rate)
+        self.timeout = timeout
         if self.ser is None:
             self.connect(power_com)
 
@@ -181,18 +182,18 @@ class CameraPower(HandSerial, CameraUsbPower):
         return self.ser
 
     def open(self):
-        print('------发送同步信号-----')
+        print('------CameraPower发送同步信号-----')
         self.send_data()
 
     def close(self):
         self.send_data(action="close")
-        print('-------结束同步信号-----')
+        print('-------CameraPower结束同步信号-----')
 
     def send_data(self, action="open"):
         order = camera_power_open if action == "open" else camera_power_close
         send_order = bytes.fromhex(order)
         self.ser.write(send_order)  # 发送数据
-        return_data = self.ser.read(24)  # 读取缓冲数据
+        return_data = self.ser.read(16)  # 读取缓冲数据
         str_return_data = str(return_data.hex())
         print("收到的回复是：", str_return_data)
         if str_return_data == order:

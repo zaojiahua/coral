@@ -156,30 +156,25 @@ class AreaSelectedMixin(object):
         else:
             retry_times = 1
         while retry_times > 0:
-            try:
-                # 创建一个复合unit中心对象，
-                with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
-                    # 先截一张图
+            retry_times -= 1
+            # 创建一个复合unit中心对象，
+            with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
+                # 先截一张图
+                ocr_obj.snap_shot()
+                # for debug
+                if not os.path.exists(ocr_obj.default_pic_path):
+                    self._model.logger.debug(f"{ocr_obj.default_pic_path} 文件不存在")
+                    # 没有找到的话，重新截图试试
                     ocr_obj.snap_shot()
-                    # for debug
-                    if not os.path.exists(ocr_obj.default_pic_path):
-                        self._model.logger.debug(f"{ocr_obj.default_pic_path} 文件不存在")
-                        # 没有找到的话，重新截图试试
-                        ocr_obj.snap_shot()
-                    x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
-                    self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
-                    # 执行ocr_obj的对应match方法
-                    getattr(ocr_obj, match_function)()
-                    # 把前面算的左上点的绝对坐标加到识别坐标上来。
-                    ocr_obj.add_bias(x0, y0)
-                    # 做点击动作
-                    ocr_obj.point()
-                    break
-            except OcrParseFail as e:
-                retry_times -= 1
-                if retry_times == 0:
-                    raise e
-                print('解析失败，重试一次。。。')
+                x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
+                self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
+                # 执行ocr_obj的对应match方法
+                getattr(ocr_obj, match_function)()
+                # 把前面算的左上点的绝对坐标加到识别坐标上来。
+                ocr_obj.add_bias(x0, y0)
+                # 做点击动作
+                ocr_obj.point()
+                break
 
         return ocr_obj.result
 

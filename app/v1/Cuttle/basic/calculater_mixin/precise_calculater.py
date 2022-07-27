@@ -24,7 +24,7 @@ class PreciseMixin(object):
                 response = ocr_obj.get_result()
                 identify_words_list = [item.get("text").strip().strip('"[]<>\,.\n') for item in response]
                 success = condition_judge(is_blur, False, required_words_list, identify_words_list)
-                if success:
+                if success == 0:
                     return success
 
     def except_words_precise(self, exec_content) -> int:

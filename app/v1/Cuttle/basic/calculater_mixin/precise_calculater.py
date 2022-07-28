@@ -3,6 +3,7 @@ import math
 from app.v1.Cuttle.basic.common_utli import suit_for_blur, condition_judge
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.config.setting import CORAL_TYPE
+from app.v1.Cuttle.basic.image_schema import ImageBasicSchemaCompatible
 
 
 class PreciseMixin(object):
@@ -17,7 +18,7 @@ class PreciseMixin(object):
             retry_times = 1
         while retry_times > 0:
             retry_times -= 1
-            self.snap_shot_now()
+            self._wrapper_validate(exec_content, ImageBasicSchemaCompatible)
             required_words_list, path = self.words_prepare(exec_content, "requiredWords")
             # 此处不传递words给ocr service，避免不确定长度文字对结果的限制（会稍微影响速度）
             with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:

@@ -148,6 +148,7 @@ class PerformanceCenter(object):
     def start_end_loop_not_found(self, exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
         self.result['url_prefix'] = "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path
+        self.result['time_per_unit'] = round(1 / FpsMax, 4)
         # 判断取图的线程是否完全终止
         for _ in as_completed([self.move_src_future]):
             print('move src 线程结束')

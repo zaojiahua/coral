@@ -10,7 +10,6 @@ class PreciseMixin(object):
     def has_word_precise(self, exec_content):
         # 命名word少个s，但为了兼容编辑过的用例，短期不能修正
         exec_content, is_blur = suit_for_blur(exec_content)
-        required_words_list, path = self.words_prepare(exec_content, "requiredWords")
         # 5型柜解析失败重试三次
         if math.floor(CORAL_TYPE) == 5:
             retry_times = 3
@@ -18,10 +17,10 @@ class PreciseMixin(object):
             retry_times = 1
         while retry_times > 0:
             retry_times -= 1
+            self.snap_shot_now()
+            required_words_list, path = self.words_prepare(exec_content, "requiredWords")
             # 此处不传递words给ocr service，避免不确定长度文字对结果的限制（会稍微影响速度）
-            with Complex_Center(**self.kwargs) as ocr_obj:
-                # 不使用用户的图片，直接重新截图一张
-                ocr_obj.snap_shot()
+            with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
                 self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
                 response = ocr_obj.get_result()
                 identify_words_list = [item.get("text").strip().strip('"[]<>\,.\n') for item in response]

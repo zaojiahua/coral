@@ -19,13 +19,16 @@ class PreciseMixin(object):
         while retry_times > 0:
             retry_times -= 1
             # 此处不传递words给ocr service，避免不确定长度文字对结果的限制（会稍微影响速度）
-            with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
+            with Complex_Center(**self.kwargs) as ocr_obj:
+                # 不使用用户的图片，直接重新截图一张
+                ocr_obj.snap_shot()
                 self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
                 response = ocr_obj.get_result()
                 identify_words_list = [item.get("text").strip().strip('"[]<>\,.\n') for item in response]
                 success = condition_judge(is_blur, False, required_words_list, identify_words_list)
                 if success == 0:
                     return success
+        return 1
 
     def except_words_precise(self, exec_content) -> int:
         # 判断所选择区域内没有有指定文字

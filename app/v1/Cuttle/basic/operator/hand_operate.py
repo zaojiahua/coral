@@ -332,7 +332,7 @@ class HandHandler(Handler, DefaultMixin):
         self._model.logger.info(f"reset hand order:{reset_orders}")
         serial_obj = None
         if rotate is True:
-            serial_obj = rotate_hand_serial_obj_dict(self._model.pk)
+            serial_obj = rotate_hand_serial_obj_dict.get(self._model.pk)
             serial_obj.send_single_order(reset_orders)
         else:
             for obj_key in hand_serial_obj_dict.keys():

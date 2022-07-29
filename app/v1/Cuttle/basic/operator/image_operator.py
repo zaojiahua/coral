@@ -145,15 +145,20 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def clear(self, result, t_guard):
         if t_guard is None or t_guard == 1:
             with Complex_Center(**self.kwargs) as ocr_obj:
+                def t_guard_process():
+                    ocr_obj.get_result(parse_function=self._parse_function)
+                    if ocr_obj.result == 0:
+                        ocr_obj.point()
+
                 ocr_obj.snap_shot()
-                ocr_obj.get_result(parse_function=self._parse_function)
-                if ocr_obj.result == 0:
-                    ocr_obj.point()
 
                 # 检测无响应的情况
                 if self.detect_no_response(ocr_obj.ocr_result):
                     ocr_obj.bug_report()
+                    t_guard_process()
                     raise DetectNoResponse
+                else:
+                    t_guard_process()
 
             pic_name = ".".join(ocr_obj.default_pic_path.split(os.sep)[-1].split(".")[:-1])
             new_path = os.path.join(self.kwargs.get("work_path"), pic_name + "-Tguard.png")

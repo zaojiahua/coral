@@ -147,17 +147,23 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
             with Complex_Center(**self.kwargs) as ocr_obj:
                 ocr_obj.snap_shot()
                 ocr_obj.get_result(parse_function=self._parse_function)
-                if ocr_obj.result == 0:
-                    ocr_obj.point()
 
-                # 检测无响应的情况
-                if self.detect_no_response(ocr_obj.ocr_result):
-                    ocr_obj.bug_report()
-                    raise DetectNoResponse
+            # 检测无响应的情况
+            no_response = False
+            if self.detect_no_response(ocr_obj.ocr_result):
+                ocr_obj.bug_report()
+                no_response = True
+
+            if ocr_obj.result == 0:
+                ocr_obj.point()
 
             pic_name = ".".join(ocr_obj.default_pic_path.split(os.sep)[-1].split(".")[:-1])
             new_path = os.path.join(self.kwargs.get("work_path"), pic_name + "-Tguard.png")
             shutil.move(ocr_obj.default_pic_path, new_path)
+
+            if no_response:
+                raise DetectNoResponse
+
             return ocr_obj.result
 
     #   -------------辅助函数---------

@@ -219,7 +219,7 @@ class PerformanceCenter(object):
                 print('图片不够 loop 2')
                 self.result = {'picture_count': number - 1, "start_point": self.start_number + self.bias}
                 self.start_end_loop_not_found()
-            number += 1
+            number += 2
 
             if judge_function.__name__ in ["_icon_find", "_icon_find_template_match"]:
                 # 判定终止图标出现只看标准图标和前后两张
@@ -372,7 +372,7 @@ class PerformanceCenter(object):
                     break
                 except IndexError as e:
                     print("error in picture_prepare", repr(e))
-            time.sleep(0.5)
+            time.sleep(0.2)
             max_retry_time -= 1
 
         if picture is not None:

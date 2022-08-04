@@ -1,4 +1,5 @@
 import logging
+import math
 import os.path
 import platform
 import random
@@ -694,3 +695,125 @@ class PaneVideoView(MethodView):
                                 record_time=int(record_time),
                                 timeout=10 * 60)
         return jsonify(dict(error_code=0))
+
+
+# 泰尔五星认证 中心五点打点
+class ClickCenterPointFive(MethodView):
+
+    def get(self):
+        # 获取机械臂对象
+        hand_obj = None
+        for obj_key in hand_serial_obj_dict.keys():
+            # 单指机械臂直接进来
+            if (arm_com in obj_key and not obj_key[-1].isdigit()) or CORAL_TYPE != 5.3:
+                hand_obj = hand_serial_obj_dict[obj_key]
+
+        request_data = request.get_json() or request.args
+        device_label = request_data["device_label"]
+        device_obj = Device(pk=device_label)
+
+        filename = 'point_5_1.png'
+        ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+        if ret_code == 0:
+            print('point 5 1 拍到照片了')
+            target_points = self.get_black_point(filename)
+            print(target_points)
+            for point in target_points:
+                # 随机误差
+                # random_point = [point[0] + random.randint(1, 5), point[1] + random.randint(1, 5)]
+                self.click(device_obj, hand_obj, *point)
+                time.sleep(1)
+
+        filename = 'point_5_2.png'
+        ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+        if ret_code == 0:
+            print('point 5 2 拍到照片了')
+            red_points = self.get_red_point(filename)
+            print(red_points)
+
+        # 计算俩点之间的距离
+        dpi = get_global_value('pane_dpi')
+        all_dis = []
+        for i in range(len(red_points)):
+            dis = math.sqrt(math.pow(red_points[i][0] - target_points[i][0], 2) +
+                            math.pow(red_points[i][1] - target_points[i][1], 2))
+            all_dis.append(round(dis / dpi, 2))
+            print(round(dis / dpi, 2))
+
+        return jsonify(dict(error_code=0, data=all_dis))
+
+    @staticmethod
+    def get_black_point(filename):
+        img = cv2.imread(filename)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        ret, binary = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
+        # cv2.imwrite('1.png', binary)
+
+        _, contours, hierarchy = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
+        # cv2.imwrite('result.png', img)
+
+        target_points = []
+        # 查找符合条件的轮廓
+        for contour_index, contour_points in enumerate(contours):
+            # 遍历组成轮廓的每个坐标点
+            m = cv2.moments(contour_points)
+            # m00代表面积
+            if m['m00'] < 1000:
+                # 获取对象的质心
+                cx = round(m['m10'] / m['m00'], 2)
+                cy = round(m['m01'] / m['m00'], 2)
+                # print(cx, cy)
+                target_points.append([cx, cy])
+
+        return target_points
+
+    @staticmethod
+    def get_red_point(filename):
+        img = cv2.imread(filename)
+        h, w, _ = img.shape
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+        # 机械臂点下的点需要是红色的
+        lower_red = np.array([0, 43, 46])
+        upper_red = np.array([10, 255, 255])
+        mask_1 = cv2.inRange(hsv, lower_red, upper_red)
+
+        lower_red = np.array([156, 43, 46])
+        upper_red = np.array([180, 255, 255])
+        mask_2 = cv2.inRange(hsv, lower_red, upper_red)
+
+        mask = mask_1 + mask_2
+
+        kernel = np.uint8(np.ones((3, 3)))
+        mask = cv2.dilate(mask, kernel, iterations=2)
+
+        # 获取符合条件的轮廓
+        _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
+        # cv2.imwrite('result.png', img)
+        target_points = []
+        for contour_index, contour_points in enumerate(contours):
+            # 遍历组成轮廓的每个坐标点
+            m = cv2.moments(contour_points)
+            # 获取对象的质心
+            cx = round(m['m10'] / m['m00'], 2)
+            cy = round(m['m01'] / m['m00'], 2)
+            target_points.append([cx, cy])
+        return target_points
+
+    def click(self, device_obj, hand_obj, point_x, point_y):
+        pos_x, pos_y, pos_z = device_obj.get_click_position(point_x, point_y, absolute=True)
+        print(pos_x, pos_y, pos_z, '*' * 10)
+        click_orders = self.get_click_orders(pos_x, -pos_y, pos_z)
+        for order in click_orders:
+            hand_obj.send_single_order(order)
+        hand_obj.recv(buffer_size=64)
+
+    @staticmethod
+    def get_click_orders(pos_x, pos_y, pos_z):
+        z_up = pos_z + 5
+        return [f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
+                f"G01 X{pos_x}Y{pos_y}Z{pos_z}F15000\r\n",
+                f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
+                arm_wait_position]

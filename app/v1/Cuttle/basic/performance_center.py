@@ -214,13 +214,6 @@ class PerformanceCenter(object):
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
             # 准确度上就是有50%概率晚一帧，不过在240帧水平上，1帧误差可以接受
             # 这部分我们自己知道就好，千万别给客户解释出去了。
-            picture, _, _, timestamp_f = self.picture_prepare(number)
-            if picture is None:
-                print('图片不够 loop 1')
-                self.result = {'picture_count': number - 1, "start_point": self.start_number + self.bias}
-                self.start_end_loop_not_found()
-            number += 1
-
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number)
             if picture is None:
                 print('图片不够 loop 2')
@@ -264,7 +257,7 @@ class PerformanceCenter(object):
                     # 实际的job_duration需要加上bias
                     job_duration = round(time_per_unit * (end - self.start_number), 3)
                 else:
-                    time_per_unit = round((timestamp - timestamp_f) / 1000, 4)
+                    time_per_unit = round(job_duration / (end - self.start_number), 4)
                     # 在win上第一张图片有问题，可能是上次拍照留在相机内存中的图片，所以用第一张
                     self.start_number = 1
 
@@ -281,7 +274,7 @@ class PerformanceCenter(object):
                     time_per_unit = round(job_duration / (number - self.start_number), 4)
                     job_duration = round(time_per_unit * (number - self.start_number - self.bias), 3)
                 else:
-                    time_per_unit = round((timestamp - timestamp_f) / 1000, 4)
+                    time_per_unit = round(job_duration / (number - self.start_number), 4)
                     self.start_number = 1
 
                 self.result = {"start_point": self.start_number + self.bias, "end_point": number,
@@ -292,6 +285,7 @@ class PerformanceCenter(object):
                 self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
                 print('结束点图片判断超出最大数量')
                 self.start_end_loop_not_found()
+            del picture, next_picture, third_pic
         # 判断取图的线程是否完全终止
         for _ in as_completed([self.move_src_future]):
             print('move src 线程结束')

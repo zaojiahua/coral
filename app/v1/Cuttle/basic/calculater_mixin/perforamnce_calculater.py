@@ -169,6 +169,9 @@ class PerformanceMinix(object):
     def end_point_with_changed(self, exec_content):
         return self._end_point(exec_content, PerformanceSchemaCompare, self._picture_changed)
 
+    def end_point_with_blank(self, exec_content):
+        return self._end_point(exec_content, PerformanceSchema, self._is_blank)
+
     @staticmethod
     def wait_end():
         # 当发生异常的时候，另一个进程可能还在使用相机，所以这里等待几秒再返回，防止t-guard马上使用相机
@@ -309,3 +312,18 @@ class PerformanceMinix(object):
     def delay_exec(self, function, *args, **kwargs):
         time.sleep(kwargs.get("sleep", 0.3))
         return function(*args, **kwargs)
+
+    def _is_blank(self, pic, next_pic, third_pic, threshold):
+        # cv2.imwrite('result_0.png', pic)
+        pic = cv2.cvtColor(pic, cv2.COLOR_BGR2GRAY)
+        ret, binary = cv2.threshold(pic, 50, 255, cv2.THRESH_BINARY)
+        # cv2.imwrite('result.png', binary)
+
+        w, h = binary.shape
+        nonzero_count = np.count_nonzero(binary)
+        all_pixes = w * h
+        blank_rate = (all_pixes - nonzero_count) / all_pixes
+        if blank_rate > threshold:
+            return 1
+        else:
+            return 0

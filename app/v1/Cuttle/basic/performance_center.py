@@ -173,9 +173,12 @@ class PerformanceCenter(object):
     def start_end_loop_not_found(self, exp=VideoEndPointNotFound()):
         set_global_value(CAMERA_IN_LOOP, False)
         self.result['url_prefix'] = "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path
+        if 'picture_count' not in self.result:
+            self.result['picture_count'] = len(self.back_up_dq) - 1
         # 判断取图的线程是否完全终止
-        for _ in as_completed([self.move_src_future]):
-            print('move src 线程结束')
+        if hasattr(self, 'move_src_future'):
+            for _ in as_completed([self.move_src_future]):
+                print('move src 线程结束')
         self.back_up_clear()
         print('清空 back up dq 队列。。。。')
         raise exp
@@ -183,7 +186,6 @@ class PerformanceCenter(object):
     def end_loop(self, judge_function):
         # 计算终止点的方法
         if not hasattr(self, "start_number") or not hasattr(self, "bias"):
-            self.result = {'picture_count': int(CameraMax / 2)}
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             self.start_end_loop_not_found(VideoStartPointNotFound())
         # 如果使用压力传感器，有可能里边还没有图片，所以选择等待一段时间
@@ -209,12 +211,14 @@ class PerformanceCenter(object):
                     self.start_end_loop_not_found()
                 number += 1
 
+        use_icon_scope = True if judge_function.__name__ == "_is_blank" else False
+
         while self.loop_flag:
             # 这个地方写了两遍不是bug，是特意的，一次取了两张
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
             # 准确度上就是有50%概率晚一帧，不过在240帧水平上，1帧误差可以接受
             # 这部分我们自己知道就好，千万别给客户解释出去了。
-            picture, next_picture, third_pic, timestamp = self.picture_prepare(number)
+            picture, next_picture, third_pic, timestamp = self.picture_prepare(number, use_icon_scope)
             if picture is None:
                 print('图片不够 loop 2')
                 self.result = {'picture_count': number - 1, "start_point": self.start_number + self.bias}
@@ -239,29 +243,28 @@ class PerformanceCenter(object):
                     time.sleep(EXTRA_PIC_NUMBER * 3 / FpsMax)
 
                 set_global_value(CAMERA_IN_LOOP, False)
-                self.end_number = number - 1
                 if judge_function.__name__ not in ["_icon_find", "_icon_find_template_match"]:
                     # 判定区域是否有变化时，变化的帧是next_picture/third_pic，当前的picture是不能画框的，需要在另一个存图线程中画框
                     self.draw_rec = True
-                    end = self.end_number + 1
+                    self.end_number = number
                 else:
                     # 判定终止图标出现时，出现的帧就是当前picture，所以直接在这个图上画就可以
                     self.draw_line_in_pic(number=self.end_number, picture=picture)
-                    end = self.end_number
+                    self.end_number = number - 1
 
                 # 找到终止点后，包装一个json格式，推到reef。
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 if not SENSOR:
-                    time_per_unit = round(job_duration / (end - self.start_number), 4)
+                    time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
                     self.start_number = int(self.start_number + self.bias)
                     # 实际的job_duration需要加上bias
-                    job_duration = round(time_per_unit * (end - self.start_number), 3)
+                    job_duration = round(time_per_unit * (self.end_number - self.start_number), 3)
                 else:
-                    time_per_unit = round(job_duration / (end - self.start_number), 4)
+                    time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
                     # 在win上第一张图片有问题，可能是上次拍照留在相机内存中的图片，所以用第一张
                     self.start_number = 1
 
-                self.result = {"start_point": self.start_number, "end_point": end,
+                self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": job_duration,
                                "time_per_unit": time_per_unit,
                                "picture_count": self.end_number + EXTRA_PIC_NUMBER - 1,

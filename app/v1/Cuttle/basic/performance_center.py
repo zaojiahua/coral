@@ -144,6 +144,7 @@ class PerformanceCenter(object):
                 picture, next_picture, third_pic, timestamp = self.picture_prepare(number,
                                                                                    use_icon_scope=use_icon_scope)
                 if picture is None:
+                    print('图片不够，start loop')
                     self.start_end_loop_not_found(VideoStartPointNotFound())
 
                 number += 1

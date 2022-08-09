@@ -250,8 +250,8 @@ class PerformanceCenter(object):
                     self.end_number = number
                 else:
                     # 判定终止图标出现时，出现的帧就是当前picture，所以直接在这个图上画就可以
-                    self.draw_line_in_pic(number=self.end_number, picture=picture)
                     self.end_number = number - 1
+                    self.draw_line_in_pic(number=self.end_number, picture=picture)
 
                 # 找到终止点后，包装一个json格式，推到reef。
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)

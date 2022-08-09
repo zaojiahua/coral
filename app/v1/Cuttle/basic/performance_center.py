@@ -23,7 +23,7 @@ EXTRA_PIC_NUMBER = 40
 
 class PerformanceCenter(object):
     # dq存储起始点前到终止点后的每一帧图片
-    inner_back_up_dq = deque(maxlen=CameraMax * 4)
+    inner_back_up_dq = deque(maxlen=CameraMax)
 
     # 这部分是性能测试的中心对象，性能测试主要测试启动点 和终止点两个点位，并根据拍照频率计算实际时间
     # 终止点比较简单，但是启动点由于现有机械臂无法确认到具体点压的时间，只能通过机械臂遮挡关键位置时间+补偿时间（机械臂下落按压时间）计算得到

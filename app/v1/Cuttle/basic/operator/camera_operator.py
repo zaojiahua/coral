@@ -40,7 +40,7 @@ def camera_start(camera_id, device_object, **kwargs):
         if camera_dq_dict.get(camera_dq_key) is not None:
             del camera_dq_dict[camera_dq_key]
         # 为了保证后续操作的统一性，将图片统一放到队列中
-        dq = deque(maxlen=CameraMax * 4)
+        dq = deque(maxlen=CameraMax)
         camera_dq_dict[camera_dq_key] = dq
 
         temporary = kwargs.get('temporary', True)

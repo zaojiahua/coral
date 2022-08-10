@@ -183,6 +183,21 @@ class PerformanceMinix(object):
         keep_pic = [2017]
         try:
             data = self._validate(exec_content, schema)
+
+            # 测试unit 目前只有检测黑屏会走这里
+            if self.kwargs.get("test_running"):
+                refer_im = cv2.imread(data.get("refer_im"))
+                h, w, _ = refer_im.shape
+                scope = data.get("icon_areas")[0]
+                if scope == [1, 1, 1, 1]:
+                    img = refer_im
+                else:
+                    area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]]
+                    img = refer_im[area[1]:area[3], area[0]:area[2]]
+                threshold = data.get("threshold", 0.99)
+                ret = judge_function(img, None, None, threshold)
+                return 0 if ret else 1
+
             performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                             data.get("areas")[0], data.get("threshold", 0.99),
                                             self.kwargs.get("work_path"))

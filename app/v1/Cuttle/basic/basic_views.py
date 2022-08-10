@@ -89,10 +89,3 @@ def ocr_test():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": repr(e)}), 400
-
-
-@basic.route('/test_is_blank/', methods=['POST'])
-def test_is_blank():
-    image_handler = ImageHandler(many=False)
-    response = image_handler.test_is_blank(request.files)
-    return jsonify(response), 200

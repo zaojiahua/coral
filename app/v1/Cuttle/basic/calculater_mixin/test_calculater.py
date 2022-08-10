@@ -148,15 +148,3 @@ class TestMixin(object):
         for i in args:
             if os.path.exists(i):
                 os.remove(i)
-
-    def test_is_blank(self, exec_content):
-        data = PerformanceSchema().load(exec_content)
-        refer_im = data.get("refer_im")
-        h, w, _ = refer_im.shape()
-        scope = data.get("icon_areas")
-        area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]]
-        img = refer_im[area[1]:area[3], area[0]:area[2]]
-        threshold = data.get("threshold", 0.99)
-        is_blank = self._is_blank(img, None, None, threshold)
-        return {'error_code': 0, 'data': {'test_result': is_blank}}
-

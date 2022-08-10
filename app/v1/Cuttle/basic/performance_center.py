@@ -176,8 +176,11 @@ class PerformanceCenter(object):
         # result数据的写入 只有在end的时候是有效的
         self.result['url_prefix'] = "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path
         if 'picture_count' not in self.result:
-            self.result['picture_count'] = len([lists for lists in os.listdir(self.work_path)
-                                                if os.path.isfile(os.path.join(self.work_path, lists))]) - 1
+            if len(self.back_up_dq) > 1:
+                self.result['picture_count'] = len(self.back_up_dq) - 1
+            else:
+                self.result['picture_count'] = len([lists for lists in os.listdir(self.work_path)
+                                                    if os.path.isfile(os.path.join(self.work_path, lists))]) - 1
         # 判断取图的线程是否完全终止
         if hasattr(self, 'move_src_future'):
             for _ in as_completed([self.move_src_future]):

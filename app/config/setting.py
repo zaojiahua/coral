@@ -86,6 +86,8 @@ elif CORAL_TYPE == 3.1:
 elif CORAL_TYPE == 4:
     HARDWARE_MAPPING_LIST = [arm_com]
 # 如果需要传感器，配置arm_com_sensor
+elif CORAL_TYPE == 5:
+    HARDWARE_MAPPING_LIST = ['1', '2', arm_com]
 elif CORAL_TYPE == 5.3:
     HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_1]
 elif CORAL_TYPE == 5.4:

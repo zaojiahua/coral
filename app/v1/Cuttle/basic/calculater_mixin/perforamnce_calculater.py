@@ -189,11 +189,8 @@ class PerformanceMinix(object):
                 refer_im = cv2.imread(data.get("refer_im"))
                 h, w, _ = refer_im.shape
                 scope = data.get("icon_areas")[0]
-                if scope == [1, 1, 1, 1]:
-                    img = refer_im
-                else:
-                    area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]]
-                    img = refer_im[area[1]:area[3], area[0]:area[2]]
+                area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]]
+                img = refer_im[area[1]:area[3], area[0]:area[2]]
                 threshold = data.get("threshold", 0.99)
                 ret = judge_function(img, None, None, threshold)
                 return 0 if ret else 1

@@ -367,6 +367,6 @@ class PerformanceSchema(PerformanceSchemaCompare):
         except FileNotFoundError:
             icon_areas = []
             icon_threshold = 0.99
-        data["icon_areas"] = icon_areas if icon_areas != [] else [[1, 1, 1, 1]]
+        data["icon_areas"] = icon_areas if icon_areas != [] else [[0, 0, 1, 1]]
         data["threshold"] = icon_threshold
         return data

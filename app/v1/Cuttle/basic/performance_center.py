@@ -245,10 +245,10 @@ class PerformanceCenter(object):
             if judge_function(picture, pic2, third_pic, self.threshold):
                 print(f"发现了终点: {number} bias：", self.bias)
 
-                # 多保存几张图片
-                if len(self.back_up_dq) < number + EXTRA_PIC_NUMBER:
+                # 保留1s的图片
+                if len(self.back_up_dq) < number + 1 * FpsMax:
                     # 实际帧率达不到，所以按照帧率缩小3倍算，这样基本足够了
-                    time.sleep(EXTRA_PIC_NUMBER * 3 / FpsMax)
+                    time.sleep(1)
 
                 set_global_value(CAMERA_IN_LOOP, False)
                 if judge_function.__name__ not in ["_icon_find", "_icon_find_template_match"]:
@@ -474,7 +474,8 @@ class PerformanceCenter(object):
             return 0
 
         number = self.end_number + 1
-        for i in range(EXTRA_PIC_NUMBER):
+        # 额外再保留1s的图片
+        for i in range(1 * FpsMax):
             try:
                 src = self.get_back_up_image(self.back_up_dq[number]['image'])
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)

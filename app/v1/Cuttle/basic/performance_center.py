@@ -16,6 +16,7 @@ from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_al
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
     CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict, get_global_value, camera_dq_dict
 from app.config.setting import CORAL_TYPE
+from app.v1.Cuttle.basic.operator.camera_operator import get_camera_ids
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 EXTRA_PIC_NUMBER = 40
@@ -54,7 +55,7 @@ class PerformanceCenter(object):
 
     @property
     def back_up_dq(self):
-        if CORAL_TYPE == 5.3:
+        if len(get_camera_ids()) > 1:
             return self.inner_back_up_dq
         else:
             # 其他类型的柜子就一个相机
@@ -62,7 +63,7 @@ class PerformanceCenter(object):
                 return camera_dq_dict.get(camera_key)
 
     def get_back_up_image(self, image):
-        if CORAL_TYPE == 5.3:
+        if len(get_camera_ids()) > 1:
             return image
         else:
             return np.rot90(self.get_roi(image), 3)

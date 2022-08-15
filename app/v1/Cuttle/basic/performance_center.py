@@ -277,7 +277,7 @@ class PerformanceCenter(object):
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": job_duration,
                                "time_per_unit": time_per_unit,
-                               "picture_count": self.end_number + FpsMax - 1,
+                               "picture_count": int(self.end_number + FpsMax - 1),
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 break
             # 最后一张在prepare的时候就拿不到了 一次拿俩张图

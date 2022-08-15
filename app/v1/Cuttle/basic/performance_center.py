@@ -277,7 +277,7 @@ class PerformanceCenter(object):
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": job_duration,
                                "time_per_unit": time_per_unit,
-                               "picture_count": self.end_number + EXTRA_PIC_NUMBER - 1,
+                               "picture_count": self.end_number + FpsMax - 1,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
                 break
             # 最后一张在prepare的时候就拿不到了 一次拿俩张图
@@ -477,7 +477,7 @@ class PerformanceCenter(object):
 
         number = self.end_number + 1
         # 额外再保留1s的图片
-        for i in range(1 * FpsMax):
+        for i in range(int(1 * FpsMax)):
             try:
                 src = self.get_back_up_image(self.back_up_dq[number]['image'])
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)

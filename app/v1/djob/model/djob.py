@@ -236,7 +236,7 @@ class DJob(BaseModel):
                 all_files.append(file_path)
 
             # 控制一次传输图片的数量
-            step = 500
+            step = 300
             for i in range(0, len(all_files), step):
                 files = [('files', (os.path.split(file_path)[-1], open(file_path, 'rb'), 'file'))
                          for file_path in all_files[i: i + step]]

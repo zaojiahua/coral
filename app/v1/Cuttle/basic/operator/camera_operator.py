@@ -246,6 +246,15 @@ def check_result(func, *args):
         raise CameraInitFail
 
 
+def get_camera_ids():
+    camera_ids = []
+    for camera_id in HARDWARE_MAPPING_LIST:
+        if not camera_id.isdigit():
+            continue
+        camera_ids.append(camera_id)
+    return camera_ids
+
+
 class CameraHandler(Handler):
     Function = collections.namedtuple("Function", ["condition", "function", "regex"])
     # 这个Function namedtuple是用做adb的结果后处理，根据结果对应匹配后处理函数，最后一个是带入函数的参数
@@ -292,11 +301,7 @@ class CameraHandler(Handler):
 
     def snap_shot(self):
         # 摄像头数量不一样的时候，方案不同
-        camera_ids = []
-        for camera_id in HARDWARE_MAPPING_LIST:
-            if not camera_id.isdigit():
-                continue
-            camera_ids.append(camera_id)
+        camera_ids = get_camera_ids()
 
         futures = []
         temporary = False if len(camera_ids) > 1 else self.back_up_dq is None

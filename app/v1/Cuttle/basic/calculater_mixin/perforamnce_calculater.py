@@ -250,9 +250,10 @@ class PerformanceMinix(object):
         return response
 
     def _black_field(self, picture, _, __, threshold):
+        picture = cv2.cvtColor(picture, cv2.COLOR_BGR2GRAY)
+        ret, picture = cv2.threshold(picture, 40, 255, cv2.THRESH_BINARY)
         result = np.count_nonzero(picture < 40)
-        standard = picture.shape[0] * picture.shape[1] * picture.shape[2]
-        # picture shape is 0?
+        standard = picture.shape[0] * picture.shape[1]
         match_ratio = result / standard
         return match_ratio > threshold - 0.01
 

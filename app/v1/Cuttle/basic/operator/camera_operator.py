@@ -102,10 +102,13 @@ def camera_init_hk(camera_id, device_object, **kwargs):
         stDeviceList = cast(deviceList.pDeviceInfo[int(camera_id) - 1], POINTER(MV_CC_DEVICE_INFO)).contents
         check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
 
-        check_result(CamObj.MV_CC_OpenDevice, 1, 0)
-        # CamObj.MV_CC_CloseDevice()
-        # CamObj.MV_CC_DestroyHandle()
-        # check_result(CamObj.MV_CC_OpenDevice, 5, 0)
+        try:
+            check_result(CamObj.MV_CC_OpenDevice, 1, 0)
+        except CameraInitFail:
+            CamObj.MV_CC_CloseDevice()
+            CamObj.MV_CC_DestroyHandle()
+            check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
+            check_result(CamObj.MV_CC_OpenDevice, 5, 0)
 
     for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
         if isinstance(key[1], bool):

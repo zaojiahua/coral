@@ -20,7 +20,8 @@ from serial import SerialException
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
     arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, BASE_DIR
-from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail
+from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail, CoordinateConvert, \
+    MergeShapeNone
 from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -42,6 +43,8 @@ from app.v1.tboard.views.stop_specific_device import stop_specific_device_inner
 from redis_init import redis_client
 
 import copy
+
+from app.v1.Cuttle.basic.setting import COMPUTE_M_LOCATION
 
 ip = copy.copy(HOST_IP)
 logger = logging.getLogger(PANE_LOG_NAME)
@@ -323,7 +326,7 @@ class PaneClickTestView(MethodView):
                                                                   device_point)
 
         # 获取执行动作需要的信息
-        exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label)
+        exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label, roi=device_point)
 
         # 判断机械臂状态是否在执行循环
         if not get_global_value("click_loop_stop_flag"):
@@ -353,7 +356,7 @@ class PaneClickTestView(MethodView):
         return jsonify(dict(error_code=0))
 
     @staticmethod
-    def get_exec_info(click_x, click_y, click_z, device_label):
+    def get_exec_info(click_x, click_y, click_z, device_label, roi=None):
         """
         return: serial_obj, orders
         """
@@ -365,12 +368,36 @@ class PaneClickTestView(MethodView):
             location = get_global_value("m_location")
             try:
                 device_obj = Device(pk=device_label)
-                # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
-                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                          location[0] + float(device_obj.device_width), location[0],
-                                                          location[2])
-                if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
-                    is_left_side = True
+                if not COMPUTE_M_LOCATION:
+                    # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
+                    DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                              location[0] + float(device_obj.width), location[0],
+                                                              location[2])
+                    if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                        is_left_side = True
+                else:
+                    dpi = get_global_value('pane_dpi')
+                    if dpi is None or roi is None:
+                        raise CoordinateConvert()
+                    try:
+                        h, w, _ = get_global_value('merge_shape')
+                    except Exception:
+                        raise MergeShapeNone()
+
+                    # 目前5d不支持点击侧边键
+                    if CORAL_TYPE == 5.3:
+                        min_x = location[0] + roi[1] / dpi
+                        max_x = location[0] + roi[3] / dpi
+                        DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                                  max_x, min_x, location[2])
+                    else:
+                        min_x = location[0] + (h - roi[3]) / dpi
+                        max_x = location[0] + (h - roi[1]) / dpi
+                        DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                                  max_x, min_x, location[2])
+
+                    if click_x < min_x or (click_x - min_x) <= X_SIDE_OFFSET_DISTANCE:
+                        is_left_side = True
                 exec_action = "press"
             except CoordinatesNotReasonable:
                 exec_action = "click"

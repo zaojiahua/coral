@@ -234,11 +234,11 @@ def stop_camera(cam_obj, camera_id, **kwargs):
     # 性能测试的时候销毁，用来释放内存
     if not kwargs.get('feature_test'):
         print('开始销毁。。。。。。。。。。。。')
-        cam_obj.MV_CC_CloseDevice()
-        cam_obj.MV_CC_DestroyHandle()
-        # 销毁
-        del cam_obj
-        del CamObjList[camera_id]
+        # cam_obj.MV_CC_CloseDevice()
+        # cam_obj.MV_CC_DestroyHandle()
+        # # 销毁
+        # del cam_obj
+        # del CamObjList[camera_id]
     print("stop camera finished..[Debug]")
 
 

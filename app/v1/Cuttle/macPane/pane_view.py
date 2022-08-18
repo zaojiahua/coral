@@ -535,8 +535,8 @@ class PaneCoordinateView(MethodView):
                     pos_a = [100, -100]
                     pos_b = [200, -100]
                 elif CORAL_TYPE == 5:
-                    pos_a = [100, -250]
-                    pos_b = [160, -250]
+                    pos_a = [125, -250]
+                    pos_b = [170, -250]
                 else:
                     pos_a = [50, -170]
                     pos_b = [100, -170]

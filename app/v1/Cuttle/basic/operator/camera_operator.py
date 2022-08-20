@@ -44,8 +44,13 @@ def camera_start(camera_id, device_object, **kwargs):
         camera_dq_dict[camera_dq_key] = dq
 
         temporary = kwargs.get('temporary', True)
+        soft_sync = kwargs.get('soft_sync', False)
         response = camera_init_hk(camera_id, device_object, **kwargs)
         print("half done  has camera? ", device_object.has_camera, 'temporary:', temporary)
+
+        if not soft_sync:
+            # 开始拍照
+            start_grabbing(camera_id)
 
         if temporary is True:
             @func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
@@ -157,8 +162,6 @@ def camera_init_hk(camera_id, device_object, **kwargs):
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offset_x)
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offset_y)
 
-    check_result(CamObj.MV_CC_StartGrabbing)
-
     stParam = MVCC_INTVALUE()
     memset(byref(stParam), 0, sizeof(MVCC_INTVALUE))
     check_result(CamObj.MV_CC_GetIntValue, "PayloadSize", stParam)
@@ -172,6 +175,12 @@ def camera_init_hk(camera_id, device_object, **kwargs):
 
     memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
     return data_buf, nPayloadSize, stFrameInfo
+
+
+# 开始拍照
+def start_grabbing(camera_id):
+    cam_obj = CamObjList[camera_id]
+    check_result(cam_obj.MV_CC_StartGrabbing)
 
 
 # temporary：性能测试的时候需要持续不断的往队列里边放图片，但是在其他情况，只需要获取当时的一张截图即可
@@ -309,6 +318,7 @@ class CameraHandler(Handler):
         futures = []
         temporary = False if len(camera_ids) > 1 else self.back_up_dq is None
         sync_camera = True if len(camera_ids) > 1 else False
+        soft_sync = sync_camera
         # 如果录像的话，则按照性能测试来录像
         feature_test = False if self.record_video else self.back_up_dq is None
         for camera_id in camera_ids:
@@ -326,7 +336,8 @@ class CameraHandler(Handler):
                                      original=self.original,
                                      sync_camera=sync_camera,
                                      feature_test=feature_test,
-                                     modify_fps=self.modify_fps)
+                                     modify_fps=self.modify_fps,
+                                     soft_sync=soft_sync)
             if camera_id not in CamObjList and camera_id != camera_ids[-1]:
                 # 必须等待一段时间 同时初始化有bug发生 以后解决吧
                 time.sleep(0.5)
@@ -399,8 +410,8 @@ class CameraHandler(Handler):
             # 实时的获取到图片
             if self.back_up_dq is not None:
                 need_back_up_dq = False
-                # 发送同步信号
-                with CameraPower(timeout=timeout):
+
+                def camera_in_loop():
                     empty_times = 0
                     while get_global_value(CAMERA_IN_LOOP):
                         # 必须等待，否则while死循环导致其他线程没有机会执行
@@ -414,6 +425,17 @@ class CameraHandler(Handler):
                                     break
                             else:
                                 empty_times = 0
+
+                # 发送同步信号
+                if soft_sync:
+                    # 软件同步
+                    for camera_id in camera_ids:
+                        start_grabbing(camera_id)
+                else:
+                    # 硬件同步
+                    with CameraPower(timeout=timeout):
+                        camera_in_loop()
+
                 # 后续再保存一些图片，因为结束点之后还需要一些图片
                 self.merge_frame(camera_ids, 60)
                 # 如果依然在loop中，也就是达到了取图的最大限制，还没来得及处理图片，则把剩下的图片都合成完毕

@@ -129,7 +129,7 @@ def camera_init_hk(camera_id, device_object, **kwargs):
         for key in high_exposure_params:
             check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
 
-    if kwargs.get('sync_camera'):
+    if kwargs.get('sync_camera') and not kwargs.get('soft_sync'):
         for key in sync_camera_params:
             if len(key) == 3 and key[2] == 'enum':
                 check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
@@ -455,6 +455,7 @@ class CameraHandler(Handler):
                     # 软件同步
                     for camera_id in camera_ids:
                         start_grabbing(camera_id)
+                    time.sleep(timeout)
                 else:
                     # 硬件同步
                     with CameraPower(timeout=timeout):

@@ -190,9 +190,13 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
     cam_obj = CamObjList[camera_id]
     # 走到这里以后，设置一个标记，代表相机开始工作了
     redis_client.set(f"camera_loop_{camera_id}", 1)
-    while redis_client.get(f"camera_grabbing_{camera_id}") == "1":
+    while True:
+        if redis_client.get(f"camera_grabbing_{camera_id}") != "1":
+            continue
+
         if redis_client.get(f"g_bExit_{camera_id}") == "1":
             break
+
         # 这个一个轮询的请求，5毫秒timeout，去获取图片
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), n_payload_size, st_frame_info, 5)
         if ret == 0:

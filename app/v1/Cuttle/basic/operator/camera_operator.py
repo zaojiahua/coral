@@ -437,6 +437,7 @@ class CameraHandler(Handler):
                     # 软件同步
                     for camera_id in camera_ids:
                         start_grabbing(camera_id)
+                    camera_in_loop()
                 else:
                     # 硬件同步
                     with CameraPower(timeout=timeout):

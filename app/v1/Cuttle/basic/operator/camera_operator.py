@@ -181,6 +181,7 @@ def camera_init_hk(camera_id, device_object, **kwargs):
 def start_grabbing(camera_id):
     cam_obj = CamObjList[camera_id]
     check_result(cam_obj.MV_CC_StartGrabbing)
+    redis_client.set(f"camera_grabbing_{camera_id}", 1)
 
 
 # temporary：性能测试的时候需要持续不断的往队列里边放图片，但是在其他情况，只需要获取当时的一张截图即可
@@ -189,7 +190,7 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
     cam_obj = CamObjList[camera_id]
     # 走到这里以后，设置一个标记，代表相机开始工作了
     redis_client.set(f"camera_loop_{camera_id}", 1)
-    while True:
+    while redis_client.get(f"camera_grabbing_{camera_id}") == "1":
         if redis_client.get(f"g_bExit_{camera_id}") == "1":
             break
         # 这个一个轮询的请求，5毫秒timeout，去获取图片
@@ -323,6 +324,7 @@ class CameraHandler(Handler):
         feature_test = False if self.record_video else self.back_up_dq is None
         for camera_id in camera_ids:
             redis_client.set(f"camera_loop_{camera_id}", 0)
+            redis_client.set(f'camera_grabbing_{camera_id}', 0)
             # 相机正在获取图片的时候 不能再次使用
             if redis_client.get(f"g_bExit_{camera_id}") == "0":
                 raise CameraInUse()
@@ -445,8 +447,14 @@ class CameraHandler(Handler):
                 if self.record_video:
                     timeout = self.record_time
                 # 发送同步信号
-                with CameraPower(timeout=timeout):
-                    pass
+                if soft_sync:
+                    # 软件同步
+                    for camera_id in camera_ids:
+                        start_grabbing(camera_id)
+                else:
+                    # 硬件同步
+                    with CameraPower(timeout=timeout):
+                       pass
 
             for camera_id in camera_ids:
                 redis_client.set(f"g_bExit_{camera_id}", "1")

@@ -179,7 +179,7 @@ class CameraPower(HandSerial, CameraUsbPower):
 
     def __enter__(self):
         self.open()
-        return self.ser
+        return self
 
     def open(self):
         print('------CameraPower发送同步信号-----')

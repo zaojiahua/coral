@@ -231,8 +231,13 @@ class HandHandler(Handler, DefaultMixin):
 
         sliding_order = self.__sliding_order(axis[0], axis[1], swipe_speed, arm_num=kwargs["arm_num"])
 
-        if CORAL_TYPE in [5, 5.1, 5.2, 5.3]:
+        if CORAL_TYPE in [5, 5.1, 5.2]:
             return kwargs["exec_serial_obj"].send_and_read(sliding_order)
+        if CORAL_TYPE == 5.3:
+            # 双指机械臂在滑动前，先判断另一个机械臂是否为idle状态
+            other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1) if kwargs["arm_num"] == 0 else hand_serial_obj_dict.get(self._model.pk + arm_com)
+            while not other_serial_obj.check_hand_status():
+                time.sleep(1)
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
 
         if swipe_speed == 10000:

@@ -572,6 +572,9 @@ class HandHandler(Handler, DefaultMixin):
         while exec_t1.is_alive() or exec_t2.is_alive():
             continue
 
+        while not left_obj.check_hand_status() or not right_obj.check_hand_status():
+            time.sleep(0.3)
+
         exec2_t1 = threading.Thread(target=left_obj.send_list_order, args=[left_order[1:]], )
         exec2_t2 = threading.Thread(target=right_obj.send_list_order, args=[right_order[1:]])
 

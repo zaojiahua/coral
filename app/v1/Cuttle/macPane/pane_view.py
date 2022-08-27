@@ -106,7 +106,7 @@ class PaneDeleteView(MethodView):
                 self._reset_arm(device_object)
             if device_object.has_arm:
                 try:
-                    hand_serial_obj = hand_serial_obj_dict[device_object.pk]
+                    hand_serial_obj = hand_serial_obj_dict[device_object.pk + arm_com]
                     hand_serial_obj.close()
                 except KeyError:
                     # 多见与机柜型号填写有误时
@@ -326,7 +326,8 @@ class PaneClickTestView(MethodView):
                                                                   device_point)
 
         # 获取执行动作需要的信息
-        exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label, roi=device_point)
+        exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label,
+                                                                  roi=device_point)
 
         # 判断机械臂状态是否在执行循环
         if not get_global_value("click_loop_stop_flag"):
@@ -416,7 +417,7 @@ class PaneClickTestView(MethodView):
             press_side_speed = PRESS_SIDE_KEY_SPEED / 2
             orders = HandHandler.press_side_order([click_x, click_y, click_z], is_left=is_left_side, speed=speed,
                                                   press_side_speed=press_side_speed)
-            exec_serial_obj = hand_serial_obj_dict.get(device_label)
+            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
 
         return exec_serial_obj, orders, exec_action
 

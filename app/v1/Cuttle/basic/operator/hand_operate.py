@@ -27,11 +27,7 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     3. 设置HOME点为操作原点
     :return:
     """
-    if CORAL_TYPE == 5.3:
-        obj_key = device_obj.pk + arm_com_id
-    else:
-        obj_key = device_obj.pk
-
+    obj_key = device_obj.pk + arm_com_id
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[obj_key] = hand_serial_obj
@@ -112,12 +108,11 @@ def pre_point(point, arm_num=0):
 
 def judge_start_x(start_x_point, device_level):
     arm_num = 0
+    suffix_key = arm_com
     if CORAL_TYPE == 5.3:
         suffix_key = arm_com if start_x_point < ARM_MOVE_REGION[0] else arm_com_1
         arm_num = 0 if suffix_key == arm_com else 1
-        exec_serial_obj = hand_serial_obj_dict.get(device_level + suffix_key)
-    else:
-        exec_serial_obj = hand_serial_obj_dict.get(device_level)
+    exec_serial_obj = hand_serial_obj_dict.get(device_level + suffix_key)
     return exec_serial_obj, arm_num
 
 
@@ -235,7 +230,9 @@ class HandHandler(Handler, DefaultMixin):
             return kwargs["exec_serial_obj"].send_and_read(sliding_order)
         if CORAL_TYPE == 5.3:
             # 双指机械臂在滑动前，先判断另一个机械臂是否为idle状态
-            other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1) if kwargs["arm_num"] == 0 else hand_serial_obj_dict.get(self._model.pk + arm_com)
+            other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1) if kwargs[
+                                                                                           "arm_num"] == 0 else hand_serial_obj_dict.get(
+                self._model.pk + arm_com)
             while not other_serial_obj.check_hand_status():
                 time.sleep(1)
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
@@ -352,7 +349,7 @@ class HandHandler(Handler, DefaultMixin):
         arm_num = 0
         exec_serial_obj = None
         if CORAL_TYPE != 5.3:
-            exec_serial_obj = hand_serial_obj_dict.get(self._model.pk)
+            exec_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com)
         else:
             if kwargs.get('index', 0) == 0:
                 exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
@@ -425,21 +422,24 @@ class HandHandler(Handler, DefaultMixin):
                                                   location[2])
         is_left = False if (pix_point[0] - location[1]) > X_SIDE_OFFSET_DISTANCE else True
         press_side_order = self.press_side_order(pix_point, is_left=is_left)
-        hand_serial_obj_dict.get(self._model.pk).send_out_key_order(press_side_order[:3],
+        hand_serial_obj_dict.get(self._model.pk + arm_com).send_out_key_order(press_side_order[:3],
                                                                     others_orders=press_side_order[3:],
                                                                     wait_time=self.speed)
-        rev = hand_serial_obj_dict.get(self._model.pk).recv(buffer_size=64)
+        rev = hand_serial_obj_dict.get(self._model.pk + arm_com).recv(buffer_size=64)
         return rev
 
     def press_out_screen(self, pix_point, **kwargs):
+        """
+        5D不支持按压侧边键
+        """
         if CORAL_TYPE == 5.3:
             raise TcabNotAllowExecThisUnit
         pix_point[1] = -pix_point[1]
         click_orders = self.__single_click_order(pix_point)
-        hand_serial_obj_dict.get(self._model.pk).send_out_key_order(click_orders[:2],
-                                                                    others_orders=[click_orders[-1]],
-                                                                    wait_time=self.speed)
-        return hand_serial_obj_dict.get(self._model.pk).recv()
+        hand_serial_obj_dict.get(self._model.pk + arm_com).send_out_key_order(click_orders[:2],
+                                                                              others_orders=[click_orders[-1]],
+                                                                              wait_time=self.speed)
+        return hand_serial_obj_dict.get(self._model.pk + arm_com).recv()
 
     def arm_back_home(self, *args, **kwargs):
         back_order = self.arm_back_home_order()

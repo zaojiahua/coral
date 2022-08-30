@@ -45,6 +45,7 @@ hand_origin_f_range = [600 / 60, 15000 / 60]
 Resource = "<Acc_"
 Phone = "<Sim_"
 pipe_command = "<FindCommand>"
+EnvVar = '<EnvVar_'
 
 job_editor_logo = "Tmach"
 
@@ -198,6 +199,12 @@ class MacroHandler(object):
             script = f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}"
             cmd = cmd.replace(fastboot_tool_prefix, script)
             cmd = self._fastboot_cmd_prefix + " " + cmd
+
+        # 支持动态环境变量
+        if EnvVar in cmd:
+            env_vars = re.findall(f"{EnvVar}(.*?)>", cmd)
+            for env_var in env_vars:
+                cmd = cmd.replace(f'{EnvVar}{env_var}>', 'abc')
 
         if pipe_command in cmd:
             cmd = cmd.replace(pipe_command, find_command)

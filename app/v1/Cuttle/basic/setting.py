@@ -121,7 +121,7 @@ camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
                                 ("PixelFormat", 0x01080009, 'enum'),
                                 ("ExposureTime", 3500.0),
                                 ("AcquisitionFrameRate", 200.0)]
-camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 200.0)]
+camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 120.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
                     ("OffsetX", 0),

@@ -479,6 +479,9 @@ class Device(BaseModel):
 
     # 更新5l机柜的m_location信息，没有机械臂对象，所以方法先写到这里
     def update_m_location(self):
+        if CORAL_TYPE in [1, 2, 3]:
+            return
+
         # 新的坐标换算和5D保持一样，也可以使用原始的坐标换算方式
         if CORAL_TYPE == 5.3 or COMPUTE_M_LOCATION:
             if not os.path.exists(COORDINATE_CONFIG_FILE):

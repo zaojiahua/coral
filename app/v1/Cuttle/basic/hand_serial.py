@@ -64,7 +64,10 @@ class HandSerial:
             print("rev: ", rev)
         self.write(arm_wait_position)
         self.ser.read(8).decode()
-        time.sleep(2)
+        if CORAL_TYPE == 5.3:
+            time.sleep(3)
+        else:
+            time.sleep(2)
         return 0
 
     def check_hand_status(self, buffer_size=64):

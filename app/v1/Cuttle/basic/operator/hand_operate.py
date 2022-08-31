@@ -228,13 +228,17 @@ class HandHandler(Handler, DefaultMixin):
 
         if CORAL_TYPE in [5, 5.1, 5.2]:
             return kwargs["exec_serial_obj"].send_and_read(sliding_order)
+
         if CORAL_TYPE == 5.3:
             # 双指机械臂在滑动前，先判断另一个机械臂是否为idle状态
             other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1) if kwargs[
                                                                                            "arm_num"] == 0 else hand_serial_obj_dict.get(
                 self._model.pk + arm_com)
             while not other_serial_obj.check_hand_status():
-                time.sleep(1)
+                time.sleep(0.3)
+            kwargs["exec_serial_obj"].send_and_read(sliding_order)
+            return 0
+
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
 
         if swipe_speed == 10000:
@@ -560,14 +564,17 @@ class HandHandler(Handler, DefaultMixin):
         exec_t2 = threading.Thread(target=right_obj.send_list_order, args=[[right_order[0]]],
                                    kwargs={"ignore_reset": True})
 
-        exec_t2.start()
         exec_t1.start()
+        exec_t2.start()
 
         while exec_t1.is_alive() or exec_t2.is_alive():
             continue
 
-        exec2_t1 = threading.Thread(target=left_obj.send_list_order, args=[left_order[1:]], )
-        exec2_t2 = threading.Thread(target=right_obj.send_list_order, args=[right_order[1:]])
+        while (not left_obj.check_hand_status()) or (not right_obj.check_hand_status()):
+            time.sleep(1)
+
+        exec2_t1 = threading.Thread(target=left_obj.send_and_read, args=[left_order[1:]], )
+        exec2_t2 = threading.Thread(target=right_obj.send_and_read, args=[right_order[1:]])
 
         exec2_t2.start()
         exec2_t1.start()

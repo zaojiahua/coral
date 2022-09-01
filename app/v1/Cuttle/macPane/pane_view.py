@@ -827,11 +827,22 @@ class ClickCenterPointFive(MethodView):
         for contour_index, contour_points in enumerate(contours):
             # 遍历组成轮廓的每个坐标点
             m = cv2.moments(contour_points)
-            # 获取对象的质心
-            cx = round(m['m10'] / m['m00'], 2)
-            cy = round(m['m01'] / m['m00'], 2)
-            target_points.append([cx, cy])
+            if m['m00'] > 50:
+                # 获取对象的质心
+                cx = round(m['m10'] / m['m00'], 2)
+                cy = round(m['m01'] / m['m00'], 2)
+                target_points.append([cx, cy])
         return target_points
+
+    @staticmethod
+    def sub_point(pre_points, cur_points):
+        result_point = []
+        for cur_p in cur_points:
+            for pre_p in pre_points:
+                dis = math.sqrt(math.pow(cur_p[0] - pre_p[0], 2) + math.pow(cur_p[1] - pre_p[1], 2))
+                if dis > 1:
+                    result_point.append(cur_p)
+        return result_point
 
     def click(self, device_obj, hand_obj, point_x, point_y):
         pos_x, pos_y, pos_z = device_obj.get_click_position(point_x, point_y, absolute=True)

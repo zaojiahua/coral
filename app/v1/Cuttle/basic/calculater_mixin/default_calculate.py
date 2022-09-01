@@ -50,7 +50,10 @@ class DefaultMixin(object):
         raw_commend = self._compatible_sleep(raw_commend)
         pix_points = ""
         absolute = True
-        if "tap" in raw_commend:
+        if 'taier' in raw_commend:
+            pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
+            opt_type = "taier_click_center_point"
+        elif "tap" in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
             opt_type = "click"
             if self.kwargs.get('repeat'):

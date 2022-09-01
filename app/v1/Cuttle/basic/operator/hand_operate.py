@@ -1,7 +1,9 @@
 import math
+import os
 import re
 import threading
 import time
+import traceback
 
 import numpy as np
 
@@ -165,6 +167,11 @@ class HandHandler(Handler, DefaultMixin):
         # 旋转机械臂self.exec_content是字符串命令，所以会找self.str_func这个方法来执行
         self.func = getattr(self, opt_type)
         return normal_result
+
+    def get_device_obj(self):
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=self._model.pk)
+        return device_obj
 
     @allot_serial_obj
     def click(self, axis, **kwargs):
@@ -367,8 +374,7 @@ class HandHandler(Handler, DefaultMixin):
 
     def back(self, _, **kwargs):
         # 按返回键，需要在5#型柜 先配置过返回键的位置
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
+        device_obj = self.get_device_obj()
         point = self.calculate([device_obj.back_x, device_obj.back_y, device_obj.back_z], absolute=False)
         exec_serial_obj, arm_num = judge_start_x(point[0], self._model.pk)
         point = pre_point(point, arm_num=arm_num)
@@ -386,8 +392,7 @@ class HandHandler(Handler, DefaultMixin):
 
     def home(self, _, **kwargs):
         # 点击桌面键 5#型柜使用
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
+        device_obj = self.get_device_obj()
         point = self.calculate([device_obj.home_x, device_obj.home_y, device_obj.home_z], absolute=False)
         exec_serial_obj, arm_num = judge_start_x(point[0], self._model.pk)
         point = pre_point(point, arm_num=arm_num)
@@ -398,8 +403,7 @@ class HandHandler(Handler, DefaultMixin):
 
     def menu(self, _, **kwargs):
         # 点击菜单键 5#型柜使用
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
+        device_obj = self.get_device_obj()
         point = self.calculate([device_obj.menu_x, device_obj.menu_y, device_obj.menu_z], absolute=False)
         exec_serial_obj, arm_num = judge_start_x(point[0], self._model.pk)
         point = pre_point(point, arm_num=arm_num)
@@ -419,8 +423,7 @@ class HandHandler(Handler, DefaultMixin):
         if CORAL_TYPE == 5.3:
             raise TcabNotAllowExecThisUnit
         # 按压侧边键
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
+        device_obj = self.get_device_obj()
         location = get_global_value('m_location')
         DefaultMixin.judge_coordinates_reasonable(pix_point, location[0] + float(device_obj.width), location[0],
                                                   location[2])
@@ -453,6 +456,49 @@ class HandHandler(Handler, DefaultMixin):
                 for order in back_order:
                     serial_obj.send_single_order(order)
                     serial_obj.recv(buffer_size=32, is_init=True)
+        return 0
+
+    @allot_serial_obj
+    def taier_click_center_point(self, pix_point, **kwargs):
+        """
+        泰尔实验室，打点精度测试
+        """
+        cur_index = kwargs.get('index')
+        dis_filename = os.path.join(self.kwargs.get("rds_work_path"), '打点精度.txt')
+        self.click(pix_point)
+
+        try:
+            from app.v1.Cuttle.macPane.pane_view import ClickCenterPointFive
+            filename = f'point_{cur_index}.png'
+            device_obj = self.get_device_obj()
+
+            # 拍照之前等待一下，否则机械臂会盖住摄像头
+            time.sleep(1)
+            ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+            if ret_code == 0:
+                # 每次只处理一个红点
+                click_center_point_five = ClickCenterPointFive()
+                red_points = click_center_point_five.get_red_point(filename)
+                # 将上次的红点减掉，以免对算法产生干扰
+                if cur_index != 0:
+                    pre_red_points = click_center_point_five.get_red_point(f'point_{cur_index - 1}.png')
+                    red_points = click_center_point_five.sub_point(pre_red_points, red_points)
+
+                red_points = pre_point(self.transform_pix_point(red_points[0], True)[0], arm_num=kwargs["arm_num"])
+
+                # 计算俩点之间的距离
+                dis = math.sqrt(math.pow(red_points[0] - pix_point[0][0], 2) +
+                                math.pow(red_points[1] - pix_point[0][1], 2))
+                dis = round(dis, 2)
+
+                print(dis)
+                with open(dis_filename, 'a') as dis_file:
+                    dis_file.write(str(dis))
+                    dis_file.write('\n')
+        except Exception:
+            print(traceback.format_exc())
+            return 1
+
         return 0
 
     def _find_key_point(self, name):

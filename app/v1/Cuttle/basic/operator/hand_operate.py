@@ -231,7 +231,7 @@ class HandHandler(Handler, DefaultMixin):
 
         sliding_order = self.__sliding_order(axis[0], axis[1], swipe_speed, arm_num=kwargs["arm_num"])
 
-        if CORAL_TYPE == 5.3 or CORAL_TYPE == 5.1:
+        if CORAL_TYPE == 5.3 or CORAL_TYPE == 5.1 or CORAL_TYPE == 5.2:
             return kwargs["exec_serial_obj"].send_and_read(sliding_order)
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
 

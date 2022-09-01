@@ -96,25 +96,31 @@ class PerformanceMinix(object):
         # 获取refer图的size用于计算裁剪后的补偿
         src = cv2.imread(data.get("refer_im"))
         h, w = src.shape[:2]
+
         from app.v1.device_common.device_model import Device
         dev_obj = Device(pk=self._model.pk)
         # 获取手机截图下的size，把相对坐标换成截图下的绝对坐标
         d_h, d_w = dev_obj.device_height, dev_obj.device_width
         snap_x0, snap_y0 = int(data.get("areas")[0][0] * d_w), int(data.get("areas")[0][1] * d_h)
+
         # 先记录下裁剪位置的左上点拍摄图下的绝对坐标
         camera_x0, camera_y0 = int(data.get("areas")[0][0] * w), int(data.get("areas")[0][1] * h)
+
+        # 实时截图
         with Complex_Center(**self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             # 截图按选区先进行裁剪，再set进_pic_path
             ocr_obj._pic_path = self._crop_image_and_save(ocr_obj.default_pic_path, data["areas"][0])
             # 裁剪前的摄像头下的实际图片，赋值给Tguard的判定依据
             self.image = ocr_obj.default_pic_path
+
             # 此处得到的是icon在裁剪后的，摄像头下，图中的绝对坐标
             try:
                 # ocr_obj.get_result_by_feature(content, cal_real_xy=False)
                 ocr_obj.get_result_by_feature(content, cal_real_xy=False)
             except NotFindIcon:
                 return 1
+
             # +-camera_x0先换算到裁剪前摄像头图中的绝对坐标，这个数据用于起点的识别
             icon_real_position_camera = [ocr_obj.cx + camera_x0 - 30, ocr_obj.cy + camera_y0 - 30,
                                          ocr_obj.cx + camera_x0 + 30, ocr_obj.cy + camera_y0 + 30]
@@ -128,8 +134,10 @@ class PerformanceMinix(object):
             # 因为PerformanceCenter内部需要根据起点icon x方向位置，计算阴影补偿，所以此处再统一换回摄像头下的相对坐标
             data["icon_areas"] = [[icon_real_position_camera[0] / w, icon_real_position_camera[1] / h,
                                    icon_real_position_camera[2] / w, icon_real_position_camera[3] / h]]
+
             if self.kwargs.get("test_running"):  # 对试运行的unit只进行点击，不计算时间。
                 return 0
+
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),

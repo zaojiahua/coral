@@ -838,10 +838,15 @@ class ClickCenterPointFive(MethodView):
     def sub_point(pre_points, cur_points):
         result_point = []
         for cur_p in cur_points:
+            is_new = True
             for pre_p in pre_points:
                 dis = math.sqrt(math.pow(cur_p[0] - pre_p[0], 2) + math.pow(cur_p[1] - pre_p[1], 2))
-                if dis > 1:
-                    result_point.append(cur_p)
+                # print(dis, '&' * 10)
+                if dis < 1:
+                    is_new = False
+                    break
+            if is_new:
+                result_point.append(cur_p)
         return result_point
 
     def click(self, device_obj, hand_obj, point_x, point_y):

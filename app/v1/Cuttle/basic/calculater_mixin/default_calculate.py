@@ -110,6 +110,14 @@ class DefaultMixin(object):
             out_key = get_out_key[2]
             pix_points = self.cal_press_pix_point(out_key, is_side=False)
             speed = int(get_out_key[3])
+        elif "press custom-point" in raw_commend:
+            opt_type = "press_custom_point"
+            absolute = False
+            get_out_key = self.exec_content.split(" ")
+            if len(get_out_key) != 4: raise ExecContentFormatError
+            out_key = get_out_key[2]
+            pix_points = self.cal_press_pix_point(out_key, is_side=False)
+            speed = int(get_out_key[3])
         elif 'G01' in raw_commend:
             pix_points = raw_commend
             opt_type = 'rotate'

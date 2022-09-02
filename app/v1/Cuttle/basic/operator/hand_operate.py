@@ -445,17 +445,18 @@ class HandHandler(Handler, DefaultMixin):
                                                                               wait_time=self.speed)
         return hand_serial_obj_dict.get(self._model.pk + arm_com).recv()
 
-    def press_custom_point(self, pix_point):
+    def press_custom_point(self, pix_point, **kwargs):
         """
         点击 or 按压实体键
         Tcab-5D 不支持侧边键按压
         """
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        roi = [device_obj.roi_x1, device_obj.roi_y1, device_obj.roi_x2, device_obj.roi_y2]
+        roi = [device_obj.x1, device_obj.y1, device_obj.x2, device_obj.y2]
         from app.v1.Cuttle.macPane.pane_view import PaneClickTestView
         exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1], pix_point[2],
-                                                                               self._model.pk, roi=roi)
+                                                                               self._model.pk,
+                                                                               roi=[float(value) for value in roi])
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action)
         return ret
 

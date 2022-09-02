@@ -17,7 +17,6 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_ST
     hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
     sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X
-from app.v1.Cuttle.macPane.pane_view import PaneClickTestView
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -456,6 +455,7 @@ class HandHandler(Handler, DefaultMixin):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
         roi = [device_obj.roi_x1, device_obj.roi_y1, device_obj.roi_x2, device_obj.roi_y2]
+        from app.v1.Cuttle.macPane.pane_view import PaneClickTestView
         exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1], pix_point[2],
                                                                                self._model.pk, roi=roi)
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action)

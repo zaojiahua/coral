@@ -420,33 +420,6 @@ class HandHandler(Handler, DefaultMixin):
         # 长按菜单键 5#型柜使用
         return self.menu(is_long_press=True)
 
-    def press_side(self, pix_point, **kwargs):
-        if CORAL_TYPE == 5.3:
-            raise TcabNotAllowExecThisUnit
-        # 按压侧边键
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
-        location = get_global_value('m_location')
-        DefaultMixin.judge_coordinates_reasonable(pix_point, location[0] + float(device_obj.width), location[0],
-                                                  location[2])
-        is_left = False if (pix_point[0] - location[1]) > X_SIDE_OFFSET_DISTANCE else True
-        press_side_order = self.press_side_order(pix_point, is_left=is_left)
-        hand_serial_obj_dict.get(self._model.pk).send_out_key_order(press_side_order[:3],
-                                                                    others_orders=press_side_order[3:],
-                                                                    wait_time=self.speed)
-        rev = hand_serial_obj_dict.get(self._model.pk).recv(buffer_size=64)
-        return rev
-
-    def press_out_screen(self, pix_point, **kwargs):
-        if CORAL_TYPE == 5.3:
-            raise TcabNotAllowExecThisUnit
-        pix_point[1] = -pix_point[1]
-        click_orders = self.__single_click_order(pix_point)
-        hand_serial_obj_dict.get(self._model.pk).send_out_key_order(click_orders[:2],
-                                                                    others_orders=[click_orders[-1]],
-                                                                    wait_time=self.speed)
-        return hand_serial_obj_dict.get(self._model.pk).recv()
-
     def press_custom_point(self, pix_point, **kwargs):
         """
         点击 or 按压实体键

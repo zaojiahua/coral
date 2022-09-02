@@ -93,24 +93,7 @@ class DefaultMixin(object):
         elif "long press menu" in raw_commend:
             opt_type = "long_press_menu"
             pix_points = 0
-        elif "press side" in raw_commend:
-            opt_type = "press_side"
-            absolute = False
-            # side key是否存在，如果存在，读取坐标，如果不在，抛出异常
-            get_side_key = self.exec_content.split(" ")
-            if len(get_side_key) != 4: raise ExecContentFormatError
-            side_key = get_side_key[2]
-            pix_points = self.cal_press_pix_point(side_key)
-            speed = int(get_side_key[3])  # 先将等待时间放在速度参数上
-        elif "press out-screen" in raw_commend:
-            opt_type = "press_out_screen"
-            absolute = False
-            get_out_key = self.exec_content.split(" ")
-            if len(get_out_key) != 4: raise ExecContentFormatError
-            out_key = get_out_key[2]
-            pix_points = self.cal_press_pix_point(out_key, is_side=False)
-            speed = int(get_out_key[3])
-        elif "press custom-point" in raw_commend:
+        elif ("press custom-point" in raw_commend) or ("press side" in raw_commend) or ("press out-screen" in raw_commend):
             opt_type = "press_custom_point"
             absolute = False
             get_out_key = self.exec_content.split(" ")

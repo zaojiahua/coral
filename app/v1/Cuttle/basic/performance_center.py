@@ -1,3 +1,4 @@
+import math
 import os
 import platform
 import time
@@ -15,7 +16,6 @@ from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
 from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_all_sensor_connect
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
     CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict, get_global_value, camera_dq_dict
-from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.operator.camera_operator import get_camera_ids
 
 sp = '/' if platform.system() == 'Linux' else '\\'
@@ -52,6 +52,8 @@ class PerformanceCenter(object):
             os.makedirs(work_path)
         self.work_path = work_path
         self.kwargs = kwargs
+        # 0: _black_field 1: _icon_find
+        self.start_method = 0
 
     @property
     def back_up_dq(self):
@@ -75,6 +77,23 @@ class PerformanceCenter(object):
         return src[int(device_obj.y1) - int(device_obj.roi_y1): int(device_obj.y2) - int(device_obj.roi_y1),
                    int(device_obj.x1) - int(device_obj.roi_x1): int(device_obj.x2) - int(device_obj.roi_x1)]
 
+    def start_judge_function(self, picture, pic2, pic3, threshold):
+        if self.start_method == 0:
+            return self._black_field(picture, pic2, pic3, threshold)
+
+    @staticmethod
+    def black_field(picture):
+        picture = cv2.cvtColor(picture, cv2.COLOR_BGR2GRAY)
+        ret, picture = cv2.threshold(picture, 40, 255, cv2.THRESH_BINARY)
+        result = np.count_nonzero(picture < 40)
+        standard = picture.shape[0] * picture.shape[1]
+        match_ratio = round(result / standard + 0.01, 2)
+        return picture, match_ratio
+
+    def _black_field(self, picture, _, __, threshold):
+        _, match_ratio = self.black_field(picture)
+        return match_ratio > threshold
+
     def get_icon(self, refer_im_path):
         # 在使用黑色区域计算时，self.icon_scope为实际出现在snap图中的位置，此方法无意义
         # 在使用icon surf计算时，self.icon_scope为编辑时出现在refer图中的位置，此方拿到的是icon标准图
@@ -86,9 +105,10 @@ class PerformanceCenter(object):
                 [self.icon_scope[0] * w, self.icon_scope[1] * h, self.icon_scope[2] * w, self.icon_scope[3] * h]]
         return picture[area[1]:area[3], area[0]:area[2]]
 
-    def start_loop(self, judge_function):
+    def start_loop(self):
         number = 0
         self.start_number = 0
+        self.start_area = None
 
         def camera_loop():
             set_global_value(CAMERA_IN_LOOP, True)
@@ -133,35 +153,31 @@ class PerformanceCenter(object):
             close_all_sensor_connect()
         else:
             # 使用图像识别的方法计算起始点
-            use_icon_scope = True if judge_function.__name__ == "_black_field" else False
-            pic2 = self.judge_icon if judge_function.__name__ in ("_icon_find", "_black_field") else None
+            use_icon_scope = True if self.start_method == 0 else False
+            pic2 = self.judge_icon if self.start_method in [0, 1] else None
 
             camera_loop()
+
+            # 感兴趣的区域只需要计算一次即可，因为每张图片大小都是一样的，感兴趣的区域也没有变过
+            area = self.get_area(self.scope if use_icon_scope is False else self.icon_scope)
+            self.start_area = area
 
             while self.loop_flag:
                 # 裁剪图片获取当前和下两张
                 # start点的确认主要就是判定是否特定位置全部变成了黑色，既_black_field方法 （主要）/丢帧检测时是判定区域内有无变化（稀有）
                 # 这部分如果是判定是否变成黑色（黑色就是机械臂刚要点下的时候，挡住图标所以黑色），其实只用到当前图，下两张没有使用
-                picture, next_picture, third_pic, timestamp = self.picture_prepare(number,
-                                                                                   use_icon_scope=use_icon_scope)
+                picture, next_picture, third_pic, timestamp = self.picture_prepare(number, area)
                 if picture is None:
                     print('图片不够，start loop')
                     self.start_end_loop_not_found(VideoStartPointNotFound())
 
                 number += 1
                 # judge_function 返回True时 即发现了起始点
-                if judge_function(picture, (pic2 if pic2 is not None else next_picture), third_pic, self.threshold):
-                    # 这块的bias就是人工补偿的固定值，大致等于机械臂下压时间
-                    self.bias = self.kwargs.get("bias") or 0
+                if self.start_judge_function(picture, (pic2 if pic2 is not None else next_picture), third_pic, self.threshold):
                     # 减一张得到起始点
                     self.start_number = number - 1
                     self.start_timestamp = timestamp
                     print(f"发现了起始点 :{number - 1} start number:{self.start_number}", '!' * 10)
-                    if judge_function.__name__ == "_black_field":
-                        # 除了查询丢帧情况，都要计算bias，既补偿的帧数，这部分是根据第一点击点的x位置，给一个线性的补偿（在上面固定下压时间的基础上）。
-                        # 因为视角不同，摄像头在中间，看右侧的遮挡会偏早（所以要多加大bias），左侧的遮挡会偏晚（少加bias）
-                        # 后续可以考虑优化成多项式
-                        self.bias = self.bias + int((self.icon_scope[0] + self.icon_scope[2]) // (50 / FpsMax))
                     break
                 elif number >= CameraMax / 2:
                     # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
@@ -195,7 +211,7 @@ class PerformanceCenter(object):
 
     def end_loop(self, judge_function):
         # 计算终止点的方法
-        if not hasattr(self, "start_number") or not hasattr(self, "bias"):
+        if not hasattr(self, "start_number"):
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             self.start_end_loop_not_found(VideoStartPointNotFound())
         # 如果使用压力传感器，有可能里边还没有图片，所以选择等待一段时间
@@ -209,26 +225,32 @@ class PerformanceCenter(object):
             number = 0
         else:
             number = self.start_number + 1
-        print("end loop start... now number:", number, "bias:", self.bias)
+        print("end loop start... now number:", number)
 
-        if self.bias > 0:
-            for i in range(self.bias):
-                # 对bias补偿的帧数，先只保存对应图片，不做结果判断，因为不可能在这个阶段出现终止点 主要是加快一些速度。
-                # 这里必须调用，因为里边会保存图片
-                picture, next_picture, _, _ = self.picture_prepare(number)
+        if self.start_method == 0:
+            while True:
+                picture, next_picture, third_pic, _ = self.picture_prepare(number, self.start_area)
+                pic2 = self.judge_icon if self.start_method in [0, 1] else None
+                # 从start到bias这段时间，应该都是属于满足条件的区间
+                if not self.start_judge_function(picture, (pic2 if pic2 is not None else next_picture),
+                                                 third_pic, self.threshold):
+                    self.bias = number
+                    break
                 if picture is None:
-                    print('图片不够 bias')
-                    self.start_end_loop_not_found()
+                    break
                 number += 1
+        else:
+            self.bias = self.start_number
 
         use_icon_scope = True if judge_function.__name__ == "_is_blank" else False
+        area = self.get_area(self.scope if use_icon_scope is False else self.icon_scope)
 
         while self.loop_flag:
             # 这个地方写了两遍不是bug，是特意的，一次取了两张
             # 主要是找终止点需要抵抗明暗变化，计算消耗有点大，现在其实是跳着看终止点，一次过两张，能节约好多时间，让设备看起来没有等待很久很久
             # 准确度上就是有50%概率晚一帧，不过在240帧水平上，1帧误差可以接受
             # 这部分我们自己知道就好，千万别给客户解释出去了。
-            picture, next_picture, third_pic, timestamp = self.picture_prepare(number, use_icon_scope)
+            picture, next_picture, third_pic, timestamp = self.picture_prepare(number, area)
             if picture is None:
                 print('图片不够 loop 2')
                 self.result = {'picture_count': number - 1, "start_point": self.start_number + self.bias}
@@ -266,7 +288,7 @@ class PerformanceCenter(object):
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 if not SENSOR:
                     time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
-                    self.start_number = int(self.start_number + self.bias)
+                    self.start_number = math.floor(int(self.start_number + self.bias) / 2)
                     # 实际的job_duration需要加上bias
                     job_duration = round(time_per_unit * (self.end_number - self.start_number), 3)
                 else:
@@ -286,11 +308,12 @@ class PerformanceCenter(object):
                 if not SENSOR:
                     time_per_unit = round(job_duration / (number - self.start_number), 4)
                     job_duration = round(time_per_unit * (number - self.start_number - self.bias), 3)
+                    self.start_number = math.floor(int(self.start_number + self.bias) / 2)
                 else:
                     time_per_unit = round(job_duration / (number - self.start_number), 4)
                     self.start_number = 1
 
-                self.result = {"start_point": self.start_number + self.bias, "end_point": number,
+                self.result = {"start_point": self.start_number, "end_point": number,
                                "job_duration": job_duration,
                                "time_per_unit": time_per_unit,
                                "picture_count": number,
@@ -309,8 +332,7 @@ class PerformanceCenter(object):
         is_icon = not (self.icon_scope is None or len(self.icon_scope) < 1)
         scope = self.icon_scope if is_icon else self.scope
         h, w = picture.shape[:2] if not (is_icon and self.scope != [0, 0, 1, 1]) else self.get_back_up_image(self.back_up_dq[0]['image']).shape[:2]
-        area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
-            if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
+        area = self.get_area(scope, h, w)
         x1, y1 = area[:2]
         x4, y4 = area[2:]
         pic = picture.copy()
@@ -368,7 +390,28 @@ class PerformanceCenter(object):
             self.move_flag = False
         return 0
 
-    def picture_prepare(self, number, use_icon_scope=False):
+    def get_area(self, scope, h=None, w=None):
+        if h is None and w is None:
+            # 得保证至少有一张图片
+            max_times = 10
+            while True:
+                try:
+                    picture_info = self.back_up_dq[0]
+                    picture = self.get_back_up_image(picture_info['image'])
+                    h, w = picture.shape[:2]
+                    break
+                except IndexError:
+                    time.sleep(0.5)
+                    max_times -= 1
+                    if max_times <= 0:
+                        break
+
+        area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
+            if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
+
+        return area
+
+    def picture_prepare(self, number, area):
         # use_icon_scope为true时裁剪snap图中真实icon出现的位置
         # use_icon_scope为false时裁剪snap图中refer中标记的configArea选区大致范围
         print('准备图片：', number)
@@ -389,12 +432,7 @@ class PerformanceCenter(object):
             max_retry_time -= 1
 
         if picture is not None:
-            h, w = picture.shape[:2]
-            scope = self.scope if use_icon_scope is False else self.icon_scope
-            area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
-                if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
-            return [p[area[1]:area[3], area[0]:area[2]]
-                    for p in [picture, pic_next, pic_next_next]] + [timestamp]
+            return [p[area[1]:area[3], area[0]:area[2]] for p in [picture, pic_next, pic_next_next]] + [timestamp]
         else:
             return None, None, None, None
 
@@ -456,7 +494,22 @@ class PerformanceCenter(object):
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
         try:
             for cur_index in range(end_number):
-                picture_save = cv2.resize(self.get_back_up_image(self.back_up_dq[cur_index]['image']), dsize=(0, 0), fx=0.7, fy=0.7)
+                picture = self.get_back_up_image(self.back_up_dq[cur_index]['image'])
+
+                # 在这个地方画上要找的起始点，调试的时候使用
+                if not hasattr(self, 'start_number') or (hasattr(self, 'bias') and cur_index <= self.bias):
+                    picture_area = picture[self.start_area[1]:self.start_area[3], self.start_area[0]:self.start_area[2]]
+                    if self.start_method == 0:
+                        picture_area, match_ratio = self.black_field(picture_area)
+                        picture[self.start_area[1]:self.start_area[3],
+                                self.start_area[0]:self.start_area[2]] = cv2.cvtColor(picture_area, cv2.COLOR_GRAY2BGR)
+                        picture = cv2.rectangle(picture.copy(), (self.start_area[0], self.start_area[1]),
+                                                (self.start_area[2], self.start_area[3]), (0, 0, 255), 2)
+                        picture = cv2.putText(picture.copy(), str(match_ratio), (self.start_area[2] + 10, self.start_area[1] + 10),
+                                              cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 3)
+
+                # picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
+                picture_save = picture
                 if find_end and hasattr(self, "draw_rec") and \
                         self.draw_rec and cur_index == (end_number - 1):
                     # 这块就是做判断画面在动的时候，最后在临界帧画框

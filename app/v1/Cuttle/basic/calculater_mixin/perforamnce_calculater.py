@@ -11,7 +11,7 @@ from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS_HARD, SENSOR
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, SWIPE_BIAS_HARD, SENSOR
 from redis_init import redis_client
 
 
@@ -31,10 +31,10 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, [icon_areas], data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"), bias=bias)
-        return performance.start_loop(self._black_field)
+        return performance.start_loop()
 
     def start_point_with_swipe_slow(self, exec_content):
-        self.swipe_calculate(exec_content, BIAS)
+        self.swipe_calculate(exec_content)
 
     def start_point_with_point_template(self, exec_content):
         # 点击相应的主要使用方法
@@ -85,8 +85,8 @@ class PerformanceMinix(object):
         # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), bias=BIAS)
-        return performance.start_loop(self._black_field)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop()
 
     def start_point_with_point(self, exec_content):
         # 跟上面那个方法差不多，就是把模板匹配换成surf特征了，其实可以重构时候做些合并
@@ -141,8 +141,8 @@ class PerformanceMinix(object):
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), bias=BIAS)
-        return performance.start_loop(self._black_field)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop()
 
     def start_point_with_point_fixed(self, exec_content):
         # 与上面两个方法也差不多，不做图标搜索了，就是按给的图标位置直接按，适合特别难识别的图标，但没有抵抗变化的能力
@@ -164,8 +164,8 @@ class PerformanceMinix(object):
             return 0
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), bias=BIAS)
-        return performance.start_loop(self._black_field)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop()
 
     # 下面几个就是上面那几个结束点版本
     def end_point_with_icon(self, exec_content):
@@ -256,14 +256,6 @@ class PerformanceMinix(object):
         from app.v1.Cuttle.basic.basic_views import UnitFactory
         response = UnitFactory().create("ImageHandler", request_dict)
         return response
-
-    def _black_field(self, picture, _, __, threshold):
-        picture = cv2.cvtColor(picture, cv2.COLOR_BGR2GRAY)
-        ret, picture = cv2.threshold(picture, 40, 255, cv2.THRESH_BINARY)
-        result = np.count_nonzero(picture < 40)
-        standard = picture.shape[0] * picture.shape[1]
-        match_ratio = result / standard
-        return match_ratio > threshold - 0.01
 
     def _icon_find(self, picture, icon, _, threshold, disappear=False):
         try:

@@ -482,12 +482,12 @@ class HandHandler(Handler, DefaultMixin):
                 # 将上次的红点减掉，以免对算法产生干扰
                 if cur_index != 0:
                     pre_red_points = click_center_point_five.get_red_point(f'point_{cur_index - 1}.png')
-                    # print('之前的红点')
-                    # print(pre_red_points)
-                    # print(red_points)
-                    # print('之后的红点')
+                    print('之前的红点')
+                    print(pre_red_points)
+                    print(red_points)
+                    print('之后的红点')
                     red_points = click_center_point_five.sub_point(pre_red_points, red_points)
-                    # print(red_points)
+                    print(red_points)
 
                 red_points = pre_point(self.transform_pix_point(red_points[0], True)[0], arm_num=kwargs["arm_num"])
 

@@ -93,7 +93,8 @@ class DefaultMixin(object):
         elif "long press menu" in raw_commend:
             opt_type = "long_press_menu"
             pix_points = 0
-        elif ("press custom-point" in raw_commend) or ("press side" in raw_commend) or ("press out-screen" in raw_commend):
+        elif ("press custom-point" in raw_commend) or ("press side" in raw_commend) or (
+                "press out-screen" in raw_commend):
             opt_type = "press_custom_point"
             absolute = False
             get_out_key = self.exec_content.split(" ")
@@ -175,7 +176,7 @@ class DefaultMixin(object):
         axis2: [起点x坐标，起点y坐标，终点x坐标，终点y坐标]
         """
         point_is_exist = False
-        x, y, x, y = 0
+        x, y = 0, 0
         x1, y1, x2, y2 = axis1
         x3, y3, x4, y4 = axis2
 

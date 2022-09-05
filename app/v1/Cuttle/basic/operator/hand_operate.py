@@ -644,7 +644,7 @@ class HandHandler(Handler, DefaultMixin):
             raise InvalidCoordinates
         left_arm_x = [min(axis[0][0], axis[1][0]), max(axis[0][0], axis[1][0])]
         right_arm_x = [min(axis[2][0], axis[3][0]), max(axis[2][0], axis[3][0])]
-        if left_arm_x[0] <= cross_point[0] <= left_arm_x[1] and right_arm_x[0] <= cross_point[0] <= right_arm_x[1]:
+        if left_arm_x[0] <= cross_point[0] <= left_arm_x[1] or right_arm_x[0] <= cross_point[0] <= right_arm_x[1]:
             raise InvalidCoordinates
         return 0
 

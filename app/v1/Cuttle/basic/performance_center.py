@@ -242,6 +242,10 @@ class PerformanceCenter(object):
         else:
             self.bias = self.start_number
 
+        # 重置number，比如用力滑动的时候，屏幕变化很快，或者响应非常快速的设备，而我们的帧率又达不到的时候
+        number = math.floor((self.start_number + self.bias) / 2)
+        print("reset number, now number:", number)
+
         use_icon_scope = True if judge_function.__name__ == "_is_blank" else False
         area = self.get_area(self.scope if use_icon_scope is False else self.icon_scope)
 

@@ -465,41 +465,47 @@ class HandHandler(Handler, DefaultMixin):
         """
         cur_index = kwargs.get('index')
         dis_filename = os.path.join(self.kwargs.get("rds_work_path"), '打点精度.txt')
-        self.click(pix_point)
 
         try:
             from app.v1.Cuttle.macPane.pane_view import ClickCenterPointFive
+            pre_filename = f'point_{cur_index - 1}.png'
             filename = f'point_{cur_index}.png'
             device_obj = self.get_device_obj()
 
-            # 拍照之前等待一下，否则机械臂会盖住摄像头
-            time.sleep(1)
-            ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+            if cur_index == 0:
+                ret_code = device_obj.get_snapshot(pre_filename, max_retry_time=1, original=False)
+            else:
+                ret_code = 0
+
             if ret_code == 0:
-                # 每次只处理一个红点
                 click_center_point_five = ClickCenterPointFive()
-                red_points = click_center_point_five.get_red_point(filename)
-                # 将上次的红点减掉，以免对算法产生干扰
-                if cur_index != 0:
-                    pre_red_points = click_center_point_five.get_red_point(f'point_{cur_index - 1}.png')
-                    print('之前的红点')
-                    print(pre_red_points)
-                    print(red_points)
-                    print('之后的红点')
+                pre_red_points = click_center_point_five.get_red_point(pre_filename)
+
+                self.click(pix_point)
+
+                # 拍照之前等待一下，否则机械臂会盖住摄像头
+                time.sleep(1)
+                # 每次只处理一个红点
+                ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+                if ret_code == 0:
+                    red_points = click_center_point_five.get_red_point(filename)
+                    print('之前的红点', pre_red_points)
+                    print('当前的红点', red_points)
+                    # 将上次的红点减掉，以免对算法产生干扰
                     red_points = click_center_point_five.sub_point(pre_red_points, red_points)
-                    print(red_points)
+                    print('剩下的红点', red_points)
 
-                red_points = pre_point(self.transform_pix_point(red_points[0], True)[0], arm_num=kwargs["arm_num"])
+                    red_points = pre_point(self.transform_pix_point(red_points[0], True)[0], arm_num=kwargs["arm_num"])
 
-                # 计算俩点之间的距离
-                dis = math.sqrt(math.pow(red_points[0] - pix_point[0][0], 2) +
-                                math.pow(red_points[1] - pix_point[0][1], 2))
-                dis = round(dis, 2)
+                    # 计算俩点之间的距离
+                    dis = math.sqrt(math.pow(red_points[0] - pix_point[0][0], 2) +
+                                    math.pow(red_points[1] - pix_point[0][1], 2))
+                    dis = round(dis, 2)
 
-                print(dis)
-                with open(dis_filename, 'a') as dis_file:
-                    dis_file.write(str(dis))
-                    dis_file.write('\n')
+                    print(dis)
+                    with open(dis_filename, 'a') as dis_file:
+                        dis_file.write(str(dis))
+                        dis_file.write('\n')
         except Exception:
             print(traceback.format_exc())
             return 1

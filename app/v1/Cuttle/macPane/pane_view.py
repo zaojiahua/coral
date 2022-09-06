@@ -822,16 +822,22 @@ class ClickCenterPointFive(MethodView):
         # 获取符合条件的轮廓
         _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
-        # cv2.imwrite('result.png', img)
+
         target_points = []
         for contour_index, contour_points in enumerate(contours):
-            # 遍历组成轮廓的每个坐标点
-            m = cv2.moments(contour_points)
-            if m['m00'] > 50:
-                # 获取对象的质心
-                cx = round(m['m10'] / m['m00'], 2)
-                cy = round(m['m01'] / m['m00'], 2)
-                target_points.append([cx, cy])
+            x, y, w, h = cv2.boundingRect(contour_points)
+            # 必须是一个圆，判断外接矩形即可
+            if 0.9 < w / h < 1.1:
+                # cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                # 遍历组成轮廓的每个坐标点
+                m = cv2.moments(contour_points)
+                if m['m00'] > 150:
+                    # 获取对象的质心
+                    cx = round(m['m10'] / m['m00'], 2)
+                    cy = round(m['m01'] / m['m00'], 2)
+                    target_points.append([cx, cy])
+
+        # cv2.imwrite('result.png', img)
         return target_points
 
     @staticmethod

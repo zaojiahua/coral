@@ -489,11 +489,11 @@ class HandHandler(Handler, DefaultMixin):
                 ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
                 if ret_code == 0:
                     red_points = click_center_point_five.get_red_point(filename)
-                    print('之前的红点', pre_red_points)
-                    print('当前的红点', red_points)
+                    print(f'{cur_index + 1}之前的红点', pre_red_points)
+                    print(f'{cur_index + 1}当前的红点', red_points)
                     # 将上次的红点减掉，以免对算法产生干扰
                     red_points = click_center_point_five.sub_point(pre_red_points, red_points)
-                    print('剩下的红点', red_points)
+                    print(f'{cur_index + 1}剩下的红点', red_points)
 
                     red_points = pre_point(self.transform_pix_point(red_points[0], True)[0], arm_num=kwargs["arm_num"])
 
@@ -504,7 +504,7 @@ class HandHandler(Handler, DefaultMixin):
 
                     print(dis)
                     with open(dis_filename, 'a') as dis_file:
-                        dis_file.write(str(dis))
+                        dis_file.write(f'{cur_index + 1}. ' + str(dis))
                         dis_file.write('\n')
         except Exception:
             print(traceback.format_exc())

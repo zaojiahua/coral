@@ -496,7 +496,8 @@ class Device(BaseModel):
                             if CORAL_TYPE == 5.3:
                                 m_l.append(Z_DOWN)
                             else:
-                                m_l.append(round(Z_DOWN + float(self.ply), 2))
+                                if self.ply:
+                                    m_l.append(round(Z_DOWN + float(self.ply), 2))
                             set_global_value(key, m_l)
                         else:
                             set_global_value(key, eval(value))
@@ -513,8 +514,9 @@ class Device(BaseModel):
                                  [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
 
         if get_global_value('m_location'):
-            self.screen_z = str(get_global_value('m_location')[2])
-            set_global_value('Z_DOWN', get_global_value('m_location')[2])
+            if len(get_global_value('m_location')) == 3:
+                self.screen_z = str(get_global_value('m_location')[2])
+                set_global_value('Z_DOWN', get_global_value('m_location')[2])
             print('new Z_DOWN', get_global_value('Z_DOWN'))
         elif Z_DOWN:
             if CORAL_TYPE == 5.3:

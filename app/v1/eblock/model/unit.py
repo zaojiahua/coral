@@ -211,6 +211,7 @@ class Unit(BaseModel):
             if kwargs.pop("test_running", False):
                 sending_data["test_running"] = True
             sending_data["work_path"] = self.unit_work_path
+            sending_data['rds_work_path'] = handler.rds_path
             sending_data["device_label"] = self.device_label
             sending_data['timeout'] = self.timeout
             sending_data['max_retry_time'] = kwargs.get('max_retry_time', None)

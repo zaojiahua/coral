@@ -29,7 +29,7 @@ DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
 SENSOR = False
 # 通过算法计算出来m_location
-COMPUTE_M_LOCATION = False
+COMPUTE_M_LOCATION = True
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
     # 5的升级版是中心对齐的
     try:
@@ -299,7 +299,6 @@ if CORAL_TYPE == 5.1:
     CameraMax = int(FpsMax * 10)  # 5l可以拍10s
 else:
     CameraMax = int(FpsMax * 7)  # 5系列其他相机拍5s
-BIAS = int(FpsMax / 120 * 19)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
 SWIPE_BIAS_HARD = int(FpsMax / 120 * 9)  # 机械臂下落--点击--抬起  所用帧数。 更改硬件需要重新测量  31?
 SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
 

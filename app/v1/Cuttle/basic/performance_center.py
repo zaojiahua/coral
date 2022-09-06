@@ -52,7 +52,7 @@ class PerformanceCenter(object):
             os.makedirs(work_path)
         self.work_path = work_path
         self.kwargs = kwargs
-        # 0: _black_field 1: _icon_find
+        # 0: _black_field
         self.start_method = 0
 
     @property
@@ -154,7 +154,6 @@ class PerformanceCenter(object):
         else:
             # 使用图像识别的方法计算起始点
             use_icon_scope = True if self.start_method == 0 else False
-            pic2 = self.judge_icon if self.start_method in [0, 1] else None
 
             camera_loop()
 
@@ -173,7 +172,7 @@ class PerformanceCenter(object):
 
                 number += 1
                 # judge_function 返回True时 即发现了起始点
-                if self.start_judge_function(picture, (pic2 if pic2 is not None else next_picture), third_pic, self.threshold):
+                if self.start_judge_function(picture, next_picture, third_pic, self.threshold):
                     # 减一张得到起始点
                     self.start_number = number - 1
                     self.start_timestamp = timestamp
@@ -230,10 +229,8 @@ class PerformanceCenter(object):
         if self.start_method == 0:
             while True:
                 picture, next_picture, third_pic, _ = self.picture_prepare(number, self.start_area)
-                pic2 = self.judge_icon if self.start_method in [0, 1] else None
                 # 从start到bias这段时间，应该都是属于满足条件的区间
-                if not self.start_judge_function(picture, (pic2 if pic2 is not None else next_picture),
-                                                 third_pic, self.threshold):
+                if not self.start_judge_function(picture, next_picture, third_pic, self.threshold):
                     self.bias = number
                     break
                 if picture is None:

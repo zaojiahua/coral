@@ -827,7 +827,7 @@ class ClickCenterPointFive(MethodView):
         for contour_index, contour_points in enumerate(contours):
             x, y, w, h = cv2.boundingRect(contour_points)
             # 必须是一个圆，判断外接矩形即可
-            if 0.95 < w / h < 1.05:
+            if 0.9 < w / h < 1.1:
                 # cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 # 遍历组成轮廓的每个坐标点
                 m = cv2.moments(contour_points)

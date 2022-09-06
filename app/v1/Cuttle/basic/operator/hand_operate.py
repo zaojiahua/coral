@@ -472,7 +472,11 @@ class HandHandler(Handler, DefaultMixin):
             filename = f'point_{cur_index}.png'
             device_obj = self.get_device_obj()
 
-            ret_code = device_obj.get_snapshot(pre_filename, max_retry_time=1, original=False)
+            if cur_index == 0:
+                ret_code = device_obj.get_snapshot(pre_filename, max_retry_time=1, original=False)
+            else:
+                ret_code = 0
+
             if ret_code == 0:
                 click_center_point_five = ClickCenterPointFive()
                 pre_red_points = click_center_point_five.get_red_point(pre_filename)

@@ -831,7 +831,7 @@ class ClickCenterPointFive(MethodView):
                 # cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 # 遍历组成轮廓的每个坐标点
                 m = cv2.moments(contour_points)
-                if m['m00'] > 50:
+                if m['m00'] > 150:
                     # 获取对象的质心
                     cx = round(m['m10'] / m['m00'], 2)
                     cy = round(m['m01'] / m['m00'], 2)

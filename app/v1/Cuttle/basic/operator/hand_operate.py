@@ -19,6 +19,7 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_ST
     hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
     sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X
+from app.execption.outer.error_code.camera import CoordinateConvert
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -149,6 +150,7 @@ class HandHandler(Handler, DefaultMixin):
         self.kwargs = kwargs
         self.repeat_count = 0
         self.repeat_click_dict = {}
+        self.pix_points = None
 
     def before_execute(self):
         # 先转换相对坐标到绝对坐标
@@ -157,6 +159,7 @@ class HandHandler(Handler, DefaultMixin):
                 getattr(self, value)()
         # 根据adb指令中的关键词dispatch到对应机械臂方法,pix_points为adb模式下的截图中的像素坐标
         pix_points, opt_type, self.speed, absolute = self.grouping(self.exec_content)
+        self.pix_points = pix_points
 
         if opt_type in self.arm_exec_content_str:
             self.exec_content = list()
@@ -454,8 +457,9 @@ class HandHandler(Handler, DefaultMixin):
 
         try:
             from app.v1.Cuttle.macPane.pane_view import ClickCenterPointFive
-            pre_filename = f'point_{cur_index - 1}.png'
-            filename = f'point_{cur_index}.png'
+            # 保存到rds目录中，这样方便调试
+            pre_filename = os.path.join(self.kwargs.get("rds_work_path"), f'point_{cur_index - 1}.png')
+            filename = os.path.join(self.kwargs.get("rds_work_path"), f'point_{cur_index}.png')
             device_obj = self.get_device_obj()
 
             if cur_index == 0:
@@ -475,22 +479,27 @@ class HandHandler(Handler, DefaultMixin):
                 ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
                 if ret_code == 0:
                     red_points = click_center_point_five.get_red_point(filename)
-                    print('之前的红点', pre_red_points)
-                    print('当前的红点', red_points)
+                    print(f'{cur_index + 1}之前的红点', pre_red_points)
+                    print(f'{cur_index + 1}当前的红点', red_points)
                     # 将上次的红点减掉，以免对算法产生干扰
                     red_points = click_center_point_five.sub_point(pre_red_points, red_points)
-                    print('剩下的红点', red_points)
-
-                    red_points = pre_point(self.transform_pix_point(red_points[0], True)[0], arm_num=kwargs["arm_num"])
+                    print(f'{cur_index + 1}剩下的红点', red_points)
+                    print('要点击的点', self.pix_points)
 
                     # 计算俩点之间的距离
-                    dis = math.sqrt(math.pow(red_points[0] - pix_point[0][0], 2) +
-                                    math.pow(red_points[1] - pix_point[0][1], 2))
+                    dis = math.sqrt(math.pow(red_points[0][0] - self.pix_points[0], 2) +
+                                    math.pow(red_points[0][1] - self.pix_points[1], 2))
                     dis = round(dis, 2)
 
-                    print(dis)
+                    print('像素差别', dis)
+                    dpi = get_global_value('pane_dpi')
+                    if dpi is None:
+                        raise CoordinateConvert()
+
+                    dis = round(dis / dpi, 2)
+                    print('毫米差别', dis)
                     with open(dis_filename, 'a') as dis_file:
-                        dis_file.write(str(dis))
+                        dis_file.write(f'{cur_index + 1}. ' + str(dis))
                         dis_file.write('\n')
         except Exception:
             print(traceback.format_exc())

@@ -11,16 +11,16 @@ from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, SWIPE_BIAS_HARD, SENSOR
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, SENSOR
 from redis_init import redis_client
 
 
 class PerformanceMinix(object):
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
-        return self.swipe_calculate(exec_content, SWIPE_BIAS_HARD)
+        return self.swipe_calculate(exec_content)
 
-    def swipe_calculate(self, exec_content, bias):
+    def swipe_calculate(self, exec_content):
         data = self._validate(exec_content, PerformanceSchema)
         # 获取用户的icon选区，按中心点重建边长为30的正方形选区，如果机械臂的延长角铁变细这个可以随着做一些变化
         x1 = data.get("icon_areas")[0][0]
@@ -30,7 +30,7 @@ class PerformanceMinix(object):
         icon_areas = [(x1 + x2) / 2 - 0.03, (y1 + y2) / 2 - 0.02, (x1 + x2) / 2 + 0.03, (y1 + y2) / 2 + 0.02]
         performance = PerformanceCenter(self._model.pk, [icon_areas], data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), bias=bias)
+                                        self.kwargs.get("work_path"))
         return performance.start_loop()
 
     def start_point_with_swipe_slow(self, exec_content):

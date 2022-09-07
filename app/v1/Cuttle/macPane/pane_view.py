@@ -527,48 +527,62 @@ class PaneCoordinateView(MethodView):
         # 让机械臂点击一个点，在屏幕上留下了一个记号A，再让机械臂点击另一个点，在屏幕上留下了记号B
         # 计算A、B俩点的像素距离，和实际距离的比，就得到了比例。根据比例，计算原点的坐标值。
         # 找到主机械臂，让主机械臂移动即可
-        for obj_key in hand_serial_obj_dict.keys():
-            # 单指机械臂直接进来
-            if (arm_com in obj_key and not obj_key[-1].isdigit()) or CORAL_TYPE != 5.3:
-                hand_obj = hand_serial_obj_dict[obj_key]
-                # 双指的范围更大，点击的时候尽量在中间点击即可
-                if CORAL_TYPE == 5.3:
-                    pos_a = [100, -100]
-                    pos_b = [200, -100]
-                elif CORAL_TYPE == 5:
-                    pos_a = [125, -250]
-                    pos_b = [170, -250]
-                else:
-                    pos_a = [50, -170]
-                    pos_b = [100, -170]
-                for click_pos in [pos_a, pos_b]:
-                    self.click(*click_pos, hand_obj)
-                request_data = request.get_json() or request.args
-                if request_data is not None:
-                    device_label = request_data.get('device_label')
-                    device_obj = Device(pk=device_label)
-                elif len(Device.all()) == 1:
-                    device_obj = Device.first()
-                else:
-                    return jsonify(dict(error_code=1, description='坐标换算失败！无法获取图片！'))
+        # 双指的范围更大，点击的时候尽量在中间点击即可
+        if CORAL_TYPE == 5.3:
+            positions = [[[100, -100], [200, -100]]]
+        elif CORAL_TYPE == 5:
+            positions = [[[125, -250], [170, -250]]]
+        else:
+            positions = [[[50, -120], [100, -120]]]
 
-                # 拍照
-                filename = 'coordinate.png'
-                ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=True)
-                if ret_code == 0:
-                    print('dpi计算拍到照片了')
-                    dpi, m_location = self.get_scale(filename, pos_a, pos_b)
-                    if dpi is None:
-                        raise CoordinateConvertFail()
-                    # if dpi is not None:
-                    #     # 测试计算的是否正确 点击左上角
-                    #     points = AutoPaneBorderView.get_suitable_area(cv2.imread(filename), 60)
-                    #     if points is not None:
-                    #         click_x, click_y, _ = device_obj.get_click_position(*points[1], test=True)
-                    #         self.click(click_x, -click_y, hand_obj)
-                break
+        all_dpi = []
+        all_m_location = []
+        for pos_a, pos_b in positions:
+            for obj_key in hand_serial_obj_dict.keys():
+                # 单指机械臂直接进来
+                if (arm_com in obj_key and not obj_key[-1].isdigit()) or CORAL_TYPE != 5.3:
+                    hand_obj = hand_serial_obj_dict[obj_key]
+                    # 双指的范围更大，点击的时候尽量在中间点击即可
+                    for click_pos in [pos_a, pos_b]:
+                        self.click(*click_pos, hand_obj)
+                    request_data = request.get_json() or request.args
+                    if request_data is not None:
+                        device_label = request_data.get('device_label')
+                        device_obj = Device(pk=device_label)
+                    elif len(Device.all()) == 1:
+                        device_obj = Device.first()
+                    else:
+                        return jsonify(dict(error_code=1, description='坐标换算失败！无法获取图片！'))
 
-        return jsonify(dict(error_code=0, data={'dpi': dpi, 'm_location': m_location}))
+                    # 拍照
+                    filename = 'coordinate.png'
+                    ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=True)
+                    if ret_code == 0:
+                        print('dpi计算拍到照片了')
+                        dpi, m_location = self.get_scale(filename, pos_a, pos_b)
+                        if dpi is None:
+                            raise CoordinateConvertFail()
+                        all_dpi.append(dpi)
+                        all_m_location.append(m_location)
+                    break
+
+        all_dpi = np.array(all_dpi)
+        all_m_location = np.array(all_m_location)
+        result_dpi = all_dpi.mean(axis=0)
+        result_m_location = all_m_location.mean(axis=0)
+        print(result_dpi)
+        print(result_m_location)
+        # 写入到文件中，方便初始化的时候获取，这里也是这俩个值更新的唯一地方
+        z_down = get_global_value('Z_DOWN')
+        set_global_value('m_location', [result_m_location[0], result_m_location[1], z_down])
+        set_global_value('pane_dpi', result_dpi)
+        merge_shape = get_global_value('merge_shape')
+        with open(COORDINATE_CONFIG_FILE, 'wt') as f:
+            f.writelines(f'm_location=[{result_m_location[0]},{result_m_location[1]}]\n')
+            f.writelines(f'pane_dpi={result_dpi}\n')
+            f.writelines(f'merge_shape={merge_shape}\n')
+
+        return jsonify(dict(error_code=0, data={'dpi': result_dpi, 'm_location': list(result_m_location)}))
 
     # 传入x,y俩个值即可
     @staticmethod
@@ -618,7 +632,7 @@ class PaneCoordinateView(MethodView):
                 # 获取对象的质心
                 cx = round(m['m10'] / m['m00'], 2)
                 cy = round(m['m01'] / m['m00'], 2)
-                if w * 0.3 < cx < w * 0.9:
+                if w * 0.1 < cx < w * 0.9:
                     bx, by, bw, bh = cv2.boundingRect(contour_points)
                     if 0.7 < bw / bh < 1.3:
                         target_contours.append(np.array([[cx, cy]]))
@@ -654,20 +668,11 @@ class PaneCoordinateView(MethodView):
                 # 计算左下角的m_location
                 # m_y = round(pos_a[1] - (w - cal_point[0][0]) / dpi, 2)
 
-            # 写入到文件中，方便初始化的时候获取，这里也是这俩个值更新的唯一地方
-            z_down = get_global_value('Z_DOWN')
-            set_global_value('m_location', [m_x, m_y, z_down])
-            set_global_value('pane_dpi', dpi)
-            merge_shape = get_global_value('merge_shape')
-            with open(COORDINATE_CONFIG_FILE, 'wt') as f:
-                f.writelines(f'm_location=[{m_x},{m_y}]\n')
-                f.writelines(f'pane_dpi={dpi}\n')
-                f.writelines(f'merge_shape={merge_shape}\n')
-
-            # 画出轮廓，方便测试
-            # img = cv2.drawContours(img, target_contours, -1, (0, 255, 0), 30)
-
             return dpi, [m_x, m_y, Z_DOWN]
+
+        # 画出轮廓，方便测试
+        img = cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
+        cv2.imwrite('result.png', img)
         # 没有找到的话抛出异常
         return None, None
 
@@ -827,7 +832,7 @@ class ClickCenterPointFive(MethodView):
         for contour_index, contour_points in enumerate(contours):
             x, y, w, h = cv2.boundingRect(contour_points)
             # 必须是一个圆，判断外接矩形即可
-            if 0.9 < w / h < 1.1:
+            if 0.8 < w / h < 1.1:
                 # cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 # 遍历组成轮廓的每个坐标点
                 m = cv2.moments(contour_points)

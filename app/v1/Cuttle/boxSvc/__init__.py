@@ -4,7 +4,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.libs.log import setup_logger
 from app.v1.Cuttle.boxSvc import box_setting
 from app.v1.Cuttle.boxSvc.box_models import Box
-from app.v1.Cuttle.boxSvc.request_sender import check_from_reef, send_available_port_to_reef
+from app.v1.Cuttle.boxSvc.box_views import save_charge_slg
+from app.v1.Cuttle.boxSvc.request_sender import check_from_reef, send_available_port_to_reef, check_port_charge_slg
 
 
 def deal_with_singal_box(box):
@@ -12,7 +13,10 @@ def deal_with_singal_box(box):
     box_obj = Box(pk=box.get("name"))
     box_obj.update_attr(**box)
     if box_obj.type == "power":
-        order_set_name = "set_on_order" if box_obj.init_status else "set_off_order"
+        # 每次Coral重启后都全部置为关闭， init_status-True 表示继电器通电后默认关闭
+        # 如果继电器init_status为True, 则set_off_order为关闭继电器指令
+        # 如果继电器init_status为False, 则set_on_order为关闭继电器指令
+        order_set_name = "set_off_order" if box_obj.init_status else "set_on_order"
     else:
         order_set_name = "check_temperature_order"
     order_dict = getattr(box_setting, order_set_name)
@@ -37,6 +41,10 @@ def box_init():
     total_verified_list = [future.result() for future in as_completed(future_list) if future.exception() is None]
     logger.info(f"power restart ,total_verfied_list:{total_verified_list} ")
     # response = send_available_port_to_reef(total_verfied_list)
+    # 获取所有充电口的充电策略
+    power_port_slg = check_port_charge_slg()
+    logger.info(f"power restart, to check all port charge strategy...")
+    save_charge_slg(power_port_slg)
 
 
 def deal_with_reef_data(box_list, logger):

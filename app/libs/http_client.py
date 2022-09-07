@@ -9,7 +9,7 @@ from app.config import setting
 from app.config.log import TOTAL_LOG_NAME
 from app.execption.inner.total import FilterUniqueKeyError, RequestMethodError
 from app.execption.outer.error_code.total import ServerError, RequestException
-from app.libs.functools import run_time
+from app.libs.func_tools import run_time
 
 METH_GET = 'GET'
 METH_DELETE = 'DELETE'
@@ -72,7 +72,7 @@ def _response_exec(response, filter_unique_key, error_log_hide, **kwargs):
                          f"url: {response.url} status_code: {response.status_code} detail: {getattr(response,'content', response)}")
             raise ServerError()
     try:
-        result: dict = response.json()  # result 默认返回json
+        result = response.json()  # result 默认返回json
     except Exception:
         return 2, {}
     if filter_unique_key:

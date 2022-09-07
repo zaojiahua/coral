@@ -10,7 +10,7 @@ from app.config.setting import JOB_SYN_RESOURCE_DIR
 from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url, upload_rds_zip_file_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import JobExecBodyException, JobExecUnknownException, \
-    JobMaxRetryCycleException, InnerJobNotAssociated
+    InnerJobNotAssociated, DeviceStatusError
 from app.execption.outer.error_code.eblock import EblockEarlyStop
 from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, DictField, OwnerList, OwnerForeignKey, \
     OwnerFloatField
@@ -123,6 +123,8 @@ class DJobFlow(BaseModel):
             self.rds.job_assessment_value = self.job_assessment_value
             self.rds.finish = True
             self.rds.flow_name = self.flow_name
+        except DeviceStatusError as ex:
+            self.fake_rds(ex, '')
         except Exception as ex:
             self.logger.exception(f" run single djob exception: {ex}")
             error_traceback = traceback.format_exc()
@@ -169,35 +171,37 @@ class DJobFlow(BaseModel):
 
         node_dict = self.job.get_start_node_dict()
 
-        while True:
-            self.logger.info(
-                f"the djob (device: {self.device_label}job: {self.job_label}) exec"
-                f" node_key :{node_key}")
+        try:
+            while True:
+                self.logger.info(
+                    f"the djob (device: {self.device_label}job: {self.job_label}) exec"
+                    f" node_key :{node_key}")
 
-            if self.stop_flag:
-                raise EblockEarlyStop
+                if self.stop_flag:
+                    raise EblockEarlyStop
 
-            next_node_dict = self._execute_node(node_key, node_dict)
-            if next_node_dict is None:  # djob 执行出口
-                break
-            job_link_instance = JobLink(node_key, next_node_dict)
-            # todo: exec link operation
-            node_key = next_node_dict.get("nextNode")
-            node_dict = self.job.get_node_dict_by_key(node_key)
-        # job_assessment_value默认值"",
-        # 当用户指定unit结果作为最终结果会将result赋值给job_assessment_value，作为最终结果值
-        if self.job_assessment_value == "":
-            self.job_assessment_value = self.computed_result()
-        else:  # 已经存在，说明结果unit事先声明设置了
-            self.rds.is_use_result_unit = True
-        self.rds.job_assessment_value = self.job_assessment_value
-        self.rds.finish = True
-        self.rds.flow_name = self.flow_name
-        self.rds.block_name = self.block_name_as_inner_job
-        self.end_time = datetime.now()
-        self.status = True
-        # 写入循环执行的次数
-        self.log_switch_time()
+                next_node_dict = self._execute_node(node_key, node_dict)
+                if next_node_dict is None:  # djob 执行出口
+                    break
+                job_link_instance = JobLink(node_key, next_node_dict)
+                # todo: exec link operation
+                node_key = next_node_dict.get("nextNode")
+                node_dict = self.job.get_node_dict_by_key(node_key)
+            # job_assessment_value默认值"",
+            # 当用户指定unit结果作为最终结果会将result赋值给job_assessment_value，作为最终结果值
+            if self.job_assessment_value == "":
+                self.job_assessment_value = self.computed_result()
+            else:  # 已经存在，说明结果unit事先声明设置了
+                self.rds.is_use_result_unit = True
+            self.rds.job_assessment_value = self.job_assessment_value
+        finally:
+            self.rds.finish = True
+            self.rds.flow_name = self.flow_name
+            self.rds.block_name = self.block_name_as_inner_job
+            self.end_time = datetime.now()
+            self.status = True
+            # 写入循环执行的次数
+            self.log_switch_time()
 
     def log_switch_time(self):
         # 写入循环执行的次数
@@ -280,13 +284,15 @@ class DJobFlow(BaseModel):
         self.inner_job_list.rpush(dJob_flow)
         if job_node.assist_device_serial_number is not None:  # assist_device_serial_number表明运行的是哪一台僚机
             dJob_flow.assist_device_serial_number = job_node.assist_device_serial_number
-        dJob_flow.prepare()
-        dJob_flow.execute()
-        self.recent_img_res_list = None
-        self.recent_img_rpop_list = None
-        self.block_recent_adb_wrong_code = 0
-        self.recent_img_res_list.rpush(int(dJob_flow.job_assessment_value))
-        self.rds.eblock_list.rpush(dJob_flow.rds.json())
+        try:
+            dJob_flow.prepare()
+            dJob_flow.execute()
+            self.recent_img_res_list = None
+            self.recent_img_rpop_list = None
+            self.block_recent_adb_wrong_code = 0
+            self.recent_img_res_list.rpush(int(dJob_flow.job_assessment_value))
+        finally:
+            self.rds.eblock_list.rpush(dJob_flow.rds.json())
 
     def _execute_normal(self, job_node):
 
@@ -510,7 +516,7 @@ class DJobFlow(BaseModel):
         if self.rds.last_node == INNER_DJOB_TYPE:
             self.inner_job_list[-1].stop_flow()
         else:
-            stop_eblock(self.current_djob_flow.rds.eblock_list[-1].pk)
+            stop_eblock(self.current_eblock.pk)
 
 
 if __name__ == "__main__":

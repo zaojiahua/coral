@@ -1,7 +1,7 @@
 from typing import List
 import time
 from app.config.ip import HOST_IP
-from app.config.url import box_url, device_temper_url
+from app.config.url import box_url, device_temper_url, port_slg_url
 from app.libs.coral_socket import CoralSocket
 from app.libs.http_client import request
 from app.v1.Cuttle.boxSvc.box_setting import power_retry_times
@@ -38,6 +38,12 @@ def _send_order_by_http():
 def check_from_reef() -> List:
     response = request(url=box_url, params={"cabinet": HOST_IP.split(".")[-1]})
     return response.get("woodenbox")
+
+
+def check_port_charge_slg():
+    cabinet = HOST_IP.split(".")[-1]
+    response = request(url=port_slg_url.format(cabinet))
+    return response
 
 
 def send_available_port_to_reef(total_verfied_list):

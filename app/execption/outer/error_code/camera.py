@@ -29,7 +29,7 @@ class NoCamera(APIException):
 class ArmReInit(APIException):
     error_code = 5003
     code = 400
-    description = "do not send init request twice"
+    description = "端口拒绝访问！！！"
 
 
 class RemoveBeforeAdd(APIException):
@@ -48,3 +48,27 @@ class PerformancePicNotFound(APIException):
     error_code = 5006
     code = 400
     description = "performance picture path not found "
+
+
+class CameraInUse(APIException):
+    error_code = 5007
+    code = 400
+    description = "相机正在使用中，请稍后重试。"
+
+
+class CoordinateConvert(APIException):
+    error_code = 5008
+    code = 400
+    description = "请先进行坐标换算！"
+
+
+class CoordinateConvertFail(APIException):
+    error_code = 5009
+    code = 400
+    description = "坐标换算失败！"
+
+
+class MergeShapeNone(APIException):
+    error_code = 5010
+    code = 400
+    description = "请先进行图像拼接！"

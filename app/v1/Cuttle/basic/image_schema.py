@@ -259,6 +259,8 @@ class OcrTestSchema(Schema):
     ocr_choice = fields.String(data_key="ocrChoice", required=False)
 
     def load_config(self, value):
+        if type(value) == list and len(value) > 0:
+            value = value[0]
         value.save(f"{value.filename}")
         with open(f"{value.filename}", "r") as f:
             content = json.load(f)
@@ -266,6 +268,8 @@ class OcrTestSchema(Schema):
         return content
 
     def load_picture(self, value):
+        if type(value) == list and len(value) > 0:
+            value = value[0]
         value.save(f"{value.filename}")
         return f"{value.filename}"
 
@@ -348,17 +352,21 @@ class PerformanceSchemaFps(PerformanceSchemaCompare):
 
 
 class PerformanceSchema(PerformanceSchemaCompare):
-    icon_config = fields.String(required=True, data_key="configFile", validate=verify_exist)
+    icon_config = fields.String(required=True, data_key="configFile")
     refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
 
     @post_load()
     def explain(self, data, **kwargs):
         data = super().explain(data, **kwargs)
-        with open(data.get('icon_config'), "r") as json_file_icon:
-            json_data_icon = json.load(json_file_icon)
-            icon_areas = [json_data_icon["area" + str(i)] for i in range(1, len(json_data_icon.keys())) if
-                          "area" + str(i) in json_data_icon.keys()]
-            icon_threshold = float(json_data_icon.get("threshold", 0.99))
-        data["icon_areas"] = icon_areas if icon_areas != [] else [[1, 1, 1, 1]]
+        try:
+            with open(data.get('icon_config'), "r") as json_file_icon:
+                json_data_icon = json.load(json_file_icon)
+                icon_areas = [json_data_icon["area" + str(i)] for i in range(1, len(json_data_icon.keys())) if
+                              "area" + str(i) in json_data_icon.keys()]
+                icon_threshold = float(json_data_icon.get("threshold", 0.99))
+        except FileNotFoundError:
+            icon_areas = []
+            icon_threshold = 0.99
+        data["icon_areas"] = icon_areas if icon_areas != [] else [[0, 0, 1, 1]]
         data["threshold"] = icon_threshold
         return data

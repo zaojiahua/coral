@@ -11,10 +11,12 @@ from func_timeout import func_set_timeout
 from marshmallow import ValidationError
 
 from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersionFail
-from app.libs.functools import method_dispatch
+from app.libs.func_tools import method_dispatch
 from app.libs.log import setup_logger
-from app.v1.Cuttle.basic.setting import normal_result, KILL_SERVER, START_SERVER, SERVER_OPERATE_LOCK, \
-    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP
+from app.v1.Cuttle.basic.setting import normal_result, SERVER_OPERATE_LOCK, \
+    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, RESTART_SERVER, \
+    adb_disconnect_threshold
+
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
 from app.config.ip import ADB_TYPE
@@ -37,7 +39,7 @@ class Handler():
     standard_list = []
 
     skip_retry_list = ["end_point_with_icon", "end_point_with_icon_template_match", "end_point_with_changed",
-                       "end_point_with_fps_lost","initiative_remove_interference"]
+                       "end_point_with_fps_lost", "initiative_remove_interference"]
 
     def __init__(self, *args, **kwargs):
         self._model = kwargs.get("model", Dummy_model(False, 0, setup_logger(f'dummy', 'dummy.log')))
@@ -48,8 +50,9 @@ class Handler():
         self.kwargs = kwargs
         self.handler_timeout = self.kwargs.get('timeout') or DEFAULT_TIMEOUT
         self.str_handler_timeout = self.kwargs.get('timeout') or ADB_DEFAULT_TIMEOUT
-        self.extra_result = {}
+        self.extra_result = {'not_compress_png_list': []}
         self.optional_input_image = self.kwargs.get('optional_input_image') or 0
+        self.portrait = self.kwargs.get('portrait', 1)
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -82,11 +85,18 @@ class Handler():
         self._model.is_busy = False
 
     def execute(self, **kwargs) -> dict:
+        # 如果被测试设备断开，则终止unit的执行
+        if self._model.pk != 0:
+            self._model.is_device_error()
+
         # 默认执行方法，使用self.func，去执行self.exec_content中内容。
         # 返回 {"result":int}  也可能多出其他项目eg： {"result": 0, "point_x": float(point_x), "point_y": float(point_y)}
         (skip, result) = self.before_execute()
         if skip:
-            return {"result": result}
+            response = {"result": result}
+            if self.extra_result:
+                response.update(self.extra_result)
+            return response
         assert (hasattr(self, "func") and hasattr(self, "exec_content")), "func and exec_content should be set"
         try:
             result = self.do(self.exec_content, **kwargs)
@@ -99,6 +109,10 @@ class Handler():
             return {'result': UnitTimeOut.error_code}
         except ImageIsNoneException as e:
             return {'result': e.error_code}
+        except Exception as e:
+            if self.extra_result:
+                e.extra_result = self.extra_result
+            raise e
 
         response = {"result": self.after_execute(result, self.func.__name__)}
         if self.extra_result:
@@ -125,7 +139,7 @@ class Handler():
         if ADB_TYPE == 1:
             random_value = random.random()
             kwargs['random_value'] = random_value
-            if exec_content == (adb_cmd_prefix + KILL_SERVER) or exec_content == (adb_cmd_prefix + START_SERVER):
+            if exec_content == (adb_cmd_prefix + RESTART_SERVER):
                 kwargs['target_lock'] = NORMAL_OPERATE_LOCK
                 kwargs['lock_type'] = SERVER_OPERATE_LOCK
             else:
@@ -143,16 +157,18 @@ class Handler():
 
         return self.retry_timeout_func(_inner_lock_func)
 
-    def retry_timeout_func(self, func, max_retry_time=3):
+    def retry_timeout_func(self, func):
         retry_time = 0
+        max_retry_time = self.kwargs.get('max_retry_time') or 3
         while retry_time < max_retry_time:
             try:
                 return func()
             except func_timeout.exceptions.FunctionTimedOut as e:
                 retry_time += 1
-                self._model.logger.error(f'超时重试: {retry_time}')
                 if retry_time == max_retry_time:
                     raise e
+                else:
+                    self._model.logger.error(f'超时重试: {retry_time}')
 
     @method_dispatch
     def after_execute(self, result: int, funcname) -> int:
@@ -177,6 +193,26 @@ class Handler():
 
     @after_execute.register(str)
     def _(self, result, funcname):
+        before_disconnect_times = self._model.disconnect_times
+
+        ret = 0
+        # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
+        if funcname not in self.skip_list:
+            for abnormal in self.process_list:
+                if isinstance(abnormal.mark, str) and abnormal.mark in result:
+                    getattr(self, abnormal.method)(result)
+                    ret = abnormal.code
+                    break
+            for standard in self.standard_list:
+                if standard.mark == result:
+                    ret = standard.code
+                    break
+
+        # 如果异常次数没有增加，说明本次连接正常，数据清零。注意有些指令可能不是adb指令，比如等待x秒
+        if self._model.disconnect_times == before_disconnect_times and \
+                before_disconnect_times < adb_disconnect_threshold and 'adb' in self.exec_content:
+            self._model.disconnect_times = 0
+
         # 针对特殊的指令查看执行结果，比如截图查看是否截图成功
         if SCREENCAP_CMD in self.exec_content:
             pic_path = self.exec_content[self.exec_content.find(SCREENCAP_CMD) + len(SCREENCAP_CMD):].strip()
@@ -188,11 +224,13 @@ class Handler():
                 exception = FindAppVersionFail()
                 exception.extra_result = self.extra_result
                 raise exception
+
             try:
                 # self.extra_result['package_name'] = re.findall(r'((?:\w+\.)+\w+)',
                 # self.exec_content[self.exec_content.find('shell'):])[0]
-                self.extra_result['package_name'] = self.exec_content[self.exec_content.find(PM_DUMP) + len(PM_DUMP):
-                                                                      self.exec_content.find('|')].strip()
+                self.extra_result['package_name'] = self.exec_content[
+                                                    self.exec_content.find(PM_DUMP) + len(PM_DUMP):
+                                                    self.exec_content.find('|')].strip()
                 self.extra_result['app_version'] = result.replace(FIND_APP_VERSION + '=', '').strip()
                 if re.match(r'^[0-9][0-9\.]+[0-9]$', self.extra_result['app_version']) is None:
                     self.extra_result['app_version'] = None
@@ -200,16 +238,7 @@ class Handler():
             except Exception:
                 raise_find_app_exception()
 
-        # 处理字符串格式的返回，流程与int型类似，去abnormal中进行匹配，并执行对应方法
-        if funcname not in self.skip_list:
-            for abnormal in self.process_list:
-                if isinstance(abnormal.mark, str) and abnormal.mark in result:
-                    getattr(self, abnormal.method)(result)
-                    return abnormal.code
-            for standard in self.standard_list:
-                if standard.mark == result:
-                    return standard.code
-        return 0
+        return ret
 
     def before_execute(self, **kwargs):
         # 默认的前置处理方法，根据functionName找到对应方法
@@ -224,6 +253,23 @@ class Handler():
     def func(self, *args, **kwargs):
         # 真实执行函数，需要在继承类中指定，adb中返回str，其他返回int
         pass
+
+    def _get_screen_point(self, x, y, portrait):
+        # 需要判断是僚机在执行，还是主机在执行，从对应的机器上获取相关数据
+        from app.v1.device_common.device_model import Device
+        target_device = Device(pk=self._model.pk)
+
+        serial_number = self.kwargs.get("assist_device_serial_number")
+        if serial_number is not None:
+            target_device = target_device.get_subsidiary_device(serial_number=serial_number)
+
+        if portrait == 1:
+            w = target_device.device_width * x
+            h = target_device.device_height * y
+        else:
+            w = target_device.device_height * x
+            h = target_device.device_width * y
+        return w, h
 
     def _relative_double_point(self):
         regex = re.compile("double_point([\d.]*?) ([\d.]*)")
@@ -243,12 +289,7 @@ class Handler():
         result = re.search(regex, self.exec_content)
         x = float(result.group(1))
         y = float(result.group(2))
-        if any((0 < x < 1, 0 < y < 1)):
-            from app.v1.device_common.device_model import Device
-            w = Device(pk=self._model.pk).device_width * x
-            h = Device(pk=self._model.pk).device_height * y
-            self.exec_content = self.exec_content.replace(result.group(1), str(w), 1)
-            self.exec_content = self.exec_content.replace(result.group(2), str(h), 1)
+        self._replace_relative_pos(x, y, result.group(1), result.group(2))
         return normal_result
 
     def _relative_swipe(self):
@@ -260,18 +301,33 @@ class Handler():
         y1 = float(result.group(2))
         x2 = float(result.group(3))
         y2 = float(result.group(4))
-        if any((0 < x1 < 1, 0 < y2 < 1, 0 < x2 < 1, 0 < y2 < 1)):
-            from app.v1.device_common.device_model import Device
-            w1 = Device(pk=self._model.pk).device_width * x1
-            h1 = Device(pk=self._model.pk).device_height * y1
-            w2 = Device(pk=self._model.pk).device_width * x2
-            h2 = Device(pk=self._model.pk).device_height * y2
-            self.exec_content = self.exec_content.replace(result.group(1), str(w1), 1)
-            self.exec_content = self.exec_content.replace(result.group(2), str(h1), 1)
-            self.exec_content = self.exec_content.replace(result.group(3), str(w2), 1)
-            self.exec_content = self.exec_content.replace(result.group(4), str(h2), 1)
+        self._replace_relative_pos(x1, y1, result.group(1), result.group(2))
+        self._replace_relative_pos(x2, y2, result.group(3), result.group(4))
 
         return normal_result
+
+    def _relative_double_hand(self):
+        regex = re.compile(
+            "double hand zoom in and out ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*) ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*) ")
+        result = re.search(regex, self.exec_content)
+        x1 = float(result.group(1))
+        y1 = float(result.group(2))
+        x2 = float(result.group(3))
+        y2 = float(result.group(4))
+        x3 = float(result.group(5))
+        y3 = float(result.group(6))
+        x4 = float(result.group(7))
+        y4 = float(result.group(8))
+        self._replace_relative_pos(x1, y1, result.group(1), result.group(2))
+        self._replace_relative_pos(x2, y2, result.group(3), result.group(4))
+        self._replace_relative_pos(x3, y3, result.group(5), result.group(6))
+        self._replace_relative_pos(x4, y4, result.group(7), result.group(8))
+
+    def _replace_relative_pos(self, x, y, result_group_1, result_group_2):
+        if any((0 < x < 1, 0 < y < 1)):
+            w, h = self._get_screen_point(x, y, self.portrait)
+            self.exec_content = self.exec_content.replace(result_group_1, str(w), 1)
+            self.exec_content = self.exec_content.replace(result_group_2, str(h), 1)
 
 
 class ListHandler(Handler):
@@ -285,6 +341,8 @@ class ListHandler(Handler):
         flag = 0
         result = None
         for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
+            if "onlyShow" in single_cmd:
+                continue
             try:
                 self.child.exec_content = single_cmd
                 kwargs['index'] = index

@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import time
+import zipfile
 from functools import lru_cache
 
 import cv2
@@ -20,7 +21,6 @@ from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.eblock.config.leadin import PROCESSER_LIST
-from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
 from app.v1.eblock.model.macro_replace import MacroHandler
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.libs.ospathutil import get_picture_create_time
@@ -118,14 +118,18 @@ class Unit(BaseModel):
     timestamps = OwnerList(to=str)
     unit_work_path = models.CharField()
     optionalInputImage = models.IntegerField()
+    portrait = models.IntegerField()
 
-    load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures', 'timestamps')
+    load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures', 'timestamps', 'assistDevice')
 
     def __init__(self, pk=None, **kwargs):
         super().__init__(pk, **kwargs)
         self.unit_work_path = str(time.time())
 
     def process_unit(self, logger, handler: MacroHandler, **kwargs):
+        from app.v1.device_common.device_model import Device
+        Device(pk=self.device_label).is_device_error()
+
         assist_device_ident = get_assist_device_ident(self.device_label,
                                                       self.assistDevice) if self.assistDevice else None
 
@@ -163,7 +167,13 @@ class Unit(BaseModel):
 
                 if assist_device_ident is None:
                     from app.v1.device_common.device_model import Device
-                    if Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1:
+                    if Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1 and \
+                            Device(pk=self.device_label).has_rotate_arm:
+                        target = PROCESSER_LIST[0]
+                    elif Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 5 and \
+                            Device(pk=self.device_label).has_rotate_arm:
+                        target = PROCESSER_LIST[1]
+                    elif Device(pk=self.device_label).has_arm and cmd_dict.get("have_second_choice", 0) == 1:
                         target = PROCESSER_LIST[1]
                     elif Device(pk=self.device_label).has_camera and cmd_dict.get("have_second_choice", 0) == 2:
                         target = PROCESSER_LIST[2]
@@ -197,11 +207,14 @@ class Unit(BaseModel):
                 cmd_dict["functionName"] = self.functionName
                 sending_data = {"execCmdDict": cmd_dict}
                 target = "ImageHandler" if self.execModName == "IMGTOOL" else "ComplexHandler"
+
             if kwargs.pop("test_running", False):
                 sending_data["test_running"] = True
             sending_data["work_path"] = self.unit_work_path
+            sending_data['rds_work_path'] = handler.rds_path
             sending_data["device_label"] = self.device_label
             sending_data['timeout'] = self.timeout
+            sending_data['max_retry_time'] = kwargs.get('max_retry_time', None)
             if self.ocrChoice:
                 sending_data["ocr_choice"] = self.ocrChoice
             if self.tGuard:
@@ -210,7 +223,11 @@ class Unit(BaseModel):
                 sending_data["assist_device_serial_number"] = assist_device_ident
             if self.optionalInputImage:
                 sending_data['optional_input_image'] = self.optionalInputImage
+            if self.portrait:
+                sending_data['portrait'] = self.portrait
+            logger.info(f'target is {target}')
             logger.info(f"unit:{sending_data}")
+
             try:
                 for i in range(3):
                     # # 给Tguard 留下发现重试执行当前unit的机会
@@ -282,27 +299,45 @@ class Unit(BaseModel):
                 # 其他情况下复制到公共读的目录 比如txt文件等 其他unit需要用到
                 shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
 
-            # 针对结果为0的unit，进行rds图片的压缩，为了减小体积
-            if self.detail.get("result") == 0:
-                if os.path.exists(target_path):
-                    # 针对png图片进行压缩
-                    if target_path.endswith('png'):
-                        # 先缩放
-                        origin_pic = cv2.imread(target_path, cv2.IMREAD_COLOR)
-                        if origin_pic is not None:
-                            origin_size = origin_pic.shape
-                            new_size = (
-                                int(origin_size[1] * PICTURE_COMPRESS_RATIO),
-                                int(origin_size[0] * PICTURE_COMPRESS_RATIO))
-                            compress_pic = cv2.resize(origin_pic, new_size)
-                            cv2.imwrite(target_path, compress_pic)
-                            # 后压缩
-                            self.pngquant_compress(target_path)
+            # 针对png图片进行压缩
+            if os.path.exists(target_path) and target_path.endswith('png'):
+                # 针对结果为0的unit，进行rds图片的压缩，为了减小体积
+                if self.detail.get("result") == 0 or self.can_compress(file):
+                    # 先缩放
+                    origin_pic = cv2.imread(target_path, cv2.IMREAD_COLOR)
+                    if origin_pic is not None:
+                        origin_size = origin_pic.shape
+                        new_size = (
+                            int(origin_size[1] * PICTURE_COMPRESS_RATIO),
+                            int(origin_size[0] * PICTURE_COMPRESS_RATIO))
+                        compress_pic = cv2.resize(origin_pic, new_size)
+                        cv2.imwrite(target_path, compress_pic)
+                        # 后压缩
+                        self.pngquant_compress(target_path)
+
+        # 压缩log文件
+        for file in os.listdir(handler.rds_path):
+            if file.endswith('.log'):
+                target_path = os.path.join(handler.rds_path, file)
+                filename = os.path.splitext(file)[0] + '.zip'
+                zip_file_name = os.path.join(handler.rds_path, filename)
+                with zipfile.ZipFile(zip_file_name, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+                    _, name = os.path.split(target_path)
+                    zf.write(target_path, arcname=name)
+                # 删除原来的文件
+                os.remove(target_path)
 
     @staticmethod
     def pngquant_compress(fp):
         command = f'pngquant {fp} -f --quality 100-100'
         subprocess.run(command, shell=True)
+
+    def can_compress(self, target_filename):
+        for filepath in self.detail.get('not_compress_png_list', []):
+            _, filename = os.path.split(filepath)
+            if filename == target_filename:
+                return False
+        return True
 
     @staticmethod
     def remove_duplicate_pic(path):
@@ -315,11 +350,17 @@ class Unit(BaseModel):
                 src_crop = cv2.imread(os.path.join(path, file))
                 src = cv2.imread(os.path.join(path, file_name[:-5] + ".jpg"))
                 src_2 = cv2.imread(os.path.join(path, file_name[:-5] + ".png"))
+                is_jpg = True if src is not None else False
                 src = src if src is not None else src_2
                 # 名称前缀相同，且图片尺寸相同则认为是没经过裁剪
                 if src_crop is not None and src is not None and src_crop.shape == src.shape:
                     try:
-                        os.remove(os.path.join(path, file))
+                        # 传递给ocr服务器的是crop的图片，这里应该删除原始那张图，保留crop的图片，否则的话，最后rds
+                        # 里边展示的图片并非传递给ocr服务器的图片，保留图片做测试就没有意义了
+                        if is_jpg:
+                            os.remove(os.path.join(path, file_name[:-5] + ".jpg"))
+                        else:
+                            os.remove(os.path.join(path, file_name[:-5] + ".png"))
                         print("delete one pic。。。")
                     except FileNotFoundError:
                         print("unable to find similar file to delete")

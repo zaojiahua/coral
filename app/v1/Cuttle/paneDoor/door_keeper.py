@@ -3,6 +3,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict
@@ -10,10 +11,10 @@ from typing import Dict
 import numpy as np
 
 from app.config.ip import HOST_IP, ADB_TYPE
-from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST
+from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com, REEF_DATE_TIME_FORMAT
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
-    device_assis_url, device_update_url
+    device_assis_url, device_update_url, device_resolution_url
 from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevice, DeviceCannotSetprop, \
     DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough, AdbConnectFail
 from app.execption.outer.error_code.total import RequestException
@@ -21,9 +22,10 @@ from app.libs.http_client import request
 from app.v1.Cuttle.basic.setting import hand_used_list
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
-from app.v1.device_common.device_model import Device
+from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
 from app.libs.adbutil import AdbCommand, get_room_version
+from app.execption.outer.error_code.camera import ArmReInit, NoCamera
 
 logger = logging.getLogger(DOOR_LOG_NAME)
 
@@ -33,6 +35,16 @@ class DoorKeeper(object):
         self.adb_cmd_obj = AdbCommand()
         self.today_id = 0
         self.date_mark = None
+
+    def update_door_info(self, request_data):
+        resource_name = request_data.get('resource_name')
+        # 更新设备信息
+        if resource_name == 'device':
+            res = Device.request_device_info()
+            for device_dict in res.get("devices"):
+                print('更新的设备信息有：', device_dict.get('device_label'))
+                device_obj = Device(pk=device_dict.get("device_label"))
+                device_obj.update_attr(**device_dict, avoid_push=True)
 
     def authorize_device(self, **kwargs):
         s_id = self.get_device_connect_id(multi=False)
@@ -46,31 +58,51 @@ class DoorKeeper(object):
             #     raise DeviceBindFail
         else:
             self.is_device_rootable(num=f"-s {s_id}")
-        if CORAL_TYPE > 2:
-            self.set_arm_or_camera(CORAL_TYPE, dev_info_dict["device_label"])
+
+        # 设备注册成功的话，设置状态为idle
+        dev_info_dict['status'] = DeviceStatus.IDLE
         self.send_dev_info_to_reef(dev_info_dict.pop("deviceName"),
                                    dev_info_dict)  # now report dev_info_dict to reef directly
         logger.info(f"set device success")
+
+        if CORAL_TYPE > 2:
+            self.set_arm_or_camera(dev_info_dict["device_label"])
+
         return 0
 
-    def set_arm_or_camera(self, CORAL_TYPE, device_label):
-        port_list = HARDWARE_MAPPING_LIST.copy()
-        rotate = True if CORAL_TYPE == 3 else False
+    @staticmethod
+    def set_arm_or_camera(device_label):
         executer = ThreadPoolExecutor()
-        # if CORAL_TYPE >= 5:
-        #     for port in port_list:
-        #         PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
+        port_list = HARDWARE_MAPPING_LIST.copy()
         try:
-            # 一个机柜只放一台手机限定
+            # 3型柜以及以上 一个机柜只放一台主机
             available_port_list = list(set(port_list) ^ set(hand_used_list))
             print("available port list :", available_port_list)
             if len(available_port_list) == 0:
                 raise ArmNorEnough
+
+            futures = []
             for port in available_port_list:
-                PaneConfigView.hardware_init(port, device_label, executer, rotate=rotate)
+                function, device_object = PaneConfigView.hardware_init(port, device_label, rotate=(port == rotate_com))
+                future = executer.submit(function, port, device_object, init=True, original=True, feature_test=True)
+                futures.append(future)
                 hand_used_list.append(port)
+
+            for future in futures:
+                exception = future.exception(timeout=20)
+                print(exception, '!' * 10)
+                if "PermissionError" in str(exception):
+                    traceback.print_exc()
+                    raise ArmReInit
+                elif "FileNotFoundError" in str(exception):
+                    return 0
+                elif "tolist" in str(exception):
+                    raise NoCamera
         except IndexError:
             raise ArmNorEnough
+        except TimeoutError:
+            print('TimeoutError', '!' * 10)
+            return 0
 
     def get_connected_device_list(self, adb_response):
         try:
@@ -98,11 +130,12 @@ class DoorKeeper(object):
         return [i.get("cpu_id") for i in id_list] + [i.get("serial_number") for i in assis_id_list]
 
     def authorize_device_manually(self, **kwargs):
-        length = np.hypot(kwargs.get("device_height"), kwargs.get("device_width"))
-        # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
-        kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
-        kwargs["start_time_key"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        kwargs["device_label"] = "M-" + kwargs.get("phone_model_name")
+        if kwargs.get('height_resolution'):
+            length = np.hypot(kwargs.get("height_resolution"), kwargs.get("width_resolution"))
+            # 此处x，y方向的dpi其实可能有差异，但是根据现有数据只能按其相等勾股定理计算，会有一点点误差，但是实际点击基本可以cover住
+            kwargs["x_dpi"] = kwargs["y_dpi"] = round(length / float(kwargs.pop("screen_size")), 3)
+        kwargs["start_time_key"] = datetime.now().strftime(REEF_DATE_TIME_FORMAT)
+        kwargs["device_label"] = "M-" + kwargs.get("phone_model_name") + '-' + kwargs.get("device_name")
         try:
             response = request(url=phone_model_url, params={"fields": "manufacturer.manufacturer_name",
                                                             "phone_model_name": kwargs.get("phone_model_name")},
@@ -111,13 +144,12 @@ class DoorKeeper(object):
         except RequestException:
             kwargs["manufacturer"] = "Manual_device"
         kwargs["rom_version"] = "Manual_"+kwargs["manufacturer"]
-        kwargs["android_version"] =  kwargs["cpu_name"] = kwargs[
-            "cpu_id"] = "Manual_device"
+        kwargs["android_version"] = kwargs["cpu_name"] = kwargs["cpu_id"] = "Manual_device"
         kwargs["ip_address"] = "0.0.0.0"
         kwargs["auto_test"] = False
         kwargs["device_type"] = "test_box"
         if CORAL_TYPE > 2:
-            self.set_arm_or_camera(CORAL_TYPE, kwargs["device_label"])
+            self.set_arm_or_camera(kwargs["device_label"])
         self.send_dev_info_to_reef(kwargs.pop("device_name"), kwargs, with_monitor=False)
         return 0
 
@@ -151,9 +183,24 @@ class DoorKeeper(object):
         if not_found in room_version or not_found in android_version or not_found in manufacturer:
             raise AdbConnectFail()
 
+        # 获取分辨率 有的手机升级版本以后，分辨率会发生变化，所以需要重新更新分辨率
+        screen_size = self.get_screen_size_internal(f"-s {s_id}")
+        width_resolution = screen_size[0]
+        height_resolution = screen_size[1]
+
         self.open_wifi_service(f"-s {s_id}")
+
+        # 如果是在error状态下点击重连，重连成功以后设置为idle状态
+        from app.v1.device_common.device_model import Device, DeviceStatus
+        device_obj = Device(pk=device_label)
+        device_info = request(url=f'{device_url}{device_obj.id}')
+        if device_info.get('status') == DeviceStatus.ERROR:
+            device_obj.update_device_status(DeviceStatus.IDLE)
+            device_obj.disconnect_times = 0
+
         return {'ip_address': ip, 'rom_version': room_version, 'device_label': device_label,
-                'manufacturer': manufacturer, 'android_version': android_version}
+                'manufacturer': manufacturer, 'android_version': android_version,
+                'width_resolution': width_resolution, 'height_resolution': height_resolution}
 
     def update_device_info(self, request_data):
         device_label = request_data.get('device_label')
@@ -161,6 +208,8 @@ class DoorKeeper(object):
         rom_version = request_data.get('rom_version')
         android_version = request_data.get('android_version')
         manufacturer = request_data.get('manufacturer')
+        width_resolution = request_data.get('width_resolution')
+        height_resolution = request_data.get('height_resolution')
         res = request(method="POST", url=device_update_url,
                       json={"ip_address": ip,
                             "rom_version": rom_version,
@@ -168,12 +217,22 @@ class DoorKeeper(object):
                             "manufacturer": request_data.get('manufacturer'),
                             "android_version": android_version})
         logger.info(f"response from reef: {res}")
+
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=device_label)
         device_obj.ip_address = ip
         device_obj.android_version = android_version
         device_obj.manufacturer = manufacturer
         device_obj.rom_version = rom_version
+        device_obj.pix_width = width_resolution
+        device_obj.pix_height = height_resolution
+
+        # 修改机型属性
+        res = request(method="POST", url=device_resolution_url, json={'device_label': device_label,
+                                                                      'width_resolution': width_resolution,
+                                                                      'height_resolution': height_resolution})
+        print('修改机型属性', res)
+
         return 0
 
     def open_wifi_service(self, num="-d"):
@@ -216,8 +275,8 @@ class DoorKeeper(object):
         ret_dict = {
             "android_version": self.adb_cmd_obj.run_cmd_to_get_result(
                 f"adb -s {s_id} shell getprop ro.build.version.release"),
-            "device_width": screen_size[0],
-            "device_height": screen_size[1], "start_time_key": datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}
+            "width_resolution": screen_size[0],
+            "height_resolution": screen_size[1], "start_time_key": datetime.now().strftime(REEF_DATE_TIME_FORMAT)}
         ret_dict = self._get_device_dpi(ret_dict, f"-s {s_id}")
         ret_dict.update(device_info_fict)
         return ret_dict
@@ -228,11 +287,15 @@ class DoorKeeper(object):
         if "device usb" not in adb_response and "device product" not in adb_response and "device transport_id" not in adb_response:
             logger.info("[get device info]: no device found")
             raise DeviceNotInUsb  # no device found
+
         device_id_list = self.get_connected_device_list(adb_response)
         device_exist_id_list = self.get_already_connected_device_id_list()
         register_id_list = list(set(device_id_list).difference(set(device_exist_id_list)))
-        if len(register_id_list) == 0:
+        if len(device_id_list) == 0:
             raise DeviceNotInUsb
+
+        if len(device_id_list) > 0 and len(register_id_list) == 0:
+            raise DeviceAlreadyInCabinet(f'设备（{device_id_list[0]}）已存在于当前系统中，请检查。')
         if not multi:
             if len(register_id_list) > 1:
                 raise NoMoreThanOneDevice
@@ -287,11 +350,14 @@ class DoorKeeper(object):
         phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.oppo.market.name")
         old_phone_model = self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.build.product")
         productName = phone_model if len(phone_model) != 0 else old_phone_model
+        screen_size = self.get_screen_size_internal(f"-s {s_id}")
         ret_dict = {"phone_model_name": productName,
                     "ip_address": self.get_dev_ip_address_internal(f"-s {s_id}") if ADB_TYPE == 0 else '0.0.0.0',
                     "device_label": self.adb_cmd_obj.run_cmd_to_get_result(f"adb -s {s_id} shell getprop ro.serialno"),
                     "manufacturer": self.adb_cmd_obj.run_cmd_to_get_result(
-                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize()
+                        f"adb -s {s_id} shell getprop ro.product.manufacturer").capitalize(),
+                    'width_resolution': screen_size[0],
+                    'height_resolution': screen_size[1]
                     }
         check_params = {"fields": "is_active", "serial_number": ret_dict["device_label"]}
         response = request(url=device_assis_url, params=check_params)
@@ -310,22 +376,11 @@ class DoorKeeper(object):
         return ret_dict
 
     def set_assis_device(self, **kwargs):
-        # {
-        #     "serial_number": "1231234",
-        #     "ip_address": "127.0.0.6",
-        #     "order": 1,
-        #     "is_active": true,
-        #     "devices": [
-        #         1
-        #     ]
-        # }
         if ADB_TYPE == 0:
             self.open_wifi_service(f"-s {kwargs.get('serial_number')}")
         kwargs["is_active"] = True
         res = request(method="POST", url=device_assis_create_update_url, json=kwargs)
         logger.info(f"response from reef: {res}")
-        # device_object = Device(pk=kwargs["device_label"])
-        # setattr(device_object, "assis_" + kwargs.get("order"), kwargs.get("ip_address"))
         return 0
 
     def is_new_phone_model(self, phone_model) -> (Dict, bool):
@@ -415,6 +470,7 @@ class DoorKeeper(object):
         dev_data_dict["id"] = res.get("id") if res.get("id") else 0
         device_object = Device(pk=dev_data_dict["device_label"])
         device_object.update_attr(**dev_data_dict, avoid_push=True)
+        device_object.update_m_location()
         aide_monitor_instance = AideMonitor(device_object)
         t = threading.Thread(target=device_object.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(dev_data_dict["device_label"])

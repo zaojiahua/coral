@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import random
 import shutil
@@ -12,13 +13,14 @@ from app.config.setting import CORAL_TYPE
 from app.config.url import coral_ocr_url
 from app.execption.outer.error_code.imgtool import OcrRetryTooManyTimes, OcrParseFail, OcrWorkPathNotFound, \
     ComplexSnapShotFail, NotFindIcon, OcrShiftWrongFormat
-from app.libs.functools import handler_switcher
+from app.libs.func_tools import handler_switcher
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec, get_file_name
 from app.v1.Cuttle.basic.setting import chinese_ingore, icon_min_template, icon_min_template_camera, \
-    light_pyramid_setting, SCREENCAP_CMD
+    light_pyramid_setting, SCREENCAP_CMD, SCREENCAP_CMD_EARLY_VERSION, SCREENCAP_CMD_VERSION_THRESHOLD
 from app.v1.eblock.config.setting import BUG_REPORT_TIMEOUT
+from app.execption.outer.error_code.djob import ImageIsNoneException
 
 
 class Complex_Center(object):
@@ -30,8 +32,10 @@ class Complex_Center(object):
 
     def __init__(self, device_label, requiredWords=None, xyShift="0 0", inputImgFile=None, work_path="", *args,
                  **kwargs):
+        # 存很多辅助信息 后边初始化的时候用，所以先设置
+        self.kwargs = kwargs
         self.device_label = device_label
-        # _pic_path 存实例化时传入的图（很可能没有）
+        # _pic_path 存实例化时传入的图（很可能没有） 有裁剪区域的时候，裁剪以后的图也是放到这个地方
         self._pic_path = inputImgFile
         # 如果传入的图为正式格式，就往work_path复制一份，用以最后上传至rds 的结果图片
         # if type(inputImgFile) == str and inputImgFile.split(".")[-1].upper() in ["PNG", "JPG", "JPEG", "GIF", "TIF"]:
@@ -50,9 +54,10 @@ class Complex_Center(object):
         # 僚机mode为0，其他除了5型柜也都为0
         self.mode = 0 if (kwargs.get("assist_device_serial_number") is not None or (
                 device.has_arm is False and device.has_camera is False)) else 1
+        # 3c也是0
+        if device.has_arm and device.has_rotate_arm:
+            self.mode = 0
         self.logger = setup_logger(f'{device_label}', f'{device_label}.log')
-        # 存很多辅助信息
-        self.kwargs = kwargs
         # 上下裁剪的补偿，用于文字点击时，先裁剪掉上半屏幕（防止同样字干扰），再从结果中加回offset得到真实坐标。
         self.crop_offset = [0, 0, device.device_width, device.device_height]
 
@@ -99,25 +104,28 @@ class Complex_Center(object):
             result = result[0]
         return float(result.get("cx")), float(result.get("cy"))
 
+    def get_pic_path(self):
+        return self.default_pic_path if self._pic_path is None else self._pic_path
+
     def get_result(self, parse_function=default_parse_response.__func__):
         # ocr 识别的方法,传递要识别的文字，做精确匹配。
         # ocr请求最多retry3次
         for i in range(3):
             # 如果有文字的话，文字要传递给ocr服务，找文字位置，没有文字的话是识别所有的文字再做判断
             body = {"words": self._searching_word} if self._searching_word else {}
-            pic_path = self.default_pic_path if self._pic_path == None else self._pic_path
+            pic_path = self.get_pic_path()
             # 发送请求给ocr服务
             response = self._ocr_request(**body, pic_path=pic_path)
             if response.get("status") == "success":
                 self.logger.info(f"get ocr result {response.get('result')}")
                 # 只计算坐标，不return的情况
                 if self._searching_word or parse_function.__name__ != self.default_parse_response.__name__:
+                    self.ocr_result = response.get('result')
                     pic_x, pic_y = parse_function(response.get("result"))
                     # 把识别得到的x.y结果根据不同的机柜情况-换算到实际需要的坐标
                     rpic_path = self.default_pic_path if self.default_pic_path is not None else self._pic_path
                     self.cal_realy_xy(pic_x, pic_y, rpic_path)
                     self.result = 0
-                    self.ocr_result = response.get('result')
                     break
                 # 需要return所有识别出所有文字的结果。
                 else:
@@ -137,7 +145,7 @@ class Complex_Center(object):
     def get_result_ignore_speed(self):
         # 与上面的方法有一些区别，不传递要识别的文字，拿到所有的文字结果，用来做in的判定
         for i in range(3):
-            pic_path = self.default_pic_path if self._pic_path == None else self._pic_path
+            pic_path = self.get_pic_path()
             response = self._ocr_request(pic_path=pic_path)
             if response.get("status") == "success":
                 identify_words_list = [
@@ -163,7 +171,14 @@ class Complex_Center(object):
     def cal_realy_xy(self, pic_x, pic_y, input_pic_path):
         from app.v1.device_common.device_model import Device
         device = Device(pk=self.device_label)
-        if device.has_camera and device.has_arm:
+        if math.floor(CORAL_TYPE) == 5:
+            if self.crop_offset != [0, 0, device.device_width, device.device_height]:
+                # 带有摄像头的中文输入，需要先恢复到整张图上的位置
+                pic_x = pic_x + self.crop_offset[0]
+                pic_y = pic_y + self.crop_offset[1]
+            self.cx = pic_x
+            self.cy = pic_y
+        elif device.has_camera and device.has_arm:
             # 摄像头识别到的文字位置，需要根据手机屏幕与摄像头照片分辨率换算回实际手机上像素位置，带选区的识别需要在具体方法再做选区内坐标到完整图坐标的变换
             if self.crop_offset != [0, 0, device.device_width, device.device_height]:
                 # 带有摄像头的中文输入，需要先恢复到整张图上的位置
@@ -229,7 +244,7 @@ class Complex_Center(object):
         th, tw = template.shape[:2]
         # add light pyramid to support difference of phone-light
         template_list = [np.clip(template * present, 0, 255).astype(np.uint8) for present in
-                         light_pyramid_setting] if CORAL_TYPE == 5 else [template]
+                         light_pyramid_setting] if math.floor(CORAL_TYPE) == 5 else [template]
         for template in template_list:
             result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
             min_val_original, _, _, _ = cv2.minMaxLoc(result)
@@ -266,9 +281,13 @@ class Complex_Center(object):
         cmd_list = [f"shell input tap {max(self.cx + self.x_shift, 0)} {max(self.cy + self.y_shift, 0)}"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>0.5")
-        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
-        if kwargs.get("ignore_arm_reset") == True:
+        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, **self.kwargs)
+        if kwargs.get("ignore_arm_reset") is True:
             request_body.update({"ignore_arm_reset": True})
+        if kwargs.get('performance_start_point'):
+            request_body.update({'performance_start_point': True})
+        if kwargs.get('is_init'):
+            request_body.update({'is_init': True})
         self.logger.info(
             f"in coral cor ready to point{max(self.cx + self.x_shift, 0)},{max(self.cy + self.y_shift, 0)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
@@ -279,7 +298,7 @@ class Complex_Center(object):
             f"shell input swipe {self.cx + self.x_shift} {self.cy + self.y_shift} {self.cx + self.x_shift} {self.cy + self.y_shift} 2000"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>1")
-        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
+        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, **self.kwargs)
         self.logger.info(f"in coral cor ready to long press point{self.cx},{self.cy}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
 
@@ -292,7 +311,7 @@ class Complex_Center(object):
             f"shell input swipe {self.cx} {self.cy} {float(x_end)} {float(y_end)} {speed}"]
         if kwargs.get("ignore_sleep") is not True:
             cmd_list.append("<4ccmd><sleep>1")
-        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
+        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, **self.kwargs)
         self.logger.info(
             f"in coral cor ready to swipe{self.cx, self.cy},{self.cx + float(x_end), self.cy + float(y_end)}")
         self.result = handler_exec(request_body, kwargs.get("handler")[self.mode])
@@ -303,8 +322,15 @@ class Complex_Center(object):
             y_shift = float(xyShift.split(" ")[1])
             if all((-1 < x_shift < 1, -1 < y_shift < 1)):
                 from app.v1.device_common.device_model import Device
-                x_shift = Device(pk=self.device_label).device_width * x_shift
-                y_shift = Device(pk=self.device_label).device_height * y_shift
+                dev_obj = Device(pk=self.device_label)
+
+                serial_number = self.kwargs.get("assist_device_serial_number")
+                if serial_number is not None:
+                    dev_obj = dev_obj.get_subsidiary_device(serial_number=serial_number)
+
+                x_shift = dev_obj.device_width * x_shift
+                y_shift = dev_obj.device_height * y_shift
+
             return (int(x_shift), int(y_shift))
         except Exception as e:
             print(repr(e))
@@ -315,10 +341,31 @@ class Complex_Center(object):
         cmd_list = [
             f"{SCREENCAP_CMD} {self.default_pic_path}"
         ]
-        request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number)
         from app.v1.device_common.device_model import Device
         device = Device(pk=self.device_label)
-        self.result = handler_exec(request_body, kwargs.get("handler")[1 if device.has_camera is True else 0])
+        try:
+            # 低版本截图指令 这里只能获取到主机的版本号 僚机只能try catch
+            if int(device.android_version.split('.')[0]) <= SCREENCAP_CMD_VERSION_THRESHOLD:
+                cmd_list = [
+                    f"{SCREENCAP_CMD_EARLY_VERSION} {self.default_pic_path}"
+                ]
+        except Exception:
+            pass
+
+        def screencap(cmd_list, device_label, connect_number):
+            request_body = adb_unit_maker(cmd_list, device_label, connect_number, **self.kwargs)
+            handler_index = 0 if self.mode == 0 else (1 if device.has_camera is True else 0)
+            return handler_exec(request_body, kwargs.get("handler")[handler_index])
+
+        try:
+            self.result = screencap(cmd_list, self.device_label, self.connect_number)
+        # 尝试使用旧的指令获取
+        except ImageIsNoneException:
+            cmd_list = [
+                f"{SCREENCAP_CMD_EARLY_VERSION} {self.default_pic_path}"
+            ]
+            self.result = screencap(cmd_list, self.device_label, self.connect_number)
+
         if self.result != 0:
             raise ComplexSnapShotFail(error_code=self.result,
                                       description=str(self.result))
@@ -332,7 +379,9 @@ class Complex_Center(object):
             cmd_list = [
                 f"bugreport {self.work_path}bugreport.zip"
             ]
-            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, BUG_REPORT_TIMEOUT)
+            # 传了俩个timeout 改成1个
+            self.kwargs['timeout'] = BUG_REPORT_TIMEOUT
+            request_body = adb_unit_maker(cmd_list, self.device_label, self.connect_number, **self.kwargs)
             handler_exec(request_body, kwargs.get("handler")[0])
             self.logger.debug("bug report finished ")
 

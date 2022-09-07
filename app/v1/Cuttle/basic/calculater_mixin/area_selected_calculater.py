@@ -1,16 +1,18 @@
+import math
 import os
+import time
 
 import cv2
 import numpy as np
 
 from app.config.setting import CORAL_TYPE
-from app.execption.outer.error_code.imgtool import IconBiggerThanField
+from app.execption.outer.error_code.imgtool import IconBiggerThanField, OcrParseFail
 from app.v1.Cuttle.basic.common_utli import threshold_set, suit_for_blur
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageAreaSchema, ImageAreaWithoutInputSchema, \
     ImageRealtimeSchema, ImageOnlyConfigCompatible
 from app.v1.Cuttle.basic.setting import icon_threshold, icon_threshold_camera, icon_rate, icon_min_template, \
-    icon_min_template_camera, blur_signal
+    icon_min_template_camera
 
 
 class AreaSelectedMixin(object):
@@ -125,6 +127,11 @@ class AreaSelectedMixin(object):
     def crop_input_picture_record_position(self, data, ocr_obj, config_name):
         from app.v1.device_common.device_model import Device
         dev_obj = Device(pk=self._model.pk)
+
+        serial_number = self.kwargs.get("assist_device_serial_number")
+        if serial_number is not None:
+            dev_obj = dev_obj.get_subsidiary_device(serial_number=serial_number)
+
         # 拿到手机的分辨率，用来把选区的左上角相对坐标->绝对坐标，后面用来加在识别结果上（因为识别的图是裁剪过，需要点击的位置是全局的）
         h, w = dev_obj.device_height, dev_obj.device_width
         x0, y0 = int(data.get(config_name)[0][0] * w), int(data.get(config_name)[0][1] * h)
@@ -142,22 +149,33 @@ class AreaSelectedMixin(object):
             is_blur = True
         match_function = "get_result" if is_blur == False else "get_result_ignore_speed"
         data = self._validate(info_body, ImageOnlyConfigCompatible)
-        # 创建一个复合unit中心对象，
-        with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
-            # 先截一张图
-            ocr_obj.snap_shot()
-            # for debug
-            if not os.path.exists(ocr_obj.default_pic_path):
-                self._model.logger.debug(f"{ocr_obj.default_pic_path} 文件不存在")
-                # 没有找到的话，重新截图试试
+
+        # 5型柜解析失败重试三次
+        if math.floor(CORAL_TYPE) == 5:
+            retry_times = 3
+        else:
+            retry_times = 1
+        while retry_times > 0:
+            retry_times -= 1
+            # 创建一个复合unit中心对象，
+            with Complex_Center(**info_body, **self.kwargs) as ocr_obj:
+                # 先截一张图
                 ocr_obj.snap_shot()
-            x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
-            # 执行ocr_obj的对应match方法
-            getattr(ocr_obj, match_function)()
-            # 把前面算的左上点的绝对坐标加到识别坐标上来。
-            ocr_obj.add_bias(x0, y0)
-            # 做点击动作
-            ocr_obj.point()
+                # for debug
+                if not os.path.exists(ocr_obj.default_pic_path):
+                    self._model.logger.debug(f"{ocr_obj.default_pic_path} 文件不存在")
+                    # 没有找到的话，重新截图试试
+                    ocr_obj.snap_shot()
+                x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
+                self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
+                # 执行ocr_obj的对应match方法
+                getattr(ocr_obj, match_function)()
+                # 把前面算的左上点的绝对坐标加到识别坐标上来。
+                ocr_obj.add_bias(x0, y0)
+                # 做点击动作
+                ocr_obj.point()
+                break
+
         return ocr_obj.result
 
     def smart_ocr_long_press(self, content) -> int:
@@ -167,6 +185,7 @@ class AreaSelectedMixin(object):
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             x0, y0 = self.crop_input_picture_record_position(data, ocr_obj, "areas")
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             getattr(ocr_obj, match_function)()
             ocr_obj.add_bias(x0, y0)
             ocr_obj.long_press()

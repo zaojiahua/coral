@@ -1,9 +1,10 @@
 import logging
 import os
 import datetime
+from logging import handlers
 
 from app.config.setting import LOG_FORMAT, LOG_TO_CONSOLE, LOG_TO_FILE, LOGGER_OBJ_DICT, \
-    LOG_DIR, CRITICAL_HOUR
+    LOG_DIR
 from app.libs.ospathutil import asure_path_exist
 
 
@@ -11,9 +12,7 @@ from app.libs.ospathutil import asure_path_exist
 def setup_logger(logger_name, log_file, level=logging.DEBUG, log_path=os.path.join(LOG_DIR, "log")):
     last_time = LOGGER_OBJ_DICT.get(logger_name, {}).get('last_time')
     now = datetime.datetime.now()
-    critical_time = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=CRITICAL_HOUR)
-    if last_time is None or (now > critical_time > last_time):
-        log_path = os.path.join(log_path, now.strftime('%Y_%m_%d'))
+    if last_time is None:
         asure_path_exist(log_path)
 
         log_file_path = os.path.join(log_path, log_file)
@@ -22,7 +21,8 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG, log_path=os.path.jo
 
         formatter = logging.Formatter(LOG_FORMAT)
 
-        file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
+        file_handler = handlers.TimedRotatingFileHandler(log_file_path, when='D', interval=1, encoding='utf-8')
+        file_handler.suffix = "%Y_%m_%d.log"
         file_handler.setFormatter(formatter)
 
         stream_handler = logging.StreamHandler()

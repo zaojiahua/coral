@@ -3,10 +3,12 @@ FROM python:3.6
 
 ENV PYTHONUNBUFFERED 1
 
-RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' >/etc/timezone \
-    && sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
-    && apt-get update && apt-get install -y android-tools-adb && apt-get install -y usbutils && apt-get install -y vim \
-    && apt-get install -y pngquant
+RUN sed -i s@/archive.ubuntu.com/@/mirrors.163.com/@g /etc/apt/sources.list \
+    && apt-get update \
+    && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' >/etc/timezone \
+    && apt-get install -y android-tools-adb && apt-get install -y usbutils && apt-get install -y vim \
+    && apt-get install -y pngquant \
+    && apt-get install -y ffmpeg
 
 #RUN export LD_LIBRARY_PATH=./app/coral/lib:$LD_LIBRARY_PATH
 

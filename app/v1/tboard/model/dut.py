@@ -1,4 +1,5 @@
 import logging
+import random
 from threading import Lock
 
 from astra import models
@@ -27,6 +28,7 @@ class Dut(BaseModel):
     device_label = models.CharField()
     current_job_index: int = models.IntegerField()
     model = "app.v1.tboard.model.tboard.TBoard"
+    job_random_order = models.BooleanField()
 
     def save(self, action, attr=None, value=None):
         if action == "post_remove":  # attr = 'pk', value = self.pk
@@ -54,23 +56,43 @@ class Dut(BaseModel):
 
     @property
     def next_job_label(self):
+        if self.job_random_order:
+            if self.current_job_index > 0 and self.current_job_index % len(self.job_label_list) == (len(self.job_label_list) - 1):
+                current_job_label_list = []
+                while len(self.job_label_list) > 0:
+                    current_job_label_list.append(self.job_label_list.lpop())
+                random.shuffle(current_job_label_list)
+                self.job_label_list.rpush(*current_job_label_list)
         self.current_job_index += 1
-        # self.current_job_index_incr()
         return self.get_job_label_by_index(self.current_job_index)
 
     def start_dut(self):
         if self.exist():  # 停止dut 会在callback之前完成，停止dut会删除 dut instance,因此callback 不应进行
-            current_job_label = self.next_job_label
-            if current_job_label is None:  # singal device's job finished
-                logger.info(f"dut ({self.pk}) finished and remove")
-                self.remove_dut()  # 完成后移除
+            from app.v1.device_common.device_model import Device, DeviceStatus
+            device = Device(pk=self.device_label)
+            if device.status == DeviceStatus.ERROR:
+                self.remove_dut()
             else:
-                result_dict, *_ = self.send_djob()
-                self.djob_pk = result_dict.get("pk")
+                current_job_label = self.next_job_label
+                if current_job_label is None:  # singal device's job finished
+                    logger.info(f"dut ({self.pk}) finished and remove")
+                    device_label = self.device_label
+                    self.remove_dut()  # 完成后移除
+                    # 这里设置状态为idle
+                    self.update_device_status(device_label)
+                else:
+                    result_dict, *_ = self.send_djob()
+                    self.djob_pk = result_dict.get("pk")
 
     def remove_dut(self):
         self.remove()
         self.check_tboard_finish()
+
+    def update_device_status(self, device_label=None, status=None):
+        from app.v1.device_common.device_model import Device, DeviceStatus
+        device = Device(pk=device_label or self.device_label)
+        # 这里设置状态为idle
+        device.update_device_status(status or DeviceStatus.IDLE)
 
     def check_tboard_finish(self):
         try:
@@ -91,15 +113,20 @@ class Dut(BaseModel):
         finally:
             lock.release()
 
-    def stop_dut(self):
+    # 代表是否是手动停止的
+    def stop_dut(self, manual_stop=False):
         try:
             logger.debug(f"stop dut--------for {self.device_label}")
             self.stop_djob()
         except Exception as e:
             logger.error(f"stop djob {self.device_label, self.current_job_label} error :{e}")
         finally:
+            # 这里设置状态为idle
+            self.update_device_status(self.device_label)
             self.remove()
-            self.check_tboard_finish()
+            # 手动停止的话，由reef自己判断，防止循环调用
+            if not manual_stop:
+                self.check_tboard_finish()
             logger.info(f"Delete dut device_label {self.device_label} ahead of time")
 
     def stop_djob(self):

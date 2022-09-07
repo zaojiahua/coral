@@ -13,9 +13,10 @@ from app.config.url import coral_ocr_url
 from app.execption.outer.error import APIException
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.compare_calculater import FeatureCompareMixin, separate_point_pixel
-from app.v1.Cuttle.basic.image_schema import IconTestSchema, OcrTestSchema
+from app.v1.Cuttle.basic.image_schema import IconTestSchema, OcrTestSchema, PerformanceSchema
 from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_threshold, icon_rate, icon_min_template, \
     icon_min_template_camera
+from app.v1.Cuttle.basic.calculater_mixin.perforamnce_calculater import PerformanceMinix
 
 
 class TestMixin(object):

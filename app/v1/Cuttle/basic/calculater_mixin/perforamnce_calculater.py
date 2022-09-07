@@ -1,33 +1,26 @@
 import os
 import time
-from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import cv2
 import numpy as np
 
-from app.config.setting import CORAL_TYPE
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.imgtool import IconTooWeek, NotFindIcon
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
-from app.v1.Cuttle.basic.operator.camera_operator import CameraMax
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, BIAS, SWIPE_BIAS, SWIPE_BIAS_HARD, \
-    icon_min_template_camera, light_pyramid_setting, light_pyramid_setting_simple
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, SENSOR
+from redis_init import redis_client
 
 
-# from skimage.measure import compare_ssim
-# from skimage.metrics.structural_similarity import compare_ssim
 class PerformanceMinix(object):
-    dq = deque(maxlen=CameraMax * 4)
-
     def start_point_with_icon(self, exec_content):
         # 方法名字尚未变更，此为滑动检测起点的方法
-        return self.swipe_calculate(exec_content, SWIPE_BIAS_HARD)
+        return self.swipe_calculate(exec_content)
 
-    def swipe_calculate(self, exec_content, bias):
+    def swipe_calculate(self, exec_content):
         data = self._validate(exec_content, PerformanceSchema)
         # 获取用户的icon选区，按中心点重建边长为30的正方形选区，如果机械臂的延长角铁变细这个可以随着做一些变化
         x1 = data.get("icon_areas")[0][0]
@@ -37,11 +30,11 @@ class PerformanceMinix(object):
         icon_areas = [(x1 + x2) / 2 - 0.03, (y1 + y2) / 2 - 0.02, (x1 + x2) / 2 + 0.03, (y1 + y2) / 2 + 0.02]
         performance = PerformanceCenter(self._model.pk, [icon_areas], data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=bias)
-        return performance.start_loop(self._black_field)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop()
 
     def start_point_with_swipe_slow(self, exec_content):
-        self.swipe_calculate(exec_content, BIAS)
+        self.swipe_calculate(exec_content)
 
     def start_point_with_point_template(self, exec_content):
         # 点击相应的主要使用方法
@@ -78,7 +71,11 @@ class PerformanceMinix(object):
             ocr_obj.add_bias(snap_x0, snap_y0)
             executer = ThreadPoolExecutor()
             # 异步延迟执行点击操作，确保另外一个线程的照片可以涵盖到这个操作
-            exec_task = executer.submit(self.delay_exec, ocr_obj.point).add_done_callback(executor_callback)
+            executer.submit(self.delay_exec,
+                            ocr_obj.point,
+                            is_init=True,
+                            performance_start_point=True if SENSOR else False)\
+                .add_done_callback(executor_callback)
             # 兼容其他多选区的格式，增加一层
             # 因为PerformanceCenter内部需要根据起点icon x方向位置，计算阴影补偿，所以此处再统一换回摄像头下的相对坐标
             data["icon_areas"] = [[icon_real_position_camera[0] / w, icon_real_position_camera[1] / h,
@@ -88,8 +85,8 @@ class PerformanceMinix(object):
         # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
-        return performance.start_loop(self._black_field)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop()
 
     def start_point_with_point(self, exec_content):
         # 跟上面那个方法差不多，就是把模板匹配换成surf特征了，其实可以重构时候做些合并
@@ -99,25 +96,31 @@ class PerformanceMinix(object):
         # 获取refer图的size用于计算裁剪后的补偿
         src = cv2.imread(data.get("refer_im"))
         h, w = src.shape[:2]
+
         from app.v1.device_common.device_model import Device
         dev_obj = Device(pk=self._model.pk)
         # 获取手机截图下的size，把相对坐标换成截图下的绝对坐标
         d_h, d_w = dev_obj.device_height, dev_obj.device_width
         snap_x0, snap_y0 = int(data.get("areas")[0][0] * d_w), int(data.get("areas")[0][1] * d_h)
+
         # 先记录下裁剪位置的左上点拍摄图下的绝对坐标
         camera_x0, camera_y0 = int(data.get("areas")[0][0] * w), int(data.get("areas")[0][1] * h)
+
+        # 实时截图
         with Complex_Center(**self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             # 截图按选区先进行裁剪，再set进_pic_path
             ocr_obj._pic_path = self._crop_image_and_save(ocr_obj.default_pic_path, data["areas"][0])
             # 裁剪前的摄像头下的实际图片，赋值给Tguard的判定依据
             self.image = ocr_obj.default_pic_path
+
             # 此处得到的是icon在裁剪后的，摄像头下，图中的绝对坐标
             try:
                 # ocr_obj.get_result_by_feature(content, cal_real_xy=False)
                 ocr_obj.get_result_by_feature(content, cal_real_xy=False)
             except NotFindIcon:
                 return 1
+
             # +-camera_x0先换算到裁剪前摄像头图中的绝对坐标，这个数据用于起点的识别
             icon_real_position_camera = [ocr_obj.cx + camera_x0 - 30, ocr_obj.cy + camera_y0 - 30,
                                          ocr_obj.cx + camera_x0 + 30, ocr_obj.cy + camera_y0 + 30]
@@ -131,13 +134,15 @@ class PerformanceMinix(object):
             # 因为PerformanceCenter内部需要根据起点icon x方向位置，计算阴影补偿，所以此处再统一换回摄像头下的相对坐标
             data["icon_areas"] = [[icon_real_position_camera[0] / w, icon_real_position_camera[1] / h,
                                    icon_real_position_camera[2] / w, icon_real_position_camera[3] / h]]
+
             if self.kwargs.get("test_running"):  # 对试运行的unit只进行点击，不计算时间。
                 return 0
+
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
-        return performance.start_loop(self._black_field)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop()
 
     def start_point_with_point_fixed(self, exec_content):
         # 与上面两个方法也差不多，不做图标搜索了，就是按给的图标位置直接按，适合特别难识别的图标，但没有抵抗变化的能力
@@ -147,17 +152,20 @@ class PerformanceMinix(object):
         y = (y1 + y2) / 2
         request_body = {
             "device_label": self._model.pk,
-            "execCmdList": [f"shell input tap {x} {y}"]
+            "execCmdList": [f"shell input tap {x} {y}"],
+            'is_init': True
         }
         # request_body.update({"ignore_arm_reset": True})
         from app.v1.Cuttle.basic.basic_views import UnitFactory
         executer = ThreadPoolExecutor()
         executer.submit(self.delay_exec, UnitFactory().create, "HandHandler", request_body).add_done_callback(
             executor_callback)
+        if self.kwargs.get("test_running"):
+            return 0
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq, bias=BIAS)
-        return performance.start_loop(self._black_field)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop()
 
     # 下面几个就是上面那几个结束点版本
     def end_point_with_icon(self, exec_content):
@@ -169,32 +177,57 @@ class PerformanceMinix(object):
     def end_point_with_changed(self, exec_content):
         return self._end_point(exec_content, PerformanceSchemaCompare, self._picture_changed)
 
+    def end_point_with_blank(self, exec_content):
+        return self._end_point(exec_content, PerformanceSchema, self._is_blank)
+
+    @staticmethod
+    def wait_end():
+        # 当发生异常的时候，另一个进程可能还在使用相机，所以这里等待几秒再返回，防止t-guard马上使用相机
+        # 这里简单判断一个相机即可
+        while redis_client.get(f"g_bExit_0") == "0":
+            time.sleep(0.1)
+
     def _end_point(self, exec_content, schema, judge_function):
         keep_pic = [2017]
         try:
             data = self._validate(exec_content, schema)
+
+            # 测试unit 目前只有检测黑屏会走这里
+            if self.kwargs.get("test_running"):
+                refer_im = cv2.imread(data.get("refer_im"))
+                h, w, _ = refer_im.shape
+                scope = data.get("icon_areas")[0]
+                area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]]
+                img = refer_im[area[1]:area[3], area[0]:area[2]]
+                threshold = data.get("threshold", 0.99)
+                ret = judge_function(img, None, None, threshold)
+                return 0 if ret else 1
+
             performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                             data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq)
+                                            self.kwargs.get("work_path"))
             performance.end_loop(judge_function)
-            time.sleep(0.5)  # 等待后续30张图片save完成
             self.extra_result = performance.result
             return 0
         except APIException as e:
             self.image = performance.tguard_picture_path if hasattr(performance, "tguard_picture_path") else None
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
+            self.wait_end()
             if hasattr(e, 'error_code'):
                 if e.error_code in keep_pic:
                     return 1
                 else:
                     return e.error_code
             return 1
+        except Exception as e:
+            self.wait_end()
+            raise e
 
     def start_point_with_fps_lost(self, exec_content):
         data = self._validate(exec_content, PerformanceSchemaCompare)
         performance = PerformanceCenter(self._model.pk, None, None,
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), self.dq)
+                                        self.kwargs.get("work_path"))
         return performance.start_loop(self._picture_changed)
 
     def end_point_with_fps_lost(self, exec_content):
@@ -202,7 +235,7 @@ class PerformanceMinix(object):
             data = self._validate(exec_content, PerformanceSchemaFps)
             performance = PerformanceCenter(self._model.pk, None, None,
                                             data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"), self.dq, fps=data.get("fps"))
+                                            self.kwargs.get("work_path"), fps=data.get("fps"))
             performance.test_fps_lost(self._picture_changed)
             self.extra_result = performance.result
             result = 0 if performance.result.get("fps_lost") == False else 1
@@ -223,13 +256,6 @@ class PerformanceMinix(object):
         from app.v1.Cuttle.basic.basic_views import UnitFactory
         response = UnitFactory().create("ImageHandler", request_dict)
         return response
-
-    def _black_field(self, picture, _, __, threshold):
-        result = np.count_nonzero(picture < 40)
-        standard = picture.shape[0] * picture.shape[1] * picture.shape[2]
-        # picture shape is 0?
-        match_ratio = result / standard
-        return match_ratio > threshold - 0.01
 
     def _icon_find(self, picture, icon, _, threshold, disappear=False):
         try:
@@ -299,3 +325,18 @@ class PerformanceMinix(object):
     def delay_exec(self, function, *args, **kwargs):
         time.sleep(kwargs.get("sleep", 0.3))
         return function(*args, **kwargs)
+
+    def _is_blank(self, pic, next_pic, third_pic, threshold):
+        # cv2.imwrite('result_0.png', pic)
+        pic = cv2.cvtColor(pic, cv2.COLOR_BGR2GRAY)
+        ret, binary = cv2.threshold(pic, 50, 255, cv2.THRESH_BINARY)
+        # cv2.imwrite('result.png', binary)
+
+        w, h = binary.shape
+        nonzero_count = np.count_nonzero(binary)
+        all_pixes = w * h
+        blank_rate = (all_pixes - nonzero_count) / all_pixes
+        if blank_rate > threshold:
+            return 1
+        else:
+            return 0

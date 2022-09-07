@@ -4,7 +4,8 @@ import random
 import cv2
 import numpy as np
 
-from app.v1.Cuttle.basic.common_utli import precise_match, blur_match, check_color_by_position, suit_for_blur
+from app.v1.Cuttle.basic.common_utli import blur_match, check_color_by_position, suit_for_blur, \
+    condition_judge
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import ImageColorSchema, ImageColorRelativePositionSchema, ImageColorPostionSchema
 from app.v1.Cuttle.basic.setting import color_rate, color_threshold, strip_str
@@ -23,7 +24,8 @@ class ColorMixin(object):
             b_required, g_required, r_required = self.get_color_by_position(data)
 
         input_crop = self._crop_image(data.get("input_im"), data.get("areas")[0]).astype(np.int32)
-        self._save_crop_image(data.get('input_im'), input_crop)
+        new_path = self._save_crop_image(data.get('input_im'), input_crop)
+        self.extra_result['not_compress_png_list'].append(new_path)
         b_input, g_input, r_input = cv2.split(input_crop)
         result = self._color_judge(b_input, b_required, g_input, g_required, r_input, r_required, data)
         return result
@@ -32,10 +34,7 @@ class ColorMixin(object):
         # 判断所选区域内文字为期待的颜色
         exec_content, is_blur = suit_for_blur(exec_content)
         identify_words_list, words_list = self._is_color_words(exec_content)
-        if not is_blur:
-            return precise_match(identify_words_list, words_list)
-        else:
-            return blur_match(identify_words_list, words_list)
+        return condition_judge(is_blur, False, words_list, identify_words_list)
 
     def get_color_by_position(self, data):
         src_refer = cv2.imread(data.get("refer_im"))
@@ -69,6 +68,7 @@ class ColorMixin(object):
         # 拿上面生成的二值化图片去识别问题，除了指定颜色其他都换为黑色了
         # （这儿有一种bug，就是选了白色背底色，其他彩色文字变成黑色之后，黑白依旧可以看出来）
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             response = ocr_obj.get_result()
         identify_words_list = [item.get("text").strip().strip(strip_str) for item in response]
         return identify_words_list, words_list
@@ -84,6 +84,7 @@ class ColorMixin(object):
         match_function = "get_result" if is_blur == False else "get_result_ignore_speed"
         with Complex_Center(inputImgFile=input_crop_path, **data, **self.kwargs) as ocr_obj:
             ocr_obj.default_pic_path = input_crop_path
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             getattr(ocr_obj, match_function)()
             x = ocr_obj.cx + ocr_obj.x_shift
             y = ocr_obj.cy + ocr_obj.y_shift
@@ -104,4 +105,4 @@ class ColorMixin(object):
     # ------------------------------已经废弃的unit   但还需要支持之前用过的job  不能删除----------------------
     def is_excepted_color_word_blur(self, exec_content) -> int:
         identify_words_list, words_list = self._is_color_words(exec_content)
-        return blur_match(identify_words_list, words_list)
+        return blur_match(words_list, identify_words_list)

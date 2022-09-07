@@ -15,13 +15,13 @@ class DeviceBase(MethodView):
 class GetDevice(DeviceBase):
     def get(self):
         respnse_body = self.door_keeper.get_device_info_compatibility()
-        return jsonify(respnse_body), 200
+        return jsonify(dict(error_code=0, data=respnse_body))
 
 
 class GetAssisDevice(DeviceBase):
     def get(self):
         respnse_body = self.door_keeper.get_assis_device()
-        return jsonify(respnse_body), 200
+        return jsonify(dict(error_code=0, data=respnse_body))
 
 
 class SetAssisDevice(DeviceBase):
@@ -36,7 +36,7 @@ class SetDevice(DeviceBase):
         data = request.get_json()
         # todo validate data first
         self.door_keeper.authorize_device(**data)
-        return jsonify({"state": "DONE"}), 200
+        return jsonify({"error_code": 0}), 200
 
 
 class SetDeviceManual(DeviceBase):
@@ -45,8 +45,8 @@ class SetDeviceManual(DeviceBase):
         try:
             data = request.get_json()
             self.door_keeper.authorize_device_manually(**data)
-            return jsonify({"state": "DONE"}), 200
-        except (AttributeError,ValueError) as e:
+            return jsonify({"error_code": 0}), 200
+        except (AttributeError, ValueError) as e:
             print(repr(e))
             return jsonify({"state": "Fail"}), 400
 
@@ -74,3 +74,12 @@ class UpdateDeviceInfo(DeviceBase):
     def post(self):
         ret_data = self.door_keeper.update_device_info(request.get_json())
         return jsonify(dict(error_code=0, data=ret_data))
+
+
+# 更新机型和硬件设备的通用接口
+class UpdateDoorInfo(DeviceBase):
+    def post(self):
+        data = request.get_json()
+        if data is not None:
+            self.door_keeper.update_door_info(data)
+        return jsonify({"error_code": 0}), 200

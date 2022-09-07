@@ -9,7 +9,7 @@ from app.config.setting import PROJECT_SIBLING_DIR
 from app.config.url import rds_url, job_url, device_power_url, device_temper_url, insert_tboard_url, device_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.stew import GetResourceFail
-from app.libs.functools import execute_limit
+from app.libs.func_tools import execute_limit
 from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
@@ -36,6 +36,7 @@ def send_battery_check(device_label, device_ip):
         jsdata["ip_address"] = device_ip
         jsdata["device_label"] = device_label
         jsdata["execCmdList"] = cmd_list
+        jsdata['max_retry_time'] = 1
         UnitFactory().create("AdbHandler", jsdata)
     except func_timeout.exceptions.FunctionTimedOut as e:
         pass
@@ -225,6 +226,7 @@ class AideMonitor(object):
         """
         :return: 1 -->charge  0--> uncharge
         """
+        print("获取到的电量: ", battery_data)
         if len(battery_data[0]) < battery_data_amount:
             result = 2
         else:
@@ -240,10 +242,10 @@ class AideMonitor(object):
         self.logger.debug(f"do_action_for_battery:{judge_result}")
         if judge_result == 2:
             return
-        return on_or_off_singal_port({
-            "port": self.device_object.power_port,
-            "action": judge_result
-        })
+        # return on_or_off_singal_port({
+        #     "port": self.device_object.power_port,
+        #     "action": judge_result
+        # })
 
     # -------------------------------------------------------------------------
     @execute_limit(300)

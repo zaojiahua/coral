@@ -100,3 +100,11 @@ class ImageIsNoneException(APIException):
     code = 400
     error_code = 4010
     description = 'image is none exception'
+
+
+class DeviceStatusError(APIException):
+    """
+    设备连接断开，剩下的unit不再执行
+    """
+    error_code = 4011
+    description = '设备连接断开，剩下的unit不再执行'

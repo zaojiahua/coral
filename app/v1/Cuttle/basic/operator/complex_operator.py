@@ -36,6 +36,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             self.image = ocr_obj.default_pic_path
+            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
             ocr_obj.get_result()
             ocr_obj.point()
         return ocr_obj.result
@@ -77,7 +78,6 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
             return 2
 
     def press_and_swipe(self, content) -> int:
-        # 未知意义方法，似乎已经没有在使用....
         with Complex_Center(**content, **self.kwargs) as ocr_obj:
             ocr_obj.snap_shot()
             self.image = ocr_obj.default_pic_path
@@ -106,8 +106,8 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
     def icon_found_with_direction(self, content, click=True):
         # 自动找icon
         from app.v1.device_common.device_model import Device
-        device_width = Device(pk=self._model.pk).device_width
-        device_height = Device(pk=self._model.pk).device_height
+        device_width, device_height = Device.get_device_width_height(self.kwargs.get("assist_device_serial_number")
+                                                                     or self._model.pk)
         center_x = int(device_width / 2)
         center_y = int(device_height / 2)
         mapping_dict = {"left": ((device_width * 0.9), center_y, (device_width * 0.1), center_y),
@@ -123,6 +123,7 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     if hasattr(self, "image") and judge_pic_same(ocr_obj.default_pic_path, self.image):
                         return 1
                     self.image = ocr_obj.default_pic_path
+                    self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
                     getattr(ocr_obj, match_function)()
                     if click:
                         ocr_obj.point()
@@ -130,9 +131,10 @@ class ComplexHandler(ImageHandler, AdbHandler, AreaSelectedMixin):
                     x_start, y_start, x_end, y_end = mapping_dict.get(content.get("direction"), (500, 500, 900, 700))
                     ocr_obj.cx = x_start
                     ocr_obj.cy = y_start
-                    speed = 500 if CORAL_TYPE < 4 else 11000
+                    is_adb = CORAL_TYPE < 4 or self.kwargs.get("assist_device_serial_number") is not None
+                    speed = 500 if is_adb else 500
                     ocr_obj.swipe(x_end=x_end, y_end=y_end, speed=speed)
-                    if CORAL_TYPE >= 4:
+                    if not is_adb:
                         time.sleep(1)
                     continue
             return ocr_obj.result

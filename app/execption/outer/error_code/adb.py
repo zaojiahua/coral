@@ -8,13 +8,13 @@ from app.execption.outer.error import APIException
 class NoMoreThanOneDevice(APIException):
     error_code = 1000
     code = 400
-    description = 'single device register only allow one device in usb'
+    description = '注册设备时，主机上只能连接一台未注册的设备。'
 
 
 class DeviceNotInUsb(APIException):
     error_code = 1001
     code = 400
-    description = "DO YOU FORGET CONNECT DEVICE? or Your device already in other cabinet"
+    description = "无法连接设备。请检查设备是否连接注册线、USB调试是否打开。"
 
 
 class DeviceChanged(APIException):
@@ -50,7 +50,7 @@ class DeviceWmSizeFail(APIException):
 class DeviceAlreadyInCabinet(APIException):
     error_code = 1007
     code = 400
-    description = "need to logout device in this or other cabinet first"
+    description = "设备已存在于当前系统中，请检查。"
 
 
 class UnitBusy(APIException):
@@ -86,7 +86,7 @@ class ArmNorEnough(APIException):
     """
     error_code = 1011
     code = 400
-    description = "  Not enough arm! You need to logout one device first"
+    description = "添加失败！该机柜中已有1台设备，请先将其移除。"
 
 
 class FindAppVersionFail(APIException):

@@ -214,19 +214,33 @@ class SensorSerial(HandSerial):
 
     # 读取按压的力值
     def query_sensor_value(self):
-        regex = re.compile("fe0150[\w+]*cffcccff")
+        regex = re.compile("fe015000([\w+]*?)cffcccff")
 
         for i in range(3):
-            return_data = self.ser.read(24)
+            return_data = self.ser.read(36)
             str_return_data = str(return_data.hex())
             result = re.search(regex, str_return_data)
             if result is None:
                 continue
-            data = result.group(0)[:22]
+            data = result.group(0)
             print("data: ", data)
-            if len(data) != 22 or data[6:16] == "f" * 8:
-                pass
-            value = int(data[12:14], 16) / 10
+            value = self.check_value(data)
+            if isinstance(value, bool):
+                continue
             print("取到的力值：", value)
             return value
         return 0
+
+    @staticmethod
+    def check_value(match_data):
+        """
+        判断读取到数据是否有效，有效则换算成对应的力值
+        data: eg: fe015000ffffffffcffcccff
+        """
+        sensor_ret_value = match_data[8:][:-8]
+        if len(sensor_ret_value) % 2 != 0:
+            return False
+        if sensor_ret_value.count('f') == len(sensor_ret_value):
+            return False
+        value = int(sensor_ret_value, 16) / 10
+        return value

@@ -410,6 +410,9 @@ class PerformanceCenter(object):
                     if max_times <= 0:
                         break
 
+            if max_times <= 0:
+                print('相机中没有图片。。。。。。', len(self.back_up_dq))
+
         area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
             if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
 

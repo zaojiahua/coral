@@ -238,7 +238,7 @@ class SensorSerial(HandSerial):
         data: eg: fe015000ffffffffcffcccff
         """
         sensor_ret_value = match_data[8:][:-8]
-        if len(sensor_ret_value) % 2 != 0:
+        if len(sensor_ret_value) != 8:
             return False
         if sensor_ret_value.count('f') == len(sensor_ret_value):
             return False

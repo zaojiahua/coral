@@ -12,7 +12,8 @@ from astra import models
 from app.config.setting import DEFAULT_DATE_TIME_FORMAT
 from app.config.url import rds_create_or_update_url, rds_performance_pic
 from app.execption.outer.error import APIException
-from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, OwnerList, OwnerFloatField, OwnerForeignKey
+from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, OwnerList, OwnerFloatField, OwnerForeignKey, \
+    DictField
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
@@ -33,6 +34,7 @@ class DJob(BaseModel):
     job_flows_order = OwnerList(to=int)
     # 保存job flow的名字，rds中使用
     job_flows_name = OwnerList(to=str)
+    job_parameter = DictField()
 
     current_djob_flow: DJobFlow = OwnerForeignKey(to=DJobFlow)
     djob_flow_list: List[DJobFlow] = OwnerList(to=DJobFlow)
@@ -80,7 +82,8 @@ class DJob(BaseModel):
                 self.current_djob_flow = DJobFlow(flow_id=flow_id, device_label=self.device_label,
                                                   job_label=self.job_label, source=self.source,
                                                   tboard_path=self.tboard_path,
-                                                  flow_name=self.job_flows_name[flow_index])
+                                                  flow_name=self.job_flows_name[flow_index],
+                                                  job_parameter=self.job_parameter)
                 self.djob_flow_list.rpush(self.current_djob_flow)
 
                 self.current_djob_flow.run_single_flow()

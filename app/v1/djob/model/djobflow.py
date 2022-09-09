@@ -43,6 +43,7 @@ class DJobFlow(BaseModel):
     # 记录父级flow_id 为0代表没有父级
     parent_flow_id = models.IntegerField()
     flow_name = models.CharField()
+    job_parameter = DictField()
 
     job: Job = OwnerForeignKey(to=Job)
     device: DjobDevice = OwnerForeignKey(to=DjobDevice)
@@ -334,7 +335,8 @@ class DJobFlow(BaseModel):
             "rds_path": self.device.rds_data_path,
             "temp_port_list": self.device.temp_port.lrange(0, -1),
             "ip_address": self.device.ip_address,
-            **job_node.exec_node_dict
+            **job_node.exec_node_dict,
+            'job_parameter': self.job_parameter
         }
 
         return insert_eblock(json_data)

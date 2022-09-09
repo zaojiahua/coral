@@ -138,6 +138,7 @@ class Dut(BaseModel):
             "job_label": self.current_job_label,
             "flow_execute_mode": self.job_msg[self.current_job_label]["flow_execute_mode"],
             "job_flows": self.job_msg[self.current_job_label]["job_flows"],
+            'job_parameter': self.job_msg[self.current_job_label]["job_parameter"],
             "source": "tboard",
             "tboard_id": self.parent.pk,
             "tboard_path": self.parent.tboard_path

@@ -208,7 +208,7 @@ class MacroHandler(object):
             for env_var in env_vars:
                 key = f'{EnvVar}{env_var}>'
                 if env_var in self.job_parameter:
-                    cmd = cmd.replace(key, self.job_parameter.get(env_var))
+                    cmd = cmd.replace(key, str(self.job_parameter.get(env_var)))
 
         if pipe_command in cmd:
             cmd = cmd.replace(pipe_command, find_command)

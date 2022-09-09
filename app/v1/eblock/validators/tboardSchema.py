@@ -21,6 +21,8 @@ class UnitSchema(BaseSchema):
     optionalInputImage = fields.Integer()
     # 横屏还是竖屏 点击unit的时候需要
     portrait = fields.Integer()
+    # 性能测试时候判断的字段
+    start_method = fields.Integer()
 
 
 class UnitListSchema(BaseSchema):

@@ -31,7 +31,7 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, [icon_areas], data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"))
-        return performance.start_loop()
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_swipe_slow(self, exec_content):
         self.swipe_calculate(exec_content)
@@ -142,7 +142,7 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"))
-        return performance.start_loop()
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point_fixed(self, exec_content):
         # 与上面两个方法也差不多，不做图标搜索了，就是按给的图标位置直接按，适合特别难识别的图标，但没有抵抗变化的能力
@@ -165,7 +165,7 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"))
-        return performance.start_loop()
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     # 下面几个就是上面那几个结束点版本
     def end_point_with_icon(self, exec_content):

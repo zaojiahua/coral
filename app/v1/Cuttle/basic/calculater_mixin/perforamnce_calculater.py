@@ -11,7 +11,7 @@ from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, SENSOR
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate
 from redis_init import redis_client
 
 
@@ -31,7 +31,7 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, [icon_areas], data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"))
-        return performance.start_loop()
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_swipe_slow(self, exec_content):
         self.swipe_calculate(exec_content)
@@ -73,8 +73,7 @@ class PerformanceMinix(object):
             # 异步延迟执行点击操作，确保另外一个线程的照片可以涵盖到这个操作
             executer.submit(self.delay_exec,
                             ocr_obj.point,
-                            is_init=True,
-                            performance_start_point=True if SENSOR else False)\
+                            is_init=True)\
                 .add_done_callback(executor_callback)
             # 兼容其他多选区的格式，增加一层
             # 因为PerformanceCenter内部需要根据起点icon x方向位置，计算阴影补偿，所以此处再统一换回摄像头下的相对坐标
@@ -82,11 +81,12 @@ class PerformanceMinix(object):
                                    icon_real_position_camera[2] / w, icon_real_position_camera[3] / h]]
             if self.kwargs.get("test_running"):  # 对试运行的unit只进行点击，不计算时间。
                 return 0
+
         # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"))
-        return performance.start_loop()
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point(self, exec_content):
         # 跟上面那个方法差不多，就是把模板匹配换成surf特征了，其实可以重构时候做些合并
@@ -142,7 +142,7 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"))
-        return performance.start_loop()
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point_fixed(self, exec_content):
         # 与上面两个方法也差不多，不做图标搜索了，就是按给的图标位置直接按，适合特别难识别的图标，但没有抵抗变化的能力
@@ -165,7 +165,7 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"))
-        return performance.start_loop()
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     # 下面几个就是上面那几个结束点版本
     def end_point_with_icon(self, exec_content):

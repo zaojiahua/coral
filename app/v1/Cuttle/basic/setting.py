@@ -27,7 +27,6 @@ Z_DOWN = None
 ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
-SENSOR = False
 # 通过算法计算出来m_location
 COMPUTE_M_LOCATION = True
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
@@ -61,10 +60,6 @@ elif math.floor(CORAL_TYPE) == 5:
     except ImportError:
         m_location_center = [157, 202.5, -24]
     set_global_value('m_location_center', m_location_center)
-try:
-    from app.config.ip import SENSOR
-except ImportError:
-    pass
 try:
     from app.config.ip import COMPUTE_M_LOCATION
 except ImportError:

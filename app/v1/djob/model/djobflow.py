@@ -1,4 +1,5 @@
 import os
+import re
 import traceback
 import zipfile
 from datetime import datetime
@@ -31,6 +32,7 @@ from app.v1.djob.viewModel.job import JobViewModel
 from app.v1.eblock.model.eblock import Eblock
 from app.v1.eblock.views.eblock import insert_eblock, stop_eblock
 from app.execption.outer.error_code.imgtool import DetectNoResponse
+from app.v1.eblock.model.macro_replace import BlockTimes
 
 
 class DJobFlow(BaseModel):
@@ -180,6 +182,18 @@ class DJobFlow(BaseModel):
 
                 if self.stop_flag:
                     raise EblockEarlyStop
+
+                # 运行次数动态定义
+                max_time = node_dict['maxTime'] if node_dict and node_dict["nodeType"] == SWITCH_TYPE else ''
+                if BlockTimes in str(max_time):
+                    # 里边的数字代表如果服务器没有传入动态参数，则默认的次数
+                    max_time = re.findall(f"{BlockTimes}(.*?)>", max_time)
+                    if len(max_time) > 0:
+                        max_time = max_time[0]
+                    else:
+                        max_time = 1
+                    node_dict['maxTime'] = self.job_parameter['time'] if 'time' in self.job_parameter else max_time
+                    print(self.job_parameter, 'aaaaaaaaaaaa')
 
                 next_node_dict = self._execute_node(node_key, node_dict)
                 if next_node_dict is None:  # djob 执行出口

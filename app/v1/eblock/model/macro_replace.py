@@ -46,6 +46,7 @@ Resource = "<Acc_"
 Phone = "<Sim_"
 pipe_command = "<FindCommand>"
 EnvVar = '<EnvVar_'
+BlockTimes = '<BlockTimes'
 
 job_editor_logo = "Tmach"
 

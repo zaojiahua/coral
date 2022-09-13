@@ -33,7 +33,8 @@ class TBoardViewModel(object):
 
         dut_obj = Dut(pk=f"{device_label}_{tboard_id}", parent_pk=tboard_id, stop_flag=False,
                       device_label=device_label,
-                      job_msg={job["job_label"]: job for job in self.jobs},
+                      # 有可能job_label是一样的，所以必须加额外的一个字段标识
+                      job_msg={job["job_label"] + f':{job_index}': job for job_index, job in enumerate(self.jobs)},
                       repeat_time=repeat_time, current_job_index=-1, job_random_order=job_random_order)
 
         dut_obj.job_label_list.rpush(*job_label_list)

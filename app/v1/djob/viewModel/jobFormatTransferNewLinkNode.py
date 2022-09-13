@@ -182,11 +182,13 @@ class JobFormatTransform:
                         return 'success'
                     elif nodeDict['text'] == 'Abnormal':
                         return 'Abnormal'
+                    elif nodeDict['text'] == 'Terminate':
+                        return 'Terminate'
 
     def isEnd(self, blockKey, nodeDataArray):
         existEnd = False
         for nodeDict in nodeDataArray:
-            if nodeDict.get('category', '') in ['End', 'Fail', 'Success', 'Abnormal']:
+            if nodeDict.get('category', '') in ['End', 'Fail', 'Success', 'Abnormal', 'Terminate']:
                 existEnd = True
                 if str(nodeDict['key']) == str(blockKey):
                     return True

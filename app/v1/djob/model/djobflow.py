@@ -21,7 +21,7 @@ from app.libs.log import setup_logger
 from app.libs.ospathutil import file_rename_from_path
 from app.v1.djob.config.setting import NORMAL_TYPE, SWITCH_TYPE, END_TYPE, FAILED_TYPE, ADBC_TYPE, TEMPER_TYPE, \
     IMGTOOL_TYPE, SUCCESS_TYPE, SUCCESS, FAILED, INNER_DJOB_TYPE, DJOB, COMPLEX_TYPE, ERROR_FILE_DIR, ABNORMAL_TYPE, \
-    ABNORMAL
+    ABNORMAL, TERMINATE_TYPE, TERMINATE
 from app.v1.djob.model.device import DjobDevice
 from app.v1.djob.model.job import Job
 from app.v1.djob.model.joblink import JobLink
@@ -192,8 +192,8 @@ class DJobFlow(BaseModel):
                         max_time = max_time[0]
                     else:
                         max_time = 1
-                    node_dict['maxTime'] = self.job_parameter['time'] if 'time' in self.job_parameter else max_time
-                    print(self.job_parameter, 'aaaaaaaaaaaa')
+                    node_dict['maxTime'] = self.job_parameter['time'] - 1 if 'time' in self.job_parameter else max_time
+                    print(self.job_parameter)
 
                 next_node_dict = self._execute_node(node_key, node_dict)
                 if next_node_dict is None:  # djob 执行出口
@@ -241,6 +241,8 @@ class DJobFlow(BaseModel):
             result_code = self.djob_result()
             result_code = ABNORMAL if result_code in [0, 1] else result_code
             return result_code
+        elif last_node == TERMINATE_TYPE:
+            return TERMINATE
         else:
             raise JobExecBodyException(description=f"job {self.job_label} exec failed:  last exec node is {last_node}")
 
@@ -261,7 +263,7 @@ class DJobFlow(BaseModel):
         elif job_node.node_type == SWITCH_TYPE:
             next_node_dict = self._execute_switch(job_node)
 
-        elif job_node.node_type in [END_TYPE, SUCCESS_TYPE, FAILED_TYPE, ABNORMAL_TYPE]:
+        elif job_node.node_type in [END_TYPE, SUCCESS_TYPE, FAILED_TYPE, ABNORMAL_TYPE, TERMINATE_TYPE]:
             return
         else:
             raise JobExecBodyException(description=f"invalid node type :{job_node.node_type}")

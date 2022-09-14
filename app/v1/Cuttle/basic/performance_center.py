@@ -140,8 +140,8 @@ class PerformanceCenter(object):
             print('找到了起始点', self.start_timestamp)
             close_all_sensor_connect()
 
-        # 将压力值记录下来，显示在图片上，方便用户查看
-        self.back_up_dq[pic_number]['force'] = cur_force
+        # 将压力值记录下来，显示在图片上，方便用户查看 处理的图片不一定是当前获取力值时候的图片，二者并不同步
+        self.back_up_dq[-1]['force'] = cur_force
         return find_begin_point
 
     def get_icon(self, refer_im_path):
@@ -501,10 +501,6 @@ class PerformanceCenter(object):
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
         try:
-            # 压力传感器的压力值图片多保存几张
-            if self.start_method in [1, 2]:
-                self.bias += 10
-
             for cur_index in range(end_number):
                 picture_info = self.back_up_dq[cur_index]
                 picture = self.get_back_up_image(picture_info['image'])
@@ -521,7 +517,7 @@ class PerformanceCenter(object):
                                                 (self.start_area[2], self.start_area[3]), (0, 0, 255), 2)
                         picture = cv2.putText(picture.copy(), str(match_ratio), (self.start_area[2] + 10, self.start_area[1] + 10),
                                               cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 3)
-                    elif self.start_method == 1:
+                    elif self.start_method in [1, 2] and 'force' in picture_info:
                         force = picture_info['force']
                         picture = cv2.putText(picture.copy(), f'force: {force}',
                                               (int((self.start_area[0] + self.start_area[2]) / 2),

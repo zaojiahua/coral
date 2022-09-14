@@ -25,7 +25,7 @@ EXTRA_PIC_NUMBER = 40
 class PerformanceCenter(object):
     # dq存储起始点前到终止点后的每一帧图片
     inner_back_up_dq = deque(maxlen=CameraMax)
-    # 0: _black_field
+    # 0: _black_field 1: 按下压感 2: 抬起压感 3: 图标膨胀
     start_method = 0
     start_area = None
     start_number = 0
@@ -91,6 +91,8 @@ class PerformanceCenter(object):
             return is_find
         elif self.start_method == 1:
             return self.sensor_press_down(pic_number)
+        elif self.start_method == 2:
+            return self.sensor_press_down(pic_number, up=True)
 
     @staticmethod
     def black_field(picture):
@@ -106,7 +108,7 @@ class PerformanceCenter(object):
         return match_ratio > threshold
 
     # 传感器获取按压的起始点
-    def sensor_press_down(self, pic_number):
+    def sensor_press_down(self, pic_number, up=False):
         find_begin_point = False
         cur_force = 0
 
@@ -122,15 +124,20 @@ class PerformanceCenter(object):
             # 力是一个从小变大，又变小的过程
             cur_force = sensor_serial_obj_dict[sensor_key].query_sensor_value()
             if cur_force < self.max_force:
+                # 抬起的起始点
                 find_begin_point = True
-                self.start_timestamp = time.time() * 1000
-                print('找到了起始点', self.start_timestamp)
                 break
             elif cur_force > self.max_force:
                 self.max_force = cur_force
                 self.sensor_index = index
+                # 按下的起始点
+                if cur_force > 0 and not up:
+                    find_begin_point = True
+                    break
 
         if find_begin_point:
+            self.start_timestamp = time.time() * 1000
+            print('找到了起始点', self.start_timestamp)
             close_all_sensor_connect()
 
         # 将压力值记录下来，显示在图片上，方便用户查看
@@ -226,7 +233,7 @@ class PerformanceCenter(object):
 
         picture_not_enough = False
         timestamp_dict = {}
-        if self.start_method != 1:
+        if self.start_method == 0:
             while True:
                 picture, next_picture, third_pic, timestamp = self.picture_prepare(number, self.start_area)
                 timestamp_dict[number] = timestamp
@@ -494,6 +501,10 @@ class PerformanceCenter(object):
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
         try:
+            # 压力传感器的压力值图片多保存几张
+            if self.start_method in [1, 2]:
+                self.bias += 10
+
             for cur_index in range(end_number):
                 picture_info = self.back_up_dq[cur_index]
                 picture = self.get_back_up_image(picture_info['image'])

@@ -26,6 +26,7 @@ class JobSchema(BaseSchema):
     updated_time = fields.Str(required=True)
     url = fields.Str(required=True)
     inner_job = fields.Nested("self", many=True, only=["job_label", "updated_time", "url"])
+    job_parameter = fields.Raw(required=False)
 
 
 class DeviceMappingSchema(BaseSchema):

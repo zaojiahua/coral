@@ -46,6 +46,7 @@ Resource = "<Acc_"
 Phone = "<Sim_"
 pipe_command = "<FindCommand>"
 EnvVar = '<EnvVar_'
+BlockTimes = '<BlockTimes'
 
 job_editor_logo = "Tmach"
 
@@ -74,6 +75,8 @@ class MacroHandler(object):
         self.rds_path = rds_path
         self.device_temp_port_list = temp_port_list
         self.ip_address = ip_address
+        # 动态参数
+        self.job_parameter = kwargs.get('job_parameter', {})
 
     def replace(self, cmd, unit_work_path, cmd_key=None, **kwargs):
         assist_device_ident = kwargs.pop("assist_device_ident", None)
@@ -204,7 +207,9 @@ class MacroHandler(object):
         if EnvVar in cmd:
             env_vars = re.findall(f"{EnvVar}(.*?)>", cmd)
             for env_var in env_vars:
-                cmd = cmd.replace(f'{EnvVar}{env_var}>', 'abc')
+                key = f'{EnvVar}{env_var}>'
+                if env_var in self.job_parameter:
+                    cmd = cmd.replace(key, str(self.job_parameter.get(env_var)))
 
         if pipe_command in cmd:
             cmd = cmd.replace(pipe_command, find_command)

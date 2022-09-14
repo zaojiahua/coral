@@ -48,6 +48,8 @@ class Dut(BaseModel):
         job_list_len = len(self.job_label_list)
         if job_index < self.total_job_number and job_list_len > 0:
             ret = self.job_label_list[job_index % job_list_len]
+        if ret is not None:
+            return ret + f':{job_index}'
         return ret
 
     @property
@@ -135,9 +137,10 @@ class Dut(BaseModel):
     def send_djob(self):
         json_data = {
             "device_label": self.device_label,
-            "job_label": self.current_job_label,
+            "job_label": self.current_job_label.split(':')[0],
             "flow_execute_mode": self.job_msg[self.current_job_label]["flow_execute_mode"],
             "job_flows": self.job_msg[self.current_job_label]["job_flows"],
+            'job_parameter': self.job_msg[self.current_job_label].get("job_parameter", {}),
             "source": "tboard",
             "tboard_id": self.parent.pk,
             "tboard_path": self.parent.tboard_path

@@ -39,6 +39,7 @@ SUCCESS_TYPE = "success"
 FAILED_TYPE = "fail"
 START_TYPE = "start"
 ABNORMAL_TYPE = "Abnormal"
+TERMINATE_TYPE = 'Terminate'
 
 # unit setting
 RESULT_TYPE = "#3AFFF3"  # 结果unit的标示
@@ -47,6 +48,7 @@ RESULT_TYPE = "#3AFFF3"  # 结果unit的标示
 SUCCESS = 0
 FAILED = 1
 ABNORMAL = -111
+TERMINATE = 2
 
 # unit category
 ADBC_TYPE = "ADBC"

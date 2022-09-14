@@ -107,7 +107,7 @@ else:
 ERROR_CODE_FILE = 'error_code.csv'
 
 # 不同主机对应的邮件列表人员
-default_email_address = ['gh@anhereef.com', 'lx@anhereef.com', 'jy@anhereef.com']
+default_email_address = ['xh@anhereef.com']
 email_addresses = {
     22: ['zc@anhereef.com'],
     25: ['whz@anhereef.com']

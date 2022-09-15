@@ -59,7 +59,7 @@ class Dut(BaseModel):
     @property
     def next_job_label(self):
         if self.job_random_order:
-            if self.current_job_index > 0 and self.current_job_index % len(self.job_label_list) == (len(self.job_label_list) - 1):
+            if self.current_job_index > 0 and self.current_job_index % len(self.job_label_list) == 0:
                 current_job_label_list = []
                 while len(self.job_label_list) > 0:
                     current_job_label_list.append(self.job_label_list.lpop())

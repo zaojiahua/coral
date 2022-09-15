@@ -17,7 +17,7 @@ from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, Owner
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
-from app.v1.djob.config.setting import SINGLE_SPLIT
+from app.v1.djob.config.setting import SINGLE_SPLIT, TERMINATE
 from app.v1.djob.model.djobflow import DJobFlow
 from app.libs.adbutil import get_room_version
 from app.config.ip import ADB_TYPE
@@ -97,6 +97,10 @@ class DJob(BaseModel):
                     break
             self.analysis_result()
             self.postprocess()
+
+            if int(self.current_djob_flow.job_assessment_value) == TERMINATE:
+                from app.v1.tboard.views.remove_tboard import remove_tboard_inner
+                remove_tboard_inner(self.tboard_id, False)
 
     def analysis_result(self):
 

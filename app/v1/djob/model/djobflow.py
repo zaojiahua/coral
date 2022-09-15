@@ -193,7 +193,7 @@ class DJobFlow(BaseModel):
                     else:
                         max_time = 1
                     node_dict['maxTime'] = self.job_parameter['time'] - 1 if 'time' in self.job_parameter else max_time
-                    print(self.job_parameter)
+                    print(self.job_parameter, 'job_parameter')
 
                 next_node_dict = self._execute_node(node_key, node_dict)
                 if next_node_dict is None:  # djob 执行出口
@@ -341,7 +341,6 @@ class DJobFlow(BaseModel):
         self.current_eblock = Eblock()
 
         # self.rds.eblock_list.rpush(eblock)
-
         json_data = {
             "pk": self.current_eblock.pk,
             "block_index": self.exec_node_index,

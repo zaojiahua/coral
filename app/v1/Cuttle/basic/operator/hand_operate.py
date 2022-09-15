@@ -434,7 +434,7 @@ class HandHandler(Handler, DefaultMixin):
         exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1], pix_point[2],
                                                                                self._model.pk,
                                                                                roi=[float(value) for value in roi])
-        ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action)
+        ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
         return ret
 
     def arm_back_home(self, *args, **kwargs):

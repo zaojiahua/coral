@@ -433,8 +433,9 @@ class HandHandler(Handler, DefaultMixin):
         from app.v1.Cuttle.macPane.pane_view import PaneClickTestView
         exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1], pix_point[2],
                                                                                self._model.pk,
-                                                                               roi=[float(value) for value in roi])
-        ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action)
+                                                                               roi=[float(value) for value in roi],
+                                                                               is_normal_speed=True)
+        ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
         return ret
 
     def arm_back_home(self, *args, **kwargs):

@@ -422,14 +422,15 @@ class PaneClickTestView(MethodView):
         return exec_serial_obj, orders, exec_action
 
     @staticmethod
-    def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False):
+    def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False, wait_time=0):
         """
         is_exec_loop: 是否正在执行测试点击多次
         """
         if exec_action == "click":
-            exec_serial_obj.send_list_order(orders, ignore_reset=ignore_reset)
+            exec_serial_obj.send_out_key_order(orders[:2], others_orders=[orders[-1]], wait_time=wait_time,
+                                               ignore_reset=ignore_reset)
         elif exec_action == "press":
-            exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=0,
+            exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=wait_time,
                                                ignore_reset=ignore_reset)
         else:
             pass

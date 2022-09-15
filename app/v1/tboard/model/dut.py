@@ -49,7 +49,7 @@ class Dut(BaseModel):
         if job_index < self.total_job_number and job_list_len > 0:
             ret = self.job_label_list[job_index % job_list_len]
         if ret is not None:
-            return ret + f':{job_index % job_list_len}'
+            return ret
         return ret
 
     @property

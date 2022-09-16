@@ -871,7 +871,7 @@ class ClickCenterPointFive(MethodView):
                 # 是一条从上到下的直线
                 if rect[1][1] > rect[1][0] and abs(rect[2]) < 2:
                     left_points = [point for point in box if point[1] < rect[0][1]]
-                elif rect[1][0] > rect[1][1] and abs(rect[2]) > 89:
+                elif rect[1][0] > rect[1][1] and abs(rect[2]) > 87:
                     left_points = [point for point in box if point[1] < rect[0][1]]
                 else:
                     left_points = [point for point in box if point[0] < rect[0][0]]

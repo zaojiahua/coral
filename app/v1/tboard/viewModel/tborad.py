@@ -18,7 +18,7 @@ class TBoardViewModel(object):
         self.board_name = board_name
         self.device_label_list = device_label_list
         self.jobs = jobs
-        self.job_label_list = [job["job_label"] for job in jobs]
+        self.job_label_list = [job["job_label"] + f':{job_index}' for job_index, job in enumerate(jobs)]
         self.repeat_time = repeat_time
         self.owner_label = owner_label
         self.create_level = create_level

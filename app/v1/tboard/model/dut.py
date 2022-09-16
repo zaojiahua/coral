@@ -49,7 +49,7 @@ class Dut(BaseModel):
         if job_index < self.total_job_number and job_list_len > 0:
             ret = self.job_label_list[job_index % job_list_len]
         if ret is not None:
-            return ret + f':{job_index % job_list_len}'
+            return ret
         return ret
 
     @property
@@ -59,7 +59,7 @@ class Dut(BaseModel):
     @property
     def next_job_label(self):
         if self.job_random_order:
-            if self.current_job_index > 0 and self.current_job_index % len(self.job_label_list) == (len(self.job_label_list) - 1):
+            if self.current_job_index >= 0 and self.current_job_index % len(self.job_label_list) == 0:
                 current_job_label_list = []
                 while len(self.job_label_list) > 0:
                     current_job_label_list.append(self.job_label_list.lpop())

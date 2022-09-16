@@ -50,7 +50,15 @@ class DefaultMixin(object):
         raw_commend = self._compatible_sleep(raw_commend)
         pix_points = ""
         absolute = True
-        if 'taier' in raw_commend:
+        if 'taier_swipe' in raw_commend:
+            position_args_list = raw_commend.split("swipe")[-1].strip().split(' ')
+            try:
+                speed = int(position_args_list[4])
+            except (IndexError, TypeError):
+                pass
+            pix_points = [float(i) for i in position_args_list[:4]]
+            opt_type = "taier_draw_line"
+        elif 'taier' in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
             opt_type = "taier_click_center_point"
         elif "tap" in raw_commend:

@@ -866,8 +866,8 @@ class ClickCenterPointFive(MethodView):
             rect = cv2.minAreaRect(contour_points)
             # 这里可能损失精度
             box = np.int0(cv2.boxPoints(rect))
-            # 线的长度至少得是50像素
-            if rect[1][0] > 100 or rect[1][1] > 100:
+            # 线的长度至少得是120像素
+            if rect[1][0] > 120 or rect[1][1] > 120:
                 # 是一条从上到下的直线
                 if rect[1][1] > rect[1][0] and abs(rect[2]) < 2:
                     left_points = [point for point in box if point[1] < rect[0][1]]

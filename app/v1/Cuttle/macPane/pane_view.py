@@ -868,6 +868,7 @@ class ClickCenterPointFive(MethodView):
             box = np.int0(cv2.boxPoints(rect))
             # 线的长度至少得是120像素
             if rect[1][0] > 120 or rect[1][1] > 120:
+                # cv2.drawContours(img, [box], -1, (0, 255, 0), 1)
                 # 是一条从上到下的直线
                 if rect[1][1] > rect[1][0] and abs(rect[2]) < 2:
                     left_points = [point for point in box if point[1] < rect[0][1]]
@@ -878,6 +879,11 @@ class ClickCenterPointFive(MethodView):
 
                 if len(left_points) == 2:
                     target_points.append((left_points[0] + left_points[1]) / 2)
+
+                # 调试的时候打开，很方便能看出问题
+                # img = cv2.putText(img.copy(), f'{target_points[-1]}',
+                #                   (int(target_points[-1][0]), int(target_points[-1][1])),
+                #                   cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 1)
 
         # cv2.imwrite('result.png', img)
         return target_points

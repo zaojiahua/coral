@@ -83,10 +83,10 @@ class PerformanceCenter(object):
         return src[int(device_obj.y1) - int(device_obj.roi_y1): int(device_obj.y2) - int(device_obj.roi_y1),
                    int(device_obj.x1) - int(device_obj.roi_x1): int(device_obj.x2) - int(device_obj.roi_x1)]
 
-    def start_judge_function(self, picture, threshold, pic_number, timestamp):
+    def start_judge_function(self, picture, threshold, pic_number=None, timestamp=None):
         if self.start_method == 0:
             is_find = self._black_field(picture, threshold)
-            if is_find:
+            if is_find and timestamp is not None:
                 self.start_timestamp = timestamp
             return is_find
         elif self.start_method == 1:
@@ -238,7 +238,7 @@ class PerformanceCenter(object):
                 picture, next_picture, third_pic, timestamp = self.picture_prepare(number, self.start_area)
                 timestamp_dict[number] = timestamp
                 # 从start到bias这段时间，应该都是属于满足条件的区间
-                if not self.start_judge_function(picture, next_picture, third_pic, self.threshold):
+                if not self.start_judge_function(picture, self.threshold):
                     self.bias = number
                     break
                 if picture is None:

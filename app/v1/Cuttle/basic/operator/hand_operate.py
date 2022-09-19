@@ -223,7 +223,7 @@ class HandHandler(Handler, DefaultMixin):
         return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     @allot_serial_obj
-    def sliding(self, axis, swipe_time=SWIPE_TIME, **kwargs):
+    def sliding(self, axis, **kwargs):
         """
         # 滑动
         # 2021.12.17 滑动，self.speed是滑动时间
@@ -488,25 +488,86 @@ class HandHandler(Handler, DefaultMixin):
                     print('要点击的点', self.pix_points)
 
                     # 计算俩点之间的距离
-                    dis = math.sqrt(math.pow(red_points[0][0] - self.pix_points[0], 2) +
-                                    math.pow(red_points[0][1] - self.pix_points[1], 2))
-                    dis = round(dis, 2)
-
-                    print('像素差别', dis)
-                    dpi = get_global_value('pane_dpi')
-                    if dpi is None:
-                        raise CoordinateConvert()
-
-                    dis = round(dis / dpi, 2)
-                    print('毫米差别', dis)
-                    with open(dis_filename, 'a') as dis_file:
-                        dis_file.write(f'{cur_index + 1}. ' + str(dis))
-                        dis_file.write('\n')
+                    self.get_point_dis(red_points, self.pix_points, dis_filename, cur_index)
         except Exception:
             print(traceback.format_exc())
             return 1
 
         return 0
+
+    @allot_serial_obj
+    def taier_draw_line(self, pix_point, **kwargs):
+        """
+        泰尔实验室，画线精度测试
+        """
+        cur_index = kwargs.get('index')
+        dis_filename = os.path.join(self.kwargs.get("rds_work_path"), '画线精度.txt')
+
+        try:
+            from app.v1.Cuttle.macPane.pane_view import ClickCenterPointFive
+            # 保存到rds目录中，这样方便调试
+            pre_filename = os.path.join(self.kwargs.get("rds_work_path"), f'line_{cur_index - 1}.png')
+            filename = os.path.join(self.kwargs.get("rds_work_path"), f'line_{cur_index}.png')
+            device_obj = self.get_device_obj()
+
+            if cur_index == 0:
+                ret_code = device_obj.get_snapshot(pre_filename, max_retry_time=1, original=False)
+            else:
+                ret_code = 0
+
+            if ret_code == 0:
+                click_center_point_five = ClickCenterPointFive()
+                pre_lines = click_center_point_five.get_lines(pre_filename)
+
+                self.sliding(pix_point)
+
+                # 拍照之前等待一下，否则机械臂会盖住摄像头
+                time.sleep(1)
+                # 每次只处理一个红点
+                ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+                if ret_code == 0:
+                    lines = click_center_point_five.get_lines(filename)
+                    print(f'{cur_index + 1}之前的线', pre_lines)
+                    print(f'{cur_index + 1}当前的线', lines)
+                    # 将上次的红点减掉，以免对算法产生干扰
+                    lines = click_center_point_five.sub_point(pre_lines, lines)
+                    print(f'{cur_index + 1}剩下的线', lines)
+                    print('画线的起点', self.pix_points)
+
+                    # 永远取左边的点，如果完全垂直，则取上边的点
+                    if self.pix_points[0] < self.pix_points[2] and abs(self.pix_points[0] - self.pix_points[2]) > 7:
+                        left_points = self.pix_points[:2]
+                    elif self.pix_points[0] > self.pix_points[2] and abs(self.pix_points[0] - self.pix_points[2]) > 7:
+                        left_points = self.pix_points[2:]
+                    else:
+                        if self.pix_points[1] < self.pix_points[3]:
+                            left_points = self.pix_points[:2]
+                        else:
+                            left_points = self.pix_points[2:]
+
+                    self.get_point_dis(lines, left_points, dis_filename, cur_index)
+        except Exception:
+            print(traceback.format_exc())
+            return 1
+
+        return 0
+
+    def get_point_dis(self, points, pix_points, dis_filename, cur_index):
+        # 计算俩点之间的距离
+        dis = math.sqrt(math.pow(points[0][0] - pix_points[0], 2) +
+                        math.pow(points[0][1] - pix_points[1], 2))
+        dis = round(dis, 2)
+
+        print('像素差别', dis)
+        dpi = get_global_value('pane_dpi')
+        if dpi is None:
+            raise CoordinateConvert()
+
+        dis = round(dis / dpi, 2)
+        print('毫米差别', dis)
+        with open(dis_filename, 'a') as dis_file:
+            dis_file.write(f'{cur_index + 1}. ' + str(dis))
+            dis_file.write('\n')
 
     def _find_key_point(self, name):
         from app.v1.device_common.device_model import Device

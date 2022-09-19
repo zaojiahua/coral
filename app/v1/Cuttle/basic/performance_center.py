@@ -83,16 +83,23 @@ class PerformanceCenter(object):
         return src[int(device_obj.y1) - int(device_obj.roi_y1): int(device_obj.y2) - int(device_obj.roi_y1),
                    int(device_obj.x1) - int(device_obj.roi_x1): int(device_obj.x2) - int(device_obj.roi_x1)]
 
-    def start_judge_function(self, picture, threshold, pic_number=None, timestamp=None):
+    def start_judge_function(self, picture, threshold, number=None, timestamp=None):
         if self.start_method == 0:
             is_find = self._black_field(picture, threshold)
             if is_find and timestamp is not None:
+                self.start_number = number
                 self.start_timestamp = timestamp
-            return is_find
         elif self.start_method == 1:
-            return self.sensor_press_down(pic_number)
+            is_find, cur_number = self.sensor_press_down()
+            if is_find:
+                self.start_number = cur_number
         elif self.start_method == 2:
-            return self.sensor_press_down(pic_number, up=True)
+            is_find, cur_number = self.sensor_press_down(up=True)
+            if is_find:
+                self.start_number = cur_number
+        else:
+            is_find = False
+        return is_find
 
     @staticmethod
     def black_field(picture):
@@ -108,9 +115,8 @@ class PerformanceCenter(object):
         return match_ratio > threshold
 
     # 传感器获取按压的起始点
-    def sensor_press_down(self, pic_number, up=False):
+    def sensor_press_down(self, up=False):
         find_begin_point = False
-        cur_force = 0
 
         # 不管左还是右，全部判断压力值即可
         for index, sensor_key in enumerate(sensor_serial_obj_dict.keys()):
@@ -123,6 +129,7 @@ class PerformanceCenter(object):
 
             # 力是一个从小变大，又变小的过程
             cur_force = sensor_serial_obj_dict[sensor_key].query_sensor_value()
+            print('力值：', cur_force, str(time.time() * 1000))
             if cur_force < self.max_force:
                 # 抬起的起始点
                 find_begin_point = True
@@ -139,10 +146,10 @@ class PerformanceCenter(object):
             self.start_timestamp = time.time() * 1000
             print('找到了起始点', self.start_timestamp)
             close_all_sensor_connect()
+        # else:
+        #     time.sleep(0.001)
 
-        # 将压力值记录下来，显示在图片上，方便用户查看 处理的图片不一定是当前获取力值时候的图片，二者并不同步
-        self.back_up_dq[-1]['force'] = cur_force
-        return find_begin_point
+        return find_begin_point, len(self.back_up_dq)
 
     def get_icon(self, refer_im_path):
         # 在使用黑色区域计算时，self.icon_scope为实际出现在snap图中的位置，此方法无意义
@@ -178,16 +185,19 @@ class PerformanceCenter(object):
             # 裁剪图片获取当前和下两张
             # start点的确认主要就是判定是否特定位置全部变成了黑色，既_black_field方法 （主要）/丢帧检测时是判定区域内有无变化（稀有）
             # 这部分如果是判定是否变成黑色（黑色就是机械臂刚要点下的时候，挡住图标所以黑色），其实只用到当前图，下两张没有使用
-            picture, _, __, timestamp = self.picture_prepare(number, area)
-            if picture is None:
-                print('图片不够，start loop')
-                self.start_end_loop_not_found(VideoStartPointNotFound())
+            if self.start_method == 0:
+                picture, _, __, timestamp = self.picture_prepare(number, area)
+                if picture is None:
+                    print('图片不够，start loop')
+                    self.start_end_loop_not_found(VideoStartPointNotFound())
+            else:
+                # 传感器判断起点不需要图片
+                picture = None
+                timestamp = None
 
             # judge_function 返回True时 即发现了起始点
             if self.start_judge_function(picture, self.threshold, number, timestamp):
-                # 减一张得到起始点
-                self.start_number = number - 1
-                print(f"发现了起始点 :{number - 1} start number:{self.start_number}", '!' * 10)
+                print(f"循环到的次数 :{number} 发现了起始点 ::{self.start_number}", '!' * 10)
                 break
             elif number >= CameraMax / 2:
                 print('找不到起点了，开始退出。。。')
@@ -288,7 +298,7 @@ class PerformanceCenter(object):
                 third_pic = third_pic
 
             if judge_function(picture, pic2, third_pic, self.threshold):
-                print(f"发现了终点: {number} bias：", self.bias)
+                print(f"发现了终点: {number} bias：", self.bias, timestamp)
 
                 # 保留1s的图片
                 if len(self.back_up_dq) < number + 1 * FpsMax:
@@ -510,8 +520,9 @@ class PerformanceCenter(object):
                 # 在这个地方画上要找的起始点，调试的时候使用
                 if not hasattr(self, 'start_number') or self.start_number == 0\
                         or not hasattr(self, 'bias') or (hasattr(self, 'bias') and cur_index <= self.bias):
-                    picture_area = picture[self.start_area[1]:self.start_area[3], self.start_area[0]:self.start_area[2]]
                     if self.start_method == 0:
+                        picture_area = picture[self.start_area[1]:self.start_area[3],
+                                               self.start_area[0]:self.start_area[2]]
                         picture_area, match_ratio = self.black_field(picture_area)
                         picture[self.start_area[1]:self.start_area[3],
                                 self.start_area[0]:self.start_area[2]] = cv2.cvtColor(picture_area, cv2.COLOR_GRAY2BGR)
@@ -519,12 +530,12 @@ class PerformanceCenter(object):
                                                 (self.start_area[2], self.start_area[3]), (0, 0, 255), 2)
                         picture = cv2.putText(picture.copy(), str(match_ratio), (self.start_area[2] + 10, self.start_area[1] + 10),
                                               cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 3)
-                    elif self.start_method in [1, 2] and 'force' in picture_info:
-                        force = picture_info['force']
-                        picture = cv2.putText(picture.copy(), f'force: {force}',
-                                              (int((self.start_area[0] + self.start_area[2]) / 2),
-                                               int((self.start_area[1] + self.start_area[3]) / 2)),
-                                              cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 3)
+                if self.start_method in [1, 2]:
+                    host_timestamp = picture_info['host_timestamp']
+                    picture = cv2.putText(picture.copy(), f'time: {host_timestamp}',
+                                          (200,
+                                           200),
+                                          cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
 
                 # picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
                 picture_save = picture

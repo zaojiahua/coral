@@ -582,13 +582,15 @@ class PerformanceCenter(object):
     # 获取指定时间点，传感器的力值
     def get_force(self, host_timestamp):
         min_value = None
+        target_timestamp = 0
+        # key是无序的，所以需要比较完所有的值
         for timestamp in self.force_dict.keys():
             distance = abs(host_timestamp - timestamp)
             if min_value is None or distance < min_value:
                 min_value = distance
-            else:
-                return self.force_dict[timestamp], timestamp
-        return self.force_dict[timestamp], timestamp
+                target_timestamp = timestamp
+
+        return self.force_dict[target_timestamp], target_timestamp
 
     # 根据时间，获取距离改时间最近的一张图片
     def get_picture_number(self, timestamp):

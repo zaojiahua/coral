@@ -135,7 +135,8 @@ class PerformanceCenter(object):
                 if cur_force not in self.force_dict[force_time]:
                     self.force_dict[force_time].append(cur_force)
             else:
-                self.force_dict[force_time].append(cur_force)
+                if len(self.force_dict[force_time]) == 0 or cur_force != self.force_dict[force_time][-1]:
+                    self.force_dict[force_time].append(cur_force)
 
             if cur_force < self.max_force:
                 # 抬起的起始点

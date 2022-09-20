@@ -294,8 +294,10 @@ class PerformanceCenter(object):
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number, area)
             if picture is None:
                 print('图片不够 loop 2')
-                job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
-                time_per_unit = round(job_duration / (number - self.start_number), 4)
+                # 用上一次的图片时间，计算time per unit
+                _, __, ___, pre_timestamp = self.picture_prepare(number - 2, area)
+                job_duration = max(round((pre_timestamp - self.start_timestamp) / 1000, 3), 0)
+                time_per_unit = round(job_duration / (number - 2 - self.start_number), 4)
                 self.result = {'picture_count': number - 1,
                                "start_point": self.start_number,
                                "time_per_unit": time_per_unit}

@@ -565,7 +565,7 @@ class PerformanceCenter(object):
                     self.draw_rec = False
                 else:
                     # 已经在结束点画了图
-                    if cur_index != (end_number - 1):
+                    if cur_index != (end_number - 1) or not find_end:
                         cv2.imwrite(os.path.join(self.work_path, f"{cur_index}.jpg"), picture_save)
         except Exception as e:
             print(e)

@@ -292,7 +292,11 @@ class PerformanceCenter(object):
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number, area)
             if picture is None:
                 print('图片不够 loop 2')
-                self.result = {'picture_count': number - 1, "start_point": self.start_number}
+                job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
+                time_per_unit = round(job_duration / (number - self.start_number), 4)
+                self.result = {'picture_count': number - 1,
+                               "start_point": self.start_number,
+                               "time_per_unit": time_per_unit}
                 self.start_end_loop_not_found()
             number += 2
 
@@ -340,8 +344,7 @@ class PerformanceCenter(object):
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 time_per_unit = round(job_duration / (number - self.start_number), 4)
 
-                self.result = {"start_point": self.start_number, "end_point": number,
-                               "job_duration": job_duration,
+                self.result = {"start_point": self.start_number,
                                "time_per_unit": time_per_unit,
                                "picture_count": number,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}

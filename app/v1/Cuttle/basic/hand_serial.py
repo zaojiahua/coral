@@ -217,7 +217,7 @@ class SensorSerial(HandSerial):
         regex = re.compile("fe015000([\w+]*?)cffcccff")
 
         for i in range(3):
-            return_data = self.ser.read(36)
+            return_data = self.ser.read(24)
             str_return_data = str(return_data.hex())
             result = re.search(regex, str_return_data)
             if result is None:
@@ -226,7 +226,7 @@ class SensorSerial(HandSerial):
             print("data: ", data)
             value = self.check_value(data)
             if isinstance(value, bool):
-                continue
+                break
             print("取到的力值：", value)
             return value
         return 0
@@ -238,7 +238,8 @@ class SensorSerial(HandSerial):
         data: eg: fe015000ffffffffcffcccff
         """
         sensor_ret_value = match_data[8:][:-8]
-        if len(sensor_ret_value) != 8:
+        ret_value_len = len(sensor_ret_value)
+        if ret_value_len != 8 and ret_value_len != 6:
             return False
         if sensor_ret_value.count('f') == len(sensor_ret_value):
             return False

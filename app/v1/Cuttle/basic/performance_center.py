@@ -1,3 +1,4 @@
+import collections
 import math
 import os
 import platform
@@ -33,6 +34,7 @@ class PerformanceCenter(object):
     # 压感相关
     max_force = 0
     sensor_index = None
+    force_dict = {}
 
     # 这部分是性能测试的中心对象，性能测试主要测试启动点 和终止点两个点位，并根据拍照频率计算实际时间
     # 终止点比较简单，但是启动点由于现有机械臂无法确认到具体点压的时间，只能通过机械臂遮挡关键位置时间+补偿时间（机械臂下落按压时间）计算得到
@@ -90,13 +92,9 @@ class PerformanceCenter(object):
                 self.start_number = number
                 self.start_timestamp = timestamp
         elif self.start_method == 1:
-            is_find, cur_number = self.sensor_press_down()
-            if is_find:
-                self.start_number = cur_number
+            is_find = self.sensor_press_down()
         elif self.start_method == 2:
-            is_find, cur_number = self.sensor_press_down(up=True)
-            if is_find:
-                self.start_number = cur_number
+            is_find = self.sensor_press_down(up=True)
         else:
             is_find = False
         return is_find
@@ -129,7 +127,17 @@ class PerformanceCenter(object):
 
             # 力是一个从小变大，又变小的过程
             cur_force = sensor_serial_obj_dict[sensor_key].query_sensor_value()
-            print('力值：', cur_force, str(time.time() * 1000))
+            force_time = round(time.time() * 1000)
+            print('力值：', cur_force, str(force_time))
+
+            # 同一个时间可能得到了很多不同的值
+            if cur_force == 0.0:
+                if cur_force not in self.force_dict[force_time]:
+                    self.force_dict[force_time].append(cur_force)
+            else:
+                if len(self.force_dict[force_time]) == 0 or cur_force != self.force_dict[force_time][-1]:
+                    self.force_dict[force_time].append(cur_force)
+
             if cur_force < self.max_force:
                 # 抬起的起始点
                 find_begin_point = True
@@ -145,11 +153,10 @@ class PerformanceCenter(object):
         if find_begin_point:
             self.start_timestamp = time.time() * 1000
             print('找到了起始点', self.start_timestamp)
+            self.start_number = self.get_picture_number(force_time)
             close_all_sensor_connect()
-        # else:
-        #     time.sleep(0.001)
 
-        return find_begin_point, len(self.back_up_dq)
+        return find_begin_point
 
     def get_icon(self, refer_im_path):
         # 在使用黑色区域计算时，self.icon_scope为实际出现在snap图中的位置，此方法无意义
@@ -174,6 +181,7 @@ class PerformanceCenter(object):
         self.max_force = 0
         self.sensor_index = None
         self.start_timestamp = 0
+        self.force_dict = collections.defaultdict(list)
 
         self.camera_loop()
 
@@ -318,12 +326,14 @@ class PerformanceCenter(object):
                 # 找到终止点后，包装一个json格式，推到reef
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
+                picture_count = int(self.end_number + FpsMax - 1)
 
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": job_duration,
                                "time_per_unit": time_per_unit,
-                               "picture_count": int(self.end_number + FpsMax - 1),
-                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+                               "picture_count": len(self.back_up_dq)
+                               if len(self.back_up_dq) < picture_count else picture_count,
+                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path} # noqa
                 break
             # 最后一张在prepare的时候就拿不到了 一次拿俩张图
             elif number >= CameraMax - 2:
@@ -512,6 +522,7 @@ class PerformanceCenter(object):
             find_end = True
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
+        print('保存图片时候的end number', end_number, '*' * 10)
         try:
             for cur_index in range(end_number):
                 picture_info = self.back_up_dq[cur_index]
@@ -530,12 +541,20 @@ class PerformanceCenter(object):
                                                 (self.start_area[2], self.start_area[3]), (0, 0, 255), 2)
                         picture = cv2.putText(picture.copy(), str(match_ratio), (self.start_area[2] + 10, self.start_area[1] + 10),
                                               cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 3)
-                if self.start_method in [1, 2]:
-                    host_timestamp = picture_info['host_timestamp']
-                    picture = cv2.putText(picture.copy(), f'time: {host_timestamp}',
-                                          (200,
-                                           200),
-                                          cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                    elif self.start_method in [1, 2]:
+                        host_timestamp = picture_info['host_timestamp']
+                        force, timestamp = self.get_force(host_timestamp)
+                        print('force:', force)
+                        picture = cv2.putText(picture.copy(), f'snap time: {host_timestamp}',
+                                              (20, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        picture = cv2.putText(picture.copy(), f'force time: {timestamp}',
+                                              (20, 300), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        step = 5
+                        for force_index in range(0, len(force), step):
+                            picture = cv2.putText(picture.copy(),
+                                                  f'force: {force[force_index: force_index + step]}',
+                                                  (20, 400 + force_index * 20),
+                                                  cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
 
                 # picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
                 picture_save = picture
@@ -546,7 +565,7 @@ class PerformanceCenter(object):
                     self.draw_rec = False
                 else:
                     # 已经在结束点画了图
-                    if cur_index != (end_number - 1):
+                    if cur_index != (end_number - 1) or not find_end:
                         cv2.imwrite(os.path.join(self.work_path, f"{cur_index}.jpg"), picture_save)
         except Exception as e:
             print(e)
@@ -573,3 +592,30 @@ class PerformanceCenter(object):
         # 销毁
         self.back_up_clear()
         print('move src to back up 正常结束')
+
+    # 获取指定时间点，传感器的力值
+    def get_force(self, host_timestamp):
+        min_value = None
+        target_timestamp = 0
+        # key是无序的，所以需要比较完所有的值
+        for timestamp in self.force_dict.keys():
+            distance = abs(host_timestamp - timestamp)
+            if min_value is None or distance < min_value:
+                min_value = distance
+                target_timestamp = timestamp
+
+        return self.force_dict[target_timestamp], target_timestamp
+
+    # 根据时间，获取距离该时间最近的一张图片
+    def get_picture_number(self, timestamp):
+        min_value = None
+        pic_number = len(self.back_up_dq)
+        for picture_index, picture_info in enumerate(self.back_up_dq):
+            host_timestamp = picture_info['host_timestamp']
+            distance = abs(host_timestamp - timestamp)
+            # 这里必须写等于，怕相机获取到的俩张图时间一致
+            if min_value is None or distance <= min_value:
+                min_value = distance
+            else:
+                return picture_index
+        return pic_number - 1

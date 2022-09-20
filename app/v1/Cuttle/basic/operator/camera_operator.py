@@ -157,6 +157,8 @@ def camera_init_hk(camera_id, device_object, **kwargs):
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offset_x)
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offset_y)
 
+    add_node_ret = CamObj.MV_CC_SetImageNodeNum(10)
+    print("增大缓存节点结果", add_node_ret)
     check_result(CamObj.MV_CC_StartGrabbing)
 
     stParam = MVCC_INTVALUE()

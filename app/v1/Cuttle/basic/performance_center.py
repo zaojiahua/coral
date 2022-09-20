@@ -28,6 +28,7 @@ class PerformanceCenter(object):
     inner_back_up_dq = deque(maxlen=CameraMax)
     # 0: _black_field 1: 按下压感 2: 抬起压感 3: 图标膨胀
     start_method = 0
+    end_number = 0
     start_area = None
     start_number = 0
     start_timestamp = 0
@@ -178,6 +179,7 @@ class PerformanceCenter(object):
         number = 0
         self.start_method = start_method
         self.start_number = 0
+        self.end_number = 0
         self.max_force = 0
         self.sensor_index = None
         self.start_timestamp = 0
@@ -292,7 +294,13 @@ class PerformanceCenter(object):
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number, area)
             if picture is None:
                 print('图片不够 loop 2')
-                self.result = {'picture_count': number - 1, "start_point": self.start_number}
+                # 用上一次的图片时间，计算time per unit
+                _, __, ___, pre_timestamp = self.picture_prepare(number - 2, area)
+                job_duration = max(round((pre_timestamp - self.start_timestamp) / 1000, 3), 0)
+                time_per_unit = round(job_duration / (number - 2 - self.start_number), 4)
+                self.result = {'picture_count': number - 1,
+                               "start_point": self.start_number,
+                               "time_per_unit": time_per_unit}
                 self.start_end_loop_not_found()
             number += 2
 
@@ -340,8 +348,7 @@ class PerformanceCenter(object):
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 time_per_unit = round(job_duration / (number - self.start_number), 4)
 
-                self.result = {"start_point": self.start_number, "end_point": number,
-                               "job_duration": job_duration,
+                self.result = {"start_point": self.start_number,
                                "time_per_unit": time_per_unit,
                                "picture_count": number,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
@@ -518,7 +525,7 @@ class PerformanceCenter(object):
 
         # 性能测试结束的最后再保存图片，可以加快匹配目标查找的速度
         find_end = False
-        if hasattr(self, 'end_number'):
+        if hasattr(self, 'end_number') and self.end_number:
             find_end = True
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)

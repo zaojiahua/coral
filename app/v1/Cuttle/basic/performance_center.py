@@ -533,12 +533,14 @@ class PerformanceCenter(object):
                                               cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 3)
                     elif self.start_method in [1, 2]:
                         host_timestamp = picture_info['host_timestamp']
-                        force = self.get_force(host_timestamp)
+                        force, timestamp = self.get_force(host_timestamp)
                         print('force:', force)
                         picture = cv2.putText(picture.copy(), f'snap time: {host_timestamp}',
                                               (20, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
-                        picture = cv2.putText(picture.copy(), f'force: {force}',
+                        picture = cv2.putText(picture.copy(), f'force time: {timestamp}',
                                               (20, 300), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        picture = cv2.putText(picture.copy(), f'force: {force}',
+                                              (20, 400), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
 
                 # picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
                 picture_save = picture
@@ -585,8 +587,8 @@ class PerformanceCenter(object):
             if min_value is None or distance < min_value:
                 min_value = distance
             else:
-                return self.force_dict[timestamp]
-        return self.force_dict[timestamp]
+                return self.force_dict[timestamp], timestamp
+        return self.force_dict[timestamp], timestamp
 
     # 根据时间，获取距离改时间最近的一张图片
     def get_picture_number(self, timestamp):

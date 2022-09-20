@@ -204,7 +204,7 @@ class PaneConfigView(MethodView):
             com_index = arm_com_1_sensor.split('_')[-1]
             function, attribute = (sensor_init, "has_sensor_" + com_index)
         # or是针对win的条件，方便测试
-        elif port.startswith('/dev/arm_sensor') or port == 'COM27':
+        elif port.startswith('/dev/arm_sensor') or port == 'COM4':
             function, attribute = (sensor_init, 'has_sensor')
         elif port.startswith('/dev/arm_'):
             com_index = arm_com_1.split('_')[-1]

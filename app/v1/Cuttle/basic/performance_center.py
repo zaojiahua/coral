@@ -129,8 +129,14 @@ class PerformanceCenter(object):
             cur_force = sensor_serial_obj_dict[sensor_key].query_sensor_value()
             force_time = round(time.time() * 1000)
             print('力值：', cur_force, str(force_time))
+
             # 同一个时间可能得到了很多不同的值
-            self.force_dict[force_time].add(cur_force)
+            if cur_force == 0.0:
+                if cur_force not in self.force_dict[force_time]:
+                    self.force_dict[force_time].append(cur_force)
+            else:
+                self.force_dict[force_time].append(cur_force)
+
             if cur_force < self.max_force:
                 # 抬起的起始点
                 find_begin_point = True
@@ -174,7 +180,7 @@ class PerformanceCenter(object):
         self.max_force = 0
         self.sensor_index = None
         self.start_timestamp = 0
-        self.force_dict = collections.defaultdict(set)
+        self.force_dict = collections.defaultdict(list)
 
         self.camera_loop()
 
@@ -319,12 +325,14 @@ class PerformanceCenter(object):
                 # 找到终止点后，包装一个json格式，推到reef
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
+                picture_count = int(self.end_number + FpsMax - 1)
 
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": job_duration,
                                "time_per_unit": time_per_unit,
-                               "picture_count": int(self.end_number + FpsMax - 1),
-                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+                               "picture_count": len(self.back_up_dq)
+                               if len(self.back_up_dq) < picture_count else picture_count,
+                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path} # noqa
                 break
             # 最后一张在prepare的时候就拿不到了 一次拿俩张图
             elif number >= CameraMax - 2:
@@ -513,6 +521,7 @@ class PerformanceCenter(object):
             find_end = True
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
+        print('保存图片时候的end number', end_number, '*' * 10)
         try:
             for cur_index in range(end_number):
                 picture_info = self.back_up_dq[cur_index]
@@ -539,8 +548,12 @@ class PerformanceCenter(object):
                                               (20, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
                         picture = cv2.putText(picture.copy(), f'force time: {timestamp}',
                                               (20, 300), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
-                        picture = cv2.putText(picture.copy(), f'force: {force}',
-                                              (20, 400), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        step = 5
+                        for force_index in range(0, len(force), step):
+                            picture = cv2.putText(picture.copy(),
+                                                  f'force: {force[force_index: force_index + step]}',
+                                                  (20, 400 + force_index * 20),
+                                                  cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
 
                 # picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
                 picture_save = picture
@@ -592,7 +605,7 @@ class PerformanceCenter(object):
 
         return self.force_dict[target_timestamp], target_timestamp
 
-    # 根据时间，获取距离改时间最近的一张图片
+    # 根据时间，获取距离该时间最近的一张图片
     def get_picture_number(self, timestamp):
         min_value = None
         pic_number = len(self.back_up_dq)

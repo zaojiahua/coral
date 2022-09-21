@@ -210,7 +210,7 @@ class PerformanceCenter(object):
                 print(f"循环到的次数 :{number} 发现了起始点 ::{self.start_number}", '!' * 10)
                 break
             elif number >= CameraMax / 2:
-                print('找不到起点了，开始退出。。。')
+                print(f'找不到起点了，开始退出。。。{number}')
                 # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
                 self.start_end_loop_not_found(VideoStartPointNotFound())
             number += 1

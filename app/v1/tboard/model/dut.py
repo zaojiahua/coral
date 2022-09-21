@@ -75,8 +75,6 @@ class Dut(BaseModel):
             if device.status == DeviceStatus.ERROR:
                 self.remove_dut()
             else:
-                if self.current_job_index == 0:
-                    self.current_job_index = -1
                 current_job_label = self.next_job_label
                 if current_job_label is None:  # singal device's job finished
                     logger.info(f"dut ({self.pk}) finished and remove")

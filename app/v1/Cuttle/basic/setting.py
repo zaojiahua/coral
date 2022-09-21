@@ -67,6 +67,7 @@ except ImportError:
     pass
 try:
     from app.config.ip import Z_DOWN
+    set_global_value('Z_DOWN_INIT', Z_DOWN)
     set_global_value('Z_DOWN', Z_DOWN)
 except ImportError:
     raise Exception("ip.py文件异常，检查Z_DOWN值")

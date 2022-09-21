@@ -538,8 +538,7 @@ class PaneClickZDown(MethodView):
         recv_z_down = request.get_json()["z_down"]
         device_label = request.get_json()["device_label"]
         device_obj = Device(pk=device_label)
-        roi = [device_obj.x1, device_obj.y1, device_obj.x2, device_obj.y2]
-        click_z = -recv_z_down + float(device_obj.ply)
+        click_z = -recv_z_down + float(device_obj.ply) if CORAL_TYPE != 5.3 else -recv_z_down
         exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
         if CORAL_TYPE == 5.3:  # 5d
             click_xy = [160, -100] if arm_num == 0 else [-160, -100]
@@ -562,21 +561,27 @@ class PaneClickZDown(MethodView):
 class PaneUpdateZDown(MethodView):
 
     def post(self):
-        Z_DOWN = - request.get_json()["z_down"]
-        set_global_value('Z_DOWN', Z_DOWN)
-        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
+        Z_DOWN = -request.get_json()["z_down"]
+        set_global_value('Z_DOWN_INIT', Z_DOWN)
         if CORAL_TYPE == 5.3:
             Z_DOWN_1 = - request.get_json()["z_down_1"]
+            set_global_value('Z_DOWN', Z_DOWN)
             set_global_value('Z_DOWN_1', Z_DOWN_1)
             PaneUpdateMLocation.update_ip_file('Z_DOWN_1', Z_DOWN_1)
+        else:
+            device_label = request.get_json()["device_label"]
+            from app.v1.device_common.device_model import Device
+            device_obj = Device(pk=device_label)
+            set_global_value('Z_DOWN', Z_DOWN+float(device_obj.ply))
+        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
         return jsonify(dict(error_code=0))
 
 
 class PaneGetZDown(MethodView):
     def get(self):
-        data = {"z_down": get_global_value('Z_DOWN')}
+        data = {"z_down": -get_global_value('Z_DOWN_INIT')}
         if CORAL_TYPE == 5.3:
-            data.update({'z_down_1': get_global_value("Z_DOWN_1")})
+            data.update({'z_down_1': -get_global_value("Z_DOWN_1")})
 
         return jsonify(dict(error_code=0, data=data))
 

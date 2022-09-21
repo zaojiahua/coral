@@ -106,7 +106,7 @@ else:
                                          ("PixelFormat", 0x01080009, 'enum'),
                                          ("ExposureTime", 3500.0)]
 
-camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 200.0)]
+camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 180.0)]
 # Tcab-5se功能测试使用的参数
 camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
                                       ('GammaEnable', True),

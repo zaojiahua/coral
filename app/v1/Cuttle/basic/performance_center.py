@@ -18,6 +18,7 @@ from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_al
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
     CAMERA_IN_LOOP, sensor_serial_obj_dict, get_global_value, camera_dq_dict
 from app.v1.Cuttle.basic.operator.camera_operator import get_camera_ids
+from app.config.setting import CORAL_TYPE
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 EXTRA_PIC_NUMBER = 40
@@ -152,9 +153,9 @@ class PerformanceCenter(object):
                     break
 
         if find_begin_point:
-            self.start_timestamp = time.time() * 1000
+            self.start_timestamp = force_time
             print('找到了起始点', self.start_timestamp)
-            self.start_number = self.get_picture_number(force_time)
+            self.start_number = self.get_picture_number(self.start_timestamp)
             close_all_sensor_connect()
 
         return find_begin_point
@@ -522,6 +523,13 @@ class PerformanceCenter(object):
         # 有可能图片全部拿完了，但是还没来得及处理图片呢
         while get_global_value(CAMERA_IN_LOOP):
             time.sleep(0.5)
+
+        # 如果是双摄，图片没有来得及合并，找的起点图片会小，所以重新设置一下起点的值
+        if self.start_method in [1, 2] and CORAL_TYPE == 5:
+            if 'start_point' in self.result:
+                self.start_number = self.get_picture_number(self.start_timestamp)
+                self.bias = self.start_number
+                self.result['start_point'] = self.start_number
 
         # 性能测试结束的最后再保存图片，可以加快匹配目标查找的速度
         find_end = False

@@ -522,7 +522,8 @@ class HandHandler(Handler, DefaultMixin):
                 self.sliding(pix_point)
 
                 # 拍照之前等待一下，否则机械臂会盖住摄像头
-                time.sleep(1)
+                print('开始等待', str(1 + self.speed / 1000))
+                time.sleep(1 + self.speed / 1000)
                 # 每次只处理一个红点
                 ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
                 if ret_code == 0:

@@ -115,7 +115,7 @@ camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
 camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
                                 ("PixelFormat", 0x01080009, 'enum'),
                                 ("ExposureTime", 3500.0),
-                                ("AcquisitionFrameRate", 200.0)]
+                                ("AcquisitionFrameRate", 240.0)]
 camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 200.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
@@ -178,7 +178,10 @@ if CORAL_TYPE == 5.3:
 else:
     Z_UP = 0
     Z_START = 0
-    arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
+    if CORAL_TYPE in [5, 5.1]:
+        arm_wait_position = f"G01 X10Y-170Z{Z_UP}F15000 \r\n"
+    else:
+        arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
 
 DIFF_X = 30
 MOVE_SPEED = 15000

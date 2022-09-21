@@ -58,14 +58,14 @@ class Dut(BaseModel):
 
     @property
     def next_job_label(self):
+        self.current_job_index += 1
         if self.job_random_order:
-            if self.current_job_index >= 0 and self.current_job_index % len(self.job_label_list) == 0:
+            if self.current_job_index % len(self.job_label_list) == 0:
                 current_job_label_list = []
                 while len(self.job_label_list) > 0:
                     current_job_label_list.append(self.job_label_list.lpop())
                 random.shuffle(current_job_label_list)
                 self.job_label_list.rpush(*current_job_label_list)
-        self.current_job_index += 1
         return self.get_job_label_by_index(self.current_job_index)
 
     def start_dut(self):
@@ -75,6 +75,8 @@ class Dut(BaseModel):
             if device.status == DeviceStatus.ERROR:
                 self.remove_dut()
             else:
+                if self.current_job_index == 0:
+                    self.current_job_index = -1
                 current_job_label = self.next_job_label
                 if current_job_label is None:  # singal device's job finished
                     logger.info(f"dut ({self.pk}) finished and remove")

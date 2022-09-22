@@ -115,7 +115,7 @@ class TcabNotAllowExecThisUnit(APIException):
     """
     error_code = 3013
     code = 400
-    description = "该类型柜子不支持执行按压侧边键"
+    description = "当前测试柜类型不支持点击侧边键"
 
 
 class UsingHandFail(APIException):

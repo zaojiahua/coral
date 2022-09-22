@@ -22,7 +22,7 @@ from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, 
     arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, BASE_DIR
 from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail, CoordinateConvert, \
     MergeShapeNone
-from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable
+from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.hand_serial import controlUsbPower
@@ -419,6 +419,8 @@ class PaneClickTestView(MethodView):
                                                   press_side_speed=press_side_speed)
             exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
 
+        if CORAL_TYPE in [5, 5.3, 5.4]:
+            raise TcabNotAllowExecThisUnit
         return exec_serial_obj, orders, exec_action
 
     @staticmethod

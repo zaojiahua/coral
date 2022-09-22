@@ -435,6 +435,8 @@ class HandHandler(Handler, DefaultMixin):
                                                                                self._model.pk,
                                                                                roi=[float(value) for value in roi],
                                                                                is_normal_speed=True)
+        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+            raise TcabNotAllowExecThisUnit
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
         return ret
 

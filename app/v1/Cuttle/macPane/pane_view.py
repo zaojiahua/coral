@@ -329,6 +329,10 @@ class PaneClickTestView(MethodView):
         exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label,
                                                                   roi=device_point)
 
+        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+            return jsonify(dict(error_code=TcabNotAllowExecThisUnit.error_code,
+                                description=TcabNotAllowExecThisUnit.description))
+
         # 判断机械臂状态是否在执行循环
         if not get_global_value("click_loop_stop_flag"):
             # 机械臂状态running,且有stop_loop_flag标志值，需要停止机械臂正在执行的动作
@@ -340,7 +344,8 @@ class PaneClickTestView(MethodView):
                 return jsonify(dict(error_code=0))
             else:
                 shutil.rmtree(random_dir)
-                raise UsingHandFail
+                return jsonify(dict(error_code=UsingHandFail.error_code,
+                                    description=UsingHandFail.description))
 
         # 判断是否执行测试点击多次
         if request_data.get("click_count"):
@@ -419,8 +424,6 @@ class PaneClickTestView(MethodView):
                                                   press_side_speed=press_side_speed)
             exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
 
-        if CORAL_TYPE in [5, 5.3, 5.4]:
-            raise TcabNotAllowExecThisUnit
         return exec_serial_obj, orders, exec_action
 
     @staticmethod

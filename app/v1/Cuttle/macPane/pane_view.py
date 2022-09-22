@@ -896,7 +896,7 @@ class ClickCenterPointFive(MethodView):
             for pre_p in pre_points:
                 dis = math.sqrt(math.pow(cur_p[0] - pre_p[0], 2) + math.pow(cur_p[1] - pre_p[1], 2))
                 # print(dis, '&' * 10)
-                if dis < 2:
+                if dis < 3:
                     is_new = False
                     break
             if is_new:

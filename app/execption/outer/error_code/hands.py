@@ -115,7 +115,7 @@ class TcabNotAllowExecThisUnit(APIException):
     """
     error_code = 3013
     code = 400
-    description = "This Tcab Type Not Allow Exec This Unit"
+    description = "当前测试柜类型不支持点击侧边键"
 
 
 class UsingHandFail(APIException):

@@ -15,6 +15,8 @@ class EmailManager():
 
     @staticmethod
     def send_email(receivers, title, content, enclosure=None):
+        if len(receivers) == 0:
+            return
         msg = MIMEMultipart()
         msg['From'] = formataddr(['Coral机器人', EmailManager.mail_sender])
         msg['To'] = ','.join(receivers)

@@ -157,6 +157,8 @@ def camera_init_hk(camera_id, device_object, **kwargs):
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offset_x)
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offset_y)
 
+    add_node_ret = CamObj.MV_CC_SetImageNodeNum(10)
+    print("增大缓存节点结果", add_node_ret)
     check_result(CamObj.MV_CC_StartGrabbing)
 
     stParam = MVCC_INTVALUE()
@@ -221,7 +223,7 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj, camera_id):
     del content
     del image
     del data_buf
-    print(f'camera{camera_id}获取到图片了', frame_num)
+    print(f'camera{camera_id}获取到图片了', frame_num, ' ' * 5, len(dq), ' ' * 2, stFrameInfo.nHostTimeStamp)
     # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
     if frame_num >= CameraMax:
         print('达到了取图的最大限制！！！')

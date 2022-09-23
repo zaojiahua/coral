@@ -479,6 +479,9 @@ class Device(BaseModel):
 
     # 更新5l机柜的m_location信息，没有机械臂对象，所以方法先写到这里
     def update_m_location(self):
+        if CORAL_TYPE in [1, 2, 3]:
+            return
+
         # 新的坐标换算和5D保持一样，也可以使用原始的坐标换算方式
         if CORAL_TYPE == 5.3 or COMPUTE_M_LOCATION:
             if not os.path.exists(COORDINATE_CONFIG_FILE):
@@ -493,7 +496,8 @@ class Device(BaseModel):
                             if CORAL_TYPE == 5.3:
                                 m_l.append(Z_DOWN)
                             else:
-                                m_l.append(round(Z_DOWN + float(self.ply), 2))
+                                if self.ply:
+                                    m_l.append(round(Z_DOWN + float(self.ply), 2))
                             set_global_value(key, m_l)
                         else:
                             set_global_value(key, eval(value))
@@ -510,8 +514,9 @@ class Device(BaseModel):
                                  [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
 
         if get_global_value('m_location'):
-            self.screen_z = str(get_global_value('m_location')[2])
-            set_global_value('Z_DOWN', get_global_value('m_location')[2])
+            if len(get_global_value('m_location')) == 3:
+                self.screen_z = str(get_global_value('m_location')[2])
+                set_global_value('Z_DOWN', get_global_value('m_location')[2])
             print('new Z_DOWN', get_global_value('Z_DOWN'))
         elif Z_DOWN:
             if CORAL_TYPE == 5.3:
@@ -554,7 +559,7 @@ class Device(BaseModel):
                 click_y = abs(m_location[1] - y / dpi)
                 # 以左下角为m_location的时候
                 # click_y = abs(m_location[1] + y / dpi)
-                click_z = m_location[2] + float(z)
+                click_z = get_global_value("Z_DOWN") + float(z)
             else:
                 # 从pane测试点击的时候走这里
                 if not test:
@@ -564,11 +569,11 @@ class Device(BaseModel):
                 if CORAL_TYPE == 5.3:
                     click_x = m_location[0] + y / dpi
                     click_y = abs(m_location[1] - (w - x) / dpi)
-                    click_z = m_location[2] + float(z)
+                    click_z = get_global_value("Z_DOWN") + float(z)
                 else:
                     click_x = m_location[0] + (h - y) / dpi
                     click_y = abs(m_location[1] - x / dpi)
-                    click_z = m_location[2] + float(z)
+                    click_z = get_global_value("Z_DOWN") + float(z)
         # 5系列柜子原始的计算方法
         else:
             # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
@@ -585,7 +590,7 @@ class Device(BaseModel):
             # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
             click_x = round((m_location[0] + float(self.width) * x_location_per), 2)
             click_y = round((m_location[1] + float(self.height) * y_location_per), 2)
-            click_z = m_location[2] + float(z)
+            click_z = get_global_value("Z_DOWN") + float(z)
 
         return click_x, click_y, click_z
 

@@ -119,6 +119,7 @@ class Unit(BaseModel):
     unit_work_path = models.CharField()
     optionalInputImage = models.IntegerField()
     portrait = models.IntegerField()
+    start_method = models.IntegerField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures', 'timestamps', 'assistDevice')
 
@@ -225,6 +226,8 @@ class Unit(BaseModel):
                 sending_data['optional_input_image'] = self.optionalInputImage
             if self.portrait:
                 sending_data['portrait'] = self.portrait
+            if self.start_method:
+                sending_data['start_method'] = self.start_method
             logger.info(f'target is {target}')
             logger.info(f"unit:{sending_data}")
 

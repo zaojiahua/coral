@@ -22,7 +22,7 @@ from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, 
     arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, BASE_DIR
 from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail, CoordinateConvert, \
     MergeShapeNone
-from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable
+from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.hand_serial import controlUsbPower
@@ -204,7 +204,7 @@ class PaneConfigView(MethodView):
             com_index = arm_com_1_sensor.split('_')[-1]
             function, attribute = (sensor_init, "has_sensor_" + com_index)
         # or是针对win的条件，方便测试
-        elif port.startswith('/dev/arm_sensor') or port == 'COM27':
+        elif port.startswith('/dev/arm_sensor') or port == 'COM4':
             function, attribute = (sensor_init, 'has_sensor')
         elif port.startswith('/dev/arm_'):
             com_index = arm_com_1.split('_')[-1]
@@ -329,6 +329,10 @@ class PaneClickTestView(MethodView):
         exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label,
                                                                   roi=device_point)
 
+        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+            return jsonify(dict(error_code=TcabNotAllowExecThisUnit.error_code,
+                                description=TcabNotAllowExecThisUnit.description))
+
         # 判断机械臂状态是否在执行循环
         if not get_global_value("click_loop_stop_flag"):
             # 机械臂状态running,且有stop_loop_flag标志值，需要停止机械臂正在执行的动作
@@ -340,7 +344,8 @@ class PaneClickTestView(MethodView):
                 return jsonify(dict(error_code=0))
             else:
                 shutil.rmtree(random_dir)
-                raise UsingHandFail
+                return jsonify(dict(error_code=UsingHandFail.error_code,
+                                    description=UsingHandFail.description))
 
         # 判断是否执行测试点击多次
         if request_data.get("click_count"):
@@ -357,7 +362,7 @@ class PaneClickTestView(MethodView):
         return jsonify(dict(error_code=0))
 
     @staticmethod
-    def get_exec_info(click_x, click_y, click_z, device_label, roi=None):
+    def get_exec_info(click_x, click_y, click_z, device_label, roi=None, is_normal_speed=False):
         """
         return: serial_obj, orders
         """
@@ -413,8 +418,8 @@ class PaneClickTestView(MethodView):
             ]
         else:
             # exec_action: press
-            speed = MOVE_SPEED - 10000
-            press_side_speed = PRESS_SIDE_KEY_SPEED / 2
+            speed = MOVE_SPEED if is_normal_speed else MOVE_SPEED - 10000
+            press_side_speed = PRESS_SIDE_KEY_SPEED if is_normal_speed else PRESS_SIDE_KEY_SPEED / 2
             orders = HandHandler.press_side_order([click_x, click_y, click_z], is_left=is_left_side, speed=speed,
                                                   press_side_speed=press_side_speed)
             exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
@@ -422,14 +427,15 @@ class PaneClickTestView(MethodView):
         return exec_serial_obj, orders, exec_action
 
     @staticmethod
-    def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False):
+    def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False, wait_time=0):
         """
         is_exec_loop: 是否正在执行测试点击多次
         """
         if exec_action == "click":
-            exec_serial_obj.send_list_order(orders, ignore_reset=ignore_reset)
+            exec_serial_obj.send_out_key_order(orders[:2], others_orders=[orders[-1]], wait_time=wait_time,
+                                               ignore_reset=ignore_reset)
         elif exec_action == "press":
-            exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=0,
+            exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=wait_time,
                                                ignore_reset=ignore_reset)
         else:
             pass
@@ -478,6 +484,7 @@ class PaneUpdateMLocation(MethodView):
 
     @staticmethod
     def update_ip_file(location_name, new_data):
+        is_kuohao = True
         if platform.system() == 'Linux':
             file = '/app/source/ip.py'
         else:
@@ -487,15 +494,22 @@ class PaneUpdateMLocation(MethodView):
             content = ""
             for line in f:
                 if location_name in line and not line.startswith("#"):
-                    old_data = line.split("=")[1].split("]")[0].strip(" ")
+                    # 带[]
+                    if "[" in line:
+                        is_kuohao = False
+                        old_data = line.split("=")[1].split("]")[0].strip(" ")
+                    else:
+                        old_data = line.split("=")[1]
                     print("老数据：", old_data)
                 content += line
 
-        if not old_data:
-            raise Exception("ip.py 配置文件有问题，请检查!")
-
-        new_content = content.replace(old_data, str(new_data).split("]")[0])
-
+        if old_data:
+            if is_kuohao:
+                new_content = content.replace(old_data, str(new_data).split("]")[0])
+            else:
+                new_content = content.replace(old_data, str(new_data))
+        else:
+            new_content = content + "\r\n" + (location_name + "=" + str(new_data))
         with open(file, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
             f2.write(new_content)  # 将替换后的内容写入到test.txt文本文件中
 
@@ -516,6 +530,65 @@ class PaneClickMLocation(MethodView):
                                                                                  m_location_data_z, device_label)
         PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action)
         return jsonify(dict(error_code=0))
+
+
+class PaneClickZDown(MethodView):
+    """
+    测试 Z_DOWN 是否合适, Z值+设备厚度后再点击
+    传入的Z值为正数，需加负号
+    """
+
+    def post(self):
+        arm_num = request.get_json().get('arm_num', 0)
+        recv_z_down = request.get_json()["z_down"]
+        device_label = request.get_json()["device_label"]
+        device_obj = Device(pk=device_label)
+        click_z = -recv_z_down + float(device_obj.ply) if CORAL_TYPE != 5.3 else -recv_z_down
+        exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
+        if CORAL_TYPE == 5.3:  # 5d
+            click_xy = [160, -100] if arm_num == 0 else [-160, -100]
+            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1) if arm_num == 1 else exec_serial_obj
+        elif CORAL_TYPE == 5.2:  # 5se
+            click_xy = [90, -120]
+        elif CORAL_TYPE == 5:  # 5升级版加了延长杆
+            click_xy = [85, -170]
+        else:  # 5l
+            click_xy = [170, -170]
+        orders = [
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], click_z + 5, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], click_z, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], Z_UP, MOVE_SPEED),
+        ]
+        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click")
+        return jsonify(dict(error_code=0))
+
+
+class PaneUpdateZDown(MethodView):
+
+    def post(self):
+        Z_DOWN = -request.get_json()["z_down"]
+        set_global_value('Z_DOWN_INIT', Z_DOWN)
+        if CORAL_TYPE == 5.3:
+            Z_DOWN_1 = - request.get_json()["z_down_1"]
+            set_global_value('Z_DOWN', Z_DOWN)
+            set_global_value('Z_DOWN_1', Z_DOWN_1)
+            PaneUpdateMLocation.update_ip_file('Z_DOWN_1', Z_DOWN_1)
+        else:
+            device_label = request.get_json()["device_label"]
+            from app.v1.device_common.device_model import Device
+            device_obj = Device(pk=device_label)
+            set_global_value('Z_DOWN', Z_DOWN+float(device_obj.ply))
+        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
+        return jsonify(dict(error_code=0))
+
+
+class PaneGetZDown(MethodView):
+    def get(self):
+        data = {"z_down": -get_global_value('Z_DOWN_INIT')}
+        if CORAL_TYPE == 5.3:
+            data.update({'z_down_1': -get_global_value("Z_DOWN_1")})
+
+        return jsonify(dict(error_code=0, data=data))
 
 
 # 5D等自动建立坐标系统
@@ -805,9 +878,7 @@ class ClickCenterPointFive(MethodView):
         return target_points
 
     @staticmethod
-    def get_red_point(filename):
-        img = cv2.imread(filename)
-        h, w, _ = img.shape
+    def get_red_pic(img):
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         # 机械臂点下的点需要是红色的
@@ -823,6 +894,14 @@ class ClickCenterPointFive(MethodView):
 
         kernel = np.uint8(np.ones((3, 3)))
         mask = cv2.dilate(mask, kernel, iterations=2)
+        # cv2.imwrite('mask.png', mask)
+
+        return mask
+
+    @staticmethod
+    def get_red_point(filename):
+        img = cv2.imread(filename)
+        mask = ClickCenterPointFive.get_red_pic(img)
 
         # 获取符合条件的轮廓
         _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -846,6 +925,42 @@ class ClickCenterPointFive(MethodView):
         return target_points
 
     @staticmethod
+    def get_lines(filename):
+        img = cv2.imread(filename)
+        mask = ClickCenterPointFive.get_red_pic(img)
+
+        # 获取符合条件的轮廓
+        _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
+
+        target_points = []
+        for contour_index, contour_points in enumerate(contours):
+            rect = cv2.minAreaRect(contour_points)
+            # 这里可能损失精度
+            box = np.int0(cv2.boxPoints(rect))
+            # 线的长度至少得是120像素
+            if rect[1][0] > 120 or rect[1][1] > 120:
+                # cv2.drawContours(img, [box], -1, (0, 255, 0), 1)
+                # 是一条从上到下的直线
+                if rect[1][1] > rect[1][0] and abs(rect[2]) < 2:
+                    left_points = [point for point in box if point[1] < rect[0][1]]
+                elif rect[1][0] > rect[1][1] and abs(rect[2]) > 87:
+                    left_points = [point for point in box if point[1] < rect[0][1]]
+                else:
+                    left_points = [point for point in box if point[0] < rect[0][0]]
+
+                if len(left_points) == 2:
+                    target_points.append((left_points[0] + left_points[1]) / 2)
+
+                # 调试的时候打开，很方便能看出问题
+                # img = cv2.putText(img.copy(), f'{target_points[-1]}',
+                #                   (int(target_points[-1][0]), int(target_points[-1][1])),
+                #                   cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 1)
+
+        # cv2.imwrite('result.png', img)
+        return target_points
+
+    @staticmethod
     def sub_point(pre_points, cur_points):
         result_point = []
         for cur_p in cur_points:
@@ -853,7 +968,7 @@ class ClickCenterPointFive(MethodView):
             for pre_p in pre_points:
                 dis = math.sqrt(math.pow(cur_p[0] - pre_p[0], 2) + math.pow(cur_p[1] - pre_p[1], 2))
                 # print(dis, '&' * 10)
-                if dis < 1:
+                if dis < 3:
                     is_new = False
                     break
             if is_new:

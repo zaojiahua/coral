@@ -21,6 +21,8 @@ class UnitSchema(BaseSchema):
     optionalInputImage = fields.Integer()
     # 横屏还是竖屏 点击unit的时候需要
     portrait = fields.Integer()
+    # 性能测试时候判断的字段
+    start_method = fields.Integer()
 
 
 class UnitListSchema(BaseSchema):
@@ -40,6 +42,7 @@ class EblockSchema(BaseSchema):
     ip_address = fields.Str(required=True)
     unit_lists = fields.Nested(UnitListSchema, many=True, required=True, data_key="unitLists")
     block_name = fields.Str(data_key="blockName")
+    job_parameter = fields.Raw(required=False)
 
     @post_load
     def make_user(self, validate_data, **kwargs):

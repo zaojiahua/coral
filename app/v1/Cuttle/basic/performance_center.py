@@ -1,3 +1,4 @@
+import collections
 import math
 import os
 import platform
@@ -15,8 +16,9 @@ from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_all_sensor_connect
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
-    CAMERA_IN_LOOP, SENSOR, sensor_serial_obj_dict, get_global_value, camera_dq_dict
+    CAMERA_IN_LOOP, sensor_serial_obj_dict, get_global_value, camera_dq_dict
 from app.v1.Cuttle.basic.operator.camera_operator import get_camera_ids
+from app.config.setting import CORAL_TYPE
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 EXTRA_PIC_NUMBER = 40
@@ -25,8 +27,16 @@ EXTRA_PIC_NUMBER = 40
 class PerformanceCenter(object):
     # dq存储起始点前到终止点后的每一帧图片
     inner_back_up_dq = deque(maxlen=CameraMax)
-    # 0: _black_field
+    # 0: _black_field 1: 按下压感 2: 抬起压感 3: 图标膨胀
     start_method = 0
+    end_number = 0
+    start_area = None
+    start_number = 0
+    start_timestamp = 0
+    # 压感相关
+    max_force = 0
+    sensor_index = None
+    force_dict = {}
 
     # 这部分是性能测试的中心对象，性能测试主要测试启动点 和终止点两个点位，并根据拍照频率计算实际时间
     # 终止点比较简单，但是启动点由于现有机械臂无法确认到具体点压的时间，只能通过机械臂遮挡关键位置时间+补偿时间（机械臂下落按压时间）计算得到
@@ -77,9 +87,19 @@ class PerformanceCenter(object):
         return src[int(device_obj.y1) - int(device_obj.roi_y1): int(device_obj.y2) - int(device_obj.roi_y1),
                    int(device_obj.x1) - int(device_obj.roi_x1): int(device_obj.x2) - int(device_obj.roi_x1)]
 
-    def start_judge_function(self, picture, pic2, pic3, threshold):
+    def start_judge_function(self, picture, threshold, number=None, timestamp=None):
         if self.start_method == 0:
-            return self._black_field(picture, pic2, pic3, threshold)
+            is_find = self._black_field(picture, threshold)
+            if is_find and timestamp is not None:
+                self.start_number = number
+                self.start_timestamp = timestamp
+        elif self.start_method == 1:
+            is_find = self.sensor_press_down()
+        elif self.start_method == 2:
+            is_find = self.sensor_press_down(up=True)
+        else:
+            is_find = False
+        return is_find
 
     @staticmethod
     def black_field(picture):
@@ -90,9 +110,55 @@ class PerformanceCenter(object):
         match_ratio = round(result / standard + 0.01, 2)
         return picture, match_ratio
 
-    def _black_field(self, picture, _, __, threshold):
+    def _black_field(self, picture, threshold):
         _, match_ratio = self.black_field(picture)
         return match_ratio > threshold
+
+    # 传感器获取按压的起始点
+    def sensor_press_down(self, up=False):
+        find_begin_point = False
+
+        # 不管左还是右，全部判断压力值即可
+        for index, sensor_key in enumerate(sensor_serial_obj_dict.keys()):
+            if sensor_serial_obj_dict[sensor_key] is None:
+                sensor_com = sensor_key.split(self.device_id)[1]
+                sensor_serial_obj_dict[sensor_key] = creat_sensor_obj(sensor_com)
+            # 找到到底是哪个机械臂在点击
+            if self.sensor_index is not None and index != self.sensor_index:
+                continue
+
+            # 力是一个从小变大，又变小的过程
+            cur_force = sensor_serial_obj_dict[sensor_key].query_sensor_value()
+            force_time = round(time.time() * 1000)
+            print('力值：', cur_force, str(force_time))
+
+            # 同一个时间可能得到了很多不同的值
+            if cur_force == 0.0:
+                if cur_force not in self.force_dict[force_time]:
+                    self.force_dict[force_time].append(cur_force)
+            else:
+                if len(self.force_dict[force_time]) == 0 or cur_force != self.force_dict[force_time][-1]:
+                    self.force_dict[force_time].append(cur_force)
+
+            if cur_force < self.max_force:
+                # 抬起的起始点
+                find_begin_point = True
+                break
+            elif cur_force > self.max_force:
+                self.max_force = cur_force
+                self.sensor_index = index
+                # 按下的起始点
+                if cur_force > 0 and not up:
+                    find_begin_point = True
+                    break
+
+        if find_begin_point:
+            self.start_timestamp = force_time
+            print('找到了起始点', self.start_timestamp)
+            self.start_number = self.get_picture_number(self.start_timestamp)
+            close_all_sensor_connect()
+
+        return find_begin_point
 
     def get_icon(self, refer_im_path):
         # 在使用黑色区域计算时，self.icon_scope为实际出现在snap图中的位置，此方法无意义
@@ -105,93 +171,62 @@ class PerformanceCenter(object):
                 [self.icon_scope[0] * w, self.icon_scope[1] * h, self.icon_scope[2] * w, self.icon_scope[3] * h]]
         return picture[area[1]:area[3], area[0]:area[2]]
 
-    def start_loop(self):
+    def camera_loop(self):
+        set_global_value(CAMERA_IN_LOOP, True)
+        executer = ThreadPoolExecutor()
+        self.move_src_future = executer.submit(self.move_src_to_backup)
+
+    def start_loop(self, start_method=0):
         number = 0
+        self.start_method = start_method
         self.start_number = 0
-        self.start_area = None
+        self.end_number = 0
+        self.max_force = 0
+        self.sensor_index = None
+        self.start_timestamp = 0
+        self.force_dict = collections.defaultdict(list)
 
-        def camera_loop():
-            set_global_value(CAMERA_IN_LOOP, True)
-            executer = ThreadPoolExecutor()
-            self.move_src_future = executer.submit(self.move_src_to_backup)
+        self.camera_loop()
 
-        # 使用传感器获取点击的起始点，精确度更高一些
-        if SENSOR:
-            begin_time = time.time()
-            find_begin_point = False
-            max_force = 0
-            v_index = None
-            while self.loop_flag:
-                # 不管左还是右，全部判断压力值即可
-                for index, sensor_key in enumerate(sensor_serial_obj_dict.keys()):
-                    if sensor_serial_obj_dict[sensor_key] is None:
-                        sensor_com = sensor_key.split(self.device_id)[1]
-                        sensor_serial_obj_dict[sensor_key] = creat_sensor_obj(sensor_com)
-                    # 找到到底是哪个机械臂在点击
-                    if v_index is not None and index != v_index:
-                        continue
+        # 感兴趣的区域只需要计算一次即可，因为每张图片大小都是一样的，感兴趣的区域也没有变过
+        area = self.get_area(self.scope if self.start_method != 0 else self.icon_scope)
+        self.start_area = area
 
-                    # 力是一个从小变大，又变小的过程
-                    cur_force = sensor_serial_obj_dict[sensor_key].query_sensor_value()
-                    if cur_force < max_force:
-                        camera_loop()
-                        find_begin_point = True
-                        self.bias = 0
-                        self.start_timestamp = time.time() * 1000
-                        print('找到了起始点', self.start_timestamp)
-                        break
-                    elif cur_force > max_force:
-                        max_force = cur_force
-                        v_index = index
-
-                if find_begin_point:
-                    close_all_sensor_connect()
-                    break
-                elif (CameraMax / FpsMax) < time.time() - begin_time:
-                    close_all_sensor_connect()
-                    raise VideoStartPointNotFound
-            close_all_sensor_connect()
-        else:
-            # 使用图像识别的方法计算起始点
-            use_icon_scope = True if self.start_method == 0 else False
-
-            camera_loop()
-
-            # 感兴趣的区域只需要计算一次即可，因为每张图片大小都是一样的，感兴趣的区域也没有变过
-            area = self.get_area(self.scope if use_icon_scope is False else self.icon_scope)
-            self.start_area = area
-
-            while self.loop_flag:
-                # 裁剪图片获取当前和下两张
-                # start点的确认主要就是判定是否特定位置全部变成了黑色，既_black_field方法 （主要）/丢帧检测时是判定区域内有无变化（稀有）
-                # 这部分如果是判定是否变成黑色（黑色就是机械臂刚要点下的时候，挡住图标所以黑色），其实只用到当前图，下两张没有使用
-                picture, next_picture, third_pic, timestamp = self.picture_prepare(number, area)
+        while self.loop_flag:
+            # 裁剪图片获取当前和下两张
+            # start点的确认主要就是判定是否特定位置全部变成了黑色，既_black_field方法 （主要）/丢帧检测时是判定区域内有无变化（稀有）
+            # 这部分如果是判定是否变成黑色（黑色就是机械臂刚要点下的时候，挡住图标所以黑色），其实只用到当前图，下两张没有使用
+            if self.start_method == 0:
+                picture, _, __, timestamp = self.picture_prepare(number, area)
                 if picture is None:
                     print('图片不够，start loop')
                     self.start_end_loop_not_found(VideoStartPointNotFound())
+            else:
+                # 传感器判断起点不需要图片
+                picture = None
+                timestamp = None
 
-                number += 1
-                # judge_function 返回True时 即发现了起始点
-                if self.start_judge_function(picture, next_picture, third_pic, self.threshold):
-                    # 减一张得到起始点
-                    self.start_number = number - 1
-                    self.start_timestamp = timestamp
-                    print(f"发现了起始点 :{number - 1} start number:{self.start_number}", '!' * 10)
-                    break
-                elif number >= CameraMax / 2:
-                    # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
-                    self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                    self.start_end_loop_not_found(VideoStartPointNotFound())
-                del picture
+            # judge_function 返回True时 即发现了起始点
+            if self.start_judge_function(picture, self.threshold, number, timestamp):
+                print(f"循环到的次数 :{number} 发现了起始点 ::{self.start_number}", '!' * 10)
+                break
+            elif number >= CameraMax / 2:
+                print(f'找不到起点了，开始退出。。。{number}')
+                # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
+                self.start_end_loop_not_found(VideoStartPointNotFound())
+            number += 1
+            del picture
 
         # 如果能走到这里，代表发现了起始点，该unit结束，但是依然在获取图片
         return 0
 
-    def start_end_loop_not_found(self, exp=VideoEndPointNotFound()):
+    def start_end_loop_not_found(self, exp=None):
         set_global_value(CAMERA_IN_LOOP, False)
+
         # result数据的写入 只有在end的时候是有效的
-        self.result['url_prefix'] = "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path
+        self.result['url_prefix'] = "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path # noqa
         self.result['time_per_unit'] = round(1 / FpsMax, 4)
+
         if 'picture_count' not in self.result:
             if len(self.back_up_dq) > 1:
                 self.result['picture_count'] = len(self.back_up_dq) - 1
@@ -200,30 +235,23 @@ class PerformanceCenter(object):
                                      if os.path.isfile(os.path.join(self.work_path, lists))]) - 1
                 if picture_count > 0:
                     self.result['picture_count'] = picture_count
+
         # 判断取图的线程是否完全终止
         if hasattr(self, 'move_src_future'):
             for _ in as_completed([self.move_src_future]):
                 print('move src 线程结束')
+
         self.back_up_clear()
         print('清空 back up dq 队列。。。。')
-        raise exp
+        raise exp or VideoEndPointNotFound()
 
     def end_loop(self, judge_function):
-        # 计算终止点的方法
-        if not hasattr(self, "start_number"):
+        # 找到起点的时候，一定有有效的起始时间
+        if not hasattr(self, "start_timestamp") or not self.start_timestamp:
             # 计算终止点前一定要保证已经有了起始点，不可以单独调用或在计算起始点结果负值时调用。
             self.start_end_loop_not_found(VideoStartPointNotFound())
-        # 如果使用压力传感器，有可能里边还没有图片，所以选择等待一段时间
-        if SENSOR:
-            # 这里需要至少等待1s，因为1s以后才开始合并图片
-            time.sleep(2)
-        if len(self.back_up_dq) == 0:
-            self.start_end_loop_not_found(PerformanceNotStart())
 
-        if SENSOR:
-            number = 0
-        else:
-            number = self.start_number + 1
+        number = self.start_number + 1
         print("end loop start... now number:", number)
 
         picture_not_enough = False
@@ -233,7 +261,7 @@ class PerformanceCenter(object):
                 picture, next_picture, third_pic, timestamp = self.picture_prepare(number, self.start_area)
                 timestamp_dict[number] = timestamp
                 # 从start到bias这段时间，应该都是属于满足条件的区间
-                if not self.start_judge_function(picture, next_picture, third_pic, self.threshold):
+                if not self.start_judge_function(picture, self.threshold):
                     self.bias = number
                     break
                 if picture is None:
@@ -267,7 +295,13 @@ class PerformanceCenter(object):
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number, area)
             if picture is None:
                 print('图片不够 loop 2')
-                self.result = {'picture_count': number - 1, "start_point": self.start_number}
+                # 用上一次的图片时间，计算time per unit
+                _, __, ___, pre_timestamp = self.picture_prepare(number - 2, area)
+                job_duration = max(round((pre_timestamp - self.start_timestamp) / 1000, 3), 0)
+                time_per_unit = round(job_duration / (number - 2 - self.start_number), 4)
+                self.result = {'picture_count': number - 1,
+                               "start_point": self.start_number,
+                               "time_per_unit": time_per_unit}
                 self.start_end_loop_not_found()
             number += 2
 
@@ -281,7 +315,7 @@ class PerformanceCenter(object):
                 third_pic = third_pic
 
             if judge_function(picture, pic2, third_pic, self.threshold):
-                print(f"发现了终点: {number} bias：", self.bias)
+                print(f"发现了终点: {number} bias：", self.bias, timestamp)
 
                 # 保留1s的图片
                 if len(self.back_up_dq) < number + 1 * FpsMax:
@@ -301,20 +335,21 @@ class PerformanceCenter(object):
                 # 找到终止点后，包装一个json格式，推到reef
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
+                picture_count = int(self.end_number + FpsMax - 1)
 
                 self.result = {"start_point": self.start_number, "end_point": self.end_number,
                                "job_duration": job_duration,
                                "time_per_unit": time_per_unit,
-                               "picture_count": int(self.end_number + FpsMax - 1),
-                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+                               "picture_count": len(self.back_up_dq)
+                               if len(self.back_up_dq) < picture_count else picture_count,
+                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path} # noqa
                 break
             # 最后一张在prepare的时候就拿不到了 一次拿俩张图
             elif number >= CameraMax - 2:
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 time_per_unit = round(job_duration / (number - self.start_number), 4)
 
-                self.result = {"start_point": self.start_number, "end_point": number,
-                               "job_duration": job_duration,
+                self.result = {"start_point": self.start_number,
                                "time_per_unit": time_per_unit,
                                "picture_count": number,
                                "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
@@ -406,6 +441,9 @@ class PerformanceCenter(object):
                     if max_times <= 0:
                         break
 
+            if max_times <= 0:
+                print('相机中没有图片。。。。。。', len(self.back_up_dq))
+
         area = [int(i) if i > 0 else 0 for i in [scope[0] * w, scope[1] * h, scope[2] * w, scope[3] * h]] \
             if 0 < all(i <= 1 for i in scope) else [int(i) for i in scope]
 
@@ -486,20 +524,31 @@ class PerformanceCenter(object):
         while get_global_value(CAMERA_IN_LOOP):
             time.sleep(0.5)
 
+        # 如果是双摄，图片没有来得及合并，找的起点图片会小，所以重新设置一下起点的值
+        if self.start_method in [1, 2] and CORAL_TYPE == 5:
+            if 'start_point' in self.result:
+                self.start_number = self.get_picture_number(self.start_timestamp)
+                self.bias = self.start_number
+                self.result['start_point'] = self.start_number
+
         # 性能测试结束的最后再保存图片，可以加快匹配目标查找的速度
         find_end = False
-        if hasattr(self, 'end_number'):
+        if hasattr(self, 'end_number') and self.end_number:
             find_end = True
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
+        print('保存图片时候的end number', end_number, '*' * 10)
         try:
             for cur_index in range(end_number):
-                picture = self.get_back_up_image(self.back_up_dq[cur_index]['image'])
+                picture_info = self.back_up_dq[cur_index]
+                picture = self.get_back_up_image(picture_info['image'])
+
                 # 在这个地方画上要找的起始点，调试的时候使用
                 if not hasattr(self, 'start_number') or self.start_number == 0\
                         or not hasattr(self, 'bias') or (hasattr(self, 'bias') and cur_index <= self.bias):
-                    picture_area = picture[self.start_area[1]:self.start_area[3], self.start_area[0]:self.start_area[2]]
                     if self.start_method == 0:
+                        picture_area = picture[self.start_area[1]:self.start_area[3],
+                                               self.start_area[0]:self.start_area[2]]
                         picture_area, match_ratio = self.black_field(picture_area)
                         picture[self.start_area[1]:self.start_area[3],
                                 self.start_area[0]:self.start_area[2]] = cv2.cvtColor(picture_area, cv2.COLOR_GRAY2BGR)
@@ -507,6 +556,20 @@ class PerformanceCenter(object):
                                                 (self.start_area[2], self.start_area[3]), (0, 0, 255), 2)
                         picture = cv2.putText(picture.copy(), str(match_ratio), (self.start_area[2] + 10, self.start_area[1] + 10),
                                               cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 3)
+                    elif self.start_method in [1, 2]:
+                        host_timestamp = picture_info['host_timestamp']
+                        force, timestamp = self.get_force(host_timestamp)
+                        print('force:', force)
+                        picture = cv2.putText(picture.copy(), f'snap time: {host_timestamp}',
+                                              (20, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        picture = cv2.putText(picture.copy(), f'force time: {timestamp}',
+                                              (20, 300), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        step = 5
+                        for force_index in range(0, len(force), step):
+                            picture = cv2.putText(picture.copy(),
+                                                  f'force: {force[force_index: force_index + step]}',
+                                                  (20, 400 + force_index * 20),
+                                                  cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
 
                 # picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
                 picture_save = picture
@@ -517,7 +580,7 @@ class PerformanceCenter(object):
                     self.draw_rec = False
                 else:
                     # 已经在结束点画了图
-                    if cur_index != (end_number - 1):
+                    if cur_index != (end_number - 1) or not find_end:
                         cv2.imwrite(os.path.join(self.work_path, f"{cur_index}.jpg"), picture_save)
         except Exception as e:
             print(e)
@@ -544,3 +607,30 @@ class PerformanceCenter(object):
         # 销毁
         self.back_up_clear()
         print('move src to back up 正常结束')
+
+    # 获取指定时间点，传感器的力值
+    def get_force(self, host_timestamp):
+        min_value = None
+        target_timestamp = 0
+        # key是无序的，所以需要比较完所有的值
+        for timestamp in self.force_dict.keys():
+            distance = abs(host_timestamp - timestamp)
+            if min_value is None or distance < min_value:
+                min_value = distance
+                target_timestamp = timestamp
+
+        return self.force_dict[target_timestamp], target_timestamp
+
+    # 根据时间，获取距离该时间最近的一张图片
+    def get_picture_number(self, timestamp):
+        min_value = None
+        pic_number = len(self.back_up_dq)
+        for picture_index, picture_info in enumerate(self.back_up_dq):
+            host_timestamp = picture_info['host_timestamp']
+            distance = abs(host_timestamp - timestamp)
+            # 这里必须写等于，怕相机获取到的俩张图时间一致
+            if min_value is None or distance <= min_value:
+                min_value = distance
+            else:
+                return picture_index
+        return pic_number - 1

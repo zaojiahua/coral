@@ -24,10 +24,10 @@ def get_global_value(key, def_value=None):
 m_location = None
 m_location_center = None
 Z_DOWN = None
+Z_DOWN_1 = None  # Tcab-5D的右机械臂
 ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
-SENSOR = False
 # 通过算法计算出来m_location
 COMPUTE_M_LOCATION = True
 if CORAL_TYPE == 5 or CORAL_TYPE == 5.2:
@@ -62,17 +62,22 @@ elif math.floor(CORAL_TYPE) == 5:
         m_location_center = [157, 202.5, -24]
     set_global_value('m_location_center', m_location_center)
 try:
-    from app.config.ip import SENSOR
-except ImportError:
-    pass
-try:
     from app.config.ip import COMPUTE_M_LOCATION
 except ImportError:
     pass
 try:
     from app.config.ip import Z_DOWN
+    set_global_value('Z_DOWN_INIT', Z_DOWN)
+    set_global_value('Z_DOWN', Z_DOWN)
 except ImportError:
-    pass
+    raise Exception("ip.py文件异常，检查Z_DOWN值")
+
+if CORAL_TYPE == 5.3:
+    try:
+        from app.config.ip import Z_DOWN_1
+        set_global_value('Z_DOWN_1', Z_DOWN_1)
+    except ImportError:
+        set_global_value('Z_DOWN_1', Z_DOWN)
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -111,7 +116,7 @@ else:
                                          ("PixelFormat", 0x01080009, 'enum'),
                                          ("ExposureTime", 3500.0)]
 
-camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 200.0)]
+camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 180.0)]
 # Tcab-5se功能测试使用的参数
 camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
                                       ('GammaEnable', True),
@@ -120,7 +125,7 @@ camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
 camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
                                 ("PixelFormat", 0x01080009, 'enum'),
                                 ("ExposureTime", 3500.0),
-                                ("AcquisitionFrameRate", 200.0)]
+                                ("AcquisitionFrameRate", 240.0)]
 camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 200.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
@@ -183,7 +188,10 @@ if CORAL_TYPE == 5.3:
 else:
     Z_UP = 0
     Z_START = 0
-    arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
+    if CORAL_TYPE in [5, 5.1]:
+        arm_wait_position = f"G01 X10Y-170Z{Z_UP}F15000 \r\n"
+    else:
+        arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
 
 DIFF_X = 30
 MOVE_SPEED = 15000
@@ -303,7 +311,6 @@ SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
 
 click_loop_stop_flag = True  # 如果为True, 则停止多次点击
 set_global_value("click_loop_stop_flag", click_loop_stop_flag)
-
 
 # 相机外触发端子的指令
 camera_power_open = "01050000ff008c3a"

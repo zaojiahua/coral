@@ -527,10 +527,10 @@ class HandHandler(Handler, DefaultMixin):
                 # 拍照之前等待一下，否则机械臂会盖住摄像头
                 sleep_time = self.speed / 1000
                 # 机械臂移动速度算的有问题应该，实际测试的时候，22秒的时候实际机械臂并没有移动完
-                if sleep_time > 10:
-                    sleep_time += 3
-                elif sleep_time > 20:
+                if sleep_time > 20:
                     sleep_time += 4
+                elif sleep_time > 10:
+                    sleep_time += 3
                 else:
                     sleep_time += 1
                 print('开始等待', str(sleep_time))

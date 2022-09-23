@@ -484,6 +484,7 @@ class PaneUpdateMLocation(MethodView):
 
     @staticmethod
     def update_ip_file(location_name, new_data):
+        is_kuohao = True
         if platform.system() == 'Linux':
             file = '/app/source/ip.py'
         else:
@@ -493,15 +494,22 @@ class PaneUpdateMLocation(MethodView):
             content = ""
             for line in f:
                 if location_name in line and not line.startswith("#"):
-                    old_data = line.split("=")[1].split("]")[0].strip(" ")
+                    # 带[]
+                    if "[" in line:
+                        is_kuohao = False
+                        old_data = line.split("=")[1].split("]")[0].strip(" ")
+                    else:
+                        old_data = line.split("=")[1]
                     print("老数据：", old_data)
                 content += line
 
-        if not old_data:
-            raise Exception("ip.py 配置文件有问题，请检查!")
-
-        new_content = content.replace(old_data, str(new_data).split("]")[0])
-
+        if old_data:
+            if is_kuohao:
+                new_content = content.replace(old_data, str(new_data).split("]")[0])
+            else:
+                new_content = content.replace(old_data, str(new_data))
+        else:
+            new_content = content + "\r\n" + (location_name + "=" + str(new_data))
         with open(file, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
             f2.write(new_content)  # 将替换后的内容写入到test.txt文本文件中
 
@@ -522,6 +530,65 @@ class PaneClickMLocation(MethodView):
                                                                                  m_location_data_z, device_label)
         PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action)
         return jsonify(dict(error_code=0))
+
+
+class PaneClickZDown(MethodView):
+    """
+    测试 Z_DOWN 是否合适, Z值+设备厚度后再点击
+    传入的Z值为正数，需加负号
+    """
+
+    def post(self):
+        arm_num = request.get_json().get('arm_num', 0)
+        recv_z_down = request.get_json()["z_down"]
+        device_label = request.get_json()["device_label"]
+        device_obj = Device(pk=device_label)
+        click_z = -recv_z_down + float(device_obj.ply) if CORAL_TYPE != 5.3 else -recv_z_down
+        exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
+        if CORAL_TYPE == 5.3:  # 5d
+            click_xy = [160, -100] if arm_num == 0 else [-160, -100]
+            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1) if arm_num == 1 else exec_serial_obj
+        elif CORAL_TYPE == 5.2:  # 5se
+            click_xy = [90, -120]
+        elif CORAL_TYPE == 5:  # 5升级版加了延长杆
+            click_xy = [85, -170]
+        else:  # 5l
+            click_xy = [170, -170]
+        orders = [
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], click_z + 5, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], click_z, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], Z_UP, MOVE_SPEED),
+        ]
+        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click")
+        return jsonify(dict(error_code=0))
+
+
+class PaneUpdateZDown(MethodView):
+
+    def post(self):
+        Z_DOWN = -request.get_json()["z_down"]
+        set_global_value('Z_DOWN_INIT', Z_DOWN)
+        if CORAL_TYPE == 5.3:
+            Z_DOWN_1 = - request.get_json()["z_down_1"]
+            set_global_value('Z_DOWN', Z_DOWN)
+            set_global_value('Z_DOWN_1', Z_DOWN_1)
+            PaneUpdateMLocation.update_ip_file('Z_DOWN_1', Z_DOWN_1)
+        else:
+            device_label = request.get_json()["device_label"]
+            from app.v1.device_common.device_model import Device
+            device_obj = Device(pk=device_label)
+            set_global_value('Z_DOWN', Z_DOWN+float(device_obj.ply))
+        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
+        return jsonify(dict(error_code=0))
+
+
+class PaneGetZDown(MethodView):
+    def get(self):
+        data = {"z_down": -get_global_value('Z_DOWN_INIT')}
+        if CORAL_TYPE == 5.3:
+            data.update({'z_down_1': -get_global_value("Z_DOWN_1")})
+
+        return jsonify(dict(error_code=0, data=data))
 
 
 # 5D等自动建立坐标系统

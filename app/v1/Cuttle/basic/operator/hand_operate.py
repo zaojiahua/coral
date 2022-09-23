@@ -104,6 +104,7 @@ def pre_point(point, arm_num=0):
     if arm_num == 0:
         return [point[0], -point[1], z_point]
     if arm_num == 1:
+        z_point = point[2] if len(point) == 3 else get_global_value('Z_DOWN_1')
         x_point = HAND_MAX_X - point[0]
         return [-x_point, -point[1], z_point]
     raise ChooseSerialObjFail
@@ -435,6 +436,8 @@ class HandHandler(Handler, DefaultMixin):
                                                                                self._model.pk,
                                                                                roi=[float(value) for value in roi],
                                                                                is_normal_speed=True)
+        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+            raise TcabNotAllowExecThisUnit
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
         return ret
 

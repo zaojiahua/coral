@@ -2,7 +2,8 @@ from flask import Blueprint
 
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
     AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView, \
-    PaneLocateDeviceView, PaneVideoView, PaneUpdateMLocation, PaneClickMLocation, ClickCenterPointFive
+    PaneLocateDeviceView, PaneVideoView, PaneUpdateMLocation, PaneClickMLocation, ClickCenterPointFive, PaneUpdateZDown, \
+    PaneClickZDown, PaneGetZDown
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, \
     PaneBorderView
 
@@ -43,6 +44,13 @@ pane.add_url_rule('/video/', view_func=PaneVideoView.as_view('record_video'))
 pane.add_url_rule('/update_m_location/', view_func=PaneUpdateMLocation.as_view('update_m_location'))
 # 测试点击m_location
 pane.add_url_rule("/click_m_location/", view_func=PaneClickMLocation.as_view('click_m_location'))
+# 更新Z_DOWN
+pane.add_url_rule('/update_z_down/', view_func=PaneUpdateZDown.as_view('update_z_down'))
+# 测试点击Z_DOWN
+pane.add_url_rule("/click_z_down/", view_func=PaneClickZDown.as_view('click_z_down'))
+# 获取Z_DOWN值
+pane.add_url_rule("/get_z_down/", view_func=PaneGetZDown.as_view('get_z_down'))
+
 
 # 泰尔五星认证
 # 中心5点打点

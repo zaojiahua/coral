@@ -109,15 +109,6 @@ class RepeatTimeInvalid(APIException):
     description = "Repeat Time Out of Range 1-10"
 
 
-class TcabNotAllowExecThisUnit(APIException):
-    """
-    目前该Tcab柜子类型不支持这个unit的执行
-    """
-    error_code = 3013
-    code = 400
-    description = "This Tcab Type Not Allow Exec This Unit"
-
-
 class UsingHandFail(APIException):
     """
     机械臂正在使用中，无法下发新指令
@@ -125,3 +116,12 @@ class UsingHandFail(APIException):
     error_code = 3013
     code = 400
     description = "机械臂正在使用中，请稍后重试！"
+
+
+class TcabNotAllowExecThisUnit(APIException):
+    """
+    目前该Tcab柜子类型不支持这个unit的执行
+    """
+    error_code = 3014
+    code = 400
+    description = "This Tcab Type Not Allow Exec This Unit"

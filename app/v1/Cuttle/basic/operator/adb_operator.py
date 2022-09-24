@@ -162,7 +162,7 @@ class AdbHandler(Handler, ChineseMixin):
             self._model.disconnect_times_timestamp.rpush(int(time.time()))
 
             # 发送邮件进行通知，这个时候可以查看网络，检查原因
-            if self._model.disconnect_times == int(adb_disconnect_threshold / 2):
+            if self._model.disconnect_times == int(adb_disconnect_threshold):
                 # 多次尝试重连不成功，说明这个时候发生了问题
                 email = EmailManager()
                 email.send_email(email_addresses.get(int(REEF_IP.split(".")[-2]), default_email_address),

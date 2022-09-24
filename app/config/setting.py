@@ -87,13 +87,13 @@ elif CORAL_TYPE == 4:
     HARDWARE_MAPPING_LIST = [arm_com]
 # 如果需要传感器，配置arm_com_sensor
 elif CORAL_TYPE == 5:
-    HARDWARE_MAPPING_LIST = ['1', '2', arm_com]
+    HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_sensor]
 elif CORAL_TYPE == 5.3:
     HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_1]
 elif CORAL_TYPE == 5.4:
-    HARDWARE_MAPPING_LIST = ['1', '2', arm_com]
+    HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_sensor]
 else:
-    HARDWARE_MAPPING_LIST = ['1', arm_com]
+    HARDWARE_MAPPING_LIST = ['1', arm_com, arm_com_sensor]
 
 Bugreport_file_name = "bugreport.zip"
 
@@ -107,8 +107,8 @@ else:
 ERROR_CODE_FILE = 'error_code.csv'
 
 # 不同主机对应的邮件列表人员
-default_email_address = ['gh@anhereef.com', 'lx@anhereef.com', 'jy@anhereef.com']
+default_email_address = []
 email_addresses = {
-    22: ['zc@anhereef.com'],
-    25: ['whz@anhereef.com']
+    22: ['zc@anhereef.com', 'xzl@anhereef.com'],
+    25: ['whz@anhereef.com', 'xwq@anhereef.com']
 }

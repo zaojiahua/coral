@@ -1,7 +1,9 @@
 import math
+import os
 import re
 import threading
 import time
+import traceback
 
 import numpy as np
 
@@ -17,6 +19,7 @@ from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_ST
     hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
     sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X
+from app.execption.outer.error_code.camera import CoordinateConvert
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -27,11 +30,7 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     3. 设置HOME点为操作原点
     :return:
     """
-    if CORAL_TYPE == 5.3:
-        obj_key = device_obj.pk + arm_com_id
-    else:
-        obj_key = device_obj.pk
-
+    obj_key = device_obj.pk + arm_com_id
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[obj_key] = hand_serial_obj
@@ -105,6 +104,7 @@ def pre_point(point, arm_num=0):
     if arm_num == 0:
         return [point[0], -point[1], z_point]
     if arm_num == 1:
+        z_point = point[2] if len(point) == 3 else get_global_value('Z_DOWN_1')
         x_point = HAND_MAX_X - point[0]
         return [-x_point, -point[1], z_point]
     raise ChooseSerialObjFail
@@ -112,12 +112,11 @@ def pre_point(point, arm_num=0):
 
 def judge_start_x(start_x_point, device_level):
     arm_num = 0
+    suffix_key = arm_com
     if CORAL_TYPE == 5.3:
         suffix_key = arm_com if start_x_point < ARM_MOVE_REGION[0] else arm_com_1
         arm_num = 0 if suffix_key == arm_com else 1
-        exec_serial_obj = hand_serial_obj_dict.get(device_level + suffix_key)
-    else:
-        exec_serial_obj = hand_serial_obj_dict.get(device_level)
+    exec_serial_obj = hand_serial_obj_dict.get(device_level + suffix_key)
     return exec_serial_obj, arm_num
 
 
@@ -152,6 +151,7 @@ class HandHandler(Handler, DefaultMixin):
         self.kwargs = kwargs
         self.repeat_count = 0
         self.repeat_click_dict = {}
+        self.pix_points = None
 
     def before_execute(self):
         # 先转换相对坐标到绝对坐标
@@ -160,6 +160,7 @@ class HandHandler(Handler, DefaultMixin):
                 getattr(self, value)()
         # 根据adb指令中的关键词dispatch到对应机械臂方法,pix_points为adb模式下的截图中的像素坐标
         pix_points, opt_type, self.speed, absolute = self.grouping(self.exec_content)
+        self.pix_points = pix_points
 
         if opt_type in self.arm_exec_content_str:
             self.exec_content = list()
@@ -170,6 +171,11 @@ class HandHandler(Handler, DefaultMixin):
         # 旋转机械臂self.exec_content是字符串命令，所以会找self.str_func这个方法来执行
         self.func = getattr(self, opt_type)
         return normal_result
+
+    def get_device_obj(self):
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=self._model.pk)
+        return device_obj
 
     @allot_serial_obj
     def click(self, axis, **kwargs):
@@ -218,7 +224,7 @@ class HandHandler(Handler, DefaultMixin):
         return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     @allot_serial_obj
-    def sliding(self, axis, swipe_time=SWIPE_TIME, **kwargs):
+    def sliding(self, axis, **kwargs):
         """
         # 滑动
         # 2021.12.17 滑动，self.speed是滑动时间
@@ -233,11 +239,17 @@ class HandHandler(Handler, DefaultMixin):
 
         if CORAL_TYPE in [5, 5.1, 5.2]:
             return kwargs["exec_serial_obj"].send_and_read(sliding_order)
+
         if CORAL_TYPE == 5.3:
             # 双指机械臂在滑动前，先判断另一个机械臂是否为idle状态
-            other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1) if kwargs["arm_num"] == 0 else hand_serial_obj_dict.get(self._model.pk + arm_com)
+            other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1) if kwargs[
+                                                                                           "arm_num"] == 0 else hand_serial_obj_dict.get(
+                self._model.pk + arm_com)
             while not other_serial_obj.check_hand_status():
-                time.sleep(1)
+                time.sleep(0.3)
+            kwargs["exec_serial_obj"].send_and_read(sliding_order)
+            return 0
+
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
 
         if swipe_speed == 10000:
@@ -352,7 +364,7 @@ class HandHandler(Handler, DefaultMixin):
         arm_num = 0
         exec_serial_obj = None
         if CORAL_TYPE != 5.3:
-            exec_serial_obj = hand_serial_obj_dict.get(self._model.pk)
+            exec_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com)
         else:
             if kwargs.get('index', 0) == 0:
                 exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
@@ -366,8 +378,7 @@ class HandHandler(Handler, DefaultMixin):
 
     def back(self, _, **kwargs):
         # 按返回键，需要在5#型柜 先配置过返回键的位置
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
+        device_obj = self.get_device_obj()
         point = self.calculate([device_obj.back_x, device_obj.back_y, device_obj.back_z], absolute=False)
         exec_serial_obj, arm_num = judge_start_x(point[0], self._model.pk)
         point = pre_point(point, arm_num=arm_num)
@@ -385,8 +396,7 @@ class HandHandler(Handler, DefaultMixin):
 
     def home(self, _, **kwargs):
         # 点击桌面键 5#型柜使用
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
+        device_obj = self.get_device_obj()
         point = self.calculate([device_obj.home_x, device_obj.home_y, device_obj.home_z], absolute=False)
         exec_serial_obj, arm_num = judge_start_x(point[0], self._model.pk)
         point = pre_point(point, arm_num=arm_num)
@@ -397,8 +407,7 @@ class HandHandler(Handler, DefaultMixin):
 
     def menu(self, _, **kwargs):
         # 点击菜单键 5#型柜使用
-        from app.v1.device_common.device_model import Device
-        device_obj = Device(pk=self._model.pk)
+        device_obj = self.get_device_obj()
         point = self.calculate([device_obj.menu_x, device_obj.menu_y, device_obj.menu_z], absolute=False)
         exec_serial_obj, arm_num = judge_start_x(point[0], self._model.pk)
         point = pre_point(point, arm_num=arm_num)
@@ -414,32 +423,23 @@ class HandHandler(Handler, DefaultMixin):
         # 长按菜单键 5#型柜使用
         return self.menu(is_long_press=True)
 
-    def press_side(self, pix_point, **kwargs):
-        if CORAL_TYPE == 5.3:
-            raise TcabNotAllowExecThisUnit
-        # 按压侧边键
+    def press_custom_point(self, pix_point, **kwargs):
+        """
+        点击 or 按压实体键
+        Tcab-5D 不支持侧边键按压
+        """
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=self._model.pk)
-        location = get_global_value('m_location')
-        DefaultMixin.judge_coordinates_reasonable(pix_point, location[0] + float(device_obj.width), location[0],
-                                                  location[2])
-        is_left = False if (pix_point[0] - location[1]) > X_SIDE_OFFSET_DISTANCE else True
-        press_side_order = self.press_side_order(pix_point, is_left=is_left)
-        hand_serial_obj_dict.get(self._model.pk).send_out_key_order(press_side_order[:3],
-                                                                    others_orders=press_side_order[3:],
-                                                                    wait_time=self.speed)
-        rev = hand_serial_obj_dict.get(self._model.pk).recv(buffer_size=64)
-        return rev
-
-    def press_out_screen(self, pix_point, **kwargs):
-        if CORAL_TYPE == 5.3:
+        roi = [device_obj.x1, device_obj.y1, device_obj.x2, device_obj.y2]
+        from app.v1.Cuttle.macPane.pane_view import PaneClickTestView
+        exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1], pix_point[2],
+                                                                               self._model.pk,
+                                                                               roi=[float(value) for value in roi],
+                                                                               is_normal_speed=True)
+        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
             raise TcabNotAllowExecThisUnit
-        pix_point[1] = -pix_point[1]
-        click_orders = self.__single_click_order(pix_point)
-        hand_serial_obj_dict.get(self._model.pk).send_out_key_order(click_orders[:2],
-                                                                    others_orders=[click_orders[-1]],
-                                                                    wait_time=self.speed)
-        return hand_serial_obj_dict.get(self._model.pk).recv()
+        ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
+        return ret
 
     def arm_back_home(self, *args, **kwargs):
         back_order = self.arm_back_home_order()
@@ -450,6 +450,134 @@ class HandHandler(Handler, DefaultMixin):
                     serial_obj.send_single_order(order)
                     serial_obj.recv(buffer_size=32, is_init=True)
         return 0
+
+    @allot_serial_obj
+    def taier_click_center_point(self, pix_point, **kwargs):
+        """
+        泰尔实验室，打点精度测试
+        """
+        cur_index = kwargs.get('index')
+        dis_filename = os.path.join(self.kwargs.get("rds_work_path"), '打点精度.txt')
+
+        try:
+            from app.v1.Cuttle.macPane.pane_view import ClickCenterPointFive
+            # 保存到rds目录中，这样方便调试
+            pre_filename = os.path.join(self.kwargs.get("rds_work_path"), f'point_{cur_index - 1}.png')
+            filename = os.path.join(self.kwargs.get("rds_work_path"), f'point_{cur_index}.png')
+            device_obj = self.get_device_obj()
+
+            if cur_index == 0:
+                ret_code = device_obj.get_snapshot(pre_filename, max_retry_time=1, original=False)
+            else:
+                ret_code = 0
+
+            if ret_code == 0:
+                click_center_point_five = ClickCenterPointFive()
+                pre_red_points = click_center_point_five.get_red_point(pre_filename)
+
+                self.click(pix_point)
+
+                # 拍照之前等待一下，否则机械臂会盖住摄像头
+                time.sleep(1)
+                # 每次只处理一个红点
+                ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+                if ret_code == 0:
+                    red_points = click_center_point_five.get_red_point(filename)
+                    print(f'{cur_index + 1}之前的红点', pre_red_points)
+                    print(f'{cur_index + 1}当前的红点', red_points)
+                    # 将上次的红点减掉，以免对算法产生干扰
+                    red_points = click_center_point_five.sub_point(pre_red_points, red_points)
+                    print(f'{cur_index + 1}剩下的红点', red_points)
+                    print('要点击的点', self.pix_points)
+
+                    # 计算俩点之间的距离
+                    self.get_point_dis(red_points, self.pix_points, dis_filename, cur_index)
+        except Exception:
+            print(traceback.format_exc())
+            return 1
+
+        return 0
+
+    @allot_serial_obj
+    def taier_draw_line(self, pix_point, **kwargs):
+        """
+        泰尔实验室，画线精度测试
+        """
+        cur_index = kwargs.get('index')
+        dis_filename = os.path.join(self.kwargs.get("rds_work_path"), '画线精度.txt')
+
+        try:
+            from app.v1.Cuttle.macPane.pane_view import ClickCenterPointFive
+            # 保存到rds目录中，这样方便调试
+            pre_filename = os.path.join(self.kwargs.get("rds_work_path"), f'line_{cur_index - 1}.png')
+            filename = os.path.join(self.kwargs.get("rds_work_path"), f'line_{cur_index}.png')
+            device_obj = self.get_device_obj()
+
+            if cur_index == 0:
+                ret_code = device_obj.get_snapshot(pre_filename, max_retry_time=1, original=False)
+            else:
+                ret_code = 0
+
+            if ret_code == 0:
+                click_center_point_five = ClickCenterPointFive()
+                pre_lines = click_center_point_five.get_lines(pre_filename)
+
+                self.sliding(pix_point)
+
+                # 拍照之前等待一下，否则机械臂会盖住摄像头
+                sleep_time = self.speed / 1000
+                # 机械臂移动速度算的有问题应该，实际测试的时候，22秒的时候实际机械臂并没有移动完
+                if sleep_time > 20:
+                    sleep_time += 4
+                else:
+                    sleep_time += 1
+                print('开始等待', str(sleep_time))
+                time.sleep(sleep_time)
+                # 每次只处理一个红点
+                ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+                if ret_code == 0:
+                    lines = click_center_point_five.get_lines(filename)
+                    print(f'{cur_index + 1}之前的线', pre_lines)
+                    print(f'{cur_index + 1}当前的线', lines)
+                    # 将上次的红点减掉，以免对算法产生干扰
+                    lines = click_center_point_five.sub_point(pre_lines, lines)
+                    print(f'{cur_index + 1}剩下的线', lines)
+                    print('画线的起点', self.pix_points)
+
+                    # 永远取左边的点，如果完全垂直，则取上边的点
+                    if self.pix_points[0] < self.pix_points[2] and abs(self.pix_points[0] - self.pix_points[2]) > 7:
+                        left_points = self.pix_points[:2]
+                    elif self.pix_points[0] > self.pix_points[2] and abs(self.pix_points[0] - self.pix_points[2]) > 7:
+                        left_points = self.pix_points[2:]
+                    else:
+                        if self.pix_points[1] < self.pix_points[3]:
+                            left_points = self.pix_points[:2]
+                        else:
+                            left_points = self.pix_points[2:]
+
+                    self.get_point_dis(lines, left_points, dis_filename, cur_index)
+        except Exception:
+            print(traceback.format_exc())
+            return 1
+
+        return 0
+
+    def get_point_dis(self, points, pix_points, dis_filename, cur_index):
+        # 计算俩点之间的距离
+        dis = math.sqrt(math.pow(points[0][0] - pix_points[0], 2) +
+                        math.pow(points[0][1] - pix_points[1], 2))
+        dis = round(dis, 2)
+
+        print('像素差别', dis)
+        dpi = get_global_value('pane_dpi')
+        if dpi is None:
+            raise CoordinateConvert()
+
+        dis = round(dis / dpi, 2)
+        print('毫米差别', dis)
+        with open(dis_filename, 'a') as dis_file:
+            dis_file.write(f'{cur_index + 1}. ' + str(dis))
+            dis_file.write('\n')
 
     def _find_key_point(self, name):
         from app.v1.device_common.device_model import Device
@@ -560,14 +688,17 @@ class HandHandler(Handler, DefaultMixin):
         exec_t2 = threading.Thread(target=right_obj.send_list_order, args=[[right_order[0]]],
                                    kwargs={"ignore_reset": True})
 
-        exec_t2.start()
         exec_t1.start()
+        exec_t2.start()
 
         while exec_t1.is_alive() or exec_t2.is_alive():
             continue
 
-        exec2_t1 = threading.Thread(target=left_obj.send_list_order, args=[left_order[1:]], )
-        exec2_t2 = threading.Thread(target=right_obj.send_list_order, args=[right_order[1:]])
+        while (not left_obj.check_hand_status()) or (not right_obj.check_hand_status()):
+            time.sleep(1)
+
+        exec2_t1 = threading.Thread(target=left_obj.send_and_read, args=[left_order[1:]], )
+        exec2_t2 = threading.Thread(target=right_obj.send_and_read, args=[right_order[1:]])
 
         exec2_t2.start()
         exec2_t1.start()
@@ -588,9 +719,13 @@ class HandHandler(Handler, DefaultMixin):
         self.judge_diff_x(axis[1][0], axis[2][0])
         self.judge_diff_x(axis[0][0], axis[3][0])
         self.judge_diff_x(axis[1][0], axis[3][0])
-        judge_result = DefaultMixin.judge_cross([axis[0][0], axis[0][1], axis[1][0], axis[1][1]],
-                                                [axis[2][0], axis[2][1], axis[3][0], axis[3][1]])
+        judge_result, cross_point = DefaultMixin.judge_cross([axis[0][0], axis[0][1], axis[1][0], axis[1][1]],
+                                                             [axis[2][0], axis[2][1], axis[3][0], axis[3][1]])
         if not judge_result:
+            raise InvalidCoordinates
+        left_arm_x = [min(axis[0][0], axis[1][0]), max(axis[0][0], axis[1][0])]
+        right_arm_x = [min(axis[2][0], axis[3][0]), max(axis[2][0], axis[3][0])]
+        if left_arm_x[0] <= cross_point[0] <= left_arm_x[1] or right_arm_x[0] <= cross_point[0] <= right_arm_x[1]:
             raise InvalidCoordinates
         return 0
 

@@ -94,6 +94,11 @@ class MvCamera():
         MvCamCtrldll.MV_CC_StartGrabbing.restype = c_uint
         return MvCamCtrldll.MV_CC_StartGrabbing(self.handle)
 
+    def MV_CC_SetImageNodeNum(self, nNum):
+        MvCamCtrldll.MV_CC_SetImageNodeNum.argtype = (c_void_p, c_uint)
+        MvCamCtrldll.MV_CC_SetImageNodeNum.restype = c_uint
+        return MvCamCtrldll.MV_CC_SetImageNodeNum(self.handle, nNum)
+
     # 停止取流
     def MV_CC_StopGrabbing(self):
         MvCamCtrldll.MV_CC_StopGrabbing.argtype = c_void_p

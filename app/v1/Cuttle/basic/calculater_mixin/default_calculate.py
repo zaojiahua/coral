@@ -50,7 +50,18 @@ class DefaultMixin(object):
         raw_commend = self._compatible_sleep(raw_commend)
         pix_points = ""
         absolute = True
-        if "tap" in raw_commend:
+        if 'taier_swipe' in raw_commend:
+            position_args_list = raw_commend.split("swipe")[-1].strip().split(' ')
+            try:
+                speed = int(position_args_list[4])
+            except (IndexError, TypeError):
+                pass
+            pix_points = [float(i) for i in position_args_list[:4]]
+            opt_type = "taier_draw_line"
+        elif 'taier' in raw_commend:
+            pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
+            opt_type = "taier_click_center_point"
+        elif "tap" in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
             opt_type = "click"
             if self.kwargs.get('repeat'):
@@ -93,17 +104,9 @@ class DefaultMixin(object):
         elif "long press menu" in raw_commend:
             opt_type = "long_press_menu"
             pix_points = 0
-        elif "press side" in raw_commend:
-            opt_type = "press_side"
-            absolute = False
-            # side key是否存在，如果存在，读取坐标，如果不在，抛出异常
-            get_side_key = self.exec_content.split(" ")
-            if len(get_side_key) != 4: raise ExecContentFormatError
-            side_key = get_side_key[2]
-            pix_points = self.cal_press_pix_point(side_key)
-            speed = int(get_side_key[3])  # 先将等待时间放在速度参数上
-        elif "press out-screen" in raw_commend:
-            opt_type = "press_out_screen"
+        elif ("press custom-point" in raw_commend) or ("press side" in raw_commend) or (
+                "press out-screen" in raw_commend):
+            opt_type = "press_custom_point"
             absolute = False
             get_out_key = self.exec_content.split(" ")
             if len(get_out_key) != 4: raise ExecContentFormatError
@@ -184,26 +187,38 @@ class DefaultMixin(object):
         axis2: [起点x坐标，起点y坐标，终点x坐标，终点y坐标]
         """
         point_is_exist = False
+        x, y = 0, 0
         x1, y1, x2, y2 = axis1
         x3, y3, x4, y4 = axis2
 
         if (x2 - x1) == 0:
             k1 = None
+            b1 = 0
         else:
             k1 = (y2 - y1) * 1.0 / (x2 - x1)  # 计算k1,由于点均为整数，需要进行浮点数转化
+            b1 = y1 * 1.0 - x1 * k1 * 1.0
 
         if (x4 - x3) == 0:  # L2直线斜率不存在
             k2 = None
+            b2 = 0
         else:
             k2 = (y4 - y3) * 1.0 / (x4 - x3)  # 斜率存在
+            b2 = y3 * 1.0 - x3 * k2 * 1.0
 
         if k1 is None:
             if not k2 is None:
+                x = x1
+                y = k2 * x1 + b2
                 point_is_exist = True
+        elif k2 is None:
+            x = x3
+            y = k1 * x3 + b1
         elif not k2 == k1:
+            x = (b2 - b1) * 1.0 / (k1 - k2)
+            y = k1 * x * 1.0 + b1 * 1.0
             point_is_exist = True
 
-        return point_is_exist
+        return point_is_exist, [x, y]
 
 
 class CameraMixin(DefaultMixin):

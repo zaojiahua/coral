@@ -44,7 +44,7 @@ class DoorKeeper(object):
             for device_dict in res.get("devices"):
                 print('更新的设备信息有：', device_dict.get('device_label'))
                 device_obj = Device(pk=device_dict.get("device_label"))
-                device_obj.update_attr(**device_dict)
+                device_obj.update_attr(**device_dict, avoid_push=True)
 
     def authorize_device(self, **kwargs):
         s_id = self.get_device_connect_id(multi=False)

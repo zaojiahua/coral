@@ -1,4 +1,5 @@
 import os
+import re
 import traceback
 import zipfile
 from datetime import datetime
@@ -20,7 +21,7 @@ from app.libs.log import setup_logger
 from app.libs.ospathutil import file_rename_from_path
 from app.v1.djob.config.setting import NORMAL_TYPE, SWITCH_TYPE, END_TYPE, FAILED_TYPE, ADBC_TYPE, TEMPER_TYPE, \
     IMGTOOL_TYPE, SUCCESS_TYPE, SUCCESS, FAILED, INNER_DJOB_TYPE, DJOB, COMPLEX_TYPE, ERROR_FILE_DIR, ABNORMAL_TYPE, \
-    ABNORMAL
+    ABNORMAL, TERMINATE_TYPE, TERMINATE
 from app.v1.djob.model.device import DjobDevice
 from app.v1.djob.model.job import Job
 from app.v1.djob.model.joblink import JobLink
@@ -31,6 +32,7 @@ from app.v1.djob.viewModel.job import JobViewModel
 from app.v1.eblock.model.eblock import Eblock
 from app.v1.eblock.views.eblock import insert_eblock, stop_eblock
 from app.execption.outer.error_code.imgtool import DetectNoResponse
+from app.v1.eblock.model.macro_replace import BlockTimes
 
 
 class DJobFlow(BaseModel):
@@ -43,6 +45,7 @@ class DJobFlow(BaseModel):
     # 记录父级flow_id 为0代表没有父级
     parent_flow_id = models.IntegerField()
     flow_name = models.CharField()
+    job_parameter = DictField()
 
     job: Job = OwnerForeignKey(to=Job)
     device: DjobDevice = OwnerForeignKey(to=DjobDevice)
@@ -180,6 +183,18 @@ class DJobFlow(BaseModel):
                 if self.stop_flag:
                     raise EblockEarlyStop
 
+                # 运行次数动态定义
+                max_time = node_dict['maxTime'] if node_dict and node_dict["nodeType"] == SWITCH_TYPE else ''
+                if BlockTimes in str(max_time):
+                    # 里边的数字代表如果服务器没有传入动态参数，则默认的次数
+                    max_time = re.findall(f"{BlockTimes}(.*?)>", max_time)
+                    if len(max_time) > 0:
+                        max_time = max_time[0]
+                    else:
+                        max_time = 1
+                    node_dict['maxTime'] = self.job_parameter['time'] - 1 if 'time' in self.job_parameter else max_time
+                    print(self.job_parameter, 'job_parameter')
+
                 next_node_dict = self._execute_node(node_key, node_dict)
                 if next_node_dict is None:  # djob 执行出口
                     break
@@ -226,6 +241,8 @@ class DJobFlow(BaseModel):
             result_code = self.djob_result()
             result_code = ABNORMAL if result_code in [0, 1] else result_code
             return result_code
+        elif last_node == TERMINATE_TYPE:
+            return TERMINATE
         else:
             raise JobExecBodyException(description=f"job {self.job_label} exec failed:  last exec node is {last_node}")
 
@@ -246,7 +263,7 @@ class DJobFlow(BaseModel):
         elif job_node.node_type == SWITCH_TYPE:
             next_node_dict = self._execute_switch(job_node)
 
-        elif job_node.node_type in [END_TYPE, SUCCESS_TYPE, FAILED_TYPE, ABNORMAL_TYPE]:
+        elif job_node.node_type in [END_TYPE, SUCCESS_TYPE, FAILED_TYPE, ABNORMAL_TYPE, TERMINATE_TYPE]:
             return
         else:
             raise JobExecBodyException(description=f"invalid node type :{job_node.node_type}")
@@ -324,7 +341,6 @@ class DJobFlow(BaseModel):
         self.current_eblock = Eblock()
 
         # self.rds.eblock_list.rpush(eblock)
-
         json_data = {
             "pk": self.current_eblock.pk,
             "block_index": self.exec_node_index,
@@ -334,7 +350,8 @@ class DJobFlow(BaseModel):
             "rds_path": self.device.rds_data_path,
             "temp_port_list": self.device.temp_port.lrange(0, -1),
             "ip_address": self.device.ip_address,
-            **job_node.exec_node_dict
+            **job_node.exec_node_dict,
+            'job_parameter': self.job_parameter
         }
 
         return insert_eblock(json_data)
@@ -346,7 +363,7 @@ class DJobFlow(BaseModel):
 
         switch_node_dict = self.switch_node_dict
 
-        if switch_node_dict.setdefault(job_node.node_key, 0) >= job_node.max_time:
+        if switch_node_dict.setdefault(job_node.node_key, 0) >= int(job_node.max_time):
             # 如果任务执行循环是else分支会造成死循环，需要避免,因此采用向上抛出异常
             # raise JobMaxRetryCycleException()
             # 超过最大的循环次数，走else分支

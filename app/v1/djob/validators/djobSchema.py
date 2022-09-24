@@ -28,6 +28,7 @@ class DJobSchema(BaseSchema):
     flow_execute_mode = fields.Str(required=True, validate=validate.OneOf(FLOW_EXECUTE_MODE))
     job_flows = fields.Nested(UIJsonSchema, many=True, required=True)
     tboard_path = fields.Str(required=True)
+    job_parameter = fields.Raw(required=False)
 
 
 if __name__ == '__main__':

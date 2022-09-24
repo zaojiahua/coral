@@ -501,15 +501,10 @@ class PaneUpdateMLocation(MethodView):
                     else:
                         old_data = line.split("=")[1]
                     print("老数据：", old_data)
+                    continue
                 content += line
 
-        if old_data:
-            if is_kuohao:
-                new_content = content.replace(old_data, str(new_data).split("]")[0])
-            else:
-                new_content = content.replace(old_data, str(new_data))
-        else:
-            new_content = content + "\r\n" + (location_name + "=" + str(new_data))
+        new_content = content + "\n" + (location_name + "=" + str(new_data))
         with open(file, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
             f2.write(new_content)  # 将替换后的内容写入到test.txt文本文件中
 

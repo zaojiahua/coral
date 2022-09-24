@@ -100,7 +100,7 @@ def pre_point(point, arm_num=0):
                 副机械臂编号为1，机械臂原点在右上角，其x,y为[-x, -y]， 且 x 坐标为 -(MAX_X - point[0])
 
     """
-    z_point = point[2] if len(point) == 3 else get_global_value('Z_DOWN')
+    z_point = point[2] if len(point) == 3 else get_global_value('m_location')[2]
     if arm_num == 0:
         return [point[0], -point[1], z_point]
     if arm_num == 1:

@@ -558,8 +558,7 @@ class Device(BaseModel):
                 # 以左上角为m_location的时候
                 click_y = abs(m_location[1] - y / dpi)
                 # 以左下角为m_location的时候
-                # click_y = abs(m_location[1] + y / dpi)
-                click_z = get_global_value("Z_DOWN") + float(z)
+                click_z = m_location[2] + float(z)
             else:
                 # 从pane测试点击的时候走这里
                 if not test:
@@ -569,11 +568,11 @@ class Device(BaseModel):
                 if CORAL_TYPE == 5.3:
                     click_x = m_location[0] + y / dpi
                     click_y = abs(m_location[1] - (w - x) / dpi)
-                    click_z = get_global_value("Z_DOWN") + float(z)
+                    click_z = m_location[2] + float(z)
                 else:
                     click_x = m_location[0] + (h - y) / dpi
                     click_y = abs(m_location[1] - x / dpi)
-                    click_z = get_global_value("Z_DOWN") + float(z)
+                    click_z = m_location[2] + float(z)
         # 5系列柜子原始的计算方法
         else:
             # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
@@ -590,7 +589,7 @@ class Device(BaseModel):
             # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
             click_x = round((m_location[0] + float(self.width) * x_location_per), 2)
             click_y = round((m_location[1] + float(self.height) * y_location_per), 2)
-            click_z = get_global_value("Z_DOWN") + float(z)
+            click_z = m_location[2] + float(z)
 
         return click_x, click_y, click_z
 

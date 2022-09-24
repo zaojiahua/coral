@@ -562,17 +562,18 @@ class PaneUpdateZDown(MethodView):
 
     def post(self):
         Z_DOWN = -request.get_json()["z_down"]
-        set_global_value('Z_DOWN_INIT', Z_DOWN)
+        set_global_value('Z_DOWN', Z_DOWN)
+        m_location = get_global_value("m_location")
         if CORAL_TYPE == 5.3:
             Z_DOWN_1 = - request.get_json()["z_down_1"]
-            set_global_value('Z_DOWN', Z_DOWN)
             set_global_value('Z_DOWN_1', Z_DOWN_1)
+            set_global_value("m_location", [m_location[0], m_location[1], Z_DOWN])
             PaneUpdateMLocation.update_ip_file('Z_DOWN_1', Z_DOWN_1)
         else:
             device_label = request.get_json()["device_label"]
             from app.v1.device_common.device_model import Device
             device_obj = Device(pk=device_label)
-            set_global_value('Z_DOWN', Z_DOWN+float(device_obj.ply))
+            set_global_value('m_location', [m_location[0], m_location[1], Z_DOWN + float(device_obj.ply)])
         PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
         return jsonify(dict(error_code=0))
 

@@ -604,7 +604,7 @@ class PaneCoordinateView(MethodView):
         if CORAL_TYPE == 5.3:
             positions = [[[100, -100], [200, -100]]]
         elif CORAL_TYPE == 5:
-            positions = [[[125, -250], [170, -250]]]
+            positions = [[[55, -250], [90, -250]]]
         else:
             positions = [[[50, -120], [100, -120]]]
 

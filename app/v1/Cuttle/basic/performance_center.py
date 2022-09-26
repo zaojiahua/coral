@@ -559,6 +559,10 @@ class PerformanceCenter(object):
                     elif self.start_method in [1, 2]:
                         host_timestamp = picture_info['host_timestamp']
                         force, timestamp = self.get_force(host_timestamp)
+                        timestamp = time.strftime(
+                            "%H:%M:%S", time.localtime(timestamp / 1000)) + '.' + str(timestamp)[-3:]
+                        host_timestamp = time.strftime(
+                            "%H:%M:%S", time.localtime(host_timestamp / 1000)) + '.' + str(host_timestamp)[-3:]
                         print('force:', force)
                         picture = cv2.putText(picture.copy(), f'snap time: {host_timestamp}',
                                               (20, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)

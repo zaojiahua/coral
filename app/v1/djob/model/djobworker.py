@@ -6,6 +6,7 @@ from app.libs.extension.field import OwnerList, OwnerForeignKey
 from app.libs.extension.model import BaseModel
 from app.libs.log import setup_logger
 from app.v1.djob import DJob
+from app.config.setting import tboard_mapping
 
 
 class DJobWorker(BaseModel):
@@ -36,6 +37,7 @@ class DJobWorker(BaseModel):
         # self.logger.info(f"{self.device_label} djobworker djob_process ")
         while len(self.djob_list) > 0:
             self.using_djob = self.djob_list.rpop()
+            self.remove_job_from_tboard_mapping()
             self.logger.info(f" DJobWorker ({self.pk}) pop a DJob"
                              f"({self.using_djob.job_label, self.using_djob.device_label})from wait list and put execute")
 
@@ -51,3 +53,17 @@ class DJobWorker(BaseModel):
         if self.using_djob.tboard_id:
             from app.v1.tboard.model.dut import Dut
             Dut(pk=f"{self.device_label}_{self.using_djob.tboard_id}").start_dut()
+
+    def remove_job_from_tboard_mapping(self):
+        new_jobs = []
+        for job in tboard_mapping[self.using_djob.tboard_id]['jobs']:
+            if job['job_label'] == self.using_djob.job_label:
+                continue
+            else:
+                new_jobs.append(job)
+        if len(new_jobs) == 0:
+            del tboard_mapping[self.using_djob.tboard_id]
+        else:
+            tboard_mapping[self.using_djob.tboard_id]['jobs'] = new_jobs
+        print('剩下的tboard_mapping')
+        print(tboard_mapping)

@@ -22,7 +22,7 @@ from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, \
-    COMPUTE_M_LOCATION
+    COMPUTE_M_LOCATION, hand_serial_obj_dict, rotate_hand_serial_obj_dict, sensor_serial_obj_dict
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.execption.outer.error_code.camera import CoordinateConvert, MergeShapeNone
 
@@ -426,6 +426,11 @@ class Device(BaseModel):
         if self.ip_address != "0.0.0.0":
             h = AdbHandler(model=self)
             h.disconnect()
+        if CORAL_TYPE >= 5:
+            hand_serial_obj_dict.clear()
+            sensor_serial_obj_dict.clear()
+        if CORAL_TYPE == 3:
+            rotate_hand_serial_obj_dict.clear()
         # 移除僚机信息
         self.remove_subsidiary_device()
         self.remove()

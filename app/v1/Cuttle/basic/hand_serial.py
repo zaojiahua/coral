@@ -8,7 +8,7 @@ from mcush import *
 
 from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com, IP_FILE_PATH
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
-from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open
+from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open, MAX_SENSOR_VALUE
 
 
 class HandSerial:
@@ -244,6 +244,8 @@ class SensorSerial(HandSerial):
         if sensor_ret_value.count('f') == len(sensor_ret_value):
             return False
         value = int(sensor_ret_value, 16) / 10
+        if value > MAX_SENSOR_VALUE:    # 超过一定范围的力值也过滤掉
+            return False
         return value
 
 

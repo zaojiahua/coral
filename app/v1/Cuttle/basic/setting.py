@@ -301,3 +301,6 @@ set_global_value("click_loop_stop_flag", click_loop_stop_flag)
 # 相机外触发端子的指令
 camera_power_open = "01050000ff008c3a"
 camera_power_close = "010500000000cdca"
+
+# 压感数值范围
+MAX_SENSOR_VALUE = 50

@@ -1,7 +1,6 @@
 import logging
 import math
 import os.path
-import platform
 import random
 import shutil
 import subprocess
@@ -19,7 +18,7 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, BASE_DIR
+    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, BASE_DIR, IP_FILE_PATH
 from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail, CoordinateConvert, \
     MergeShapeNone
 from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit
@@ -484,28 +483,16 @@ class PaneUpdateMLocation(MethodView):
 
     @staticmethod
     def update_ip_file(location_name, new_data):
-        is_kuohao = True
-        if platform.system() == 'Linux':
-            file = '/app/source/ip.py'
-        else:
-            file = os.path.join(BASE_DIR, "app", "config", "ip.py")
-        old_data = None
-        with open(file, "r", encoding="utf-8") as f:
+        with open(IP_FILE_PATH, "r", encoding="utf-8") as f:
             content = ""
             for line in f:
                 if location_name in line and not line.startswith("#"):
-                    # 带[]
-                    if "[" in line:
-                        is_kuohao = False
-                        old_data = line.split("=")[1].split("]")[0].strip(" ")
-                    else:
-                        old_data = line.split("=")[1]
-                    print("老数据：", old_data)
+                    print("被替换的数据是： ", line)
                     continue
                 content += line
 
         new_content = content + "\n" + (location_name + "=" + str(new_data))
-        with open(file, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
+        with open(IP_FILE_PATH, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
             f2.write(new_content)  # 将替换后的内容写入到test.txt文本文件中
 
 
@@ -562,19 +549,14 @@ class PaneUpdateZDown(MethodView):
 
     def post(self):
         Z_DOWN = -request.get_json()["z_down"]
-        set_global_value('Z_DOWN', Z_DOWN)
-        m_location = get_global_value("m_location")
+        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
         if CORAL_TYPE == 5.3:
             Z_DOWN_1 = - request.get_json()["z_down_1"]
-            set_global_value('Z_DOWN_1', Z_DOWN_1)
-            set_global_value("m_location", [m_location[0], m_location[1], Z_DOWN])
             PaneUpdateMLocation.update_ip_file('Z_DOWN_1', Z_DOWN_1)
-        else:
-            device_label = request.get_json()["device_label"]
-            from app.v1.device_common.device_model import Device
-            device_obj = Device(pk=device_label)
-            set_global_value('m_location', [m_location[0], m_location[1], Z_DOWN + float(device_obj.ply)])
-        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
+        device_label = request.get_json()["device_label"]
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=device_label)
+        device_obj.update_m_location()
         return jsonify(dict(error_code=0))
 
 

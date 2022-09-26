@@ -5,7 +5,7 @@ import traceback
 
 from astra import models
 
-from app.config.setting import ADB_TYPE, HOST_IP
+from app.config.setting import ADB_TYPE, HOST_IP, IP_FILE_PATH
 from app.config.url import device_create_update_url, device_url, device_phone_model_coordinate, coordinate_url
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
@@ -481,7 +481,18 @@ class Device(BaseModel):
     def update_m_location(self):
         if CORAL_TYPE in [1, 2, 3]:
             return
-
+        Z_DOWN = None
+        Z_DOWN_1 = None
+        with open(IP_FILE_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                if "Z_DOWN" in line and line[0] != '#':
+                    Z_DOWN = float(line.split('=')[1].split('#')[0])
+                if "Z_DOWN_1" in line and line[0] != '#' and CORAL_TYPE == 5.3:
+                    Z_DOWN_1 = float(line.split('=')[1].split('#')[0])
+        if not Z_DOWN:
+            self.logger.error('缺少必要的Z_DOWN相关配置, 请检查配置文件！！！')
+        if CORAL_TYPE == 5.3 and (not Z_DOWN_1):
+            Z_DOWN_1 = Z_DOWN
         # 新的坐标换算和5D保持一样，也可以使用原始的坐标换算方式
         if CORAL_TYPE == 5.3 or COMPUTE_M_LOCATION:
             if not os.path.exists(COORDINATE_CONFIG_FILE):
@@ -521,6 +532,7 @@ class Device(BaseModel):
         elif Z_DOWN:
             if CORAL_TYPE == 5.3:
                 set_global_value('Z_DOWN', Z_DOWN)
+                set_global_value('Z_DOWN_1', Z_DOWN_1)
             else:
                 set_global_value('Z_DOWN', round(Z_DOWN + float(self.ply), 2))
             print('new Z_DOWN', get_global_value('Z_DOWN'))

@@ -18,13 +18,13 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, BASE_DIR, IP_FILE_PATH
+    arm_com_1, CORAL_TYPE, arm_com, arm_com_1_sensor, IP_FILE_PATH
 from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail, CoordinateConvert, \
     MergeShapeNone
 from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
-from app.v1.Cuttle.basic.hand_serial import controlUsbPower
+from app.v1.Cuttle.basic.hand_serial import controlUsbPower, read_z_down_from_file
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler, judge_start_x, \
@@ -562,9 +562,10 @@ class PaneUpdateZDown(MethodView):
 
 class PaneGetZDown(MethodView):
     def get(self):
-        data = {"z_down": -get_global_value('Z_DOWN_INIT')}
+        Z_DOWN, Z_DOWN_1 = read_z_down_from_file()
+        data = {"z_down": -Z_DOWN}
         if CORAL_TYPE == 5.3:
-            data.update({'z_down_1': -get_global_value("Z_DOWN_1")})
+            data.update({'z_down_1': (-Z_DOWN if not Z_DOWN_1 else -Z_DOWN_1)})
 
         return jsonify(dict(error_code=0, data=data))
 

@@ -6,7 +6,7 @@ from serial import SerialException
 
 from mcush import *
 
-from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com
+from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com, IP_FILE_PATH
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
 from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open
 
@@ -245,3 +245,15 @@ class SensorSerial(HandSerial):
             return False
         value = int(sensor_ret_value, 16) / 10
         return value
+
+
+def read_z_down_from_file():
+    Z_DOWN = None
+    Z_DOWN_1 = None
+    with open(IP_FILE_PATH, "r", encoding="utf-8") as f:
+        for line in f:
+            if "Z_DOWN" in line and line[0] != '#':
+                Z_DOWN = float(line.split('=')[1].split('#')[0])
+            if "Z_DOWN_1" in line and line[0] != '#' and CORAL_TYPE == 5.3:
+                Z_DOWN_1 = float(line.split('=')[1].split('#')[0])
+    return Z_DOWN, Z_DOWN_1

@@ -20,7 +20,7 @@ from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
-from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, Z_DOWN, \
+from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, \
     COMPUTE_M_LOCATION
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.execption.outer.error_code.camera import CoordinateConvert, MergeShapeNone

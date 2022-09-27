@@ -104,6 +104,7 @@ def pre_point(point, arm_num=0):
     if arm_num == 0:
         return [point[0], -point[1], z_point]
     if arm_num == 1:
+        z_point = point[2] if len(point) == 3 else get_global_value('Z_DOWN_1')
         x_point = HAND_MAX_X - point[0]
         return [-x_point, -point[1], z_point]
     raise ChooseSerialObjFail
@@ -435,6 +436,8 @@ class HandHandler(Handler, DefaultMixin):
                                                                                self._model.pk,
                                                                                roi=[float(value) for value in roi],
                                                                                is_normal_speed=True)
+        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+            raise TcabNotAllowExecThisUnit
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
         return ret
 
@@ -522,8 +525,16 @@ class HandHandler(Handler, DefaultMixin):
                 self.sliding(pix_point)
 
                 # 拍照之前等待一下，否则机械臂会盖住摄像头
-                print('开始等待', str(1 + self.speed / 1000))
-                time.sleep(1 + self.speed / 1000)
+                sleep_time = self.speed / 1000
+                # 机械臂移动速度算的有问题应该，实际测试的时候，22秒的时候实际机械臂并没有移动完
+                if sleep_time > 20:
+                    sleep_time += 4
+                elif sleep_time > 10:
+                    sleep_time += 3
+                else:
+                    sleep_time += 1
+                print('开始等待', str(sleep_time))
+                time.sleep(sleep_time)
                 # 每次只处理一个红点
                 ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
                 if ret_code == 0:

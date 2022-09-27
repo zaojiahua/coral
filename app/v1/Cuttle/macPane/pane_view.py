@@ -720,7 +720,7 @@ class PaneCoordinateView(MethodView):
                 # 计算左下角的m_location
                 # m_y = round(pos_a[1] - (w - cal_point[0][0]) / dpi, 2)
 
-            return dpi, [m_x, m_y, Z_DOWN]
+            return dpi, [m_x, m_y]
 
         # 画出轮廓，方便测试
         img = cv2.drawContours(img, contours, -1, (0, 255, 0), 3)

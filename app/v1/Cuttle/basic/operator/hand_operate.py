@@ -564,7 +564,7 @@ class HandHandler(Handler, DefaultMixin):
         if dpi is None:
             raise CoordinateConvert()
 
-        dis = round(dis / dpi, 2)
+        dis = round(dis / dpi, 2) * 0.5
         print('毫米差别', dis)
         with open(dis_filename, 'a') as dis_file:
             dis_file.write(f'{cur_index + 1}. ' + str(dis))

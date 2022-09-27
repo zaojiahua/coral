@@ -139,6 +139,7 @@ class DefaultMixin(object):
         if "<sleep>" in exec_content:
             res = re.search("<sleep>(.*?)$", exec_content)
             sleep_time = res.group(1)
+            print('--------------即将睡眠：', str(sleep_time))
             time.sleep(float(sleep_time))
             exec_content = exec_content.replace("<sleep>" + sleep_time, "").strip()
         if len(exec_content) <= 1:

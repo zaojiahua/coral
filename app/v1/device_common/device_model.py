@@ -437,7 +437,6 @@ class Device(BaseModel):
         add_device_thread_status(self.device_label)
         while self.flag:
             time.sleep(2)
-            print('设备线程运行中。。。。。。')
             # first priority do single djob
             try:
                 if Dut.all(device_label=self.device_label):

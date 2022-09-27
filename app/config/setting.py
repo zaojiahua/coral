@@ -112,3 +112,6 @@ email_addresses = {
     22: ['zc@anhereef.com', 'xzl@anhereef.com'],
     25: ['whz@anhereef.com', 'xwq@anhereef.com']
 }
+
+# tboard mapping 临时性的跑通方案 用来记录哪些job还没有执行以及job对应的一些参数
+tboard_mapping = {}

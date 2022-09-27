@@ -501,15 +501,10 @@ class PaneUpdateMLocation(MethodView):
                     else:
                         old_data = line.split("=")[1]
                     print("老数据：", old_data)
+                    continue
                 content += line
 
-        if old_data:
-            if is_kuohao:
-                new_content = content.replace(old_data, str(new_data).split("]")[0])
-            else:
-                new_content = content.replace(old_data, str(new_data))
-        else:
-            new_content = content + "\r\n" + (location_name + "=" + str(new_data))
+        new_content = content + "\n" + (location_name + "=" + str(new_data))
         with open(file, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
             f2.write(new_content)  # 将替换后的内容写入到test.txt文本文件中
 
@@ -567,17 +562,18 @@ class PaneUpdateZDown(MethodView):
 
     def post(self):
         Z_DOWN = -request.get_json()["z_down"]
-        set_global_value('Z_DOWN_INIT', Z_DOWN)
+        set_global_value('Z_DOWN', Z_DOWN)
+        m_location = get_global_value("m_location")
         if CORAL_TYPE == 5.3:
             Z_DOWN_1 = - request.get_json()["z_down_1"]
-            set_global_value('Z_DOWN', Z_DOWN)
             set_global_value('Z_DOWN_1', Z_DOWN_1)
+            set_global_value("m_location", [m_location[0], m_location[1], Z_DOWN])
             PaneUpdateMLocation.update_ip_file('Z_DOWN_1', Z_DOWN_1)
         else:
             device_label = request.get_json()["device_label"]
             from app.v1.device_common.device_model import Device
             device_obj = Device(pk=device_label)
-            set_global_value('Z_DOWN', Z_DOWN+float(device_obj.ply))
+            set_global_value('m_location', [m_location[0], m_location[1], Z_DOWN + float(device_obj.ply)])
         PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
         return jsonify(dict(error_code=0))
 
@@ -604,7 +600,7 @@ class PaneCoordinateView(MethodView):
         if CORAL_TYPE == 5.3:
             positions = [[[100, -100], [200, -100]]]
         elif CORAL_TYPE == 5:
-            positions = [[[125, -250], [170, -250]]]
+            positions = [[[55, -250], [90, -250]]]
         else:
             positions = [[[50, -120], [100, -120]]]
 

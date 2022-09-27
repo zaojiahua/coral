@@ -50,6 +50,7 @@ class DJob(BaseModel):
     tboard_id = models.IntegerField()
 
     stop = models.BooleanField()  # default False 未停止  True  手动停止
+    finish = models.BooleanField() # 代表是否完成
 
     job_assessment_value = models.CharField()  # 记录rds结果
     job_duration = OwnerFloatField()  # 记录性能测试用例性能数据（运行时间）

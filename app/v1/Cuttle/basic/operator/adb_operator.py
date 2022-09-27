@@ -195,7 +195,16 @@ class AdbHandler(Handler, ChineseMixin):
         if "<sleep>" in exec_content:
             res = re.search("<sleep>(.*?)$", exec_content)
             sleep_time = res.group(1)
-            time.sleep(float(sleep_time))
+
+            print('--------------即将睡眠：', str(sleep_time))
+            from app.v1.eblock.model.eblock import Eblock
+            block = Eblock(pk=self.kwargs.get('block_pk'))
+            step = 1
+            for _ in range(0, int(sleep_time), step):
+                time.sleep(step)
+                if block.stop_flag:
+                    break
+
             exec_content = exec_content.replace("<sleep>" + sleep_time, "").strip()
         return exec_content
 

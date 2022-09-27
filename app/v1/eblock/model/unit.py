@@ -211,6 +211,7 @@ class Unit(BaseModel):
 
             if kwargs.pop("test_running", False):
                 sending_data["test_running"] = True
+            sending_data['block_pk'] = kwargs.get('block_pk')
             sending_data["work_path"] = self.unit_work_path
             sending_data['rds_work_path'] = handler.rds_path
             sending_data["device_label"] = self.device_label

@@ -37,7 +37,6 @@ class DJobWorker(BaseModel):
         # self.logger.info(f"{self.device_label} djobworker djob_process ")
         while len(self.djob_list) > 0:
             self.using_djob = self.djob_list.rpop()
-            self.remove_job_from_tboard_mapping()
             self.logger.info(f" DJobWorker ({self.pk}) pop a DJob"
                              f"({self.using_djob.job_label, self.using_djob.device_label})from wait list and put execute")
 
@@ -46,6 +45,8 @@ class DJobWorker(BaseModel):
             self.callback()
             self.logger.info("callback finished ")
 
+            self.using_djob.finish = True
+            self.remove_job_from_tboard_mapping()
             self.using_djob.remove()
             self.logger.info("djob_process finished  now start next djob")
 
@@ -56,8 +57,10 @@ class DJobWorker(BaseModel):
 
     def remove_job_from_tboard_mapping(self):
         new_jobs = []
+        # 接口形式没有随机，移除第一个找到的job即可
         for job in tboard_mapping[self.using_djob.tboard_id]['jobs']:
-            if job['job_label'] == self.using_djob.job_label:
+            if job['job_label'] == self.using_djob.job_label and self.using_djob.finish:
+                print('移除job', job['job_label'])
                 continue
             else:
                 new_jobs.append(job)

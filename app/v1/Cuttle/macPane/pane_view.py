@@ -366,46 +366,43 @@ class PaneClickTestView(MethodView):
         return: serial_obj, orders
         """
         is_left_side = False
-        if CORAL_TYPE == 5.3:
-            exec_action = "click"
-        else:
-            # 判断是否是按压侧边键
-            location = get_global_value("m_location")
-            try:
-                device_obj = Device(pk=device_label)
-                if not COMPUTE_M_LOCATION:
-                    # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
+        # 判断是否是按压侧边键
+        location = get_global_value("m_location")
+        try:
+            device_obj = Device(pk=device_label)
+            if not COMPUTE_M_LOCATION:
+                # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
+                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                          location[0] + float(device_obj.width), location[0],
+                                                          location[2])
+                if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                    is_left_side = True
+            else:
+                dpi = get_global_value('pane_dpi')
+                if dpi is None or roi is None:
+                    raise CoordinateConvert()
+                try:
+                    h, w, _ = get_global_value('merge_shape')
+                except Exception:
+                    raise MergeShapeNone()
+
+                # 目前5d不支持点击侧边键
+                if CORAL_TYPE == 5.3:
+                    min_x = location[0] + roi[1] / dpi
+                    max_x = location[0] + roi[3] / dpi
                     DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                              location[0] + float(device_obj.width), location[0],
-                                                              location[2])
-                    if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
-                        is_left_side = True
+                                                              max_x, min_x, location[2])
                 else:
-                    dpi = get_global_value('pane_dpi')
-                    if dpi is None or roi is None:
-                        raise CoordinateConvert()
-                    try:
-                        h, w, _ = get_global_value('merge_shape')
-                    except Exception:
-                        raise MergeShapeNone()
+                    min_x = location[0] + (h - roi[3]) / dpi
+                    max_x = location[0] + (h - roi[1]) / dpi
+                    DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                              max_x, min_x, location[2])
 
-                    # 目前5d不支持点击侧边键
-                    if CORAL_TYPE == 5.3:
-                        min_x = location[0] + roi[1] / dpi
-                        max_x = location[0] + roi[3] / dpi
-                        DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                                  max_x, min_x, location[2])
-                    else:
-                        min_x = location[0] + (h - roi[3]) / dpi
-                        max_x = location[0] + (h - roi[1]) / dpi
-                        DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                                  max_x, min_x, location[2])
-
-                    if click_x < min_x or (click_x - min_x) <= X_SIDE_OFFSET_DISTANCE:
-                        is_left_side = True
-                exec_action = "press"
-            except CoordinatesNotReasonable:
-                exec_action = "click"
+                if click_x < min_x or (click_x - min_x) <= X_SIDE_OFFSET_DISTANCE:
+                    is_left_side = True
+            exec_action = "press"
+        except CoordinatesNotReasonable:
+            exec_action = "click"
 
         if exec_action == "click":
             exec_serial_obj, arm_num = judge_start_x(click_x, device_label)

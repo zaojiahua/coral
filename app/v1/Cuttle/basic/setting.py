@@ -23,8 +23,6 @@ def get_global_value(key, def_value=None):
 # import的时候可能存在问题，所以变量都声明一下
 m_location = None
 m_location_center = None
-Z_DOWN = None
-Z_DOWN_1 = None  # Tcab-5D的右机械臂
 ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
@@ -65,19 +63,7 @@ try:
     from app.config.ip import COMPUTE_M_LOCATION
 except ImportError:
     pass
-try:
-    from app.config.ip import Z_DOWN
-    set_global_value('Z_DOWN_INIT', Z_DOWN)
-    set_global_value('Z_DOWN', Z_DOWN)
-except ImportError:
-    raise Exception("ip.py文件异常，检查Z_DOWN值")
 
-if CORAL_TYPE == 5.3:
-    try:
-        from app.config.ip import Z_DOWN_1
-        set_global_value('Z_DOWN_1', Z_DOWN_1)
-    except ImportError:
-        set_global_value('Z_DOWN_1', Z_DOWN)
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -315,3 +301,6 @@ set_global_value("click_loop_stop_flag", click_loop_stop_flag)
 # 相机外触发端子的指令
 camera_power_open = "01050000ff008c3a"
 camera_power_close = "010500000000cdca"
+
+# 压感数值范围
+MAX_SENSOR_VALUE = 50

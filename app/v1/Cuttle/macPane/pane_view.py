@@ -1,7 +1,6 @@
 import logging
 import math
 import os.path
-import platform
 import random
 import shutil
 import subprocess
@@ -19,13 +18,13 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, BASE_DIR
+    arm_com_1, CORAL_TYPE, arm_com, arm_com_1_sensor, IP_FILE_PATH
 from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail, CoordinateConvert, \
     MergeShapeNone
 from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
-from app.v1.Cuttle.basic.hand_serial import controlUsbPower
+from app.v1.Cuttle.basic.hand_serial import controlUsbPower, read_z_down_from_file
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler, judge_start_x, \
@@ -367,46 +366,43 @@ class PaneClickTestView(MethodView):
         return: serial_obj, orders
         """
         is_left_side = False
-        if CORAL_TYPE == 5.3:
-            exec_action = "click"
-        else:
-            # 判断是否是按压侧边键
-            location = get_global_value("m_location")
-            try:
-                device_obj = Device(pk=device_label)
-                if not COMPUTE_M_LOCATION:
-                    # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
+        # 判断是否是按压侧边键
+        location = get_global_value("m_location")
+        try:
+            device_obj = Device(pk=device_label)
+            if not COMPUTE_M_LOCATION:
+                # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
+                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                          location[0] + float(device_obj.width), location[0],
+                                                          location[2])
+                if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                    is_left_side = True
+            else:
+                dpi = get_global_value('pane_dpi')
+                if dpi is None or roi is None:
+                    raise CoordinateConvert()
+                try:
+                    h, w, _ = get_global_value('merge_shape')
+                except Exception:
+                    raise MergeShapeNone()
+
+                # 目前5d不支持点击侧边键
+                if CORAL_TYPE == 5.3:
+                    min_x = location[0] + roi[1] / dpi
+                    max_x = location[0] + roi[3] / dpi
                     DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                              location[0] + float(device_obj.width), location[0],
-                                                              location[2])
-                    if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
-                        is_left_side = True
+                                                              max_x, min_x, location[2])
                 else:
-                    dpi = get_global_value('pane_dpi')
-                    if dpi is None or roi is None:
-                        raise CoordinateConvert()
-                    try:
-                        h, w, _ = get_global_value('merge_shape')
-                    except Exception:
-                        raise MergeShapeNone()
+                    min_x = location[0] + (h - roi[3]) / dpi
+                    max_x = location[0] + (h - roi[1]) / dpi
+                    DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                              max_x, min_x, location[2])
 
-                    # 目前5d不支持点击侧边键
-                    if CORAL_TYPE == 5.3:
-                        min_x = location[0] + roi[1] / dpi
-                        max_x = location[0] + roi[3] / dpi
-                        DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                                  max_x, min_x, location[2])
-                    else:
-                        min_x = location[0] + (h - roi[3]) / dpi
-                        max_x = location[0] + (h - roi[1]) / dpi
-                        DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                                  max_x, min_x, location[2])
-
-                    if click_x < min_x or (click_x - min_x) <= X_SIDE_OFFSET_DISTANCE:
-                        is_left_side = True
-                exec_action = "press"
-            except CoordinatesNotReasonable:
-                exec_action = "click"
+                if click_x < min_x or (click_x - min_x) <= X_SIDE_OFFSET_DISTANCE:
+                    is_left_side = True
+            exec_action = "press"
+        except CoordinatesNotReasonable:
+            exec_action = "click"
 
         if exec_action == "click":
             exec_serial_obj, arm_num = judge_start_x(click_x, device_label)
@@ -484,28 +480,16 @@ class PaneUpdateMLocation(MethodView):
 
     @staticmethod
     def update_ip_file(location_name, new_data):
-        is_kuohao = True
-        if platform.system() == 'Linux':
-            file = '/app/source/ip.py'
-        else:
-            file = os.path.join(BASE_DIR, "app", "config", "ip.py")
-        old_data = None
-        with open(file, "r", encoding="utf-8") as f:
+        with open(IP_FILE_PATH, "r", encoding="utf-8") as f:
             content = ""
             for line in f:
                 if location_name in line and not line.startswith("#"):
-                    # 带[]
-                    if "[" in line:
-                        is_kuohao = False
-                        old_data = line.split("=")[1].split("]")[0].strip(" ")
-                    else:
-                        old_data = line.split("=")[1]
-                    print("老数据：", old_data)
+                    print("被替换的数据是： ", line)
                     continue
                 content += line
 
         new_content = content + "\n" + (location_name + "=" + str(new_data))
-        with open(file, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
+        with open(IP_FILE_PATH, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
             f2.write(new_content)  # 将替换后的内容写入到test.txt文本文件中
 
 
@@ -562,27 +546,23 @@ class PaneUpdateZDown(MethodView):
 
     def post(self):
         Z_DOWN = -request.get_json()["z_down"]
-        set_global_value('Z_DOWN', Z_DOWN)
-        m_location = get_global_value("m_location")
+        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
         if CORAL_TYPE == 5.3:
             Z_DOWN_1 = - request.get_json()["z_down_1"]
-            set_global_value('Z_DOWN_1', Z_DOWN_1)
-            set_global_value("m_location", [m_location[0], m_location[1], Z_DOWN])
             PaneUpdateMLocation.update_ip_file('Z_DOWN_1', Z_DOWN_1)
-        else:
-            device_label = request.get_json()["device_label"]
-            from app.v1.device_common.device_model import Device
-            device_obj = Device(pk=device_label)
-            set_global_value('m_location', [m_location[0], m_location[1], Z_DOWN + float(device_obj.ply)])
-        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
+        device_label = request.get_json()["device_label"]
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=device_label)
+        device_obj.update_m_location()
         return jsonify(dict(error_code=0))
 
 
 class PaneGetZDown(MethodView):
     def get(self):
-        data = {"z_down": -get_global_value('Z_DOWN_INIT')}
+        Z_DOWN, Z_DOWN_1 = read_z_down_from_file()
+        data = {"z_down": -Z_DOWN}
         if CORAL_TYPE == 5.3:
-            data.update({'z_down_1': -get_global_value("Z_DOWN_1")})
+            data.update({'z_down_1': (-Z_DOWN if not Z_DOWN_1 else -Z_DOWN_1)})
 
         return jsonify(dict(error_code=0, data=data))
 
@@ -737,7 +717,7 @@ class PaneCoordinateView(MethodView):
                 # 计算左下角的m_location
                 # m_y = round(pos_a[1] - (w - cal_point[0][0]) / dpi, 2)
 
-            return dpi, [m_x, m_y, Z_DOWN]
+            return dpi, [m_x, m_y]
 
         # 画出轮廓，方便测试
         img = cv2.drawContours(img, contours, -1, (0, 255, 0), 3)

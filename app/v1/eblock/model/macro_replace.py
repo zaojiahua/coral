@@ -204,7 +204,7 @@ class MacroHandler(object):
 
         # 支持只增加串口
         if serial_content in cmd:
-            cmd = cmd.replace(serial_content, self.get_serial_content(assist_device_ident))
+            cmd = cmd.replace(serial_content, self.get_serial_content_no_prefix(assist_device_ident))
 
         # 支持动态环境变量
         if EnvVar in cmd:
@@ -219,7 +219,10 @@ class MacroHandler(object):
         return cmd, save_file
 
     def get_serial_content(self, assist_device_ident):
-        return f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}"
+        return ' -s ' + self.get_serial_content_no_prefix(assist_device_ident)
+
+    def get_serial_content_no_prefix(self, assist_device_ident):
+        return f"{assist_device_ident}" if assist_device_ident else f"{self.ip_address}"
 
     @staticmethod
     def get_validate_range(r_list, x):

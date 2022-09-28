@@ -24,6 +24,7 @@ long_time_sleep_tag = "<longTimeSleepTag_"
 content_singal = "<Macro_"
 adb_tool_prefix = "<3adbcTool>"
 fastboot_tool_prefix = "<fastbootTool>"
+serial_content = '<serialTool>'
 adb_ip_prefix = "<3adbcIP>"
 Rotate_horizontal = "<RotateHorizontal>"
 Rotate_vertical = "<RotateVertical>"
@@ -193,15 +194,17 @@ class MacroHandler(object):
         if adb_ip_prefix in cmd:
             cmd = cmd.replace(adb_ip_prefix, REEF_IP)
         if adb_tool_prefix in cmd:
-            script = f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}"
-            cmd = cmd.replace(adb_tool_prefix, script)
+            cmd = cmd.replace(adb_tool_prefix, self.get_serial_content(assist_device_ident))
             cmd = self._adb_cmd_prefix + " " + cmd
 
         # 支持刷机指令
         if fastboot_tool_prefix in cmd:
-            script = f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}"
-            cmd = cmd.replace(fastboot_tool_prefix, script)
+            cmd = cmd.replace(fastboot_tool_prefix, self.get_serial_content(assist_device_ident))
             cmd = self._fastboot_cmd_prefix + " " + cmd
+
+        # 支持只增加串口
+        if serial_content in cmd:
+            cmd = cmd.replace(serial_content, self.get_serial_content(assist_device_ident))
 
         # 支持动态环境变量
         if EnvVar in cmd:
@@ -214,6 +217,9 @@ class MacroHandler(object):
         if pipe_command in cmd:
             cmd = cmd.replace(pipe_command, find_command)
         return cmd, save_file
+
+    def get_serial_content(self, assist_device_ident):
+        return f" -s {assist_device_ident}" if assist_device_ident else f"-s {self.ip_address}"
 
     @staticmethod
     def get_validate_range(r_list, x):

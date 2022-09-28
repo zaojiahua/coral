@@ -58,8 +58,8 @@ class DJobWorker(BaseModel):
     def remove_job_from_tboard_mapping(self):
         new_jobs = []
         # 接口形式没有随机，移除第一个找到的job即可
-        for job in tboard_mapping[self.using_djob.tboard_id]['jobs']:
-            if job['job_label'] == self.using_djob.job_label and self.using_djob.finish:
+        for job_index, job in enumerate(tboard_mapping[self.using_djob.tboard_id]['jobs']):
+            if job['job_label'] == self.using_djob.job_label and job_index == 0:
                 print('移除job', job['job_label'])
                 continue
             else:

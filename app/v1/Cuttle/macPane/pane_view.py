@@ -425,55 +425,52 @@ class PaneClickTestView(MethodView):
 
         return exec_serial_obj, orders, exec_action
 
+    @staticmethod
+    def get_device_scope(roi, location, dpi, h):
+        """
+        判断点击点是否在roi范围内
+        click: 物理坐标值, [x, y] or [x, y, z]
+        需求得最大[min_x, max_x], [mix_y, mix_y]
+        """
+        if CORAL_TYPE in [5, 5, 3]:
+            min_x = location[0] + roi[1] / dpi
+            max_x = location[0] + roi[3] / dpi
+        else:
+            min_x = location[0] + (h - roi[3]) / dpi
+            max_x = location[0] + (h - roi[1]) / dpi
 
-@staticmethod
-def get_device_scope(roi, location, dpi, h):
-    """
-    判断点击点是否在roi范围内
-    click: 物理坐标值, [x, y] or [x, y, z]
-    需求得最大[min_x, max_x], [mix_y, mix_y]
-    """
-    if CORAL_TYPE in [5, 5, 3]:
-        min_x = location[0] + roi[1] / dpi
-        max_x = location[0] + roi[3] / dpi
-    else:
-        min_x = location[0] + (h - roi[3]) / dpi
-        max_x = location[0] + (h - roi[1]) / dpi
+        min_y = location[0] + roi[0] / dpi
+        max_y = location[1] + roi[2] / dpi
 
-    min_y = location[0] + roi[0] / dpi
-    max_y = location[1] + roi[2] / dpi
+        return [min_x, max_x, min_y, max_y]
 
-    return [min_x, max_x, min_y, max_y]
+    @staticmethod
+    def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False, wait_time=0):
+        """
+        is_exec_loop: 是否正在执行测试点击多次
+        """
+        if exec_action == "click":
+            exec_serial_obj.send_out_key_order(orders[:2], others_orders=[orders[-1]], wait_time=wait_time,
+                                               ignore_reset=ignore_reset)
+        elif exec_action == "press":
+            exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=wait_time,
+                                               ignore_reset=ignore_reset)
+        else:
+            pass
+        exec_serial_obj.recv()
 
-
-@staticmethod
-def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False, wait_time=0):
-    """
-    is_exec_loop: 是否正在执行测试点击多次
-    """
-    if exec_action == "click":
-        exec_serial_obj.send_out_key_order(orders[:2], others_orders=[orders[-1]], wait_time=wait_time,
-                                           ignore_reset=ignore_reset)
-    elif exec_action == "press":
-        exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=wait_time,
-                                           ignore_reset=ignore_reset)
-    else:
-        pass
-    exec_serial_obj.recv()
-
-
-@staticmethod
-def exec_action_loop(exec_serial_obj, orders, exec_action, click_count, random_dir):
-    for num in range(click_count):
-        if get_global_value("click_loop_stop_flag"):
-            exec_serial_obj.send_single_order(arm_wait_position)
-            exec_serial_obj.recv()
-            break
-        ignore_reset = False if num == click_count - 1 else True
-        PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=ignore_reset)
-    set_global_value("click_loop_stop_flag", True)
-    shutil.rmtree(random_dir)
-    return 0
+    @staticmethod
+    def exec_action_loop(exec_serial_obj, orders, exec_action, click_count, random_dir):
+        for num in range(click_count):
+            if get_global_value("click_loop_stop_flag"):
+                exec_serial_obj.send_single_order(arm_wait_position)
+                exec_serial_obj.recv()
+                break
+            ignore_reset = False if num == click_count - 1 else True
+            PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=ignore_reset)
+        set_global_value("click_loop_stop_flag", True)
+        shutil.rmtree(random_dir)
+        return 0
 
 
 class PaneUpdateMLocation(MethodView):

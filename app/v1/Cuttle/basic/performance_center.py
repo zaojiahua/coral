@@ -274,12 +274,12 @@ class PerformanceCenter(object):
             self.bias = self.start_number
 
         # 重置number，比如用力滑动的时候，屏幕变化很快，或者响应非常快速的设备，而我们的帧率又达不到的时候
-        number = math.floor((self.start_number + self.bias) / 2)
+        number = math.ceil((self.start_number + self.bias) / 2)
         print("reset number, now number:", number)
 
         # 这里重新设置一下start_number，因为终点不一定可以找到，start_number的值必须正确了
         if self.start_method == 0:
-            self.start_number = math.floor(int(self.start_number + self.bias) / 2)
+            self.start_number = math.ceil(int(self.start_number + self.bias) / 2)
             self.start_timestamp = timestamp_dict[self.start_number]
 
             # 在寻找bias的时候，如果图片不够，报错

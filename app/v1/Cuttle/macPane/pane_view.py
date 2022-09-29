@@ -388,7 +388,7 @@ class PaneClickTestView(MethodView):
             except Exception:
                 raise MergeShapeNone()
 
-            device_scope = PaneClickTestView.get_device_scope(roi, location, dpi, h)
+            device_scope = PaneClickTestView.get_device_scope(roi, location, dpi, h, w)
             # 点的位置在屏幕内一定为点击，屏幕外一定是按压
             exec_action = "click" if (device_scope[0] <= click_x <= device_scope[1]) and (
                     device_scope[2] <= click_y <= device_scope[3]) else "press"
@@ -426,21 +426,22 @@ class PaneClickTestView(MethodView):
         return exec_serial_obj, orders, exec_action
 
     @staticmethod
-    def get_device_scope(roi, location, dpi, h):
+    def get_device_scope(roi, location, dpi, h, w):
         """
         判断点击点是否在roi范围内
         click: 物理坐标值, [x, y] or [x, y, z]
         需求得最大[min_x, max_x], [mix_y, mix_y]
         """
-        if CORAL_TYPE in [5, 5, 3]:
+        if CORAL_TYPE in [5, 5.3]:
             min_x = location[0] + roi[1] / dpi
             max_x = location[0] + roi[3] / dpi
+            min_y = -location[1] + (w - roi[2]) / dpi
+            max_y = -location[1] + (w - roi[0]) / dpi
         else:
             min_x = location[0] + (h - roi[3]) / dpi
             max_x = location[0] + (h - roi[1]) / dpi
-
-        min_y = location[0] + roi[0] / dpi
-        max_y = location[1] + roi[2] / dpi
+            min_y = -location[1] + roi[0] / dpi
+            max_y = -location[1] + roi[2] / dpi
 
         return [min_x, max_x, min_y, max_y]
 

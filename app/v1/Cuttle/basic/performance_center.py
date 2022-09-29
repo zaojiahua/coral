@@ -636,6 +636,7 @@ class PerformanceCenter(object):
     # 根据时间，获取距离该时间最近的一张图片
     def get_picture_number(self, timestamp):
         min_value = None
+        host_timestamp = None
         pic_number = len(self.back_up_dq)
         for picture_index, picture_info in enumerate(self.back_up_dq):
             host_timestamp = picture_info['host_timestamp']
@@ -645,4 +646,4 @@ class PerformanceCenter(object):
                 min_value = distance
             else:
                 return picture_index, host_timestamp
-        return pic_number - 1
+        return pic_number - 1, host_timestamp

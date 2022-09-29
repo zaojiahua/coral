@@ -155,7 +155,7 @@ class PerformanceCenter(object):
         if find_begin_point:
             self.start_timestamp = force_time
             print('找到了起始点', self.start_timestamp)
-            self.start_number = self.get_picture_number(self.start_timestamp)
+            self.start_number, _ = self.get_picture_number(self.start_timestamp)
             close_all_sensor_connect()
 
         return find_begin_point
@@ -225,7 +225,9 @@ class PerformanceCenter(object):
 
         # result数据的写入 只有在end的时候是有效的
         self.result['url_prefix'] = "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path # noqa
-        self.result['time_per_unit'] = round(1 / FpsMax, 4)
+
+        if 'time_per_unit' not in self.result or self.start_method in [1, 2]:
+            self.result['time_per_unit'] = round(1 / FpsMax, 4)
 
         if 'picture_count' not in self.result:
             if len(self.back_up_dq) > 1:
@@ -524,17 +526,23 @@ class PerformanceCenter(object):
         while get_global_value(CAMERA_IN_LOOP):
             time.sleep(0.5)
 
-        # 如果是双摄，图片没有来得及合并，找的起点图片会小，所以重新设置一下起点的值
-        if self.start_method in [1, 2] and CORAL_TYPE == 5:
-            if 'start_point' in self.result:
-                self.start_number = self.get_picture_number(self.start_timestamp)
-                self.bias = self.start_number
-                self.result['start_point'] = self.start_number
-
         # 性能测试结束的最后再保存图片，可以加快匹配目标查找的速度
         find_end = False
         if hasattr(self, 'end_number') and self.end_number:
             find_end = True
+
+        # 如果是双摄，图片没有来得及合并，找的起点图片会小，所以重新设置一下起点的值
+        if self.start_method in [1, 2] and CORAL_TYPE == 5:
+            if 'start_point' in self.result:
+                self.start_number, host_timestamp = self.get_picture_number(self.start_timestamp)
+                self.bias = self.start_number
+                self.result['start_point'] = self.start_number
+                if find_end:
+                    # 修改time_per_unit，便于前端计算
+                    end_host_timestamp = self.back_up_dq[self.end_number]['host_timestamp']
+                    job_duration = max(round((end_host_timestamp - host_timestamp) / 1000, 3), 0)
+                    time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
+                    self.result['time_per_unit'] = time_per_unit
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
         print('保存图片时候的end number', end_number, '*' * 10)
@@ -636,5 +644,5 @@ class PerformanceCenter(object):
             if min_value is None or distance <= min_value:
                 min_value = distance
             else:
-                return picture_index
+                return picture_index, host_timestamp
         return pic_number - 1

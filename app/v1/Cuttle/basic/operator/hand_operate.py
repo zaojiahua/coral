@@ -10,7 +10,7 @@ import numpy as np
 from app.config.setting import CORAL_TYPE, arm_com, arm_com_1
 from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, ChooseSerialObjFail, InvalidCoordinates, \
-    RepeatTimeInvalid, TcabNotAllowExecThisUnit
+    RepeatTimeInvalid, TcabNotAllowExecThisUnit, CoordinatesNotReasonable
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower, SensorSerial
@@ -432,12 +432,16 @@ class HandHandler(Handler, DefaultMixin):
         device_obj = Device(pk=self._model.pk)
         roi = [device_obj.x1, device_obj.y1, device_obj.x2, device_obj.y2]
         from app.v1.Cuttle.macPane.pane_view import PaneClickTestView
-        exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1], pix_point[2],
-                                                                               self._model.pk,
-                                                                               roi=[float(value) for value in roi],
-                                                                               is_normal_speed=True)
-        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+        try:
+            exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1],
+                                                                                   pix_point[2],
+                                                                                   self._model.pk,
+                                                                                   roi=[float(value) for value in roi],
+                                                                                   is_normal_speed=True)
+        except TcabNotAllowExecThisUnit:
             raise TcabNotAllowExecThisUnit
+        except CoordinatesNotReasonable:
+            raise CoordinatesNotReasonable
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
         return ret
 

@@ -63,6 +63,10 @@ try:
     from app.config.ip import COMPUTE_M_LOCATION
 except ImportError:
     pass
+try:
+    from app.config.ip import CAMERA_CONVERT
+except ImportError:
+    CAMERA_CONVERT = False
 
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来

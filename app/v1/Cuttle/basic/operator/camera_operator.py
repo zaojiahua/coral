@@ -536,8 +536,8 @@ class CameraHandler(Handler):
                 img2 = frames[0]['image']
                 img1 = frames[1]['image']
             # 有时候俩个相机反了，打开这里
-            # if CORAL_TYPE == 5.3:
-            #     img1, img2 = img2, img1
+            if CORAL_TYPE == 5.3 and CAMERA_CONVERT:
+                img1, img2 = img2, img1
 
             host_t_1 = frames[0]['host_timestamp']
             host_t_2 = frames[1]['host_timestamp']

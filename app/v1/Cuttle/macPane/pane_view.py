@@ -390,7 +390,7 @@ class PaneClickTestView(MethodView):
 
             # 判断是否是侧边键
             device_scope = PaneClickTestView.get_device_scope(roi, location, dpi, h)
-            if device_scope[0] <= click_x <= device_scope[1] and device_scope[3] <= click_y <= device_scope[4]:
+            if device_scope[0] <= click_x <= device_scope[1] and device_scope[2] <= click_y <= device_scope[3]:
                 exec_action = "press"
                 if CORAL_TYPE in [5, 5.3, 5.4]:
                     raise TcabNotAllowExecThisUnit

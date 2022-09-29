@@ -325,12 +325,15 @@ class PaneClickTestView(MethodView):
                                                                   device_point)
 
         # 获取执行动作需要的信息
-        exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label,
-                                                                  roi=device_point)
-
-        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+        try:
+            exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label,
+                                                                      roi=device_point)
+        except TcabNotAllowExecThisUnit:
             return jsonify(dict(error_code=TcabNotAllowExecThisUnit.error_code,
                                 description=TcabNotAllowExecThisUnit.description))
+        except CoordinatesNotReasonable:
+            return jsonify(dict(error_code=CoordinatesNotReasonable.error_code,
+                                description=CoordinatesNotReasonable.description))
 
         # 判断机械臂状态是否在执行循环
         if not get_global_value("click_loop_stop_flag"):
@@ -366,43 +369,43 @@ class PaneClickTestView(MethodView):
         return: serial_obj, orders
         """
         is_left_side = False
-        # 判断是否是按压侧边键
         location = get_global_value("m_location")
-        try:
-            device_obj = Device(pk=device_label)
-            if not COMPUTE_M_LOCATION:
-                # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
-                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                          location[0] + float(device_obj.width), location[0],
-                                                          location[2])
-                if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
-                    is_left_side = True
-            else:
-                dpi = get_global_value('pane_dpi')
-                if dpi is None or roi is None:
-                    raise CoordinateConvert()
-                try:
-                    h, w, _ = get_global_value('merge_shape')
-                except Exception:
-                    raise MergeShapeNone()
+        device_obj = Device(pk=device_label)
+        exec_action = None
+        if not COMPUTE_M_LOCATION:
+            # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
+            DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                      location[0] + float(device_obj.width), location[0],
+                                                      location[2])
+            if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                is_left_side = True
+        else:
+            dpi = get_global_value('pane_dpi')
+            if dpi is None or roi is None:
+                raise CoordinateConvert()
+            try:
+                h, w, _ = get_global_value('merge_shape')
+            except Exception:
+                raise MergeShapeNone()
 
-                # 目前5d不支持点击侧边键
-                if CORAL_TYPE == 5.3:
-                    min_x = location[0] + roi[1] / dpi
-                    max_x = location[0] + roi[3] / dpi
-                    DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                              max_x, min_x, location[2])
-                else:
-                    min_x = location[0] + (h - roi[3]) / dpi
-                    max_x = location[0] + (h - roi[1]) / dpi
-                    DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                              max_x, min_x, location[2])
+            device_scope = PaneClickTestView.get_device_scope(roi, location, dpi, h)
+            # 点的位置在屏幕内一定为点击，屏幕外一定是按压
+            exec_action = "click" if (device_scope[0] <= click_x <= device_scope[1]) and (
+                    device_scope[2] <= click_y <= device_scope[3]) else "press"
+
+            # 带传感器的柜子不允许按压
+            if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+                raise TcabNotAllowExecThisUnit
+
+            # 其他柜型（5L-5.1，5se-5.2）支持按压，但需要判断按压侧边键位置的合理性
+            if exec_action == "press":
+                min_x = location[0] + (h - roi[3]) / dpi
+                max_x = location[0] + (h - roi[1]) / dpi
+                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                          max_x, min_x, location[2])
 
                 if click_x < min_x or (click_x - min_x) <= X_SIDE_OFFSET_DISTANCE:
                     is_left_side = True
-            exec_action = "press"
-        except CoordinatesNotReasonable:
-            exec_action = "click"
 
         if exec_action == "click":
             exec_serial_obj, arm_num = judge_start_x(click_x, device_label)
@@ -421,6 +424,25 @@ class PaneClickTestView(MethodView):
             exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
 
         return exec_serial_obj, orders, exec_action
+
+    @staticmethod
+    def get_device_scope(roi, location, dpi, h):
+        """
+        判断点击点是否在roi范围内
+        click: 物理坐标值, [x, y] or [x, y, z]
+        需求得最大[min_x, max_x], [mix_y, mix_y]
+        """
+        if CORAL_TYPE in [5, 5, 3]:
+            min_x = location[0] + roi[1] / dpi
+            max_x = location[0] + roi[3] / dpi
+        else:
+            min_x = location[0] + (h - roi[3]) / dpi
+            max_x = location[0] + (h - roi[1]) / dpi
+
+        min_y = location[0] + roi[0] / dpi
+        max_y = location[1] + roi[2] / dpi
+
+        return [min_x, max_x, min_y, max_y]
 
     @staticmethod
     def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False, wait_time=0):

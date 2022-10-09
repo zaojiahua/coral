@@ -13,8 +13,8 @@ from marshmallow import ValidationError
 from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersionFail
 from app.libs.func_tools import method_dispatch
 from app.libs.log import setup_logger
-from app.v1.Cuttle.basic.setting import normal_result, SERVER_OPERATE_LOCK, \
-    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, RESTART_SERVER, \
+from app.v1.Cuttle.basic.setting import normal_result, \
+    adb_cmd_prefix, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, RESTART_SERVER, \
     adb_disconnect_threshold
 
 from app.execption.outer.error_code.imgtool import DetectNoResponse
@@ -135,27 +135,7 @@ class Handler():
         def _inner_func():
             return self.str_func(exec_content, **kwargs)
 
-        # 俩种类型的指令互斥
-        if ADB_TYPE == 1:
-            random_value = random.random()
-            kwargs['random_value'] = random_value
-            if exec_content == (adb_cmd_prefix + RESTART_SERVER):
-                kwargs['target_lock'] = NORMAL_OPERATE_LOCK
-                kwargs['lock_type'] = SERVER_OPERATE_LOCK
-            else:
-                kwargs['target_lock'] = SERVER_OPERATE_LOCK
-                kwargs['lock_type'] = NORMAL_OPERATE_LOCK
-
-        def _inner_lock_func():
-            try:
-                return _inner_func()
-            except func_timeout.exceptions.FunctionTimedOut as e:
-                # 超时以后需要删除lock
-                if kwargs.get('lock_type'):
-                    unlock_cmd(keys=[kwargs['lock_type']], args=[kwargs['random_value']])
-                raise e
-
-        return self.retry_timeout_func(_inner_lock_func)
+        return self.retry_timeout_func(_inner_func)
 
     def retry_timeout_func(self, func):
         retry_time = 0

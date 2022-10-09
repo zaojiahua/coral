@@ -252,30 +252,6 @@ KILL_SERVER = "kill-server"
 START_SERVER = "start-server"
 # 本来没有这条指令 但是为了让skill-server start-server作为一个原子操作，做一个这样的指令
 RESTART_SERVER = 'restart-server'
-SERVER_OPERATE_LOCK = 'server_operate_lock'
-NORMAL_OPERATE_LOCK = 'normal_lock'
-
-get_lock = '''
-local is_exist = redis.call("GET", KEYS[1])
-if is_exist then
-    return 1
-else
-    redis.call("SET", ARGV[1], ARGV[2])
-    return 0
-end
-'''
-unlock = '''
-local random_value = redis.call("GET", KEYS[1])
-if random_value == ARGV[1] then
-    return redis.call("DEL", KEYS[1])
-else
-    return 0
-end
-'''
-
-get_lock_cmd = redis_client.register_script(get_lock)
-unlock_cmd = redis_client.register_script(unlock)
-
 SCREENCAP_CMD = 'exec-out screencap -p >'
 # 兼容更早的Android版本
 SCREENCAP_CMD_EARLY_VERSION = "shell screencap -p | sed 's/\r$//' >"

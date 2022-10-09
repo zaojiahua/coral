@@ -3,7 +3,6 @@ import copy
 import re
 import time
 import traceback
-import random
 
 import cv2
 import func_timeout
@@ -14,12 +13,11 @@ from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersi
 from app.libs.func_tools import method_dispatch
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.setting import normal_result, \
-    adb_cmd_prefix, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, RESTART_SERVER, \
+    SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, \
     adb_disconnect_threshold
 
 from app.execption.outer.error_code.imgtool import DetectNoResponse
-from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
-from app.config.ip import ADB_TYPE
+from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT, HAND_HANDLER, CAMERA_HANDLER
 from app.execption.outer.error_code.eblock import UnitTimeOut
 from app.execption.outer.error_code.djob import ImageIsNoneException
 
@@ -53,6 +51,7 @@ class Handler():
         self.extra_result = {'not_compress_png_list': []}
         self.optional_input_image = self.kwargs.get('optional_input_image') or 0
         self.portrait = self.kwargs.get('portrait', 1)
+        self.handler_type = self.kwargs.get('handler_type')
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -126,7 +125,8 @@ class Handler():
             # 具体执行方法，这部分处理不是字符串的unit
             return self.func(exec_content, **kwargs)
 
-        return self.retry_timeout_func(_inner_func)
+        return self.retry_timeout_func(_inner_func) if self.handler_type not in [HAND_HANDLER, CAMERA_HANDLER] \
+            else self.func(exec_content, **kwargs)
 
     @do.register(str)
     def _(self, exec_content, **kwargs):
@@ -135,7 +135,8 @@ class Handler():
         def _inner_func():
             return self.str_func(exec_content, **kwargs)
 
-        return self.retry_timeout_func(_inner_func)
+        return self.retry_timeout_func(_inner_func) if self.handler_type not in [HAND_HANDLER, CAMERA_HANDLER] \
+            else self.str_func(exec_content, **kwargs)
 
     def retry_timeout_func(self, func):
         retry_time = 0

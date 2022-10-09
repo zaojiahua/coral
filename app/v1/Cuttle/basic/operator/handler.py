@@ -126,7 +126,7 @@ class Handler():
             return self.func(exec_content, **kwargs)
 
         return self.retry_timeout_func(_inner_func) if self.handler_type not in [HAND_HANDLER, CAMERA_HANDLER] \
-            else self.func(exec_content, **kwargs)
+            else _inner_func()
 
     @do.register(str)
     def _(self, exec_content, **kwargs):
@@ -136,7 +136,7 @@ class Handler():
             return self.str_func(exec_content, **kwargs)
 
         return self.retry_timeout_func(_inner_func) if self.handler_type not in [HAND_HANDLER, CAMERA_HANDLER] \
-            else self.str_func(exec_content, **kwargs)
+            else _inner_func()
 
     def retry_timeout_func(self, func):
         retry_time = 0

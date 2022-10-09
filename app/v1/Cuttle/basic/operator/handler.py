@@ -52,6 +52,8 @@ class Handler():
         self.optional_input_image = self.kwargs.get('optional_input_image') or 0
         self.portrait = self.kwargs.get('portrait', 1)
         self.handler_type = self.kwargs.get('handler_type')
+        # adb 指令都是开启了一个新的进程来做的，这里记录一下进程id，方便强制结束进程
+        self.working_process = None
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -146,6 +148,9 @@ class Handler():
                 return func()
             except func_timeout.exceptions.FunctionTimedOut as e:
                 retry_time += 1
+                # 超时的时候，把子进程强制结束
+                if self.working_process is not None:
+                    self.working_process.kill()
                 if retry_time == max_retry_time:
                     raise e
                 else:

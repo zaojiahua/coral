@@ -77,8 +77,13 @@ class AdbHandler(Handler, ChineseMixin):
         if len(exec_content) == 0:
             return ""
 
-        sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
+        if sys.platform != "win32":
+            # https://www.cnblogs.com/xiao987334176/p/10863807.html
+            sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT, close_fds=True, preexec_fn=os.setsid)
+        else:
+            sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT)
         # 记录进程id，方便超时时候的处理
         self.working_process = sub_proc
         # 这个地方是耗时操作，在获取返回值

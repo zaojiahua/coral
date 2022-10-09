@@ -1,6 +1,9 @@
 import collections
 import copy
+import os
 import re
+import signal
+import sys
 import time
 import traceback
 
@@ -150,7 +153,9 @@ class Handler():
                 retry_time += 1
                 # 超时的时候，把子进程强制结束
                 if self.working_process is not None:
-                    self.working_process.kill()
+                    # 只有linux下才能杀掉开启的进程
+                    if sys.platform != "win32":
+                        os.killpg(self.working_process.pid, signal.SIGUSR1)
                 if retry_time == max_retry_time:
                     raise e
                 else:

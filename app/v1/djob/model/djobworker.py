@@ -6,6 +6,7 @@ from app.libs.extension.field import OwnerList, OwnerForeignKey
 from app.libs.extension.model import BaseModel
 from app.libs.log import setup_logger
 from app.v1.djob import DJob
+from app.config.setting import tboard_mapping
 
 
 class DJobWorker(BaseModel):
@@ -44,6 +45,8 @@ class DJobWorker(BaseModel):
             self.callback()
             self.logger.info("callback finished ")
 
+            self.using_djob.finish = True
+            self.remove_job_from_tboard_mapping()
             self.using_djob.remove()
             self.logger.info("djob_process finished  now start next djob")
 
@@ -51,3 +54,19 @@ class DJobWorker(BaseModel):
         if self.using_djob.tboard_id:
             from app.v1.tboard.model.dut import Dut
             Dut(pk=f"{self.device_label}_{self.using_djob.tboard_id}").start_dut()
+
+    def remove_job_from_tboard_mapping(self):
+        new_jobs = []
+        # 接口形式没有随机，移除第一个找到的job即可
+        for job_index, job in enumerate(tboard_mapping[self.using_djob.tboard_id]['jobs']):
+            if job['job_label'] == self.using_djob.job_label and job_index == 0:
+                print('移除job', job['job_label'])
+                continue
+            else:
+                new_jobs.append(job)
+        if len(new_jobs) == 0:
+            del tboard_mapping[self.using_djob.tboard_id]
+        else:
+            tboard_mapping[self.using_djob.tboard_id]['jobs'] = new_jobs
+        print('剩下的tboard_mapping')
+        print(tboard_mapping)

@@ -10,6 +10,7 @@ from app.config.url import device_create_update_url, device_url, device_phone_mo
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
+from app.v1.Cuttle.basic.hand_serial import read_z_down_from_file
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.boxSvc.box_views import get_port_temperature
 from app.v1.device_common.device_manager import add_device_thread_status, remove_device_thread_status
@@ -20,8 +21,8 @@ from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
-from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, Z_DOWN, \
-    COMPUTE_M_LOCATION
+from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, \
+    COMPUTE_M_LOCATION, hand_serial_obj_dict, rotate_hand_serial_obj_dict, sensor_serial_obj_dict
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.execption.outer.error_code.camera import CoordinateConvert, MergeShapeNone
 
@@ -425,6 +426,11 @@ class Device(BaseModel):
         if self.ip_address != "0.0.0.0":
             h = AdbHandler(model=self)
             h.disconnect()
+        if CORAL_TYPE >= 5:
+            hand_serial_obj_dict.clear()
+            sensor_serial_obj_dict.clear()
+        if CORAL_TYPE == 3:
+            rotate_hand_serial_obj_dict.clear()
         # 移除僚机信息
         self.remove_subsidiary_device()
         self.remove()
@@ -481,7 +487,11 @@ class Device(BaseModel):
     def update_m_location(self):
         if CORAL_TYPE in [1, 2, 3]:
             return
-
+        Z_DOWN, Z_DOWN_1 = read_z_down_from_file()
+        if not Z_DOWN:
+            self.logger.error('缺少必要的Z_DOWN相关配置, 请检查配置文件！！！')
+        if CORAL_TYPE == 5.3 and (not Z_DOWN_1):
+            Z_DOWN_1 = Z_DOWN
         # 新的坐标换算和5D保持一样，也可以使用原始的坐标换算方式
         if CORAL_TYPE == 5.3 or COMPUTE_M_LOCATION:
             if not os.path.exists(COORDINATE_CONFIG_FILE):
@@ -521,6 +531,7 @@ class Device(BaseModel):
         elif Z_DOWN:
             if CORAL_TYPE == 5.3:
                 set_global_value('Z_DOWN', Z_DOWN)
+                set_global_value('Z_DOWN_1', Z_DOWN_1)
             else:
                 set_global_value('Z_DOWN', round(Z_DOWN + float(self.ply), 2))
             print('new Z_DOWN', get_global_value('Z_DOWN'))
@@ -558,8 +569,7 @@ class Device(BaseModel):
                 # 以左上角为m_location的时候
                 click_y = abs(m_location[1] - y / dpi)
                 # 以左下角为m_location的时候
-                # click_y = abs(m_location[1] + y / dpi)
-                click_z = get_global_value("Z_DOWN") + float(z)
+                click_z = m_location[2] + float(z)
             else:
                 # 从pane测试点击的时候走这里
                 if not test:
@@ -569,11 +579,11 @@ class Device(BaseModel):
                 if CORAL_TYPE == 5.3:
                     click_x = m_location[0] + y / dpi
                     click_y = abs(m_location[1] - (w - x) / dpi)
-                    click_z = get_global_value("Z_DOWN") + float(z)
+                    click_z = m_location[2] + float(z)
                 else:
                     click_x = m_location[0] + (h - y) / dpi
                     click_y = abs(m_location[1] - x / dpi)
-                    click_z = get_global_value("Z_DOWN") + float(z)
+                    click_z = m_location[2] + float(z)
         # 5系列柜子原始的计算方法
         else:
             # 代表传入的x,y,z是以roi区域的左上角点为原点的，并且图片时经过旋转后的
@@ -590,7 +600,7 @@ class Device(BaseModel):
             # 然后对应实际的设备大小，换算成点击位置，要求roi必须和填入的设备宽高大小一致 注意拍成的照片是横屏还是竖屏 m_location针对的是实际的左上角点，其实是图片上的左下角点
             click_x = round((m_location[0] + float(self.width) * x_location_per), 2)
             click_y = round((m_location[1] + float(self.height) * y_location_per), 2)
-            click_z = get_global_value("Z_DOWN") + float(z)
+            click_z = m_location[2] + float(z)
 
         return click_x, click_y, click_z
 

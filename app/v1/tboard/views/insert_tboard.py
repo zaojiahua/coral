@@ -8,6 +8,7 @@ from app.execption.outer.error_code.tboard import CreateTboardError
 from app.v1.tboard.validators.tboardSchema import TboardSchema, TboardJobPrioritySchema
 from app.v1.tboard.views import tborad_router
 from app.libs.log import setup_logger
+from app.config.setting import tboard_mapping
 
 """
 {
@@ -30,6 +31,7 @@ from app.libs.log import setup_logger
 def insert_tboard():
     logger = setup_logger(TBOARD_LOG_NAME, f'{TBOARD_LOG_NAME}.log')
     logger.info(f"【Tboard】 receive a tboard from post request {request.json}")
+    tboard_mapping[request.json['tboard_id']] = request.json
     return insert_tboard_inner(**request.json)
 
 

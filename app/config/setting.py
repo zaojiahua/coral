@@ -104,6 +104,12 @@ if sys.platform.startswith("win"):
 else:
     find_command = "grep"
 
+if platform.system() == 'Linux':
+    IP_FILE_PATH = '/app/source/ip.py'
+else:
+    IP_FILE_PATH = os.path.join(BASE_DIR, "app", "config", "ip.py")
+
+
 ERROR_CODE_FILE = 'error_code.csv'
 
 # 不同主机对应的邮件列表人员
@@ -112,3 +118,6 @@ email_addresses = {
     22: ['zc@anhereef.com', 'xzl@anhereef.com'],
     25: ['whz@anhereef.com', 'xwq@anhereef.com']
 }
+
+# tboard mapping 临时性的跑通方案 用来记录哪些job还没有执行以及job对应的一些参数
+tboard_mapping = {}

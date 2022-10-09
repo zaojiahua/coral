@@ -19,7 +19,7 @@ from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
-from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, get_lock_cmd, unlock_cmd, \
+from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, \
     adb_cmd_prefix, RESTART_SERVER, KILL_SERVER, START_SERVER, DEVICE_DETECT_ERROR_MAX_TIME, get_global_value
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 from app.v1.eblock.config.setting import ADB_DEFAULT_TIMEOUT
@@ -77,54 +77,21 @@ class AdbHandler(Handler, ChineseMixin):
         if len(exec_content) == 0:
             return ""
 
-        # 有俩种类型的锁，俩种类型的操作互斥，一个是adb server start 或者是 kill的，另一个是其他类的
-        target_lock = kwargs.get('target_lock')
-        lock_type = kwargs.get('lock_type')
-        random_value = kwargs.get('random_value')
-        while True:
-            if target_lock and lock_type:
-                is_lock = get_lock_cmd(keys=[target_lock], args=[lock_type, random_value])
-                self._model.logger.debug(f"锁状态：{is_lock}")
-            else:
-                is_lock = 0
-
-            if not is_lock:
-                if exec_content == (adb_cmd_prefix + RESTART_SERVER):
-                    # restart server 本身也应该是互斥的，否则会出现端口占用等异常
-                    lock.acquire(timeout=10)
-                    try:
-                        for cmd in [adb_cmd_prefix + KILL_SERVER, adb_cmd_prefix + START_SERVER]:
-                            sub_proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
-                                                        stderr=subprocess.STDOUT)
-                            restr = sub_proc.communicate()[0]
-                            execute_result = restr.strip().decode(coding)
-                            print(f'restart: {cmd} response: {execute_result}')
-                    finally:
-                        if lock_type:
-                            unlock_cmd(keys=[lock_type], args=[random_value])
-                        lock.release()
-                        break
-                else:
-                    sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE,
-                                                stderr=subprocess.STDOUT)
-                    restr = sub_proc.communicate()[0]
-                    no_sleep = False
-                    for cmd in self.NoSleepList:
-                        if cmd in exec_content:
-                            no_sleep = True
-                            break
-                    if not no_sleep:
-                        time.sleep(1)
-                    try:
-                        execute_result = restr.strip().decode(coding)
-                    except UnicodeDecodeError:
-                        execute_result = restr.strip().decode("gbk")
-                        print("cmd to exec:", exec_content, "decode error happened")
-                    finally:
-                        if lock_type:
-                            unlock_cmd(keys=[lock_type], args=[random_value])
-                        break
+        sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+        restr = sub_proc.communicate()[0]
+        no_sleep = False
+        for cmd in self.NoSleepList:
+            if cmd in exec_content:
+                no_sleep = True
+                break
+        if not no_sleep:
             time.sleep(1)
+        try:
+            execute_result = restr.strip().decode(coding)
+        except UnicodeDecodeError:
+            execute_result = restr.strip().decode("gbk")
+            print("cmd to exec:", exec_content, "decode error happened")
 
         self._model.logger.debug(f"adb response:{execute_result}")
         return execute_result
@@ -195,7 +162,19 @@ class AdbHandler(Handler, ChineseMixin):
         if "<sleep>" in exec_content:
             res = re.search("<sleep>(.*?)$", exec_content)
             sleep_time = res.group(1)
-            time.sleep(float(sleep_time))
+
+            self._model.logger.debug(f'--------------即将睡眠：{sleep_time}')
+            if float(sleep_time) < 10:
+                time.sleep(float(sleep_time))
+            else:
+                from app.v1.eblock.model.eblock import Eblock
+                block = Eblock(pk=self.kwargs.get('block_pk'))
+                step = 1
+                for _ in range(0, int(sleep_time), step):
+                    time.sleep(step)
+                    if block.stop_flag:
+                        break
+
             exec_content = exec_content.replace("<sleep>" + sleep_time, "").strip()
         return exec_content
 

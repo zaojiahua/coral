@@ -139,6 +139,7 @@ class DefaultMixin(object):
         if "<sleep>" in exec_content:
             res = re.search("<sleep>(.*?)$", exec_content)
             sleep_time = res.group(1)
+            print('--------------即将睡眠：', str(sleep_time))
             time.sleep(float(sleep_time))
             exec_content = exec_content.replace("<sleep>" + sleep_time, "").strip()
         if len(exec_content) <= 1:
@@ -174,10 +175,10 @@ class DefaultMixin(object):
             raise CoordinatesNotReasonable
             # 侧边键坐标在屏幕外合理
         if coordinates[0] <= min_x or coordinates[0] >= max_x:
-            return True
-        if abs(coordinates[0] - min_x) > X_SIDE_OFFSET_DISTANCE or abs(max_x - coordinates[0]) > X_SIDE_OFFSET_DISTANCE:
-            raise CoordinatesNotReasonable
-        return True
+            if abs(coordinates[0] - min_x) <= X_SIDE_OFFSET_DISTANCE or abs(
+                    max_x - coordinates[0]) <= X_SIDE_OFFSET_DISTANCE:
+                return True
+        raise CoordinatesNotReasonable
 
     @staticmethod
     def judge_cross(axis1, axis2):

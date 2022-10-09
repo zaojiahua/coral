@@ -64,7 +64,7 @@ class Eblock(BaseModel):
         for units in self.all_unit_list:
             if self.stop_flag is True:
                 break
-            units.process_unit_list(self.logger, self.handler)
+            units.process_unit_list(self.logger, self.handler, block_pk=self.pk)
         if self.stop_flag is True:
             self.logger.info(f"ready to stop eblock for device {self.device_id}")
             raise EblockEarlyStop()

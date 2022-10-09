@@ -104,6 +104,12 @@ if sys.platform.startswith("win"):
 else:
     find_command = "grep"
 
+if platform.system() == 'Linux':
+    IP_FILE_PATH = '/app/source/ip.py'
+else:
+    IP_FILE_PATH = os.path.join(BASE_DIR, "app", "config", "ip.py")
+
+
 ERROR_CODE_FILE = 'error_code.csv'
 
 # 不同主机对应的邮件列表人员

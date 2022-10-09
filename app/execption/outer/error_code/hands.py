@@ -68,7 +68,7 @@ class CoordinatesNotReasonable(APIException):
     """
     error_code = 3007
     code = 400
-    description = 'The Side Key Coordinates Should Not be In the Screen'
+    description = '侧边键坐标选择不合理'
 
 
 class ControlUSBPowerFail(APIException):
@@ -124,4 +124,4 @@ class TcabNotAllowExecThisUnit(APIException):
     """
     error_code = 3014
     code = 400
-    description = "This Tcab Type Not Allow Exec This Unit"
+    description = "当前测试柜类型不支持点击侧边键"

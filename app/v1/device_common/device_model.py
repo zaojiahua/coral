@@ -457,7 +457,7 @@ class Device(BaseModel):
         while self.flag:
             time.sleep(2)
             if self.status == DeviceStatus.ERROR:
-                continue
+                break
             try:
                 if self.power_port:
                     aide_monitor_instance.start_battery_management()

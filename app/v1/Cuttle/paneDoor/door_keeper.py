@@ -197,6 +197,10 @@ class DoorKeeper(object):
         if device_info.get('status') == DeviceStatus.ERROR:
             device_obj.update_device_status(DeviceStatus.IDLE)
             device_obj.disconnect_times = 0
+            from app.v1.Cuttle.macPane.init import recover_root
+            recover_root(device_obj.device_label, device_obj.connect_number)
+            aide_monitor_instance = AideMonitor(device_obj)
+            ThreadPoolExecutor(max_workers=100).submit(device_obj.start_device_async_loop, aide_monitor_instance)
 
         return {'ip_address': ip, 'rom_version': room_version, 'device_label': device_label,
                 'manufacturer': manufacturer, 'android_version': android_version,

@@ -4,11 +4,9 @@ import shutil
 import subprocess
 import time
 import zipfile
-from functools import lru_cache
 
 import cv2
 from astra import models
-from func_timeout import func_set_timeout
 
 from app.config.ip import ADB_TYPE
 from app.config.setting import Bugreport_file_name, PICTURE_COMPRESS_RATIO
@@ -20,7 +18,7 @@ from app.libs.extension.field import DictField, OwnerList
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.basic_views import UnitFactory
-from app.v1.eblock.config.leadin import PROCESSER_LIST
+from app.v1.eblock.config.setting import PROCESSER_LIST, IMAGE_HANDLER, COMPLEX_HANDLER
 from app.v1.eblock.model.macro_replace import MacroHandler
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.libs.ospathutil import get_picture_create_time
@@ -207,7 +205,7 @@ class Unit(BaseModel):
                 logger.debug("----replace other macro finished in eblock----")
                 cmd_dict["functionName"] = self.functionName
                 sending_data = {"execCmdDict": cmd_dict}
-                target = "ImageHandler" if self.execModName == "IMGTOOL" else "ComplexHandler"
+                target = IMAGE_HANDLER if self.execModName == "IMGTOOL" else COMPLEX_HANDLER
 
             if kwargs.pop("test_running", False):
                 sending_data["test_running"] = True
@@ -345,6 +343,8 @@ class Unit(BaseModel):
 
     @staticmethod
     def remove_duplicate_pic(path):
+        if not path:
+            return
         for file in os.listdir(path):
             file_name = ".".join(file.split(".")[:-1])
             # 手机推送出来的图片可能是jpg和png两种格式

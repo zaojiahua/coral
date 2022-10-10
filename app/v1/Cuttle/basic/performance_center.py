@@ -155,7 +155,7 @@ class PerformanceCenter(object):
         if find_begin_point:
             self.start_timestamp = force_time
             print('找到了起始点', self.start_timestamp)
-            self.start_number = self.get_picture_number(self.start_timestamp)
+            self.start_number, _ = self.get_picture_number(self.start_timestamp)
             close_all_sensor_connect()
 
         return find_begin_point
@@ -225,7 +225,9 @@ class PerformanceCenter(object):
 
         # result数据的写入 只有在end的时候是有效的
         self.result['url_prefix'] = "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path # noqa
-        self.result['time_per_unit'] = round(1 / FpsMax, 4)
+
+        if 'time_per_unit' not in self.result or self.start_method in [1, 2]:
+            self.result['time_per_unit'] = round(1 / FpsMax, 4)
 
         if 'picture_count' not in self.result:
             if len(self.back_up_dq) > 1:
@@ -272,12 +274,12 @@ class PerformanceCenter(object):
             self.bias = self.start_number
 
         # 重置number，比如用力滑动的时候，屏幕变化很快，或者响应非常快速的设备，而我们的帧率又达不到的时候
-        number = math.floor((self.start_number + self.bias) / 2)
+        number = math.ceil((self.start_number + self.bias) / 2)
         print("reset number, now number:", number)
 
         # 这里重新设置一下start_number，因为终点不一定可以找到，start_number的值必须正确了
         if self.start_method == 0:
-            self.start_number = math.floor(int(self.start_number + self.bias) / 2)
+            self.start_number = math.ceil(int(self.start_number + self.bias) / 2)
             self.start_timestamp = timestamp_dict[self.start_number]
 
             # 在寻找bias的时候，如果图片不够，报错
@@ -524,17 +526,23 @@ class PerformanceCenter(object):
         while get_global_value(CAMERA_IN_LOOP):
             time.sleep(0.5)
 
-        # 如果是双摄，图片没有来得及合并，找的起点图片会小，所以重新设置一下起点的值
-        if self.start_method in [1, 2] and CORAL_TYPE == 5:
-            if 'start_point' in self.result:
-                self.start_number = self.get_picture_number(self.start_timestamp)
-                self.bias = self.start_number
-                self.result['start_point'] = self.start_number
-
         # 性能测试结束的最后再保存图片，可以加快匹配目标查找的速度
         find_end = False
         if hasattr(self, 'end_number') and self.end_number:
             find_end = True
+
+        # 如果是双摄，图片没有来得及合并，找的起点图片会小，所以重新设置一下起点的值
+        if self.start_method in [1, 2] and CORAL_TYPE == 5:
+            if 'start_point' in self.result:
+                self.start_number, host_timestamp = self.get_picture_number(self.start_timestamp)
+                self.bias = self.start_number
+                self.result['start_point'] = self.start_number
+                if find_end:
+                    # 修改time_per_unit，便于前端计算
+                    end_host_timestamp = self.back_up_dq[self.end_number]['host_timestamp']
+                    job_duration = max(round((end_host_timestamp - host_timestamp) / 1000, 3), 0)
+                    time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
+                    self.result['time_per_unit'] = time_per_unit
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
         print('保存图片时候的end number', end_number, '*' * 10)
@@ -628,6 +636,7 @@ class PerformanceCenter(object):
     # 根据时间，获取距离该时间最近的一张图片
     def get_picture_number(self, timestamp):
         min_value = None
+        host_timestamp = None
         pic_number = len(self.back_up_dq)
         for picture_index, picture_info in enumerate(self.back_up_dq):
             host_timestamp = picture_info['host_timestamp']
@@ -636,5 +645,5 @@ class PerformanceCenter(object):
             if min_value is None or distance <= min_value:
                 min_value = distance
             else:
-                return picture_index
-        return pic_number - 1
+                return picture_index, host_timestamp
+        return pic_number - 1, host_timestamp

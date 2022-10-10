@@ -1,9 +1,11 @@
 import collections
 import copy
+import os
 import re
+import signal
+import sys
 import time
 import traceback
-import random
 
 import cv2
 import func_timeout
@@ -13,13 +15,12 @@ from marshmallow import ValidationError
 from app.execption.outer.error_code.adb import UnitBusy, NoContent, FindAppVersionFail
 from app.libs.func_tools import method_dispatch
 from app.libs.log import setup_logger
-from app.v1.Cuttle.basic.setting import normal_result, SERVER_OPERATE_LOCK, \
-    NORMAL_OPERATE_LOCK, adb_cmd_prefix, unlock_cmd, SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, RESTART_SERVER, \
+from app.v1.Cuttle.basic.setting import normal_result, \
+    SCREENCAP_CMD, FIND_APP_VERSION, PM_DUMP, \
     adb_disconnect_threshold
 
 from app.execption.outer.error_code.imgtool import DetectNoResponse
-from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT
-from app.config.ip import ADB_TYPE
+from app.v1.eblock.config.setting import DEFAULT_TIMEOUT, ADB_DEFAULT_TIMEOUT, HAND_HANDLER, CAMERA_HANDLER
 from app.execption.outer.error_code.eblock import UnitTimeOut
 from app.execption.outer.error_code.djob import ImageIsNoneException
 
@@ -53,6 +54,9 @@ class Handler():
         self.extra_result = {'not_compress_png_list': []}
         self.optional_input_image = self.kwargs.get('optional_input_image') or 0
         self.portrait = self.kwargs.get('portrait', 1)
+        self.handler_type = self.kwargs.get('handler_type')
+        # adb 指令都是开启了一个新的进程来做的，这里记录一下进程id，方便强制结束进程
+        self.working_process = None
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -126,7 +130,8 @@ class Handler():
             # 具体执行方法，这部分处理不是字符串的unit
             return self.func(exec_content, **kwargs)
 
-        return self.retry_timeout_func(_inner_func)
+        return self.retry_timeout_func(_inner_func) if self.handler_type not in [HAND_HANDLER, CAMERA_HANDLER] \
+            else _inner_func()
 
     @do.register(str)
     def _(self, exec_content, **kwargs):
@@ -135,27 +140,8 @@ class Handler():
         def _inner_func():
             return self.str_func(exec_content, **kwargs)
 
-        # 俩种类型的指令互斥
-        if ADB_TYPE == 1:
-            random_value = random.random()
-            kwargs['random_value'] = random_value
-            if exec_content == (adb_cmd_prefix + RESTART_SERVER):
-                kwargs['target_lock'] = NORMAL_OPERATE_LOCK
-                kwargs['lock_type'] = SERVER_OPERATE_LOCK
-            else:
-                kwargs['target_lock'] = SERVER_OPERATE_LOCK
-                kwargs['lock_type'] = NORMAL_OPERATE_LOCK
-
-        def _inner_lock_func():
-            try:
-                return _inner_func()
-            except func_timeout.exceptions.FunctionTimedOut as e:
-                # 超时以后需要删除lock
-                if kwargs.get('lock_type'):
-                    unlock_cmd(keys=[kwargs['lock_type']], args=[kwargs['random_value']])
-                raise e
-
-        return self.retry_timeout_func(_inner_lock_func)
+        return self.retry_timeout_func(_inner_func) if self.handler_type not in [HAND_HANDLER, CAMERA_HANDLER] \
+            else _inner_func()
 
     def retry_timeout_func(self, func):
         retry_time = 0
@@ -165,6 +151,11 @@ class Handler():
                 return func()
             except func_timeout.exceptions.FunctionTimedOut as e:
                 retry_time += 1
+                # 超时的时候，把子进程强制结束
+                if self.working_process is not None:
+                    # 只有linux下才能杀掉开启的进程
+                    if sys.platform != "win32":
+                        os.killpg(self.working_process.pid, signal.SIGUSR1)
                 if retry_time == max_retry_time:
                     raise e
                 else:

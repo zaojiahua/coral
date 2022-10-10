@@ -23,8 +23,6 @@ def get_global_value(key, def_value=None):
 # import的时候可能存在问题，所以变量都声明一下
 m_location = None
 m_location_center = None
-Z_DOWN = None
-Z_DOWN_1 = None  # Tcab-5D的右机械臂
 ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
@@ -66,18 +64,10 @@ try:
 except ImportError:
     pass
 try:
-    from app.config.ip import Z_DOWN
-    set_global_value('Z_DOWN_INIT', Z_DOWN)
-    set_global_value('Z_DOWN', Z_DOWN)
+    from app.config.ip import CAMERA_CONVERT
 except ImportError:
-    raise Exception("ip.py文件异常，检查Z_DOWN值")
+    CAMERA_CONVERT = False
 
-if CORAL_TYPE == 5.3:
-    try:
-        from app.config.ip import Z_DOWN_1
-        set_global_value('Z_DOWN_1', Z_DOWN_1)
-    except ImportError:
-        set_global_value('Z_DOWN_1', Z_DOWN)
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -252,30 +242,6 @@ KILL_SERVER = "kill-server"
 START_SERVER = "start-server"
 # 本来没有这条指令 但是为了让skill-server start-server作为一个原子操作，做一个这样的指令
 RESTART_SERVER = 'restart-server'
-SERVER_OPERATE_LOCK = 'server_operate_lock'
-NORMAL_OPERATE_LOCK = 'normal_lock'
-
-get_lock = '''
-local is_exist = redis.call("GET", KEYS[1])
-if is_exist then
-    return 1
-else
-    redis.call("SET", ARGV[1], ARGV[2])
-    return 0
-end
-'''
-unlock = '''
-local random_value = redis.call("GET", KEYS[1])
-if random_value == ARGV[1] then
-    return redis.call("DEL", KEYS[1])
-else
-    return 0
-end
-'''
-
-get_lock_cmd = redis_client.register_script(get_lock)
-unlock_cmd = redis_client.register_script(unlock)
-
 SCREENCAP_CMD = 'exec-out screencap -p >'
 # 兼容更早的Android版本
 SCREENCAP_CMD_EARLY_VERSION = "shell screencap -p | sed 's/\r$//' >"
@@ -315,3 +281,6 @@ set_global_value("click_loop_stop_flag", click_loop_stop_flag)
 # 相机外触发端子的指令
 camera_power_open = "01050000ff008c3a"
 camera_power_close = "010500000000cdca"
+
+# 压感数值范围
+MAX_SENSOR_VALUE = 50

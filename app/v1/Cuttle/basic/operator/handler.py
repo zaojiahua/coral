@@ -57,6 +57,10 @@ class Handler():
         self.handler_type = self.kwargs.get('handler_type')
         # adb 指令都是开启了一个新的进程来做的，这里记录一下进程id，方便强制结束进程
         self.working_process = None
+        # 记录一下当前unit属于的父block，有可能没有
+        from app.v1.eblock.model.eblock import Eblock
+        block = Eblock(pk=self.kwargs.get('block_pk'))
+        self.parent_block = block
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -144,8 +148,6 @@ class Handler():
             else _inner_func()
 
     def retry_timeout_func(self, func):
-        from app.v1.eblock.model.eblock import Eblock
-        block = Eblock(pk=self.kwargs.get('block_pk'))
         retry_time = 0
         max_retry_time = self.kwargs.get('max_retry_time') or 3
         while retry_time < max_retry_time:
@@ -153,7 +155,7 @@ class Handler():
                 return func()
             except func_timeout.exceptions.FunctionTimedOut as e:
                 # 任务停止的时候就不要重试了
-                if block.stop_flag:
+                if self.parent_block is not None and self.parent_block.stop_flag:
                     raise e
                 retry_time += 1
                 # 超时的时候，把子进程强制结束

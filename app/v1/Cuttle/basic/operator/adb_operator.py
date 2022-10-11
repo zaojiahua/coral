@@ -2,6 +2,7 @@ import os
 import random
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -84,6 +85,14 @@ class AdbHandler(Handler, ChineseMixin):
         else:
             sub_proc = subprocess.Popen(exec_content, shell=True, stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT)
+
+        while sub_proc.poll() is None:
+            time.sleep(0.1)
+            # 如果当前unit已经被停止，立即终止运行
+            if self.parent_block is not None and self.parent_block.stop_flag:
+                if sys.platform != "win32":
+                    os.killpg(sub_proc.pid, signal.SIGUSR1)
+                return ''
         # 记录进程id，方便超时时候的处理
         self.working_process = sub_proc
         # 这个地方是耗时操作，在获取返回值

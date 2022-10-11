@@ -345,6 +345,8 @@ class Unit(BaseModel):
 
     @staticmethod
     def remove_duplicate_pic(path):
+        if not path:
+            return
         for file in os.listdir(path):
             file_name = ".".join(file.split(".")[:-1])
             # 手机推送出来的图片可能是jpg和png两种格式

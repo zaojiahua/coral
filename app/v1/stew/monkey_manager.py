@@ -73,7 +73,7 @@ class MonkeyManager(object):
             monkey_cmd = self.monkey_script.format(device_label=device_label,
                                                    running_log=os.path.join(log_path, RUNNING_LOG),
                                                    error_log=os.path.join(log_path, ERROR_LOG))
-            print(monkey_cmd)
+            # print(monkey_cmd)
             monkey_proc = subprocess.Popen(monkey_cmd,
                                            shell=True,
                                            stdout=subprocess.PIPE,

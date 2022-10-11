@@ -453,7 +453,7 @@ class Device(BaseModel):
                     if self.status == DeviceStatus.ERROR:
                         continue
                     aide_monitor_instance.start_job_recommend()
-            except Exception as e:
+            except BaseException as e:
                 self.logger.exception(f"Exception in sequence_loop: {repr(e)}")
                 self.logger.error(f"Exception in sequence_loop: {repr(e)}")
         self.logger.warning(f"--flag changed in loop--：{self.flag}")
@@ -470,7 +470,7 @@ class Device(BaseModel):
                 if self.temp_port_list.smembers():
                     get_port_temperature(self.temp_port_list.smembers())
                 send_battery_check(self.device_label, self.connect_number)
-            except Exception as e:
+            except BaseException as e:
                 self.logger.error(f"Exception in async_loop: {repr(e)}")
         self.logger.warning(f"--flag changed--：{self.flag}")
 

@@ -448,9 +448,9 @@ class Device(BaseModel):
                         continue
                     aide_monitor_instance.start_job_recommend()
             except BaseException as e:
-                self.logger.exception(f"Exception in sequence_loop: {repr(e)}")
+                self.logger.exception(f"{self.device_label} Exception in sequence_loop: {repr(e)}")
                 self.logger.error(f"Exception in sequence_loop: {repr(e)}")
-        self.logger.warning(f"--flag changed in loop--：{self.flag}")
+        self.logger.warning(f"--flag changed in loop--：{self.flag} {self.device_label}")
 
     def start_device_async_loop(self, aide_monitor_instance):
         # start battery auto-charging and temp auto-management asynchronously

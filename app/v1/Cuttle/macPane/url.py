@@ -3,7 +3,7 @@ from flask import Blueprint
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
     AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView, \
     PaneLocateDeviceView, PaneVideoView, PaneUpdateMLocation, PaneClickMLocation, ClickCenterPointFive, PaneUpdateZDown, \
-    PaneClickZDown, PaneGetZDown
+    PaneClickZDown, PaneGetZDown, PaneMkDir
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, \
     PaneBorderView
 
@@ -55,3 +55,6 @@ pane.add_url_rule("/get_z_down/", view_func=PaneGetZDown.as_view('get_z_down'))
 # 泰尔五星认证
 # 中心5点打点
 pane.add_url_rule("/click_center_point_five/", view_func=ClickCenterPointFive.as_view('click_center_point_five'))
+
+# 在coral服务器上，创建文件夹的接口
+pane.add_url_rule('/mk_dir/', view_func=PaneMkDir.as_view('mk_dir'))

@@ -986,3 +986,17 @@ class ClickCenterPointFive(MethodView):
                 f"G01 X{pos_x}Y{pos_y}Z{pos_z}F15000\r\n",
                 f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
                 arm_wait_position]
+
+
+class PaneMkDir(MethodView):
+
+    def post(self):
+        request_data = request.get_json() or request.args
+        dir_path = request_data.get('dir_path')
+        if not dir_path:
+            return jsonify(dict(error_message='dir_path is necessary')), 500
+
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+
+        return jsonify(dict(error_code=0, data={'dir_path': f'mk dir {dir_path} success'}))

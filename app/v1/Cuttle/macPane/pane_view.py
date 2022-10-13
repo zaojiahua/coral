@@ -602,7 +602,7 @@ class PaneCoordinateView(MethodView):
         # 双指的范围更大，点击的时候尽量在中间点击即可
         if CORAL_TYPE == 5.3:
             positions = [[[100, -100], [200, -100]]]
-        elif CORAL_TYPE == 5:
+        elif CORAL_TYPE in [5, 5.4]:
             positions = [[[55, -250], [90, -250]]]
         else:
             positions = [[[50, -120], [100, -120]]]

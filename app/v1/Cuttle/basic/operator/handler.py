@@ -57,6 +57,10 @@ class Handler():
         self.handler_type = self.kwargs.get('handler_type')
         # adb 指令都是开启了一个新的进程来做的，这里记录一下进程id，方便强制结束进程
         self.working_process = None
+        # 记录一下当前unit属于的父block，有可能没有
+        from app.v1.eblock.model.eblock import Eblock
+        block = Eblock(pk=self.kwargs.get('block_pk'))
+        self.parent_block = block
 
     def __new__(cls, *args, **kwargs):
         if kwargs.pop('many', False):
@@ -150,6 +154,9 @@ class Handler():
             try:
                 return func()
             except func_timeout.exceptions.FunctionTimedOut as e:
+                # 任务停止的时候就不要重试了
+                if self.parent_block is not None and self.parent_block.stop_flag:
+                    raise e
                 retry_time += 1
                 # 超时的时候，把子进程强制结束
                 if self.working_process is not None:
@@ -325,13 +332,21 @@ class ListHandler(Handler):
 
     def __init__(self, *args, **kwargs):
         self.child = kwargs.pop('child')
+        self.kwargs = kwargs
         assert self.child is not None, '`child` is a required argument.'
         super(ListHandler, self).__init__(*args, **kwargs)
 
     def execute(self, **kwargs):
+        from app.v1.eblock.model.eblock import Eblock
+        block = Eblock(pk=self.kwargs.get('block_pk'))
+
         flag = 0
         result = None
         for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
+            # 任务停止的时候，剩下的指令不再执行
+            if block.stop_flag:
+                break
+
             if "onlyShow" in single_cmd:
                 continue
             try:

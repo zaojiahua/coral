@@ -386,7 +386,7 @@ class DoorKeeper(object):
     def is_new_phone_model(self, phone_model) -> (Dict, bool):
         params = {
             "phone_model_name": phone_model,
-            "fields": "phone_model_name,x_border,y_border,x_dpi,y_dpi"
+            "fields": "phone_model_name,x_dpi,y_dpi"
         }
         try:
             response = request(url=phone_model_url, params=params, filter_unique_key=True)

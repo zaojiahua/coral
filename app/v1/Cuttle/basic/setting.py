@@ -178,7 +178,7 @@ if CORAL_TYPE == 5.3:
 else:
     Z_UP = 0
     Z_START = 0
-    if CORAL_TYPE in [5, 5.1]:
+    if CORAL_TYPE in [5, 5.1, 5.4]:
         arm_wait_position = f"G01 X10Y-170Z{Z_UP}F15000 \r\n"
     else:
         arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"

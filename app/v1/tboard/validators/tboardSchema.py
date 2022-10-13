@@ -47,6 +47,7 @@ class TboardSchema(BaseSchema):
     owner_label = fields.Str(required=True)
     create_level = fields.Str(missing="USER", validate=validate.OneOf(Role.__members__))
     job_random_order = fields.Boolean(missing=False)
+    special_job_info = fields.Nested(JobSchema, many=False, required=False)
 
     # # extends
     # class Meta(BaseSchema.Meta):

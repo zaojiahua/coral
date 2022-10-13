@@ -29,6 +29,7 @@ class DJobSchema(BaseSchema):
     job_flows = fields.Nested(UIJsonSchema, many=True, required=True)
     tboard_path = fields.Str(required=True)
     job_parameter = fields.Raw(required=False)
+    not_push_rds = fields.Integer(required=False)
 
 
 if __name__ == '__main__':

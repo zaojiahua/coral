@@ -110,7 +110,9 @@ ERROR_CODE_FILE = 'error_code.csv'
 default_email_address = []
 email_addresses = {
     22: ['zc@anhereef.com', 'xzl@anhereef.com'],
-    25: ['whz@anhereef.com', 'xwq@anhereef.com']
+    25: ['whz@anhereef.com', 'xwq@anhereef.com'],
+    15: ['gh@anhereef.com'],
+    35: ['hx@anhereef.com', 'wyx@anhereef.com']
 }
 
 # tboard mapping 临时性的跑通方案 用来记录哪些job还没有执行以及job对应的一些参数

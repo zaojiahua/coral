@@ -20,7 +20,8 @@ from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, get_lock_cmd, unlock_cmd, \
-    adb_cmd_prefix, RESTART_SERVER, KILL_SERVER, START_SERVER, DEVICE_DETECT_ERROR_MAX_TIME, get_global_value
+    adb_cmd_prefix, RESTART_SERVER, KILL_SERVER, START_SERVER, DEVICE_DETECT_ERROR_MAX_TIME, get_global_value, \
+    POWER_OFF_BATTERY_LEVEL
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 from app.v1.eblock.config.setting import ADB_DEFAULT_TIMEOUT
 from app.libs.email_manager import EmailManager
@@ -179,6 +180,22 @@ class AdbHandler(Handler, ChineseMixin):
                 from app.v1.device_common.device_model import DeviceStatus
                 self._model.update_device_status(DeviceStatus.ERROR)
                 self._model.logger.warning(f"设备状态变成error")
+
+            # 连接不上的时候，判断是否发生了关机
+            serial_number = self.str_func(f'lsusb -v | grep iSerial | grep {connect_number}')
+            if connect_number not in serial_number and device.battery_level < POWER_OFF_BATTERY_LEVEL:
+                # 判断是否处于运行用例的状态
+                from app.v1.tboard.model.dut import Dut
+                dut = Dut.first(device_label=device.device_label)
+                if dut is not None:
+                    email = EmailManager()
+                    email.send_email(email_addresses.get(int(REEF_IP.split(".")[-2]), default_email_address),
+                                     '空电关机，请检查！',
+                                     f'设备{device.device_name}：{connect_number} \n'
+                                     f'机柜：{REEF_IP.split(".")[-2]}号机 I\'M {HOST_IP.split(".")[-1]}'
+                                     f'（{CORAL_TYPE_NAME[CORAL_TYPE]}）\n'
+                                     f'{datetime.now().strftime(REEF_DATE_TIME_FORMAT)}')
+                    dut.insert_special_djob()
         return 0
 
     def disconnect(self, ip=None):
@@ -218,15 +235,13 @@ class AdbHandler(Handler, ChineseMixin):
 
     def save_battery(self, result):
         from app.v1.device_common.device_model import Device
+        device = Device(pk=self._model.pk)
         result_list = result.split(mark)
         battery_level = int(result_list[0])
         charging = False if result_list[1].strip() in self.discharging_mark_list else True
-        # 原来Coral的充电逻辑
-        # if int(battery_level) <= 10 and charging == False:
-        #     on_or_off_singal_port({
-        #         "port": Device(pk=self._model.pk).power_port,
-        #         "action": True
-        #     })
+        # 记录设备最新的电量信息
+        device.battery_level = battery_level
+
         # 2022.3.31  根据充电口的充电策略进行充电
         self._model.logger.debug(f"根据充电策略充电.....battery_level: {battery_level}")
         self.set_power_port_status_by_battery(battery_level)
@@ -234,7 +249,7 @@ class AdbHandler(Handler, ChineseMixin):
         self._model.disconnect_times = 0
         try:
             json_data = {
-                "device": Device(pk=self._model.pk).id,
+                "device": device.id,
                 "cabinet": HOST_IP.split(".")[-1],
                 "record_datetime": datetime.now(),
                 "battery_level": battery_level,

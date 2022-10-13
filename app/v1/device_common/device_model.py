@@ -112,6 +112,8 @@ class Device(BaseModel):
     subsidiarydevice = OwnerList(to=str)
     # 如果是僚机，代表的是第几个僚机，0代表的就是主机
     order = models.IntegerField()
+    # 记录最后一次电量信息
+    battery_level = models.IntegerField()
 
     float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2",
                   'width', 'height', 'ply', "screen_z", 'back_x', 'back_y', 'back_z',

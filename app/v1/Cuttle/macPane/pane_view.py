@@ -552,7 +552,7 @@ class PaneClickZDown(MethodView):
             exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1) if arm_num == 1 else exec_serial_obj
         elif CORAL_TYPE == 5.2:  # 5se
             click_xy = [90, -120]
-        elif CORAL_TYPE == 5:  # 5升级版加了延长杆
+        elif CORAL_TYPE in [5, 5.4]:  # 5升级版加了延长杆
             click_xy = [85, -170]
         else:  # 5l
             click_xy = [170, -170]

@@ -706,7 +706,7 @@ class PaneCoordinateView(MethodView):
                 # 获取对象的质心
                 cx = round(m['m10'] / m['m00'], 2)
                 cy = round(m['m01'] / m['m00'], 2)
-                if w * 0.1 < cx < w * 0.9:
+                if w * 0.2 < cx < w * 0.9:
                     bx, by, bw, bh = cv2.boundingRect(contour_points)
                     if 0.7 < bw / bh < 1.3:
                         target_contours.append(np.array([[cx, cy]]))

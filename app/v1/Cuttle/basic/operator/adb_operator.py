@@ -194,6 +194,7 @@ class AdbHandler(Handler, ChineseMixin):
                                      f'设备{device.device_name}：{connect_number} \n'
                                      f'机柜：{REEF_IP.split(".")[-2]}号机 I\'M {HOST_IP.split(".")[-1]}'
                                      f'（{CORAL_TYPE_NAME[CORAL_TYPE]}）\n'
+                                     f'电量：{device.battery_level} \n'
                                      f'{datetime.now().strftime(REEF_DATE_TIME_FORMAT)}')
                     dut.insert_special_djob()
         return 0

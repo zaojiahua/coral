@@ -183,7 +183,9 @@ class AdbHandler(Handler, ChineseMixin):
 
             # 连接不上的时候，判断是否发生了关机
             serial_number = self.str_func(f'lsusb -v | grep iSerial | grep {connect_number}')
-            if connect_number not in serial_number and device.battery_level < POWER_OFF_BATTERY_LEVEL:
+            if self._model.disconnect_times == 1 \
+                    and connect_number not in serial_number \
+                    and device.battery_level < POWER_OFF_BATTERY_LEVEL:
                 # 判断是否处于运行用例的状态
                 from app.v1.tboard.model.dut import Dut
                 dut = Dut.first(device_label=device.device_label)
@@ -241,7 +243,8 @@ class AdbHandler(Handler, ChineseMixin):
         battery_level = int(result_list[0])
         charging = False if result_list[1].strip() in self.discharging_mark_list else True
         # 记录设备最新的电量信息
-        device.battery_level = battery_level
+        if battery_level != 0:
+            device.battery_level = battery_level
 
         # 2022.3.31  根据充电口的充电策略进行充电
         self._model.logger.debug(f"根据充电策略充电.....battery_level: {battery_level}")

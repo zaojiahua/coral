@@ -157,7 +157,7 @@ class Dut(BaseModel):
     # 加入特殊的掉电关机的job 临时方案
     def insert_special_djob(self):
         # 存在才执行，否则和普通的一样逻辑
-        if self.special_job_label is not None and not self.special_job_running:
+        if self.special_job_label and not self.special_job_running:
             self.current_job_index -= 1
             self.special_job_running = True
             # 先把正在执行的停止了

@@ -38,7 +38,7 @@ class Device(BaseModel):
     # attribute that only coral have
     exclude_list = ["src_list", "has_camera", "has_arm", "flag", "is_bind", "kx1", "kx2", "ky1",
                     "ky2", "assis_1", "assis_2", "assis_3", "x1", "x2", "y1", "y2", 'subsidiarydevice',
-                    'disconnect_times_timestamp']
+                    'disconnect_times_timestamp', 'battery_level']
     # device basic attribute
     device_label = models.CharField()
     ip_address = models.CharField()

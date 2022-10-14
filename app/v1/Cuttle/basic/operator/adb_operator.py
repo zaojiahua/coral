@@ -243,8 +243,8 @@ class AdbHandler(Handler, ChineseMixin):
         battery_level = int(result_list[0])
         charging = False if result_list[1].strip() in self.discharging_mark_list else True
         # 记录设备最新的电量信息
-        if battery_level != 0:
-            device.battery_level = battery_level
+        if int(battery_level) != 0:
+            device.battery_level = int(battery_level)
 
         # 2022.3.31  根据充电口的充电策略进行充电
         self._model.logger.debug(f"根据充电策略充电.....battery_level: {battery_level}")
@@ -358,11 +358,15 @@ class AdbHandler(Handler, ChineseMixin):
             self._model.logger.error("Get the battery.dat file but unable to obtain power")
             return
         self._model.logger.debug(f"battery fail mark, 根据充电策略充电.....battery_level: {battery_level}")
-        self.set_power_port_status_by_battery(battery_level)
         from app.v1.device_common.device_model import Device
+        device = Device(pk=self._model.pk)
+        if int(battery_level) != 0:
+            device.battery_level = int(battery_level)
+
+        self.set_power_port_status_by_battery(battery_level)
         from app.libs.http_client import request
         json_data = {
-            "device": Device(pk=self._model.pk).id,
+            "device": device.id,
             "cabinet": HOST_IP.split(".")[-1],
             "record_datetime": datetime.now(),
             "battery_level": int(battery_level),

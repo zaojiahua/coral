@@ -22,19 +22,7 @@ class DefaultMixin(object):
         from app.v1.device_common.device_model import Device
         opt_coordinate = []
         device = Device(pk=self._model.pk)
-        if CORAL_TYPE == 4:
-            if not (hasattr(self, "w_dpi") and hasattr(self, "h_dpi")):
-                self.w_dpi = float(device.x_dpi)
-                self.h_dpi = float(device.y_dpi)
-            # 实际距离，（已加边框，未加左上角点）
-            window_coordinate = [pix_point[0] / self.w_dpi * 2.54 * 10 + float(device.x_border),
-                                 pix_point[1] / self.h_dpi * 2.54 * 10 + float(device.y_border)]
-
-            opt_coordinate = [
-                round(window_coordinate[0] + get_global_value('m_location')[0], 1),
-                round(window_coordinate[1] + get_global_value('m_location')[1], 1)
-            ]
-        elif math.floor(CORAL_TYPE) == 5:
+        if math.floor(CORAL_TYPE) == 5:
             opt_coordinate = list(device.get_click_position(pix_point[0],
                                                             pix_point[1],
                                                             pix_point[2] if len(pix_point) > 2 else 0,

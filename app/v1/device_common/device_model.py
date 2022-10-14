@@ -36,7 +36,7 @@ class DeviceStatus(object):
 
 class Device(BaseModel):
     # attribute that only coral have
-    exclude_list = ["src_list", "has_camera", "has_arm", "flag", "is_bind", "x_border", "y_border", "kx1", "kx2", "ky1",
+    exclude_list = ["src_list", "has_camera", "has_arm", "flag", "is_bind", "kx1", "kx2", "ky1",
                     "ky2", "assis_1", "assis_2", "assis_3", "x1", "x2", "y1", "y2", 'subsidiarydevice',
                     'disconnect_times_timestamp']
     # device basic attribute
@@ -60,8 +60,6 @@ class Device(BaseModel):
     monitor_index = models.CharField()
     x_dpi = models.CharField()
     y_dpi = models.CharField()
-    x_border = models.CharField()
-    y_border = models.CharField()
     # 这里是用户输入的设备实际宽高厚度
     width = models.CharField()
     height = models.CharField()
@@ -115,7 +113,7 @@ class Device(BaseModel):
     # 记录最后一次电量信息
     battery_level = models.IntegerField()
 
-    float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2",
+    float_list = ["x_dpi", "y_dpi", "x1", "x2", "y1", "y2",
                   'width', 'height', 'ply', "screen_z", 'back_x', 'back_y', 'back_z',
                   'home_x', 'home_y', 'home_z', 'menu_x', 'menu_y', 'menu_z']
 
@@ -133,7 +131,7 @@ class Device(BaseModel):
         common_fields = "id,auto_test,device_name,cpu_id,ip_address,status," \
                         "tempport,tempport.port,powerport,powerport.port,device_label,android_version," \
                         "android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name," \
-                        "phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer," \
+                        "phone_model.cpu_name,phone_model.manufacturer," \
                         "phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name," \
                         "phone_model.width,phone_model.height,phone_model.ply," \
                         "phone_model.width_resolution,phone_model.height_resolution," \
@@ -352,9 +350,6 @@ class Device(BaseModel):
         self._set_char("cpu_name", kwargs, "phone_model", "cpu_name")
         self._set_char("x_dpi", kwargs, "phone_model", "x_dpi")
         self._set_char("y_dpi", kwargs, "phone_model", "y_dpi")
-
-        self._set_char("x_border", kwargs, "phone_model", "x_border")
-        self._set_char("y_border", kwargs, "phone_model", "y_border")
 
         self._set_char("width", kwargs, "phone_model", "width")
         self._set_char("height", kwargs, "phone_model", "height")

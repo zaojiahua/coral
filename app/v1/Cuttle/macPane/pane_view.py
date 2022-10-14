@@ -602,8 +602,10 @@ class PaneCoordinateView(MethodView):
         # 双指的范围更大，点击的时候尽量在中间点击即可
         if CORAL_TYPE == 5.3:
             positions = [[[100, -100], [200, -100]]]
-        elif CORAL_TYPE in [5, 5.4]:
+        elif CORAL_TYPE == 5:
             positions = [[[55, -250], [90, -250]]]
+        elif CORAL_TYPE == 5.4:
+            positions = [[[35, -210], [85, -210]]]
         else:
             positions = [[[50, -120], [100, -120]]]
 
@@ -700,7 +702,7 @@ class PaneCoordinateView(MethodView):
             # 遍历组成轮廓的每个坐标点
             m = cv2.moments(contour_points)
             # m00代表面积
-            if m['m00'] > 50:
+            if 50 < m['m00'] < 300:
                 # 获取对象的质心
                 cx = round(m['m10'] / m['m00'], 2)
                 cy = round(m['m01'] / m['m00'], 2)
@@ -713,7 +715,8 @@ class PaneCoordinateView(MethodView):
             for i in range(len(all_contours)):
                 for j in range(i + 1, len(all_contours)):
                     # x坐标基本一样
-                    if abs(all_contours[i][0][0] - all_contours[j][0][0]) < 5:
+                    if abs(all_contours[i][0][0] - all_contours[j][0][0]) < 5 and abs(
+                            all_contours[i][0][1] - all_contours[j][0][1]) > 100:
                         return [all_contours[i], all_contours[j]]
 
         print(target_contours)

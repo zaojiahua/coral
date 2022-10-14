@@ -38,7 +38,7 @@ class TBoardViewModel(object):
                       job_msg={job["job_label"] + f':{job_index}': job for job_index, job in enumerate(self.jobs)},
                       special_job_msg={special_job_info['job_label']: special_job_info} if special_job_info else {},
                       repeat_time=repeat_time, current_job_index=-1, job_random_order=job_random_order,
-                      special_job_label=special_job_info['job_label'])
+                      special_job_label=special_job_info['job_label'] if special_job_info else None)
 
         dut_obj.job_label_list.rpush(*job_label_list)
         return dut_obj

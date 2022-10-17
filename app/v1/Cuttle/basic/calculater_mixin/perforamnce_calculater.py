@@ -327,6 +327,8 @@ class PerformanceMinix(object):
         # 5双摄升级版的柜子，机械臂离设备比较近，等待时间需要长一点，否则机械臂按完以后压力传感器才开始获取压力值
         if CORAL_TYPE == 5:
             time.sleep(kwargs.get("sleep", 1.3))
+        elif CORAL_TYPE == 5.4:
+            time.sleep(kwargs.get("sleep", 2))
         else:
             time.sleep(kwargs.get("sleep", 0.3))
         return function(*args, **kwargs)

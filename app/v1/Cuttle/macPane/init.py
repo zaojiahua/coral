@@ -18,6 +18,7 @@ from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
 from app.v1.Cuttle.paneDoor.door_keeper import DoorKeeper
 from app.v1.stew.monkey_manager import MonkeyManager
+from app.v1.tboard import tboard_init
 
 key_parameter_list = ["camera", "robot_arm"]
 
@@ -32,6 +33,9 @@ def pane_init():
     else:
         logger.info("---system update---, try to recover device status ")
         recover_device(executer, logger)
+
+    # tboard初始化 恢复上次中断的任务
+    tboard_init()
 
 
 def check_boot_up_reason():
@@ -93,7 +97,6 @@ def recover_device(executer, logger):
         if device_obj.status != DeviceStatus.ERROR and math.floor(CORAL_TYPE) < 5:
             # 获取电量信息
             executer.submit(device_obj.start_device_async_loop, aide_monitor_instance)
-
         # 开启执行任务的线程
         t = threading.Thread(target=device_obj.start_device_sequence_loop, args=(aide_monitor_instance,))
         t.setName(device_label)

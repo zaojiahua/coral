@@ -4,7 +4,7 @@ from app.libs.extension.model import BaseModel
 
 class BouncedWords(BaseModel):
     words = DictField()
-    load = ("words")
+    load = ("words",)
 
-    def __init__(self, pk=None, **kwargs):
-        super().__init__(pk, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(BouncedWords, self).__init__(*args, **kwargs)

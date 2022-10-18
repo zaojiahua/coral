@@ -159,7 +159,10 @@ class Handler():
 
     def retry_timeout_func(self, func):
         from app.v1.eblock.model.eblock import Eblock
-        block = Eblock(pk=self.kwargs.get('block_pk'))
+        if self.kwargs.get('block_pk') is not None:
+            block = Eblock(pk=self.kwargs.get('block_pk'))
+        else:
+            block = None
         retry_time = 0
         max_retry_time = self.kwargs.get('max_retry_time') or 3
         while retry_time < max_retry_time:
@@ -167,7 +170,7 @@ class Handler():
                 return func()
             except func_timeout.exceptions.FunctionTimedOut as e:
                 # 任务停止的时候就不要重试了
-                if block.stop_flag:
+                if block and block.stop_flag:
                     raise e
                 retry_time += 1
                 if retry_time == max_retry_time:
@@ -344,14 +347,19 @@ class ListHandler(Handler):
         super(ListHandler, self).__init__(*args, **kwargs)
 
     def execute(self, **kwargs):
+        # unit可能来自于block，也有可能直接创建的
         from app.v1.eblock.model.eblock import Eblock
-        block = Eblock(pk=self.kwargs.get('block_pk'))
+        block_pk = self.kwargs.get('block_pk')
+        if block_pk is not None:
+            block = Eblock(pk=block_pk)
+        else:
+            block = None
 
         flag = 0
         result = None
         for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
             # 任务停止的时候，剩下的指令不再执行
-            if block.stop_flag:
+            if block is not None and block.stop_flag:
                 break
 
             if "onlyShow" in single_cmd:

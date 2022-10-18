@@ -12,7 +12,6 @@ from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.boxSvc.box_views import get_port_temperature
-from app.v1.device_common.device_manager import add_device_thread_status, remove_device_thread_status
 from app.v1.device_common.setting import key_map_position, default_key_map_position
 from app.v1.djob import DJobWorker
 from app.v1.stew.model.aide_monitor import send_battery_check
@@ -418,7 +417,6 @@ class Device(BaseModel):
         simplify the remove process(not use hash)
         """
         self.logger.warning(f"remove device info ")
-        remove_device_thread_status(self.device_label)
         if self.ip_address != "0.0.0.0":
             h = AdbHandler(model=self)
             h.disconnect()
@@ -431,7 +429,6 @@ class Device(BaseModel):
         # 每一个设备拥有自己的同步循环loop，优先处理下发的任务，没有下发任务且auto test开启时执行推荐任务。
         self.logger.info(f"new device {self.device_label} into sequence_loop")
         # ------------------------Loop------------------------
-        add_device_thread_status(self.device_label)
         while self.flag:
             time.sleep(2)
             # first priority do single djob
@@ -443,7 +440,7 @@ class Device(BaseModel):
                     # 上边的if不用加，因为add的地方进行了限制，如果加了的话，可能导致已经add，但是却没有执行的bug。
                     if self.status == DeviceStatus.ERROR:
                         continue
-                    aide_monitor_instance.start_job_recommend()
+                    # aide_monitor_instance.start_job_recommend()
             except BaseException as e:
                 self.logger.exception(f"{self.device_label} Exception in sequence_loop: {repr(e)}")
                 self.logger.error(f"Exception in sequence_loop: {repr(e)}")

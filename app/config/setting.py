@@ -3,13 +3,13 @@ import platform
 import sys
 
 from .ip import *
-from .post import *
 from .secure import *
 
 # log 必须导入
 from .log import *
 
 DEBUG = False
+REEF_PORT = 8000
 
 DEFAULT_DATE_TIME_FORMAT = "%Y_%m_%d_%H_%M_%S"
 REEF_DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"

@@ -4,11 +4,9 @@ import shutil
 import subprocess
 import time
 import zipfile
-from functools import lru_cache
 
 import cv2
 from astra import models
-from func_timeout import func_set_timeout
 
 from app.config.ip import ADB_TYPE
 from app.config.setting import Bugreport_file_name, PICTURE_COMPRESS_RATIO
@@ -24,6 +22,7 @@ from app.v1.eblock.config.leadin import PROCESSER_LIST
 from app.v1.eblock.model.macro_replace import MacroHandler
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.libs.ospathutil import get_picture_create_time
+from app.config.restart_coral import restart_coral
 
 
 def get_assist_device_ident(device_label, assist_device_serial_number):
@@ -263,8 +262,12 @@ class Unit(BaseModel):
                 try:
                     self.copy_save_file(save_list, handler)
                 except OSError as e:
-                    print('捕捉到OSError了。')
-                    print(e)
+                    # 对容器进行重启
+                    if 'Cannot allocate memory' in str(e):
+                        print('内存不足，即将对容器进行重启', '$' * 20)
+                        restart_coral()
+                    else:
+                        raise e
 
         return _inner_func()
 

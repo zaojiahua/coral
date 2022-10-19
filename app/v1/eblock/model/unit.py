@@ -259,7 +259,12 @@ class Unit(BaseModel):
                 else:
                     raise e
             finally:
-                self.copy_save_file(save_list, handler)
+                # 这里也有可能发生异常
+                try:
+                    self.copy_save_file(save_list, handler)
+                except OSError as e:
+                    print('捕捉到OSError了。')
+                    print(e)
 
         return _inner_func()
 

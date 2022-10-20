@@ -70,3 +70,6 @@ coral_ocr_url = "/ocr"
 # ==================================tguard=======================================
 
 bounced_words_url = '/api/v1/cedar/tguard/'
+
+# 续航时间
+battery_life_url = '/api/v1/coral/upload_cool_pad_power_last_view/'

@@ -14,7 +14,7 @@ from func_timeout import func_set_timeout
 from app.config.ip import HOST_IP, ADB_TYPE, REEF_IP
 from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name, CORAL_TYPE_NAME, email_addresses, \
     default_email_address, REEF_DATE_TIME_FORMAT
-from app.config.url import battery_url
+from app.config.url import battery_url, battery_life_url
 from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
@@ -198,6 +198,11 @@ class AdbHandler(Handler, ChineseMixin):
                                      f'（{CORAL_TYPE_NAME[CORAL_TYPE]}）\n'
                                      f'电量：{device.battery_level} \n'
                                      f'{datetime.now().strftime(REEF_DATE_TIME_FORMAT)}')
+                    # 通知reef
+                    tboard_id = dut.pk.split('_')[-1]
+                    res = request(method="POST", json={'device': device.id, 'tboard': tboard_id},
+                                  url=battery_life_url)
+                    print('空电关机reef的返回值是：', res)
                     dut.insert_special_djob()
         return 0
 

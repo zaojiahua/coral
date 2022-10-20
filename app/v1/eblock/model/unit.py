@@ -258,16 +258,7 @@ class Unit(BaseModel):
                 else:
                     raise e
             finally:
-                # 这里也有可能发生异常
-                try:
-                    self.copy_save_file(save_list, handler)
-                except OSError as e:
-                    # 对容器进行重启
-                    if 'Cannot allocate memory' in str(e):
-                        print('内存不足，即将对容器进行重启', '$' * 20)
-                        restart_coral()
-                    else:
-                        raise e
+                self.copy_save_file(save_list, handler)
 
         return _inner_func()
 

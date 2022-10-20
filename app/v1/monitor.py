@@ -18,5 +18,6 @@ def resource_monitor():
         # print(f'网络读取字节数：{int(net_io_counter[1] / 1024 / 1024)}M')
         # print('-' * 50)
         if virtual_memory_percent > 95:
+            print(f'内存占用达到{virtual_memory_percent}%, 重启容器')
             restart_coral()
         time.sleep(1)

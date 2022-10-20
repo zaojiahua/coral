@@ -874,7 +874,7 @@ class ClickCenterPointFive(MethodView):
         return target_points
 
     @staticmethod
-    def get_red_pic(img):
+    def get_red_pic(img, is_dilate=True):
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         # 机械臂点下的点需要是红色的
@@ -888,8 +888,9 @@ class ClickCenterPointFive(MethodView):
 
         mask = mask_1 + mask_2
 
-        kernel = np.uint8(np.ones((3, 3)))
-        mask = cv2.dilate(mask, kernel, iterations=2)
+        if is_dilate:
+            kernel = np.uint8(np.ones((3, 3)))
+            mask = cv2.dilate(mask, kernel, iterations=2)
         # cv2.imwrite('mask.png', mask)
 
         return mask
@@ -970,6 +971,23 @@ class ClickCenterPointFive(MethodView):
             if is_new:
                 result_point.append(cur_p)
         return result_point
+
+    def get_contours(self, filename):
+        img = cv2.imread(filename)
+        img = cv2.GaussianBlur(img, (3, 3), 0)
+        src = self.get_red_pic(img, False)
+
+        # cv2.imwrite('blur.png', src)
+
+        # 获取符合条件的轮廓
+        _, contours, hierarchy = cv2.findContours(src, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        print(contours)
+        print(hierarchy)
+
+        # cv2.drawContours(img, contours, -1, (0, 255, 0), 1)
+        # cv2.imwrite('result.png', img)
+
+        return len(contours)
 
     def click(self, device_obj, hand_obj, point_x, point_y):
         pos_x, pos_y, pos_z = device_obj.get_click_position(point_x, point_y, absolute=True)

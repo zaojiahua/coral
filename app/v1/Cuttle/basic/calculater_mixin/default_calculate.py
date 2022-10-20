@@ -56,7 +56,7 @@ class DefaultMixin(object):
                 except (IndexError, TypeError):
                     pass
             else:
-                speed = 50
+                speed = 50 * 60
                 pix_points = [float(i) for i in position_args_list[:]]
             opt_type = "taier_breakpoint"
         elif 'taier' in raw_commend:

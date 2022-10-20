@@ -391,12 +391,16 @@ class HandHandler(Handler, DefaultMixin):
         ]
         for point_index in range(len(points)):
             point = points[point_index]
-            sliding_order += ['G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], point[2], MOVE_SPEED)]
+            sliding_order += ['G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], point[2], self.speed)]
         # 最后再加一条，抬起来的指令
         sliding_order += ['G01 X%0.1fY%0.1fZ%dF%d \r\n' % (points[-1][0], points[-1][1], Z_UP, MOVE_SPEED)]
 
-        exec_serial_obj.send_list_order(sliding_order)
-        return exec_serial_obj.recv()
+        # 3条3条的发送过去
+        step = 3
+        for order_index in range(0, len(sliding_order), step):
+            ignore_reset = False if (order_index + step) >= len(sliding_order) else True
+            exec_serial_obj.send_list_order(sliding_order[order_index:order_index + step], ignore_reset=ignore_reset)
+            exec_serial_obj.recv()
 
     def back(self, _, **kwargs):
         # 按返回键，需要在5#型柜 先配置过返回键的位置
@@ -597,13 +601,14 @@ class HandHandler(Handler, DefaultMixin):
 
         self.continuous_swipe_2(pix_point)
 
+        # 根据坐标点先做一个等待，等后期优化
+        time.sleep(2 * len(pix_point))
         device_obj = self.get_device_obj()
-        ret_code = device_obj.get_snapshot(filename, max_retry_time=1, original=False)
-        if ret_code == 0:
-            click_center_point_five = ClickCenterPointFive()
-            lines = click_center_point_five.get_lines(filename)
+        device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+        click_center_point_five = ClickCenterPointFive()
+        success = click_center_point_five.get_contours(filename)
 
-        return 0
+        return success
 
     def get_point_dis(self, points, pix_points, dis_filename, cur_index):
         # 计算俩点之间的距离

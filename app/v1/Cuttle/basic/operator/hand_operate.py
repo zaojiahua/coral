@@ -598,6 +598,7 @@ class HandHandler(Handler, DefaultMixin):
         from app.v1.Cuttle.macPane.pane_view import ClickCenterPointFive
         # 保存到rds目录中，这样方便调试
         filename = os.path.join(self.kwargs.get("rds_work_path"), f'break_point.png')
+        result_filename = os.path.join(self.kwargs.get("rds_work_path"), f'result.png')
 
         self.continuous_swipe_2(pix_point)
 
@@ -606,7 +607,7 @@ class HandHandler(Handler, DefaultMixin):
         device_obj = self.get_device_obj()
         device_obj.get_snapshot(filename, max_retry_time=1, original=False)
         click_center_point_five = ClickCenterPointFive()
-        success = click_center_point_five.get_contours(filename)
+        success = click_center_point_five.get_contours(filename, result_filename)
 
         return success
 

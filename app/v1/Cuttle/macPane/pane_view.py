@@ -972,7 +972,7 @@ class ClickCenterPointFive(MethodView):
                 result_point.append(cur_p)
         return result_point
 
-    def get_contours(self, filename):
+    def get_contours(self, filename, result_filename):
         img = cv2.imread(filename)
         img = cv2.GaussianBlur(img, (3, 3), 0)
         src = self.get_red_pic(img, False)
@@ -981,13 +981,15 @@ class ClickCenterPointFive(MethodView):
 
         # 获取符合条件的轮廓
         _, contours, hierarchy = cv2.findContours(src, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        print(contours)
-        print(hierarchy)
+        for contour_index, contour in enumerate(contours):
+            img = cv2.putText(img.copy(), f'{contour_index + 1}',
+                              (int(contour[0][0][0]), int(contour[0][0][1])),
+                              cv2.FONT_HERSHEY_COMPLEX, 1.0, (255, 0, 0), 2)
 
         # cv2.drawContours(img, contours, -1, (0, 255, 0), 1)
-        # cv2.imwrite('result.png', img)
+        cv2.imwrite(result_filename, img)
 
-        return len(contours)
+        return len(hierarchy) - 1
 
     def click(self, device_obj, hand_obj, point_x, point_y):
         pos_x, pos_y, pos_z = device_obj.get_click_position(point_x, point_y, absolute=True)

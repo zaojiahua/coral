@@ -46,6 +46,19 @@ class DefaultMixin(object):
                 pass
             pix_points = [float(i) for i in position_args_list[:4]]
             opt_type = "taier_draw_line"
+        elif 'taier_breakpoint' in raw_commend:
+            position_args_list = raw_commend.split("swipe")[-1].strip().split(' ')
+            # 奇数的话最后一个是速度，偶数的话默认速度
+            if len(position_args_list) % 2 == 1:
+                try:
+                    speed = int(position_args_list[-1])
+                    pix_points = [float(i) for i in position_args_list[:-1]]
+                except (IndexError, TypeError):
+                    pass
+            else:
+                speed = 50
+                pix_points = [float(i) for i in position_args_list[:]]
+            opt_type = "taier_breakpoint"
         elif 'taier' in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
             opt_type = "taier_click_center_point"
@@ -140,14 +153,16 @@ class DefaultMixin(object):
             return k
         if len(k) == 3:
             return self.calculate(k, absolute)
-        if len(k) == 8:
-            # 双指滑动
-            pix_point = [k[0:2], k[2:4], k[4:6], k[6:8]]
-            return [self.calculate(i) for i in pix_point]
-        if len(k) != 2 and len(k) != 4:
+        # 坐标是成对出现的，所以应该为偶数
+        if len(k) % 2 == 1:
             raise CoordinateWrongFormat
-        pix_point = [k] if len(k) == 2 else [k[:2], k[2:]]
-        return [self.calculate(i) for i in pix_point]
+        else:
+            # 做统一的转换
+            step = 2
+            pix_point = []
+            for i in range(0, len(k), step):
+                pix_point += [k[i:i+step]]
+            return [self.calculate(i) for i in pix_point]
 
     def cal_press_pix_point(self, press_key, is_side=True):
         from app.v1.device_common.device_model import Device

@@ -314,6 +314,30 @@ class Handler():
 
         return normal_result
 
+    # 多点滑动
+    def _multi_swipe(self):
+        regex = re.compile("[\d.]+")
+        all_points = re.findall(regex, self.exec_content)
+        # 如果出现奇数，最后一个是速度，所以去掉
+        if len(all_points) % 2 == 1:
+            all_points = all_points[:-1]
+
+        results_points = []
+        step = 2
+        for i in range(0, len(all_points), step):
+            w, h = self._get_screen_point(float(all_points[i]), float(all_points[i + 1]), self.portrait)
+            results_points.append(w)
+            results_points.append(h)
+
+        # 替换
+        last_pos = 0
+        for point_index, point in enumerate(all_points):
+            new_last_pos = self.exec_content.find(point, last_pos)
+            self.exec_content = self.exec_content[: new_last_pos] \
+                                + str(results_points[point_index]) \
+                                + self.exec_content[new_last_pos + len(point):]
+            last_pos = new_last_pos + len(str(results_points[point_index]))
+
     def _relative_double_hand(self):
         regex = re.compile(
             "double hand zoom in and out ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*) ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*) ")

@@ -19,6 +19,7 @@ from app.v1.stew.model.aide_monitor import AideMonitor
 from app.v1.Cuttle.paneDoor.door_keeper import DoorKeeper
 from app.v1.stew.monkey_manager import MonkeyManager
 from app.v1.tboard import tboard_init
+from app.v1.monitor import resource_monitor
 
 key_parameter_list = ["camera", "robot_arm"]
 
@@ -71,6 +72,10 @@ def recover_device(executer, logger):
     # monkey监控策略
     if math.floor(CORAL_TYPE) < 5:
         executer.submit(MonkeyManager().monkey_loop)
+
+    # 资源监控
+    if math.floor(CORAL_TYPE) >= 5:
+        executer.submit(resource_monitor)
 
     res = Device.request_device_info()
     for device_dict in res.get("devices"):

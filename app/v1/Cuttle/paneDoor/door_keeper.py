@@ -123,7 +123,7 @@ class DoorKeeper(object):
         return id_list
 
     def get_already_connected_device_id_list(self):
-        response = request(url=device_url, params={"fields": "cpu_id", "status__in": "ReefList[idle{%,%}busy]"})
+        response = request(url=device_url, params={"fields": "cpu_id", "status__in": "ReefList[idle{%,%}busy{%,%}occupied{%,%}error]"})
         assis_response = request(url=device_assis_url, params={"fields": "serial_number", "is_active": True})
         id_list = response.get("devices")
         assis_id_list = assis_response.get("subsidiarydevice")
@@ -390,7 +390,7 @@ class DoorKeeper(object):
     def is_new_phone_model(self, phone_model) -> (Dict, bool):
         params = {
             "phone_model_name": phone_model,
-            "fields": "phone_model_name,x_border,y_border,x_dpi,y_dpi"
+            "fields": "phone_model_name,x_dpi,y_dpi"
         }
         try:
             response = request(url=phone_model_url, params=params, filter_unique_key=True)

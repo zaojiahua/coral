@@ -1,5 +1,3 @@
-import time
-
 import requests
 from flask import Flask
 from flask_cors import CORS
@@ -13,7 +11,6 @@ from app.v1.Cuttle.paneDoor.url import door
 from app.v1.djob.views import djob_router
 from app.v1.eblock.url import eblock
 from app.v1.log_view import log
-from app.v1.stew.init import calculate_matrix
 from app.v1.tboard.views import tborad_router
 from app.config.url import bounced_words_url
 from extensions import ma
@@ -46,40 +43,31 @@ def load_setting(app):
     all_words = {}
     for word in bounced_words:
         all_words[word['id']] = word['name']
-    BouncedWords(words=all_words)
-
-
-def server_init_inside():
-    calculate_matrix()
-    time.sleep(5)
-    pane_init()  # pane_init must after tboard_init
-    # hand_init()
+    b_word = BouncedWords(pk=1)
+    b_word.words = all_words
 
 
 def create_app():
+    # 调用server_init windows通过配置SERVER_INIT参数走这里 linux是从gunicorn文件中进行调用的
     if SERVER_INIT:
         from server_init import server_init
         server_init()
+
     # __name__ 指向app.app,因此应用程序更目录为 app 目录 而非更上层的MachExec
-    app = Flask(__name__)
+    flask_app = Flask(__name__)
 
-    CORS(app, expose_headers=[EXPOSE_HEADERS])
+    CORS(flask_app, expose_headers=[EXPOSE_HEADERS])
 
-    load_setting(app)
+    load_setting(flask_app)
 
-    register_blueprints(app)
+    register_blueprints(flask_app)
 
-    register_extensions(app)
+    register_extensions(flask_app)
 
-    # logger_init()
+    # 从这个地方开始，恢复上次中断的任务，或者等待执行新的任务
+    pane_init()
 
-    server_init_inside()
-
-    # 主要用来debug 不涉及到业务逻辑
-    # t = threading.Thread(target=device_manager_loop)
-    # t.start()
-
-    return app
+    return flask_app
 
 
 app = create_app()

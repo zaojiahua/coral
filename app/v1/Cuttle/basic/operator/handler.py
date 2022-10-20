@@ -304,6 +304,30 @@ class Handler():
 
         return normal_result
 
+    # 多点滑动
+    def _multi_swipe(self):
+        regex = re.compile("[\d.]+")
+        all_points = re.findall(regex, self.exec_content)
+        # 如果出现奇数，最后一个是速度，所以去掉
+        if len(all_points) % 2 == 1:
+            all_points = all_points[:-1]
+
+        results_points = []
+        step = 2
+        for i in range(0, len(all_points), step):
+            w, h = self._get_screen_point(float(all_points[i]), float(all_points[i + 1]), self.portrait)
+            results_points.append(w)
+            results_points.append(h)
+
+        # 替换
+        last_pos = 0
+        for point_index, point in enumerate(all_points):
+            new_last_pos = self.exec_content.find(point, last_pos)
+            self.exec_content = self.exec_content[: new_last_pos] \
+                                + str(results_points[point_index]) \
+                                + self.exec_content[new_last_pos + len(point):]
+            last_pos = new_last_pos + len(str(results_points[point_index]))
+
     def _relative_double_hand(self):
         regex = re.compile(
             "double hand zoom in and out ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*) ([\d.]*?) ([\d.]*?) ([\d.]*?) ([\d.]*) ")
@@ -337,14 +361,19 @@ class ListHandler(Handler):
         super(ListHandler, self).__init__(*args, **kwargs)
 
     def execute(self, **kwargs):
+        # unit可能来自于block，也有可能直接创建的
         from app.v1.eblock.model.eblock import Eblock
-        block = Eblock(pk=self.kwargs.get('block_pk'))
+        block_pk = self.kwargs.get('block_pk')
+        if block_pk is not None:
+            block = Eblock(pk=block_pk)
+        else:
+            block = None
 
         flag = 0
         result = None
         for index, single_cmd in enumerate(copy.deepcopy(self.exec_content)):
             # 任务停止的时候，剩下的指令不再执行
-            if block.stop_flag:
+            if block is not None and block.stop_flag:
                 break
 
             if "onlyShow" in single_cmd:

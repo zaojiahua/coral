@@ -22,19 +22,7 @@ class DefaultMixin(object):
         from app.v1.device_common.device_model import Device
         opt_coordinate = []
         device = Device(pk=self._model.pk)
-        if CORAL_TYPE == 4:
-            if not (hasattr(self, "w_dpi") and hasattr(self, "h_dpi")):
-                self.w_dpi = float(device.x_dpi)
-                self.h_dpi = float(device.y_dpi)
-            # 实际距离，（已加边框，未加左上角点）
-            window_coordinate = [pix_point[0] / self.w_dpi * 2.54 * 10 + float(device.x_border),
-                                 pix_point[1] / self.h_dpi * 2.54 * 10 + float(device.y_border)]
-
-            opt_coordinate = [
-                round(window_coordinate[0] + get_global_value('m_location')[0], 1),
-                round(window_coordinate[1] + get_global_value('m_location')[1], 1)
-            ]
-        elif math.floor(CORAL_TYPE) == 5:
+        if math.floor(CORAL_TYPE) == 5:
             opt_coordinate = list(device.get_click_position(pix_point[0],
                                                             pix_point[1],
                                                             pix_point[2] if len(pix_point) > 2 else 0,
@@ -58,6 +46,19 @@ class DefaultMixin(object):
                 pass
             pix_points = [float(i) for i in position_args_list[:4]]
             opt_type = "taier_draw_line"
+        elif 'taier_breakpoint' in raw_commend:
+            position_args_list = raw_commend.split("swipe")[-1].strip().split(' ')
+            # 奇数的话最后一个是速度，偶数的话默认速度
+            if len(position_args_list) % 2 == 1:
+                try:
+                    speed = int(position_args_list[-1])
+                    pix_points = [float(i) for i in position_args_list[:-1]]
+                except (IndexError, TypeError):
+                    pass
+            else:
+                speed = 50 * 60
+                pix_points = [float(i) for i in position_args_list[:]]
+            opt_type = "taier_breakpoint"
         elif 'taier' in raw_commend:
             pix_points = [float(i) for i in raw_commend.split("tap")[-1].strip().split(' ')]
             opt_type = "taier_click_center_point"
@@ -152,14 +153,16 @@ class DefaultMixin(object):
             return k
         if len(k) == 3:
             return self.calculate(k, absolute)
-        if len(k) == 8:
-            # 双指滑动
-            pix_point = [k[0:2], k[2:4], k[4:6], k[6:8]]
-            return [self.calculate(i) for i in pix_point]
-        if len(k) != 2 and len(k) != 4:
+        # 坐标是成对出现的，所以应该为偶数
+        if len(k) % 2 == 1:
             raise CoordinateWrongFormat
-        pix_point = [k] if len(k) == 2 else [k[:2], k[2:]]
-        return [self.calculate(i) for i in pix_point]
+        else:
+            # 做统一的转换
+            step = 2
+            pix_point = []
+            for i in range(0, len(k), step):
+                pix_point += [k[i:i+step]]
+            return [self.calculate(i) for i in pix_point]
 
     def cal_press_pix_point(self, press_key, is_side=True):
         from app.v1.device_common.device_model import Device

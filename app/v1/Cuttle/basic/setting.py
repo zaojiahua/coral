@@ -283,3 +283,5 @@ camera_power_close = "010500000000cdca"
 
 # 压感数值范围
 MAX_SENSOR_VALUE = 50
+# 判断关机的电量阈值
+POWER_OFF_BATTERY_LEVEL = 8

@@ -3,13 +3,13 @@ import platform
 import sys
 
 from .ip import *
-from .post import *
 from .secure import *
 
 # log 必须导入
 from .log import *
 
 DEBUG = False
+REEF_PORT = 8000
 
 DEFAULT_DATE_TIME_FORMAT = "%Y_%m_%d_%H_%M_%S"
 REEF_DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -116,7 +116,9 @@ ERROR_CODE_FILE = 'error_code.csv'
 default_email_address = []
 email_addresses = {
     22: ['zc@anhereef.com', 'xzl@anhereef.com'],
-    25: ['whz@anhereef.com', 'xwq@anhereef.com']
+    25: ['whz@anhereef.com', 'xwq@anhereef.com'],
+    15: ['gh@anhereef.com'],
+    35: ['hx@anhereef.com', 'wyx@anhereef.com']
 }
 
 # tboard mapping 临时性的跑通方案 用来记录哪些job还没有执行以及job对应的一些参数

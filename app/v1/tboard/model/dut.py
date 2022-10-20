@@ -1,5 +1,6 @@
 import logging
 import random
+import time
 from threading import Lock
 
 from astra import models
@@ -29,6 +30,10 @@ class Dut(BaseModel):
     current_job_index: int = models.IntegerField()
     model = "app.v1.tboard.model.tboard.TBoard"
     job_random_order = models.BooleanField()
+    # 掉电关机使用的job
+    special_job_msg = DictField()
+    special_job_label = models.CharField()
+    special_job_running = models.BooleanField()
 
     def save(self, action, attr=None, value=None):
         if action == "post_remove":  # attr = 'pk', value = self.pk
@@ -135,6 +140,7 @@ class Dut(BaseModel):
         return remove_djob_inner(self.djob_pk)
 
     def send_djob(self):
+        self.special_job_running = False
         json_data = {
             "device_label": self.device_label,
             "job_label": self.current_job_label.split(':')[0],
@@ -147,3 +153,35 @@ class Dut(BaseModel):
         }
         logger.info(f"send insert djob, body：{json_data}")
         return insert_djob_inner(**json_data)
+
+    # 加入特殊的掉电关机的job 临时方案
+    def insert_special_djob(self):
+        # 存在才执行，否则和普通的一样逻辑
+        if self.special_job_label and not self.special_job_running:
+            self.current_job_index -= 1
+            self.special_job_running = True
+            # 先把正在执行的停止了
+            print('停止正在执行的job。。。。。。。。。。')
+            self.stop_djob()
+            # 去掉所有的待机时间
+            new_job_message = self.job_msg
+            for job_label, msg in new_job_message.items():
+                if 'job_parameter' in msg and 'standby_time' in msg['job_parameter']:
+                    new_job_message[job_label]['job_parameter']['standby_time'] = 0
+            self.job_msg = new_job_message
+            # 等待5秒，上一个djob正在运行的unit可能还没有结束
+            time.sleep(5)
+            print('开启特殊的job。。。。。。。。。。。。。')
+            json_data = {
+                "device_label": self.device_label,
+                "job_label": self.special_job_label,
+                "flow_execute_mode": self.special_job_msg[self.special_job_label]["flow_execute_mode"],
+                "job_flows": self.special_job_msg[self.special_job_label]["job_flows"],
+                'job_parameter': self.special_job_msg[self.special_job_label].get("job_parameter", {}),
+                "source": "tboard",
+                "tboard_id": self.parent.pk,
+                "tboard_path": self.parent.tboard_path,
+                'not_push_rds': 1
+            }
+            logger.info(f"send insert djob, body：{json_data}")
+            return insert_djob_inner(**json_data)

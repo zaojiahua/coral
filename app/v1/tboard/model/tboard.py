@@ -77,21 +77,24 @@ class TBoard(BaseModel):
         # 当 tboard_id = 0,就不会重复执行
 
         if self.tboard_id != 0:
-            json_data = {
-                "end_time": time.strftime('%Y_%m_%d_%H_%M_%S'),
-                "cabinet_dict": json.dumps({HOST_IP.split(".")[-1]: 0})
-            }  # datetime 格式
-            while True:
-                try:
-                    response = request(method="PUT", url=tboard_id_url.format(self.tboard_id), json=json_data)
-                    logger.info(f"end tboard response :{response}")
-                    break
-                except APIException as e:
-                    if e.code not in [502, 504]:
-                        raise e
+            self.notify_tboard_finish(self.tboard_id)
 
             deal_dir_file(self.tboard_path)
             self.remove()
-
         else:
             logger.error(f"tboard({self.pk}) It has been deleted. cannot do this")
+
+    @staticmethod
+    def notify_tboard_finish(tboard_id):
+        json_data = {
+            "end_time": time.strftime('%Y_%m_%d_%H_%M_%S'),
+            "cabinet_dict": json.dumps({HOST_IP.split(".")[-1]: 0})
+        }
+        while True:
+            try:
+                response = request(method="PUT", url=tboard_id_url.format(tboard_id), json=json_data)
+                logger.info(f"end tboard response :{response}")
+                break
+            except APIException as e:
+                if e.code not in [502, 504]:
+                    raise e

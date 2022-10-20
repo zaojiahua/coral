@@ -15,13 +15,14 @@ from func_timeout import func_set_timeout
 from app.config.ip import HOST_IP, ADB_TYPE, REEF_IP
 from app.config.setting import PROJECT_SIBLING_DIR, CORAL_TYPE, Bugreport_file_name, CORAL_TYPE_NAME, email_addresses, \
     default_email_address, REEF_DATE_TIME_FORMAT
-from app.config.url import battery_url
+from app.config.url import battery_url, battery_life_url
 from app.execption.outer.error_code.total import ServerError
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.chinese_calculater import ChineseMixin
 from app.v1.Cuttle.basic.operator.handler import Handler, Abnormal
 from app.v1.Cuttle.basic.setting import adb_disconnect_threshold, \
-    adb_cmd_prefix, RESTART_SERVER, KILL_SERVER, START_SERVER, DEVICE_DETECT_ERROR_MAX_TIME, get_global_value
+    adb_cmd_prefix, DEVICE_DETECT_ERROR_MAX_TIME, get_global_value, \
+    POWER_OFF_BATTERY_LEVEL
 from app.v1.Cuttle.boxSvc.box_views import on_or_off_singal_port
 from app.v1.eblock.config.setting import ADB_DEFAULT_TIMEOUT
 from app.libs.email_manager import EmailManager
@@ -163,6 +164,30 @@ class AdbHandler(Handler, ChineseMixin):
                 from app.v1.device_common.device_model import DeviceStatus
                 self._model.update_device_status(DeviceStatus.ERROR)
                 self._model.logger.warning(f"设备状态变成error")
+
+            # 连接不上的时候，判断是否发生了关机
+            serial_number = self.str_func(f'lsusb -v | grep iSerial | grep {connect_number}')
+            if self._model.disconnect_times == 1 \
+                    and connect_number not in serial_number \
+                    and device.battery_level < POWER_OFF_BATTERY_LEVEL:
+                # 判断是否处于运行用例的状态
+                from app.v1.tboard.model.dut import Dut
+                dut = Dut.first(device_label=device.device_label)
+                if dut is not None:
+                    email = EmailManager()
+                    email.send_email(email_addresses.get(int(REEF_IP.split(".")[-2]), default_email_address),
+                                     '空电关机，请检查！',
+                                     f'设备{device.device_name}：{connect_number} \n'
+                                     f'机柜：{REEF_IP.split(".")[-2]}号机 I\'M {HOST_IP.split(".")[-1]}'
+                                     f'（{CORAL_TYPE_NAME[CORAL_TYPE]}）\n'
+                                     f'电量：{device.battery_level} \n'
+                                     f'{datetime.now().strftime(REEF_DATE_TIME_FORMAT)}')
+                    # 通知reef
+                    tboard_id = dut.pk.split('_')[-1]
+                    res = request(method="POST", json={'device': device.id, 'tboard': tboard_id},
+                                  url=battery_life_url)
+                    print('空电关机reef的返回值是：', res)
+                    dut.insert_special_djob()
         return 0
 
     def disconnect(self, ip=None):
@@ -202,15 +227,14 @@ class AdbHandler(Handler, ChineseMixin):
 
     def save_battery(self, result):
         from app.v1.device_common.device_model import Device
+        device = Device(pk=self._model.pk)
         result_list = result.split(mark)
         battery_level = int(result_list[0])
         charging = False if result_list[1].strip() in self.discharging_mark_list else True
-        # 原来Coral的充电逻辑
-        # if int(battery_level) <= 10 and charging == False:
-        #     on_or_off_singal_port({
-        #         "port": Device(pk=self._model.pk).power_port,
-        #         "action": True
-        #     })
+        # 记录设备最新的电量信息
+        if int(battery_level) != 0:
+            device.battery_level = int(battery_level)
+
         # 2022.3.31  根据充电口的充电策略进行充电
         self._model.logger.debug(f"根据充电策略充电.....battery_level: {battery_level}")
         self.set_power_port_status_by_battery(battery_level)
@@ -218,7 +242,7 @@ class AdbHandler(Handler, ChineseMixin):
         self._model.disconnect_times = 0
         try:
             json_data = {
-                "device": Device(pk=self._model.pk).id,
+                "device": device.id,
                 "cabinet": HOST_IP.split(".")[-1],
                 "record_datetime": datetime.now(),
                 "battery_level": battery_level,
@@ -323,11 +347,15 @@ class AdbHandler(Handler, ChineseMixin):
             self._model.logger.error("Get the battery.dat file but unable to obtain power")
             return
         self._model.logger.debug(f"battery fail mark, 根据充电策略充电.....battery_level: {battery_level}")
-        self.set_power_port_status_by_battery(battery_level)
         from app.v1.device_common.device_model import Device
+        device = Device(pk=self._model.pk)
+        if int(battery_level) != 0:
+            device.battery_level = int(battery_level)
+
+        self.set_power_port_status_by_battery(battery_level)
         from app.libs.http_client import request
         json_data = {
-            "device": Device(pk=self._model.pk).id,
+            "device": device.id,
             "cabinet": HOST_IP.split(".")[-1],
             "record_datetime": datetime.now(),
             "battery_level": int(battery_level),

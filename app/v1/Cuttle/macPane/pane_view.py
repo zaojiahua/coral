@@ -880,7 +880,7 @@ class ClickCenterPointFive(MethodView):
         return target_points
 
     @staticmethod
-    def get_red_pic(img):
+    def get_red_pic(img, is_dilate=True):
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         # 机械臂点下的点需要是红色的
@@ -894,8 +894,9 @@ class ClickCenterPointFive(MethodView):
 
         mask = mask_1 + mask_2
 
-        kernel = np.uint8(np.ones((3, 3)))
-        mask = cv2.dilate(mask, kernel, iterations=2)
+        if is_dilate:
+            kernel = np.uint8(np.ones((3, 3)))
+            mask = cv2.dilate(mask, kernel, iterations=2)
         # cv2.imwrite('mask.png', mask)
 
         return mask
@@ -977,6 +978,25 @@ class ClickCenterPointFive(MethodView):
                 result_point.append(cur_p)
         return result_point
 
+    def get_contours(self, filename, result_filename):
+        img = cv2.imread(filename)
+        img = cv2.GaussianBlur(img, (3, 3), 0)
+        src = self.get_red_pic(img, False)
+
+        # cv2.imwrite('blur.png', src)
+
+        # 获取符合条件的轮廓
+        _, contours, hierarchy = cv2.findContours(src, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for contour_index, contour in enumerate(contours):
+            img = cv2.putText(img.copy(), f'{contour_index + 1}',
+                              (int(contour[0][0][0]), int(contour[0][0][1])),
+                              cv2.FONT_HERSHEY_COMPLEX, 1.0, (255, 0, 0), 2)
+
+        # cv2.drawContours(img, contours, -1, (0, 255, 0), 1)
+        cv2.imwrite(result_filename, img)
+
+        return len(hierarchy) - 1
+
     def click(self, device_obj, hand_obj, point_x, point_y):
         pos_x, pos_y, pos_z = device_obj.get_click_position(point_x, point_y, absolute=True)
         print(pos_x, pos_y, pos_z, '*' * 10)
@@ -992,3 +1012,17 @@ class ClickCenterPointFive(MethodView):
                 f"G01 X{pos_x}Y{pos_y}Z{pos_z}F15000\r\n",
                 f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
                 arm_wait_position]
+
+
+class PaneMkDir(MethodView):
+
+    def post(self):
+        request_data = request.get_json() or request.args
+        dir_path = request_data.get('dir_path')
+        if not dir_path:
+            return jsonify(dict(error_message='dir_path is necessary')), 500
+
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+
+        return jsonify(dict(error_code=0, data={'dir_path': f'mk dir {dir_path} success'}))

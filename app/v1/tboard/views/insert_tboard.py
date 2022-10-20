@@ -43,7 +43,10 @@ def insert_tboard_inner(**kwargs):
     tboard_obj = res.create_tboard()
     if tboard_obj == -1:
         raise CreateTboardError(description='not useful device')
+
     # 异步向下执行
+    if res.special_job_info is not None:
+        res.jobs += [res.special_job_info]
     t1 = threading.Thread(target=tboard_obj.start_tboard, args=(res.jobs,))
     t1.start()
     return {

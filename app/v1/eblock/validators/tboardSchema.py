@@ -1,7 +1,6 @@
 from marshmallow import fields, post_load
 
 from app.libs.extension.schema import BaseSchema
-from app.v1.eblock.config.setting import DEFAULT_TIMEOUT
 
 
 class UnitSchema(BaseSchema):

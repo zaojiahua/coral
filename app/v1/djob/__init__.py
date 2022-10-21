@@ -8,6 +8,11 @@ from app.v1.djob.model.rds import RDS
 
 def djob_init():
     request(method="DELETE", url=delete_unfinished_rds_url)
+    djob_flush()
+
+
+# 清空所有的djob
+def djob_flush():
     for djob_worker in DJobWorker.all():
         djob_worker.remove()
     for djob in DJob.all():

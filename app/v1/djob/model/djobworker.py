@@ -56,17 +56,18 @@ class DJobWorker(BaseModel):
             Dut(pk=f"{self.device_label}_{self.using_djob.tboard_id}").start_dut()
 
     def remove_job_from_tboard_mapping(self):
-        new_jobs = []
         # 接口形式没有随机，移除第一个找到的job即可
-        for job_index, job in enumerate(tboard_mapping[self.using_djob.tboard_id]['jobs']):
-            if job['job_label'] == self.using_djob.job_label and job_index == 0:
-                print('移除job', job['job_label'])
-                continue
+        if self.using_djob.tboard_id in tboard_mapping:
+            new_jobs = []
+            for job_index, job in enumerate(tboard_mapping[self.using_djob.tboard_id]['jobs']):
+                if job['job_label'] == self.using_djob.job_label and job_index == 0:
+                    print('移除job', job['job_label'])
+                    continue
+                else:
+                    new_jobs.append(job)
+            if len(new_jobs) == 0:
+                del tboard_mapping[self.using_djob.tboard_id]
             else:
-                new_jobs.append(job)
-        if len(new_jobs) == 0:
-            del tboard_mapping[self.using_djob.tboard_id]
-        else:
-            tboard_mapping[self.using_djob.tboard_id]['jobs'] = new_jobs
+                tboard_mapping[self.using_djob.tboard_id]['jobs'] = new_jobs
         print('剩下的tboard_mapping')
         print(tboard_mapping)

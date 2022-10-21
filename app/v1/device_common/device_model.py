@@ -13,7 +13,6 @@ from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.hand_serial import read_z_down_from_file
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.boxSvc.box_views import get_port_temperature
-from app.v1.device_common.device_manager import add_device_thread_status, remove_device_thread_status
 from app.v1.device_common.setting import key_map_position, default_key_map_position
 from app.v1.djob import DJobWorker
 from app.v1.stew.model.aide_monitor import send_battery_check
@@ -37,9 +36,9 @@ class DeviceStatus(object):
 
 class Device(BaseModel):
     # attribute that only coral have
-    exclude_list = ["src_list", "has_camera", "has_arm", "flag", "is_bind", "x_border", "y_border", "kx1", "kx2", "ky1",
+    exclude_list = ["src_list", "has_camera", "has_arm", "flag", "is_bind", "kx1", "kx2", "ky1",
                     "ky2", "assis_1", "assis_2", "assis_3", "x1", "x2", "y1", "y2", 'subsidiarydevice',
-                    'disconnect_times_timestamp']
+                    'disconnect_times_timestamp', 'battery_level']
     # device basic attribute
     device_label = models.CharField()
     ip_address = models.CharField()
@@ -61,8 +60,6 @@ class Device(BaseModel):
     monitor_index = models.CharField()
     x_dpi = models.CharField()
     y_dpi = models.CharField()
-    x_border = models.CharField()
-    y_border = models.CharField()
     # 这里是用户输入的设备实际宽高厚度
     width = models.CharField()
     height = models.CharField()
@@ -113,8 +110,10 @@ class Device(BaseModel):
     subsidiarydevice = OwnerList(to=str)
     # 如果是僚机，代表的是第几个僚机，0代表的就是主机
     order = models.IntegerField()
+    # 记录最后一次电量信息
+    battery_level = models.IntegerField()
 
-    float_list = ["x_dpi", "y_dpi", "x_border", "y_border", "x1", "x2", "y1", "y2",
+    float_list = ["x_dpi", "y_dpi", "x1", "x2", "y1", "y2",
                   'width', 'height', 'ply', "screen_z", 'back_x', 'back_y', 'back_z',
                   'home_x', 'home_y', 'home_z', 'menu_x', 'menu_y', 'menu_z']
 
@@ -132,7 +131,7 @@ class Device(BaseModel):
         common_fields = "id,auto_test,device_name,cpu_id,ip_address,status," \
                         "tempport,tempport.port,powerport,powerport.port,device_label,android_version," \
                         "android_version.version,monitor_index,monitor_index.port,phone_model.phone_model_name," \
-                        "phone_model.x_border,phone_model.y_border,phone_model.cpu_name,phone_model.manufacturer," \
+                        "phone_model.cpu_name,phone_model.manufacturer," \
                         "phone_model.id,phone_model.x_dpi,phone_model.y_dpi,phone_model.manufacturer.manufacturer_name," \
                         "phone_model.width,phone_model.height,phone_model.ply," \
                         "phone_model.width_resolution,phone_model.height_resolution," \
@@ -352,9 +351,6 @@ class Device(BaseModel):
         self._set_char("x_dpi", kwargs, "phone_model", "x_dpi")
         self._set_char("y_dpi", kwargs, "phone_model", "y_dpi")
 
-        self._set_char("x_border", kwargs, "phone_model", "x_border")
-        self._set_char("y_border", kwargs, "phone_model", "y_border")
-
         self._set_char("width", kwargs, "phone_model", "width")
         self._set_char("height", kwargs, "phone_model", "height")
         self._set_char("ply", kwargs, "phone_model", "ply")
@@ -422,7 +418,6 @@ class Device(BaseModel):
         simplify the remove process(not use hash)
         """
         self.logger.warning(f"remove device info ")
-        remove_device_thread_status(self.device_label)
         if self.ip_address != "0.0.0.0":
             h = AdbHandler(model=self)
             h.disconnect()
@@ -440,7 +435,6 @@ class Device(BaseModel):
         # 每一个设备拥有自己的同步循环loop，优先处理下发的任务，没有下发任务且auto test开启时执行推荐任务。
         self.logger.info(f"new device {self.device_label} into sequence_loop")
         # ------------------------Loop------------------------
-        add_device_thread_status(self.device_label)
         while self.flag:
             time.sleep(2)
             # first priority do single djob
@@ -452,7 +446,7 @@ class Device(BaseModel):
                     # 上边的if不用加，因为add的地方进行了限制，如果加了的话，可能导致已经add，但是却没有执行的bug。
                     if self.status == DeviceStatus.ERROR:
                         continue
-                    aide_monitor_instance.start_job_recommend()
+                    # aide_monitor_instance.start_job_recommend()
             except BaseException as e:
                 self.logger.exception(f"{self.device_label} Exception in sequence_loop: {repr(e)}")
                 self.logger.error(f"Exception in sequence_loop: {repr(e)}")

@@ -260,7 +260,6 @@ COORDINATE_CONFIG_FILE = 'app/config/coordinate.py'
 MERGE_IMAGE_H = 'app/config/merge_image_h.npy'
 CAMERA_IN_LOOP = 'camera_in_loop'  # 性能测试控制摄像机是否继续获取图片
 set_global_value(CAMERA_IN_LOOP, False)
-COORDINATE_POINT_FILE = "app/config/point.py"
 
 # 跟性能测试相关的参数
 FpsMax = 240
@@ -288,6 +287,8 @@ camera_power_close = "010500000000cdca"
 
 # 压感数值范围
 MAX_SENSOR_VALUE = 50
+# 判断关机的电量阈值
+POWER_OFF_BATTERY_LEVEL = 8
 
 # 参考的dpi和mlocation值
 REFERENCE_VALUE = {

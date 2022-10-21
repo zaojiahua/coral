@@ -54,11 +54,11 @@ class AideMonitor(object):
     def __init__(self, device_object, rest_time=300):
         self.__dict__.update(self._default)
         self.jobPriorityDict = {}
-        from app.v1.stew.init import similarity_matrix_monitor_object, user_id
-        self.matrixMonitor = similarity_matrix_monitor_object
+        # from app.v1.stew.init import similarity_matrix_monitor_object, user_id
+        # self.matrixMonitor = similarity_matrix_monitor_object
         self.ranking_job_list = None
         self.rest_time = rest_time
-        self.user_id = str(user_id)
+        # self.user_id = str(user_id)
         self.temp_alarm = 50
         self.device_object = device_object
         self.logger = setup_logger(f'stew{device_object.pk}', f'stew-{device_object.pk}.log')

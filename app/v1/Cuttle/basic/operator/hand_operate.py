@@ -137,6 +137,7 @@ class HandHandler(Handler, DefaultMixin):
         # 用在执行之前，before_execute中针对不同方法正则替换其中的相对坐标到绝对坐标
         "input tap": "_relative_point",
         "input swipe": "_relative_swipe",
+        "multi swipe": "_multi_swipe",
         "double_point": "_relative_double_point",
         "double hand zoom": "_relative_double_hand",
     }
@@ -158,6 +159,7 @@ class HandHandler(Handler, DefaultMixin):
         for key, value in self.before_match_rules.items():
             if key in self.exec_content:
                 getattr(self, value)()
+                break
         # 根据adb指令中的关键词dispatch到对应机械臂方法,pix_points为adb模式下的截图中的像素坐标
         pix_points, opt_type, self.speed, absolute = self.grouping(self.exec_content)
         self.pix_points = pix_points
@@ -376,6 +378,30 @@ class HandHandler(Handler, DefaultMixin):
         exec_serial_obj.send_list_order(sliding_order, ignore_reset=True)
         return exec_serial_obj.recv()
 
+    @allot_serial_obj
+    def continuous_swipe_2(self, points, **kwargs):
+        exec_serial_obj = kwargs.get('exec_serial_obj')
+        # 对坐标进行预处理
+        for axis_index in range(len(points)):
+            points[axis_index] = pre_point(points[axis_index], arm_num=kwargs["arm_num"])
+
+        # 先加一条移动过去的指令
+        sliding_order = [
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (points[0][0], points[0][1], Z_UP, MOVE_SPEED)
+        ]
+        for point_index in range(len(points)):
+            point = points[point_index]
+            sliding_order += ['G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], point[2], self.speed)]
+        # 最后再加一条，抬起来的指令
+        sliding_order += ['G01 X%0.1fY%0.1fZ%dF%d \r\n' % (points[-1][0], points[-1][1], Z_UP, MOVE_SPEED)]
+
+        # 3条3条的发送过去
+        step = 3
+        for order_index in range(0, len(sliding_order), step):
+            ignore_reset = False if (order_index + step) >= len(sliding_order) else True
+            exec_serial_obj.send_list_order(sliding_order[order_index:order_index + step], ignore_reset=ignore_reset)
+            exec_serial_obj.recv()
+
     def back(self, _, **kwargs):
         # 按返回键，需要在5#型柜 先配置过返回键的位置
         device_obj = self.get_device_obj()
@@ -567,6 +593,27 @@ class HandHandler(Handler, DefaultMixin):
             return 1
 
         return 0
+
+    @allot_serial_obj
+    def taier_breakpoint(self, pix_point, **kwargs):
+        """
+        泰尔实验室，回型框断点检测
+        """
+        from app.v1.Cuttle.macPane.pane_view import ClickCenterPointFive
+        # 保存到rds目录中，这样方便调试
+        filename = os.path.join(self.kwargs.get("rds_work_path"), f'break_point.png')
+        result_filename = os.path.join(self.kwargs.get("rds_work_path"), f'result.png')
+
+        self.continuous_swipe_2(pix_point)
+
+        # 根据坐标点先做一个等待，等后期优化
+        time.sleep(2 * len(pix_point))
+        device_obj = self.get_device_obj()
+        device_obj.get_snapshot(filename, max_retry_time=1, original=False)
+        click_center_point_five = ClickCenterPointFive()
+        success = click_center_point_five.get_contours(filename, result_filename)
+
+        return success
 
     def get_point_dis(self, points, pix_points, dis_filename, cur_index):
         # 计算俩点之间的距离

@@ -23,7 +23,7 @@ def remove_djob_inner(djob_pk):
 
     else:
         # 非运行状态
-        djob_worker.djozb_list.lrem(1, djob)
+        djob_worker.djob_list.lrem(1, djob)
 
         djob.remove()
 

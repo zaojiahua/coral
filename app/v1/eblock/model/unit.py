@@ -22,6 +22,7 @@ from app.v1.eblock.config.setting import PROCESSER_LIST, IMAGE_HANDLER, COMPLEX_
 from app.v1.eblock.model.macro_replace import MacroHandler
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.libs.ospathutil import get_picture_create_time
+from app.config.restart_coral import restart_coral
 
 
 def get_assist_device_ident(device_label, assist_device_serial_number):

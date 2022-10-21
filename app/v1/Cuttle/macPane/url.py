@@ -3,7 +3,7 @@ from flask import Blueprint
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
     AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView, \
     PaneLocateDeviceView, PaneVideoView, PaneUpdateMLocation, PaneClickMLocation, ClickCenterPointFive, PaneUpdateZDown, \
-    PaneClickZDown, PaneGetZDown
+    PaneClickZDown, PaneGetZDown, PaneClickCoordinateView, PaneGetCoordinateView
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, \
     PaneBorderView
 
@@ -33,6 +33,10 @@ pane.add_url_rule('/get_roi/', view_func=AutoPaneBorderView.as_view('get_roi'))
 pane.add_url_rule('/file_push/', view_func=FilePushView.as_view('file_push'))
 # 建立坐标系统
 pane.add_url_rule('/coordinate/', view_func=PaneCoordinateView.as_view('coordinate'))
+# 点击坐标换算点
+pane.add_url_rule('/click_coordinate/', view_func=PaneClickCoordinateView.as_view('click_coordinate'))
+# 查询坐标换算的默认点
+pane.add_url_rule('/get_coordinate/', view_func=PaneGetCoordinateView.as_view('get_coordinate'))
 # 重置拼图矩阵
 pane.add_url_rule('/reset_h/', view_func=PaneMergePicView.as_view('reset_h'))
 # 调试被测试设备的距离

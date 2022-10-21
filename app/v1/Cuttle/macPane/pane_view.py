@@ -21,7 +21,8 @@ from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, 
     arm_com_1, CORAL_TYPE, arm_com, arm_com_1_sensor, IP_FILE_PATH
 from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail, CoordinateConvert, \
     MergeShapeNone
-from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit
+from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit, \
+    CrossMax
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.v1.Cuttle.basic.hand_serial import controlUsbPower, read_z_down_from_file
@@ -33,7 +34,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
-    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP
+    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -590,25 +591,79 @@ class PaneGetZDown(MethodView):
         return jsonify(dict(error_code=0, data=data))
 
 
+# 获取坐标换算时的点击坐标
+class PaneGetCoordinateView(MethodView):
+
+    def get(self):
+        start_point, end_point = [], []
+        if not os.path.exists(COORDINATE_POINT_FILE):
+            # 使用默认值
+            if CORAL_TYPE == 5.3:
+                start_point, end_point = [100, -100], [200, -100]
+            elif CORAL_TYPE == 5:
+                start_point, end_point = [55, -250], [90, -250]
+            elif CORAL_TYPE == 5.4:
+                start_point, end_point = [35, -210], [85, -210]
+            elif CORAL_TYPE == 5.1:
+                start_point, end_point = [110, -220], [160, -220]
+            else:
+                start_point, end_point = [50, -120], [100, -120]
+        else:
+            with open(COORDINATE_POINT_FILE, 'rt') as f:
+                for line in f.readlines():
+                    key, value = line.strip('\n').split('=')
+                    if key == 'start_point':
+                        start_point = value
+                    if key == 'end_point':
+                        end_point = value
+        return jsonify(dict(error_code=0, data={"start_point": start_point, "end_point": end_point}))
+
+
+# 点击坐标换算的物理坐标点
+class PaneClickCoordinateView(MethodView):
+    """
+    点一个物理坐标点
+    device_label, x, y
+    """
+
+    def post(self):
+        device_label = request.get_json()["device_label"]
+        point = request.get_json()["point"]
+        judge_ret = DefaultMixin.judge_coordinate_in_arm(point)
+        if not judge_ret:
+            return jsonify(dict(error_code=CrossMax.error_code,
+                                description=CrossMax.description))
+        # 获取机械臂执行对象
+        exec_serial_obj, arm_num = judge_start_x(point[0], device_label)
+        axis = pre_point([point[0], abs(point[1])], arm_num=arm_num)
+
+        # 判断机械臂状态是否在执行循环
+        if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):
+            return jsonify(dict(error_code=UsingHandFail.error_code,
+                                description=UsingHandFail.description))
+
+        # 执行点击
+        orders = [
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2] + 5, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2], MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], Z_UP, MOVE_SPEED),
+        ]
+        exec_serial_obj.send_list_order(orders)
+        exec_serial_obj.recv()
+        return jsonify(dict(error_code=0))
+
+
 # 5D等自动建立坐标系统
 class PaneCoordinateView(MethodView):
     # 确定俩件事情，一个是比例，也就是一个像素等于实际多少毫米。另一个是图片坐标系统下的原点实际的坐标值。
     def post(self):
+        positions = [[request.get_json()["start_point"], request.get_json()["end_point"]]]
         dpi = 0
         m_location = [0, 0, 0]
         # 让机械臂点击一个点，在屏幕上留下了一个记号A，再让机械臂点击另一个点，在屏幕上留下了记号B
         # 计算A、B俩点的像素距离，和实际距离的比，就得到了比例。根据比例，计算原点的坐标值。
         # 找到主机械臂，让主机械臂移动即可
         # 双指的范围更大，点击的时候尽量在中间点击即可
-        if CORAL_TYPE == 5.3:
-            positions = [[[100, -100], [200, -100]]]
-        elif CORAL_TYPE == 5:
-            positions = [[[55, -250], [90, -250]]]
-        elif CORAL_TYPE == 5.4:
-            positions = [[[35, -210], [85, -210]]]
-        else:
-            positions = [[[50, -120], [100, -120]]]
-
         all_dpi = []
         all_m_location = []
         for pos_a, pos_b in positions:
@@ -656,7 +711,15 @@ class PaneCoordinateView(MethodView):
             f.writelines(f'pane_dpi={result_dpi}\n')
             f.writelines(f'merge_shape={merge_shape}\n')
 
-        return jsonify(dict(error_code=0, data={'dpi': result_dpi, 'm_location': list(result_m_location)}))
+        # 坐标换算完成
+        with open(COORDINATE_POINT_FILE, "w+") as f:
+            f.write(f"start_point={positions[0][0]}\n")
+            f.write(f"end_point={positions[0][1]}\n")
+
+        reference_dpi = REFERENCE_VALUE["reference_" + str(CORAL_TYPE * 10)]["dpi"]
+        reference_location = REFERENCE_VALUE["reference_" + str(CORAL_TYPE * 10)]["m_location"]
+        return jsonify(dict(error_code=0,
+                            description=f"坐标换算完成。换算后得到dpi和mlocation分别为【{dpi}】和【{m_location}】，dpi和mloction的参考值分别为【{reference_dpi}】和【{reference_location}】"))
 
     # 传入x,y俩个值即可
     @staticmethod

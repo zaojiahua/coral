@@ -182,6 +182,10 @@ else:
     else:
         arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
 
+MAX_SCOPE_5SE = [234, -245]  # 带延长杆的小型龙门架机械臂,行程 [320, 245]
+MAX_SCOPE_5 = [235, -420]  # 带延长杆的Y400龙门架机械臂，行程[320, 423]
+MAX_SCOPE_5L = [320, -420]  # 不带延长杆的Y400龙门架机械臂
+
 DIFF_X = 30
 MOVE_SPEED = 15000
 SWIPE_TIME = 1
@@ -256,6 +260,7 @@ COORDINATE_CONFIG_FILE = 'app/config/coordinate.py'
 MERGE_IMAGE_H = 'app/config/merge_image_h.npy'
 CAMERA_IN_LOOP = 'camera_in_loop'  # 性能测试控制摄像机是否继续获取图片
 set_global_value(CAMERA_IN_LOOP, False)
+COORDINATE_POINT_FILE = "app/config/point.py"
 
 # 跟性能测试相关的参数
 FpsMax = 240
@@ -283,3 +288,12 @@ camera_power_close = "010500000000cdca"
 
 # 压感数值范围
 MAX_SENSOR_VALUE = 50
+
+# 参考的dpi和mlocation值
+REFERENCE_VALUE = {
+    "reference_50": {"dpi": 8.631, "m_location": [11, -81]},
+    "reference_51": {"dpi": 7.707, "m_location": [18, -52]},
+    "reference_52": {"dpi": 8.502, "m_location": [15, -39]},
+    "reference_53": {"dpi": 4.643, "m_location": [-18, 41]},
+    "reference_54": {"dpi": 5.502, "m_location": [12, -87]},
+}

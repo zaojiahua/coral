@@ -613,9 +613,9 @@ class PaneGetCoordinateView(MethodView):
                 for line in f.readlines():
                     key, value = line.strip('\n').split('=')
                     if key == 'start_point':
-                        start_point = value
+                        start_point = eval(value)
                     if key == 'end_point':
-                        end_point = value
+                        end_point = eval(value)
         return jsonify(dict(error_code=0, data={"start_point": start_point, "end_point": end_point}))
 
 
@@ -716,10 +716,10 @@ class PaneCoordinateView(MethodView):
             f.write(f"start_point={positions[0][0]}\n")
             f.write(f"end_point={positions[0][1]}\n")
 
-        reference_dpi = REFERENCE_VALUE["reference_" + str(CORAL_TYPE * 10)]["dpi"]
-        reference_location = REFERENCE_VALUE["reference_" + str(CORAL_TYPE * 10)]["m_location"]
+        reference_dpi = REFERENCE_VALUE["reference_" + str(int(CORAL_TYPE * 10))]["dpi"]
+        reference_location = REFERENCE_VALUE["reference_" + str(int(CORAL_TYPE * 10))]["m_location"]
         return jsonify(dict(error_code=0,
-                            description=f"坐标换算完成。换算后得到dpi和mlocation分别为【{dpi}】和【{m_location}】，dpi和mloction的参考值分别为【{reference_dpi}】和【{reference_location}】"))
+                            description=f"坐标换算完成。dpi为【{dpi}】,参考值【{reference_dpi}】；mlocation为【{m_location[0]},{m_location[1]}】，参考值为【{reference_location[0]}, {reference_location[1]}】"))
 
     # 传入x,y俩个值即可
     @staticmethod

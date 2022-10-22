@@ -525,8 +525,8 @@ class CameraHandler(Handler):
             merge_frame_num = merge_frame_num if merge_frame_num < max_frame_num else max_frame_num
 
         # 同步拍照靠硬件解决，这里获取同步的图片以后，直接拼接即可
-        stop_flag = True
         while True:
+            stop_flag = True
             for camera_id in camera_ids:
                 if len(camera_dq_dict.get(self._model.pk + camera_id)) > 0 \
                         and camera_dq_dict.get(self._model.pk + camera_id)[0]['frame_num'] <= merge_frame_num:

@@ -26,6 +26,9 @@ from app.v1.Cuttle.basic.hand_serial import CameraPower
 MoveToPress = 9
 ImageNumberFile = "__number.txt"
 GET_ONE_FRAME_TIMEOUT = 5
+# 统计帧率 多摄的时候，因为在消耗图片的时候，会减少队列中图片的数量，算出来的帧率是某一段时间的帧率，不是拍摄
+# 整个过程中的帧率，所以加入这个数据结构，用来做统计，方便调试和测试性能
+frame_rate_dict = {}
 
 
 # 相机初始化
@@ -35,6 +38,9 @@ def camera_start(camera_id, device_object, **kwargs):
     # 根据camera_id来支持多摄像头的方案
     print('camera_id:', camera_id)
     try:
+        # 统计帧率
+        frame_rate_dict[camera_id] = {'begin_time': -1, 'end_time': -1, 'pic_count': 0}
+
         camera_dq_key = device_object.pk + camera_id
         # 先销毁
         if camera_dq_dict.get(camera_dq_key) is not None:
@@ -77,10 +83,12 @@ def camera_start(camera_id, device_object, **kwargs):
         check_result(cam_obj.MV_CC_GetFloatValue, "ResultingFrameRate", stParam)
         print(f'camera{camera_id}原始帧率是：', stParam.fCurValue, '^' * 10)
 
-        pic_count = len(camera_dq_dict[camera_dq_key])
+        pic_count = frame_rate_dict[camera_id]['pic_count']
         if pic_count > 1:
-            begin_time = camera_dq_dict[camera_dq_key][0]['host_timestamp']
-            end_time = camera_dq_dict[camera_dq_key][-1]['host_timestamp']
+            begin_time = frame_rate_dict[camera_id]['begin_time']
+            # end_time 可能是达到了取图的最大限制，也可能是用户终止了
+            end_time = frame_rate_dict[camera_id]['end_time']
+            end_time = camera_dq_dict[camera_dq_key][-1]['host_timestamp'] if end_time == -1 else end_time
             frame_rate = pic_count / ((end_time - begin_time) / 1000)
             print(f'camera{camera_id}帧率是：', int(frame_rate), '^' * 10, pic_count, ((end_time - begin_time) / 1000))
 
@@ -238,11 +246,18 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj, camera_id):
     del content
     del image
     del data_buf
+
+    # 记录帧率
+    frame_rate_dict[camera_id]['pic_count'] += 1
+    if frame_num == 1:
+        frame_rate_dict[camera_id]['begin_time'] = stFrameInfo.nHostTimeStamp
+
     print(f'camera{camera_id}获取到图片了', frame_num, ' ' * 5, len(dq), ' ' * 2, stFrameInfo.nHostTimeStamp)
     # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
     if frame_num >= CameraMax:
         print('达到了取图的最大限制！！！')
         redis_client.set(f'g_bExit_{camera_id}', 1)
+        frame_rate_dict[camera_id]['end_time'] = stFrameInfo.nHostTimeStamp
 
 
 def stop_camera(cam_obj, camera_id, **kwargs):

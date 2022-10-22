@@ -118,7 +118,8 @@ email_addresses = {
     22: ['zc@anhereef.com', 'xzl@anhereef.com'],
     25: ['whz@anhereef.com', 'xwq@anhereef.com'],
     15: ['gh@anhereef.com'],
-    35: ['hx@anhereef.com', 'wyx@anhereef.com']
+    # 9其实就是35号机
+    9: ['wyx@anhereef.com']
 }
 
 # tboard mapping 临时性的跑通方案 用来记录哪些job还没有执行以及job对应的一些参数

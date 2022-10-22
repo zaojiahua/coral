@@ -169,7 +169,7 @@ class AdbHandler(Handler, ChineseMixin):
             serial_number = self.str_func(f'lsusb -v | grep iSerial | grep {connect_number}')
             if self._model.disconnect_times == 1 \
                     and connect_number not in serial_number \
-                    and device.battery_level < POWER_OFF_BATTERY_LEVEL:
+                    and device.battery_level <= POWER_OFF_BATTERY_LEVEL:
                 # 判断是否处于运行用例的状态
                 from app.v1.tboard.model.dut import Dut
                 dut = Dut.first(device_label=device.device_label)

@@ -1050,7 +1050,14 @@ class ClickCenterPointFive(MethodView):
 
         # 获取符合条件的轮廓
         _, contours, hierarchy = cv2.findContours(src, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        for contour_index, contour in enumerate(contours):
+
+        target_points = []
+        for contour_index, contour_points in enumerate(contours):
+            m = cv2.moments(contour_points)
+            if m['m00'] > 50:
+                target_points.append(contour_points)
+
+        for contour_index, contour in enumerate(target_points):
             img = cv2.putText(img.copy(), f'{contour_index + 1}',
                               (int(contour[0][0][0]), int(contour[0][0][1])),
                               cv2.FONT_HERSHEY_COMPLEX, 1.0, (255, 0, 0), 2)
@@ -1058,7 +1065,7 @@ class ClickCenterPointFive(MethodView):
         # cv2.drawContours(img, contours, -1, (0, 255, 0), 1)
         cv2.imwrite(result_filename, img)
 
-        return len(hierarchy) - 1
+        return len(target_points) - 1
 
     def click(self, device_obj, hand_obj, point_x, point_y):
         pos_x, pos_y, pos_z = device_obj.get_click_position(point_x, point_y, absolute=True)

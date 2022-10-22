@@ -127,7 +127,7 @@ def allot_serial_obj(func):
         exec_serial_obj, arm_num = judge_start_x(start_x_point, self._model.pk)
         kwargs["exec_serial_obj"] = exec_serial_obj
         kwargs["arm_num"] = arm_num
-        func(self, axis, **kwargs)
+        return func(self, axis, **kwargs)
 
     return wrapper
 
@@ -594,7 +594,6 @@ class HandHandler(Handler, DefaultMixin):
 
         return 0
 
-    @allot_serial_obj
     def taier_breakpoint(self, pix_point, **kwargs):
         """
         泰尔实验室，回型框断点检测

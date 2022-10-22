@@ -143,7 +143,7 @@ camera_params_54 = [("OffsetY", 0),
                     ("ExposureTime", 1200.0),
                     ('ADCBitDepth', 2, 'enum'),
                     # ("Gain", 2.5),
-                    ("AcquisitionFrameRate", 320.0),
+                    ("AcquisitionFrameRate", 480.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
 

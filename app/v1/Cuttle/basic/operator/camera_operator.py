@@ -764,8 +764,10 @@ class CameraHandler(Handler):
     # 把他作为一个测试帧率的接口，这样不会受到其他线程的干扰
     def get_video(self, *args, **kwargs):
         self.back_up_dq = deque(maxlen=CameraMax)
+        self.modify_fps = True
         set_global_value(CAMERA_IN_LOOP, True)
         self.snap_shot()
+        self.back_up_dq.clear()
 
     def ignore(self, *arg, **kwargs):
         return 0

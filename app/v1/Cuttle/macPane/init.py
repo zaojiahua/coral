@@ -27,7 +27,7 @@ key_parameter_list = ["camera", "robot_arm"]
 def pane_init():
     logger = setup_logger('pane_init', r'pane_init.log')
     reason = check_boot_up_reason()
-    executer = ThreadPoolExecutor(max_workers=300)
+    executer = ThreadPoolExecutor(max_workers=300, thread_name_prefix="device_")
     if not reason:
         logger.info("---abnormal reboot---, try to set all device to offline")
         clean_device(logger, executer)

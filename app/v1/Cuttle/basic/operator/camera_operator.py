@@ -445,7 +445,7 @@ class CameraHandler(Handler):
                     while get_global_value(CAMERA_IN_LOOP):
                         # 必须等待，否则while死循环导致其他线程没有机会执行
                         if redis_client.get(f"g_bExit_{camera_ids[0]}") == "0":
-                            time.sleep(1)
+                            time.sleep(merge_frame_num / FpsMax)
                         if get_global_value(CAMERA_IN_LOOP):
                             # 判断图片是否全部处理完毕
                             self.cur_frame_num += merge_frame_num

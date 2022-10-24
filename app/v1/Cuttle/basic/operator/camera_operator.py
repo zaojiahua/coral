@@ -747,6 +747,7 @@ class CameraHandler(Handler):
 
     # 把他作为一个测试帧率的接口，这样不会受到其他线程的干扰
     def get_video(self, *args, **kwargs):
+        # 注意这里可能造成内存泄漏 执行完这个方法最好重启容器
         self.back_up_dq = deque(maxlen=CameraMax)
         self.modify_fps = True
         set_global_value(CAMERA_IN_LOOP, True)

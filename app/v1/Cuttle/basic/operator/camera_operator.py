@@ -333,7 +333,7 @@ class CameraHandler(Handler):
         for condition, function, regex in self.function_list:
             if condition in content:
                 res = re.search(regex, content)
-                return res.group(1) if res.group() else "", function
+                return res.group(1) if res and res.group() else "", function
         return "", "ignore"
 
     def snap_shot(self):
@@ -539,8 +539,8 @@ class CameraHandler(Handler):
                 break
 
         # 打印一下，方便debug，等成熟以后删除
-        for frame_key in self.frames.keys():
-            print(frame_key, len(self.frames[frame_key]), '*' * 10)
+        # for frame_key in self.frames.keys():
+        #     print(frame_key, len(self.frames[frame_key]), '*' * 10)
 
         if len(self.frames) == 0:
             return -1
@@ -756,6 +756,12 @@ class CameraHandler(Handler):
     def screen_shot_and_pull(self, *args, **kwargs):
         self.snap_shot()
         self.move(*args)
+
+    # 把他作为一个测试帧率的接口，这样不会受到其他线程的干扰
+    def get_video(self, *args, **kwargs):
+        self.back_up_dq = deque(maxlen=CameraMax)
+        set_global_value(CAMERA_IN_LOOP, True)
+        self.snap_shot()
 
     def ignore(self, *arg, **kwargs):
         return 0

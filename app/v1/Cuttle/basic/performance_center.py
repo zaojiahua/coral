@@ -532,7 +532,7 @@ class PerformanceCenter(object):
             find_end = True
 
         # 如果是双摄，图片没有来得及合并，找的起点图片会小，所以重新设置一下起点的值
-        if self.start_method in [1, 2] and CORAL_TYPE == 5:
+        if self.start_method in [1, 2] and CORAL_TYPE != 5.2:
             if 'start_point' in self.result:
                 self.start_number, host_timestamp = self.get_picture_number(self.start_timestamp)
                 self.bias = self.start_number

@@ -517,8 +517,12 @@ class CameraHandler(Handler):
         self.frames = collections.defaultdict(list)
 
         # 合并到指定帧号的图片
-        max_frame_num = max([int(camera_dq_dict.get(self._model.pk + camera_id)[-1]['frame_num'])
-                             for camera_id in camera_ids])
+        try:
+            max_frame_num = max([int(camera_dq_dict.get(self._model.pk + camera_id)[-1]['frame_num'])
+                                 for camera_id in camera_ids])
+        except IndexError:
+            return -1
+
         if merge_frame_num is None:
             merge_frame_num = max_frame_num
         else:

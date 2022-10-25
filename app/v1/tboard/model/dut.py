@@ -81,6 +81,7 @@ class Dut(BaseModel):
                 self.remove_dut()
             else:
                 current_job_label = self.next_job_label
+                logger.info(f'current job index: {self.current_job_index}')
                 if current_job_label is None:  # singal device's job finished
                     logger.info(f"dut ({self.pk}) finished and remove")
                     device_label = self.device_label
@@ -159,6 +160,7 @@ class Dut(BaseModel):
         # 存在才执行，否则和普通的一样逻辑
         if self.special_job_label and not self.special_job_running:
             self.current_job_index -= 1
+            logger.info(f'current job index: {self.current_job_index}')
             self.special_job_running = True
             # 先把正在执行的停止了
             print('停止正在执行的job。。。。。。。。。。')

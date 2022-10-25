@@ -41,9 +41,12 @@ class DJobWorker(BaseModel):
                              f"({self.using_djob.job_label, self.using_djob.device_label})from wait list and put execute")
 
             self.using_djob.run_job_with_flow_execute_mode()
-            # 执行完成，调用dut，推送djob到 DJobWorker
-            self.callback()
-            self.logger.info("callback finished ")
+
+            # 设计有问题，队列里边只能是一个元素，否则对tboard是否执行完成的判断存在漏洞
+            if len(self.djob_list) == 0:
+                # 执行完成，调用dut，推送djob到 DJobWorker
+                self.callback()
+                self.logger.info("callback finished ")
 
             self.using_djob.finish = True
             self.remove_job_from_tboard_mapping()

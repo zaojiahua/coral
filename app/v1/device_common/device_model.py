@@ -516,18 +516,17 @@ class Device(BaseModel):
             if m_location is not None:
                 set_global_value('m_location',
                                  [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
+        if CORAL_TYPE == 5.3:
+            set_global_value('Z_DOWN', Z_DOWN)
+            set_global_value('Z_DOWN_1', Z_DOWN_1)
 
         if get_global_value('m_location'):
             if len(get_global_value('m_location')) == 3:
                 self.screen_z = str(get_global_value('m_location')[2])
                 set_global_value('Z_DOWN', get_global_value('m_location')[2])
             print('new Z_DOWN', get_global_value('Z_DOWN'))
-        elif Z_DOWN:
-            if CORAL_TYPE == 5.3:
-                set_global_value('Z_DOWN', Z_DOWN)
-                set_global_value('Z_DOWN_1', Z_DOWN_1)
-            else:
-                set_global_value('Z_DOWN', round(Z_DOWN + float(self.ply), 2))
+        elif Z_DOWN and CORAL_TYPE != 5.3:
+            set_global_value('Z_DOWN', round(Z_DOWN + float(self.ply), 2))
             print('new Z_DOWN', get_global_value('Z_DOWN'))
 
     # 获取5l柜的点击坐标

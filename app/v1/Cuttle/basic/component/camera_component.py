@@ -165,8 +165,8 @@ def camera_init_hk(camera_id, device_label, **kwargs):
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offset_x)
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offset_y)
 
-    add_node_ret = CamObj.MV_CC_SetImageNodeNum(10)
-    print("增大缓存节点结果", add_node_ret)
+    # add_node_ret = CamObj.MV_CC_SetImageNodeNum(10)
+    # print("增大缓存节点结果", add_node_ret)
 
     stParam = MVCC_INTVALUE()
     memset(byref(stParam), 0, sizeof(MVCC_INTVALUE))
@@ -209,8 +209,6 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
             camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id)
             if temporary is True:
                 redis_client.set(f'g_bExit_{camera_id}', 1)
-            else:
-                time.sleep(0.001)
         else:
             continue
 

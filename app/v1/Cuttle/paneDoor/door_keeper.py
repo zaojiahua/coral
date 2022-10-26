@@ -105,6 +105,8 @@ class DoorKeeper(object):
                     camera_process.start()
                     # 清空管道，否则残留着之前的图片
                     queue.get()
+                    # 必须清理，否则会有bug
+                    ret_kwargs_queue.get()
                 else:
                     future = executer.submit(function, port, device_object, init=True, original=True, feature_test=True)
                     futures.append(future)

@@ -53,6 +53,7 @@ class DefaultMixin(object):
                 try:
                     # 前端显示的单位是mm/s，机械臂要求的单位是mm/min
                     speed = int(position_args_list[-1]) * 60
+                    speed = MOVE_SPEED if speed > MOVE_SPEED else speed
                     pix_points = [float(i) for i in position_args_list[:-1]]
                 except (IndexError, TypeError):
                     pass

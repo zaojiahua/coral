@@ -14,14 +14,6 @@ from app.libs.ospathutil import deal_dir_file
 
 PROJECT_SIBLING_DIR = os.path.dirname((os.path.dirname(os.path.abspath(__file__))))
 
-init_func = [
-    cabinet_register,
-    # tempr_init,
-    # power_init,
-    box_init,
-    djob_flush,
-]
-
 
 def server_init():
     check_reef_exist()
@@ -33,11 +25,21 @@ def server_init():
         if dirname != 'log':
             deal_dir_file(os.path.join(PROJECT_SIBLING_DIR, "coral-log", dirname))
 
-    log_path = os.path.join(PROJECT_SIBLING_DIR, "coral-log", "log")
-    if os.path.exists(log_path):
-        os.rename(log_path, log_path + f"_{time.strftime('%Y_%m_%d_%H_%M_%S', time.localtime())}")
-    os.makedirs(log_path)
+    try:
+        log_path = os.path.join(PROJECT_SIBLING_DIR, "coral-log", "log")
+        if os.path.exists(log_path):
+            os.rename(log_path, log_path + f"_{time.strftime('%Y_%m_%d_%H_%M_%S', time.localtime())}")
+        os.makedirs(log_path)
+    except Exception:
+        pass
 
+    init_func = [
+        cabinet_register,
+        # tempr_init,
+        # power_init,
+        box_init,
+        djob_flush,
+    ]
     executor = ThreadPoolExecutor(len(init_func))
     all_task = [executor.submit(func) for func in init_func]
     wait(all_task)

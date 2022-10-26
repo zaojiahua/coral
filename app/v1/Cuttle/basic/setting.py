@@ -74,6 +74,10 @@ rotate_hand_serial_obj_dict = {}
 hand_origin_cmd_prefix = 'Hand'
 hand_used_list = []
 camera_dq_dict = {}
+# 将摄像机拍照需要的参数，传递到这里
+camera_kwargs_dict = {}
+# 将拍摄照片返回的参数，传递到这里，为了做进程之间的同步
+camera_ret_kwargs_dict = {}
 sensor_serial_obj_dict = {}
 
 # 相机的参数和柜子类型紧密相关，所以应该根据柜子类型来区分，而不是功能测试还是性能测试
@@ -221,7 +225,6 @@ chinese_ingore = 0.55
 # 屏幕右侧开关占比
 right_switch_percent = 0.87
 
-CamObjList = {}
 normal_result = (False, None)
 blur_signal = "[B]"
 # 需要按常见顺序调整 亮度百分比的顺序 尽可能优先匹配到常见亮度变化。

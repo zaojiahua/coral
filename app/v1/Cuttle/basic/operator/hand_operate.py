@@ -286,11 +286,11 @@ class HandHandler(Handler, DefaultMixin):
             repeat_time = self.speed  # 为整型，且需在1-10之间
         else:
             raise RepeatTimeInvalid
-        for i in range(repeat_time):
-            ignore_reset = False if i == (repeat_time - 1) else True
+        for repeat_num in range(repeat_time):
+            ignore_reset = False if repeat_num == (repeat_time - 1) else True
             self.kwargs["exec_repeat_sliding_obj"].send_list_order(self.kwargs["repeat_sliding_order"],
                                                                    ignore_reset=ignore_reset)
-
+            time.sleep(0.5)
         self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=repeat_time * 8)
         return 0
 

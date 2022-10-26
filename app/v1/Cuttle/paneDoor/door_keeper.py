@@ -90,7 +90,7 @@ class DoorKeeper(object):
                 # 摄像机使用进程来创建，其他硬件使用线程的方式创建
                 if attribute == 'has_camera':
                     # 必须等待一段时间 相机同时初始化有bug发生 以后解决吧
-                    mp.set_start_method('spawn')
+                    # mp.set_start_method('spawn')
                     queue = mp.Queue(maxsize=CameraMax)
                     kwargs_queue = mp.Queue(maxsize=1)
                     camera_dq_dict[device_object.pk + port] = queue

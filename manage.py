@@ -112,4 +112,6 @@ if multiprocessing.current_process().name != CAMERA_PROCESS_NAME:
 
         return 'ok'
 
+
+if __name__ == '__main__':
     app.run(host='0.0.0.0')

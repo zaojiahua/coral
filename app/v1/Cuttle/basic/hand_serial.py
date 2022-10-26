@@ -13,7 +13,7 @@ from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, c
 
 class HandSerial:
 
-    def __init__(self, baud_rate=115200, timeout=5):
+    def __init__(self, baud_rate=115200, timeout=3):
         self.baud_rate = baud_rate
         self.timeout = timeout
         self.ser = None

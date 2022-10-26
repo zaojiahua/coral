@@ -602,7 +602,7 @@ class PaneCoordinateView(MethodView):
         elif CORAL_TYPE == 5:
             positions = [[[55, -250], [90, -250]]]
         else:
-            positions = [[[50, -120], [100, -120]]]
+            positions = [[[130, -120], [190, -120]]]
 
         all_dpi = []
         all_m_location = []

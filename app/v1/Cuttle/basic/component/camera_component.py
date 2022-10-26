@@ -21,7 +21,7 @@ CamObjList = {}
 
 # 注意这里是单独的一个进程，数据只能自己用，其他进程无法使用，进程间的通信使用queue
 # 相机初始化
-def camera_start(camera_id, device_label, queue, kwargs_queue):
+def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue):
     camera_dq_key = device_label + camera_id
     while True:
         if redis_client.get(f"g_bExit_{camera_id}") == '0':
@@ -88,7 +88,7 @@ def camera_start(camera_id, device_label, queue, kwargs_queue):
                 # 结束循环，关闭取图
                 redis_client.set(f"g_bExit_{camera_id}", "1")
                 # 等拿图这里完全结束了，另一个进程中再执行其他的操作，这里做一个同步
-                kwargs_queue.put('end')
+                ret_kwargs_queue.put('end')
         time.sleep(0.1)
 
 

@@ -17,6 +17,7 @@ from app.config.setting import HARDWARE_MAPPING_LIST, CAMERA_PROCESS_NAME
 from app.libs import image_utils
 from redis_init import redis_client
 from app.v1.Cuttle.basic.hand_serial import CameraPower
+# 不可去掉，其他文件引用了这里的camera_start
 from app.v1.Cuttle.basic.component.camera_component import camera_start
 
 MoveToPress = 9
@@ -88,7 +89,7 @@ class CameraHandler(Handler):
             if not queue.empty():
                 queue.get()
             print(f'当前管道是否清空 {camera_id}', queue.empty())
-            if camera_kwargs_dict[self._model.pk + camera_id].get() == 'end':
+            if camera_ret_kwargs_dict[self._model.pk + camera_id].get() == 'end':
                 print(f'拍照流程完全结束 {camera_id}')
 
     def snap_shot(self):

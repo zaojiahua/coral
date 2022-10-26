@@ -20,7 +20,8 @@ from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevi
     DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough, AdbConnectFail
 from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
-from app.v1.Cuttle.basic.setting import hand_used_list, camera_dq_dict, CameraMax, camera_kwargs_dict
+from app.v1.Cuttle.basic.setting import hand_used_list, camera_dq_dict, CameraMax, camera_kwargs_dict, \
+    camera_ret_kwargs_dict
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
 from app.v1.device_common.device_model import Device, DeviceStatus
@@ -93,10 +94,12 @@ class DoorKeeper(object):
                     # mp.set_start_method('spawn')
                     queue = mp.Queue(maxsize=CameraMax)
                     kwargs_queue = mp.Queue(maxsize=1)
+                    ret_kwargs_queue = mp.Queue(maxsize=1)
                     camera_dq_dict[device_object.pk + port] = queue
                     camera_kwargs_dict[device_object.pk + port] = kwargs_queue
+                    camera_ret_kwargs_dict[device_object.pk + port] = ret_kwargs_queue
                     camera_process = mp.Process(name=CAMERA_PROCESS_NAME, target=function, args=(
-                        port, device_label, queue, kwargs_queue))
+                        port, device_label, queue, kwargs_queue, ret_kwargs_queue))
                     print('-------摄像机进程开启-------', camera_process)
                     redis_client.set(f"g_bExit_{port}", "0")
                     camera_process.start()

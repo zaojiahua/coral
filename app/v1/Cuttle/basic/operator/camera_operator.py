@@ -87,7 +87,9 @@ class CameraHandler(Handler):
             queue = camera_dq_dict.get(self._model.pk + camera_id)
             if not queue.empty():
                 queue.get()
-            print('当前管道是否清空 ', queue.empty())
+            print(f'当前管道是否清空 {camera_id}', queue.empty())
+            if camera_kwargs_dict[self._model.pk + camera_id].get() == 'end':
+                print(f'拍照流程完全结束 {camera_id}')
 
     def snap_shot(self):
         # 摄像头数量不一样的时候，方案不同

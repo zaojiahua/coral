@@ -2,283 +2,25 @@ import collections
 import os.path
 import re
 import time
-import traceback
-from ctypes import *
 # 更高效，但不便于跨进程使用，待有性能要求时可以考虑deque
 from collections import deque
 
 import cv2
-import func_timeout
 import numpy as np
-from func_timeout import func_set_timeout
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from app.execption.outer.error_code.camera import NoSrc, CameraInitFail, CameraInUse
-from app.v1.Cuttle.basic.MvImport.HK_import import *
+from app.execption.outer.error_code.camera import NoSrc, CameraInUse
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import *
 from app.execption.outer.error_code.imgtool import CameraNotResponse
-from app.config.setting import HARDWARE_MAPPING_LIST
+from app.config.setting import HARDWARE_MAPPING_LIST, CAMERA_PROCESS_NAME
 from app.libs import image_utils
 from redis_init import redis_client
 from app.v1.Cuttle.basic.hand_serial import CameraPower
+from app.v1.Cuttle.basic.component.camera_component import camera_start
 
 MoveToPress = 9
 ImageNumberFile = "__number.txt"
-GET_ONE_FRAME_TIMEOUT = 5
-# 统计帧率 多摄的时候，因为在消耗图片的时候，会减少队列中图片的数量，算出来的帧率是某一段时间的帧率，不是拍摄
-# 整个过程中的帧率，所以加入这个数据结构，用来做统计，方便调试和测试性能
-frame_rate_dict = {}
-
-
-# 相机初始化
-def camera_start(camera_id, device_object, **kwargs):
-    # 相机初始化
-    redis_client.set(f"g_bExit_{camera_id}", "0")
-    # 根据camera_id来支持多摄像头的方案
-    print('camera_id:', camera_id)
-    try:
-        # 统计帧率
-        frame_rate_dict[camera_id] = {'begin_time': -1, 'end_time': -1, 'pic_count': 0}
-
-        camera_dq_key = device_object.pk + camera_id
-        # 先销毁
-        if camera_dq_dict.get(camera_dq_key) is not None:
-            del camera_dq_dict[camera_dq_key]
-        # 为了保证后续操作的统一性，将图片统一放到队列中
-        dq = deque(maxlen=CameraMax)
-        camera_dq_dict[camera_dq_key] = dq
-
-        temporary = kwargs.get('temporary', True)
-        soft_sync = kwargs.get('soft_sync', False)
-        response = camera_init_hk(camera_id, device_object, **kwargs)
-        print("half done  has camera? ", device_object.has_camera, 'temporary:', temporary)
-
-        if not soft_sync:
-            # 开始拍照
-            start_grabbing(camera_id)
-
-        if temporary is True:
-            @func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
-            def _inner_func():
-                return camera_start_hk(camera_id, dq, *response, temporary=temporary)
-
-            _inner_func()
-        else:
-            camera_start_hk(camera_id, dq, *response, temporary=temporary)
-
-    except Exception as e:
-        print('相机初始化异常：', e)
-        print(traceback.format_exc())
-        raise e
-    except func_timeout.exceptions.FunctionTimedOut as e:
-        print('获取图片超时了！！！')
-        raise e
-    finally:
-        cam_obj = CamObjList[camera_id] if camera_id in CamObjList else None
-
-        # 统计帧率
-        stParam = MVCC_FLOATVALUE()
-        memset(byref(stParam), 0, sizeof(MVCC_FLOATVALUE))
-        check_result(cam_obj.MV_CC_GetFloatValue, "ResultingFrameRate", stParam)
-        print(f'camera{camera_id}原始帧率是：', stParam.fCurValue, '^' * 10)
-
-        pic_count = frame_rate_dict[camera_id]['pic_count']
-        if pic_count > 1:
-            begin_time = frame_rate_dict[camera_id]['begin_time']
-            # end_time 可能是达到了取图的最大限制，也可能是用户终止了
-            end_time = frame_rate_dict[camera_id]['end_time']
-            end_time = camera_dq_dict[camera_dq_key][-1]['host_timestamp'] if end_time == -1 else end_time
-            frame_rate = pic_count / ((end_time - begin_time) / 1000)
-            print(f'camera{camera_id}帧率是：', int(frame_rate), '^' * 10, pic_count, ((end_time - begin_time) / 1000))
-
-        if cam_obj is not None:
-            stop_camera(cam_obj, camera_id, **kwargs)
-
-        # 结束循环，关闭取图
-        redis_client.set(f"g_bExit_{camera_id}", "1")
-
-
-def camera_init_hk(camera_id, device_object, **kwargs):
-    inited = False
-    if camera_id in CamObjList and CamObjList[camera_id]:
-        inited = True
-        CamObj = CamObjList[camera_id]
-
-    if not inited:
-        print('重新初始化。。。。')
-        deviceList = MV_CC_DEVICE_INFO_LIST()
-        tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
-        check_result(MvCamera.MV_CC_EnumDevices, tlayerType, deviceList)
-        CamObj = MvCamera()
-        # index 0--->第一个设备
-        stDeviceList = cast(deviceList.pDeviceInfo[int(camera_id) - 1], POINTER(MV_CC_DEVICE_INFO)).contents
-        check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
-
-        try:
-            check_result(CamObj.MV_CC_OpenDevice, 1, 0)
-        except CameraInitFail:
-            CamObj.MV_CC_CloseDevice()
-            CamObj.MV_CC_DestroyHandle()
-            check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
-            check_result(CamObj.MV_CC_OpenDevice, 5, 0)
-
-    for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
-        if isinstance(key[1], bool):
-            check_result(CamObj.MV_CC_SetBoolValue, key[0], key[1])
-        elif len(key) == 3 and key[2] == 'enum':
-            check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
-        elif isinstance(key[1], int):
-            check_result(CamObj.MV_CC_SetIntValue, key[0], key[1])
-        elif isinstance(key[1], float):
-            check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
-
-    if kwargs.get('high_exposure'):
-        for key in high_exposure_params:
-            check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
-
-    if kwargs.get('sync_camera') and not kwargs.get('soft_sync'):
-        for key in sync_camera_params:
-            if len(key) == 3 and key[2] == 'enum':
-                check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
-            elif isinstance(key[1], float):
-                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
-    else:
-        check_result(CamObj.MV_CC_SetEnumValue, 'TriggerMode', 0)
-
-    if kwargs.get("modify_fps") and CORAL_TYPE == 5.2:
-        # Tcab-5se在进行性能测试时需要相机帧率
-        for key in camera_params_52_performance:
-            if len(key) == 3 and key[2] == 'enum':
-                check_result(CamObj.MV_CC_SetEnumValue, key[0], key[1])
-            elif isinstance(key[1], float):
-                check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
-
-    # 设置roi 多摄像机暂时不设置
-    if not kwargs.get('original') and not kwargs.get('sync_camera'):
-        if int(device_object.x1) == int(device_object.x2) == 0:
-            pass
-        else:
-            # 这里的4和16是软件设置的时候，必须是4和16的倍数
-            width = int(device_object.roi_x2) - int(device_object.roi_x1)
-            offset_x = int(device_object.roi_x1)
-            height = int(device_object.roi_y2) - int(device_object.roi_y1)
-            offset_y = int(device_object.roi_y1)
-            print('设置的roi是：', width, height, offset_x, offset_y)
-            check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
-            check_result(CamObj.MV_CC_SetIntValue, 'Height', height)
-            check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offset_x)
-            check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offset_y)
-
-    add_node_ret = CamObj.MV_CC_SetImageNodeNum(10)
-    print("增大缓存节点结果", add_node_ret)
-
-    stParam = MVCC_INTVALUE()
-    memset(byref(stParam), 0, sizeof(MVCC_INTVALUE))
-    check_result(CamObj.MV_CC_GetIntValue, "PayloadSize", stParam)
-
-    nPayloadSize = stParam.nCurValue
-    data_buf = (c_ubyte * nPayloadSize)()
-    stFrameInfo = MV_FRAME_OUT_INFO_EX()
-
-    if not inited:
-        CamObjList[camera_id] = CamObj
-
-    memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
-    return data_buf, nPayloadSize, stFrameInfo
-
-
-# 开始拍照
-def start_grabbing(camera_id):
-    cam_obj = CamObjList[camera_id]
-    check_result(cam_obj.MV_CC_StartGrabbing)
-    redis_client.set(f"camera_grabbing_{camera_id}", 1)
-
-
-# temporary：性能测试的时候需要持续不断的往队列里边放图片，但是在其他情况，只需要获取当时的一张截图即可
-def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temporary=True):
-    # 这个是海康摄像头持续获取图片的方法，原理还是用ctypes模块调用.dll或者.so文件中的变量
-    cam_obj = CamObjList[camera_id]
-    # 走到这里以后，设置一个标记，代表相机开始工作了
-    redis_client.set(f"camera_loop_{camera_id}", 1)
-    while True:
-        if redis_client.get(f"camera_grabbing_{camera_id}") != "1":
-            continue
-
-        if redis_client.get(f"g_bExit_{camera_id}") == "1":
-            break
-
-        # 这个一个轮询的请求，5毫秒timeout，去获取图片
-        ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), n_payload_size, st_frame_info, 5)
-        if ret == 0:
-            camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id)
-            if temporary is True:
-                redis_client.set(f'g_bExit_{camera_id}', 1)
-            else:
-                time.sleep(0.001)
-        else:
-            continue
-
-
-def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj, camera_id):
-    # 当摄像头有最新照片后，创建一个stConvertParam的结构体去获取实际图片和图片信息，
-    # pDstBuffer这个指针指向真实图片数据的缓存
-    nRGBSize = stFrameInfo.nWidth * stFrameInfo.nHeight * 3
-    stConvertParam = MV_CC_PIXEL_CONVERT_PARAM()
-    memset(byref(stConvertParam), 0, sizeof(stConvertParam))
-    stConvertParam.nWidth = stFrameInfo.nWidth
-    stConvertParam.nHeight = stFrameInfo.nHeight
-    stConvertParam.pSrcData = data_buf
-    stConvertParam.nSrcDataLen = stFrameInfo.nFrameLen
-    stConvertParam.enSrcPixelType = stFrameInfo.enPixelType
-    stConvertParam.enDstPixelType = PixelType_Gvsp_BGR8_Packed
-    content = (c_ubyte * nRGBSize)()
-    stConvertParam.pDstBuffer = content
-    stConvertParam.nDstBufferSize = nRGBSize
-    cam_obj.MV_CC_ConvertPixelType(stConvertParam)
-    # 得到图片做最简单处理就放入deque,这块不要做旋转等操作，否则跟不上240帧的获取速度
-    image = np.asarray(content, dtype="uint8")
-    image = image.reshape((stFrameInfo.nHeight, stFrameInfo.nWidth, 3))
-    frame_num = stFrameInfo.nFrameNum
-    dq.append({'image': image,
-               'host_timestamp': stFrameInfo.nHostTimeStamp,
-               'frame_num': frame_num})
-    del content
-    del image
-    del data_buf
-
-    # 记录帧率
-    frame_rate_dict[camera_id]['pic_count'] += 1
-    if frame_num == 1:
-        frame_rate_dict[camera_id]['begin_time'] = stFrameInfo.nHostTimeStamp
-
-    print(f'camera{camera_id}获取到图片了', frame_num, ' ' * 5, len(dq), ' ' * 2, stFrameInfo.nHostTimeStamp)
-    # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
-    if frame_num >= CameraMax:
-        print('达到了取图的最大限制！！！')
-        redis_client.set(f'g_bExit_{camera_id}', 1)
-        frame_rate_dict[camera_id]['end_time'] = stFrameInfo.nHostTimeStamp
-
-
-def stop_camera(cam_obj, camera_id, **kwargs):
-    print('stop grabbing..........', kwargs.get('feature_test'))
-    cam_obj.MV_CC_StopGrabbing()
-    # 性能测试的时候销毁，用来释放内存
-    if not kwargs.get('feature_test'):
-        print('开始销毁。。。。。。。。。。。。')
-        # cam_obj.MV_CC_CloseDevice()
-        # cam_obj.MV_CC_DestroyHandle()
-        # # 销毁
-        # del cam_obj
-        # del CamObjList[camera_id]
-    print("stop camera finished..[Debug]")
-
-
-def check_result(func, *args):
-    return_value = func(*args)
-    if return_value != 0:
-        print("return_value", hex(return_value), *args, func.__name__)
-        raise CameraInitFail
 
 
 def get_camera_ids():
@@ -322,6 +64,7 @@ class CameraHandler(Handler):
         self.weights = None
         # 多摄像机下当前合并到哪个帧号了
         self.cur_frame_num = 0
+        self.src = None
 
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
@@ -336,6 +79,16 @@ class CameraHandler(Handler):
                 return res.group(1) if res and res.group() else "", function
         return "", "ignore"
 
+    # 清空管道中的数据
+    def clear_queue(self):
+        print('清空 camera_dq_dict 管道内容')
+        camera_ids = get_camera_ids()
+        for camera_id in camera_ids:
+            queue = camera_dq_dict.get(self._model.pk + camera_id)
+            if not queue.empty():
+                queue.get()
+            print('当前管道是否清空 ', queue.empty())
+
     def snap_shot(self):
         # 摄像头数量不一样的时候，方案不同
         camera_ids = get_camera_ids()
@@ -347,50 +100,50 @@ class CameraHandler(Handler):
         # 如果录像的话，则按照性能测试来录像
         feature_test = False if self.record_video else self.back_up_dq is None
         for camera_id in camera_ids:
-            redis_client.set(f"camera_loop_{camera_id}", 0)
-            redis_client.set(f'camera_grabbing_{camera_id}', 0)
             # 相机正在获取图片的时候 不能再次使用
             if redis_client.get(f"g_bExit_{camera_id}") == "0":
                 raise CameraInUse()
 
-            executer = ThreadPoolExecutor()
-            future = executer.submit(camera_start,
-                                     camera_id,
-                                     self._model,
-                                     high_exposure=self.high_exposure,
-                                     temporary=temporary,
-                                     original=self.original,
-                                     sync_camera=sync_camera,
-                                     feature_test=feature_test,
-                                     modify_fps=self.modify_fps,
-                                     soft_sync=soft_sync)
-            if camera_id not in CamObjList and camera_id != camera_ids[-1]:
-                # 必须等待一段时间 同时初始化有bug发生 以后解决吧
-                time.sleep(0.5)
-            futures.append(future)
+            redis_client.set(f"camera_loop_{camera_id}", 0)
+            redis_client.set(f'camera_grabbing_{camera_id}', 0)
+
+            # 设置参数，开始拍照
+            camera_kwargs_dict[self._model.pk + camera_id].put({
+                'high_exposure': self.high_exposure,
+                'temporary': temporary,
+                'original': self.original,
+                'sync_camera': sync_camera,
+                'feature_test': feature_test,
+                'modify_fps': self.modify_fps,
+                'soft_sync': soft_sync
+            })
+            redis_client.set(f"g_bExit_{camera_id}", '0')
 
         # 默认使用第一个相机中的截图
         if len(camera_ids) == 1:
-            image = None
             # 实时的获取到图片
             if self.back_up_dq is not None:
+                queue = camera_dq_dict.get(self._model.pk + camera_ids[0])
                 # 停止时刻由外部进行控制，这里负责图像处理即可
                 while get_global_value(CAMERA_IN_LOOP):
-                    time.sleep(0.5)
+                    time.sleep(0.001)
+                    # 取图取的很快，基本用不上batch size
+                    batch_size = 60
+                    while not queue.empty() and batch_size > 0:
+                        # print('图片入队')
+                        self.back_up_dq.append(queue.get(False))
+                        batch_size -= 1
+                    # 如果达到了取图的最大限制，并且图片都取出来了，那多等待一些时间
+                    if redis_client.get(f"g_bExit_{camera_ids[0]}") == '1' and queue.empty():
+                        time.sleep(0.5)
+
                 redis_client.set(f"g_bExit_{camera_ids[0]}", "1")
-                for _ in as_completed(futures):
-                    print('已经停止获取图片了')
+                # 多余的图片删除，及时释放管道里边的内存，如果想多获取一些图片，由外部进行控制
+                self.clear_queue()
             else:
-                for _ in as_completed(futures):
-                    image = camera_dq_dict.get(self._model.pk + camera_ids[0])[-1]['image']
-                    # 读取矫正参数
-                    # f = pickle.load(open('app/config/camera_correct', 'rb'))
-                    # ret, mtx, dist, rvecs, tvecs = f['ret'], f['mtx'], f['dist'], f['rvecs'], f['tvecs']
-                    # h, w = image.shape[:2]
-                    # new_camera_mtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
-                    # image = cv2.undistort(image, mtx, dist, None, new_camera_mtx)
-                    if not self.original:
-                        image = np.rot90(self.get_roi(image, False), 3)
+                image = camera_dq_dict.get(self._model.pk + camera_ids[0]).get(block=True, timeout=3)['image']
+                if not self.original:
+                    image = np.rot90(self.get_roi(image, False), 3)
 
                 try:
                     self.src = image
@@ -398,8 +151,7 @@ class CameraHandler(Handler):
                     raise CameraNotResponse
 
                 # 清空内存
-                print('清空 camera_dq_dict 内存')
-                camera_dq_dict.get(self._model.pk + camera_ids[0]).clear()
+                self.clear_queue()
         else:
             # 判断俩个相机都已经进入到了循环中
             while True:
@@ -752,7 +504,8 @@ class CameraHandler(Handler):
         self.modify_fps = True
         set_global_value(CAMERA_IN_LOOP, True)
         self.snap_shot()
-        self.back_up_dq.clear()
+        # 清空内存
+        self.clear_queue()
 
     def ignore(self, *arg, **kwargs):
         return 0

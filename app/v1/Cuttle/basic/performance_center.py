@@ -67,12 +67,13 @@ class PerformanceCenter(object):
 
     @property
     def back_up_dq(self):
-        if len(get_camera_ids()) > 1:
-            return self.inner_back_up_dq
-        else:
-            # 其他类型的柜子就一个相机
-            for camera_key in camera_dq_dict:
-                return camera_dq_dict.get(camera_key)
+        return self.inner_back_up_dq
+        # if len(get_camera_ids()) > 1:
+        #     return self.inner_back_up_dq
+        # else:
+        #     # 其他类型的柜子就一个相机
+        #     for camera_key in camera_dq_dict:
+        #         return camera_dq_dict.get(camera_key)
 
     def get_back_up_image(self, image):
         if len(get_camera_ids()) > 1:

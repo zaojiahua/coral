@@ -626,7 +626,7 @@ class HandHandler(Handler, DefaultMixin):
         click_center_point_five = ClickCenterPointFive()
         success = click_center_point_five.get_contours(filename, result_filename)
 
-        return success
+        return success if success == 0 else 1
 
     def get_point_dis(self, points, pix_points, dis_filename, cur_index):
         # 计算俩点之间的距离

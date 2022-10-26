@@ -1,11 +1,12 @@
 import logging
+import multiprocessing
 import os
 import csv
 import math
 
 from werkzeug.exceptions import HTTPException
 
-from app.config.setting import TOTAL_LOG_NAME, LOG_DIR, BASE_DIR, ERROR_CODE_FILE
+from app.config.setting import TOTAL_LOG_NAME, LOG_DIR, BASE_DIR, ERROR_CODE_FILE, CAMERA_PROCESS_NAME
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.total import ServerError, RecvHttpException
 from app.libs.logresponse import LogResponse
@@ -15,7 +16,7 @@ from app.v1.Cuttle.basic.setting import rotate_hand_serial_obj_dict
 logger = logging.getLogger(TOTAL_LOG_NAME)
 
 
-if __name__ == '__main__':
+if multiprocessing.current_process().name != CAMERA_PROCESS_NAME:
     from app.app import app
 
     # https://www.cnblogs.com/huchong/p/9205651.html

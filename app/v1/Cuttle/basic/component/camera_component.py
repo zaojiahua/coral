@@ -17,6 +17,7 @@ GET_ONE_FRAME_TIMEOUT = 5
 # 整个过程中的帧率，所以加入这个数据结构，用来做统计，方便调试和测试性能
 frame_rate_dict = {}
 CamObjList = {}
+collate_content = []
 
 
 # 注意这里是单独的一个进程，数据只能自己用，其他进程无法使用，进程间的通信使用queue
@@ -39,6 +40,15 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                 soft_sync = kwargs.get('soft_sync', False)
                 response = camera_init_hk(camera_id, device_label, **kwargs)
                 print("half done camera init", device_label, 'temporary:', temporary)
+
+                # 性能测试的时候提前分配内存
+                if not temporary:
+                    width, height, _, _ = get_roi(device_label)
+                    if width is not None and height is not None:
+                        n_rgb_size = width * height * 3
+                        for i in range(int(CameraMax / 2)):
+                            collate_content.append((c_ubyte * n_rgb_size)())
+                        print('内存提前分配完毕')
 
                 if not soft_sync:
                     # 开始拍照
@@ -78,6 +88,9 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
 
                 if cam_obj is not None:
                     stop_camera(cam_obj, camera_id, **kwargs)
+
+                # 清理提前分配的内存
+                collate_content.clear()
 
                 # 结束循环，关闭取图
                 redis_client.set(f"g_bExit_{camera_id}", "1")
@@ -143,17 +156,8 @@ def camera_init_hk(camera_id, device_label, **kwargs):
 
     # 设置roi 多摄像机暂时不设置
     if not kwargs.get('original') and not kwargs.get('sync_camera'):
-        from app.v1.device_common.device_model import Device
-        device_object = Device(pk=device_label)
-        if int(device_object.x1) == int(device_object.x2) == 0:
-            pass
-        else:
-            # 这里的4和16是软件设置的时候，必须是4和16的倍数
-            width = int(device_object.roi_x2) - int(device_object.roi_x1)
-            offset_x = int(device_object.roi_x1)
-            height = int(device_object.roi_y2) - int(device_object.roi_y1)
-            offset_y = int(device_object.roi_y1)
-            print('设置的roi是：', width, height, offset_x, offset_y)
+        width, height, offset_x, offset_y = get_roi(device_label)
+        if width is not None:
             check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
             check_result(CamObj.MV_CC_SetIntValue, 'Height', height)
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offset_x)
@@ -175,6 +179,22 @@ def camera_init_hk(camera_id, device_label, **kwargs):
 
     memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
     return data_buf, nPayloadSize, stFrameInfo
+
+
+# 获取设置的roi大小
+def get_roi(device_label):
+    from app.v1.device_common.device_model import Device
+    device_object = Device(pk=device_label)
+    if int(device_object.x1) == int(device_object.x2) == 0:
+        return None, None, None, None
+    else:
+        # 这里的4和16是软件设置的时候，必须是4和16的倍数
+        width = int(device_object.roi_x2) - int(device_object.roi_x1)
+        offset_x = int(device_object.roi_x1)
+        height = int(device_object.roi_y2) - int(device_object.roi_y1)
+        offset_y = int(device_object.roi_y1)
+        print('设置的roi是：', width, height, offset_x, offset_y)
+        return width, height, offset_x, offset_y
 
 
 # 开始拍照
@@ -207,28 +227,34 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
             continue
 
 
-def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj, camera_id):
+def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
     # 当摄像头有最新照片后，创建一个stConvertParam的结构体去获取实际图片和图片信息，
     # pDstBuffer这个指针指向真实图片数据的缓存
-    nRGBSize = stFrameInfo.nWidth * stFrameInfo.nHeight * 3
-    stConvertParam = MV_CC_PIXEL_CONVERT_PARAM()
-    memset(byref(stConvertParam), 0, sizeof(stConvertParam))
-    stConvertParam.nWidth = stFrameInfo.nWidth
-    stConvertParam.nHeight = stFrameInfo.nHeight
-    stConvertParam.pSrcData = data_buf
-    stConvertParam.nSrcDataLen = stFrameInfo.nFrameLen
-    stConvertParam.enSrcPixelType = stFrameInfo.enPixelType
-    stConvertParam.enDstPixelType = PixelType_Gvsp_BGR8_Packed
-    content = (c_ubyte * nRGBSize)()
-    stConvertParam.pDstBuffer = content
-    stConvertParam.nDstBufferSize = nRGBSize
-    cam_obj.MV_CC_ConvertPixelType(stConvertParam)
+    n_rgb_size = st_frame_info.nWidth * st_frame_info.nHeight * 3
+    st_convert_param = MV_CC_PIXEL_CONVERT_PARAM()
+    memset(byref(st_convert_param), 0, sizeof(st_convert_param))
+    st_convert_param.nWidth = st_frame_info.nWidth
+    st_convert_param.nHeight = st_frame_info.nHeight
+    st_convert_param.pSrcData = data_buf
+    st_convert_param.nSrcDataLen = st_frame_info.nFrameLen
+    st_convert_param.enSrcPixelType = st_frame_info.enPixelType
+    st_convert_param.enDstPixelType = PixelType_Gvsp_BGR8_Packed
+
+    # 这一步的操作比较耗时，所以提前分配内存
+    if len(collate_content) > 0:
+        content = collate_content.pop()
+    else:
+        content = (c_ubyte * n_rgb_size)()
+
+    st_convert_param.pDstBuffer = content
+    st_convert_param.nDstBufferSize = n_rgb_size
+    cam_obj.MV_CC_ConvertPixelType(st_convert_param)
     # 得到图片做最简单处理就放入deque,这块不要做旋转等操作，否则跟不上240帧的获取速度
     image = np.asarray(content, dtype="uint8")
-    image = image.reshape((stFrameInfo.nHeight, stFrameInfo.nWidth, 3))
-    frame_num = stFrameInfo.nFrameNum
+    image = image.reshape((st_frame_info.nHeight, st_frame_info.nWidth, 3))
+    frame_num = st_frame_info.nFrameNum
     dq.put({'image': image,
-            'host_timestamp': stFrameInfo.nHostTimeStamp,
+            'host_timestamp': st_frame_info.nHostTimeStamp,
             'frame_num': frame_num})
     del content
     del image
@@ -237,11 +263,11 @@ def camera_snapshot(dq, data_buf, stFrameInfo, cam_obj, camera_id):
     # 记录帧率
     frame_rate_dict[camera_id]['pic_count'] += 1
     if frame_num == 0:
-        frame_rate_dict[camera_id]['begin_time'] = stFrameInfo.nHostTimeStamp
+        frame_rate_dict[camera_id]['begin_time'] = st_frame_info.nHostTimeStamp
     else:
-        frame_rate_dict[camera_id]['end_time'] = stFrameInfo.nHostTimeStamp
+        frame_rate_dict[camera_id]['end_time'] = st_frame_info.nHostTimeStamp
 
-    print(f'camera{camera_id}获取到图片了', frame_num, ' ' * 5, frame_rate_dict[camera_id]['pic_count'], ' ' * 2, stFrameInfo.nHostTimeStamp)
+    print(f'camera{camera_id}获取到图片了', frame_num, ' ' * 5, frame_rate_dict[camera_id]['pic_count'], ' ' * 2, st_frame_info.nHostTimeStamp)
     # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
     if frame_num >= CameraMax:
         print('达到了取图的最大限制！！！')

@@ -508,6 +508,9 @@ class PerformanceCenter(object):
             del image_info['image']
         self.back_up_dq.clear()
         gc.collect()
+        # 单例模式，这里对变量进行清空，无论成功还是失败，肯定会调用这里
+        self.start_number = 0
+        self.start_timestamp = 0
         print('清空 back up dq 队列。。。。')
 
     def move_src_to_backup(self):

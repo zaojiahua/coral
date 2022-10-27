@@ -3,8 +3,6 @@ import traceback
 from ctypes import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import deque
-# import multiprocessing as mp
-
 import func_timeout
 import numpy as np
 from func_timeout import func_set_timeout
@@ -254,13 +252,13 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
     st_convert_param.enSrcPixelType = st_frame_info.enPixelType
     st_convert_param.enDstPixelType = PixelType_Gvsp_BGR8_Packed
 
-    print('11111', (time.time() - b) * 1000)
+    # print('11111', (time.time() - b) * 1000)
     # 这一步的操作比较耗时，所以提前分配内存
     if len(collate_content) > 0:
         content = collate_content.pop()
     else:
         content = (c_ubyte * n_rgb_size)()
-    print('22222', (time.time() - b) * 1000)
+    # print('22222', (time.time() - b) * 1000)
 
     st_convert_param.pDstBuffer = content
     st_convert_param.nDstBufferSize = n_rgb_size
@@ -269,13 +267,13 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
     image = np.asarray(content, dtype="uint8")
     image = image.reshape((st_frame_info.nHeight, st_frame_info.nWidth, 3))
     frame_num = st_frame_info.nFrameNum
-    print('333333', (time.time() - b) * 1000)
+    # print('333333', (time.time() - b) * 1000)
     frame_cache.append({'image': image,
                         'host_timestamp': st_frame_info.nHostTimeStamp,
                         'frame_num': frame_num})
     # if frame_num % 2 == 0:
     #     dq.put(frame_cache)
-    print('4444444', (time.time() - b) * 1000)
+    # print('4444444', (time.time() - b) * 1000)
     del content
     del image
     del data_buf
@@ -288,7 +286,7 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
         frame_rate_dict[camera_id]['end_time'] = st_frame_info.nHostTimeStamp
 
     print(f'camera{camera_id}获取到图片了', frame_num, ' ' * 5, frame_rate_dict[camera_id]['pic_count'], ' ' * 2, st_frame_info.nHostTimeStamp)
-    print('555555', (time.time() - b) * 1000)
+    # print('555555', (time.time() - b) * 1000)
     # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
     if frame_num >= CameraMax:
         print('达到了取图的最大限制！！！')
@@ -315,8 +313,8 @@ def queue_put(camera_id, dq):
 
 
 def stop_camera(cam_obj, camera_id, **kwargs):
-    print('stop grabbing..........', kwargs.get('feature_test'))
-    cam_obj.MV_CC_StopGrabbing()
+    ret = cam_obj.MV_CC_StopGrabbing()
+    print(f'stop grabbing..........{ret}', kwargs.get('feature_test'))
     # 性能测试的时候销毁，用来释放内存
     if not kwargs.get('feature_test'):
         print('开始销毁。。。。。。。。。。。。')

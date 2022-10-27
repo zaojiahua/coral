@@ -7,13 +7,13 @@ from collections import deque
 
 import cv2
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
 
 from app.execption.outer.error_code.camera import NoSrc, CameraInUse
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import *
 from app.execption.outer.error_code.imgtool import CameraNotResponse
-from app.config.setting import HARDWARE_MAPPING_LIST, CAMERA_PROCESS_NAME
+from app.config.setting import HARDWARE_MAPPING_LIST
 from app.libs import image_utils
 from redis_init import redis_client
 from app.v1.Cuttle.basic.hand_serial import CameraPower
@@ -82,15 +82,15 @@ class CameraHandler(Handler):
 
     # 清空管道中的数据
     def clear_queue(self):
-        print('清空 camera_dq_dict 管道内容')
         camera_ids = get_camera_ids()
         for camera_id in camera_ids:
-            queue = camera_dq_dict.get(self._model.pk + camera_id)
-            if not queue.empty():
-                queue.get()
-            print(f'当前管道是否清空 {camera_id}', queue.empty())
+            # 这里会阻塞 直到有元素
             if camera_ret_kwargs_dict[self._model.pk + camera_id].get() == 'end':
                 print(f'拍照流程完全结束 {camera_id}')
+            queue = camera_dq_dict.get(self._model.pk + camera_id)
+            for _ in range(queue.qsize()):
+                queue.get()
+            print(f'当前管道是否清空 {camera_id}: {queue.qsize()}', queue.empty())
 
     def snap_shot(self):
         # 摄像头数量不一样的时候，方案不同
@@ -124,9 +124,9 @@ class CameraHandler(Handler):
 
         # 默认使用第一个相机中的截图
         if len(camera_ids) == 1:
+            queue = camera_dq_dict.get(self._model.pk + camera_ids[0])
             # 实时的获取到图片
             if self.back_up_dq is not None:
-                queue = camera_dq_dict.get(self._model.pk + camera_ids[0])
                 # 停止时刻由外部进行控制，这里负责图像处理即可
                 while get_global_value(CAMERA_IN_LOOP):
                     time.sleep(0.001)
@@ -144,7 +144,7 @@ class CameraHandler(Handler):
                 # 多余的图片删除，及时释放管道里边的内存，如果想多获取一些图片，由外部进行控制
                 self.clear_queue()
             else:
-                image = camera_dq_dict.get(self._model.pk + camera_ids[0]).get(block=True, timeout=3)['image']
+                image = queue.get(block=True, timeout=3)['image']
                 if not self.original:
                     image = np.rot90(self.get_roi(image, False), 3)
 

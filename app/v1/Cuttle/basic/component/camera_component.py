@@ -1,6 +1,8 @@
 import time
 import traceback
 from ctypes import *
+from concurrent.futures import ThreadPoolExecutor
+from collections import deque
 # import multiprocessing as mp
 
 import func_timeout
@@ -20,12 +22,12 @@ CamObjList = {}
 # 提前开辟图片的内存
 collate_content = []
 # 图片合成以后，先不要往管道里边放，放入管道是耗时操作，先保存起来，批量放或者开一个线程去放
-frame_cache = []
+frame_cache = deque(maxlen=CameraMax)
+
 
 # 注意这里是单独的一个进程，数据只能自己用，其他进程无法使用，进程间的通信使用queue
 # 相机初始化
 def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue):
-    camera_dq_key = device_label + camera_id
     while True:
         if redis_client.get(f"g_bExit_{camera_id}") == '0':
             # 根据camera_id来支持多摄像头的方案
@@ -51,6 +53,10 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                         for i in range(int(CameraMax)):
                             collate_content.append((c_ubyte * n_rgb_size)())
                         print('内存提前分配完毕')
+
+                # 开一个线程，专门往管道里边放入图片
+                executer = ThreadPoolExecutor(max_workers=1, thread_name_prefix="camera_")
+                executer.submit(queue_put, camera_id, queue)
 
                 if not soft_sync:
                     # 开始拍照
@@ -232,6 +238,7 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
 def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
     # 当摄像头有最新照片后，创建一个stConvertParam的结构体去获取实际图片和图片信息，
     # pDstBuffer这个指针指向真实图片数据的缓存
+    b = time.time()
     n_rgb_size = st_frame_info.nWidth * st_frame_info.nHeight * 3
     st_convert_param = MV_CC_PIXEL_CONVERT_PARAM()
     memset(byref(st_convert_param), 0, sizeof(st_convert_param))
@@ -242,11 +249,13 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
     st_convert_param.enSrcPixelType = st_frame_info.enPixelType
     st_convert_param.enDstPixelType = PixelType_Gvsp_BGR8_Packed
 
+    print('11111', (time.time() - b) * 1000)
     # 这一步的操作比较耗时，所以提前分配内存
     if len(collate_content) > 0:
         content = collate_content.pop()
     else:
         content = (c_ubyte * n_rgb_size)()
+    print('22222', (time.time() - b) * 1000)
 
     st_convert_param.pDstBuffer = content
     st_convert_param.nDstBufferSize = n_rgb_size
@@ -255,11 +264,13 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
     image = np.asarray(content, dtype="uint8")
     image = image.reshape((st_frame_info.nHeight, st_frame_info.nWidth, 3))
     frame_num = st_frame_info.nFrameNum
+    print('333333', (time.time() - b) * 1000)
     frame_cache.append({'image': image,
                         'host_timestamp': st_frame_info.nHostTimeStamp,
                         'frame_num': frame_num})
-    if frame_num % 2 == 0:
-        dq.put(frame_cache)
+    # if frame_num % 2 == 0:
+    #     dq.put(frame_cache)
+    print('4444444', (time.time() - b) * 1000)
     del content
     del image
     del data_buf
@@ -272,10 +283,24 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
         frame_rate_dict[camera_id]['end_time'] = st_frame_info.nHostTimeStamp
 
     print(f'camera{camera_id}获取到图片了', frame_num, ' ' * 5, frame_rate_dict[camera_id]['pic_count'], ' ' * 2, st_frame_info.nHostTimeStamp)
+    print('555555', (time.time() - b) * 1000)
     # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
     if frame_num >= CameraMax:
         print('达到了取图的最大限制！！！')
         redis_client.set(f'g_bExit_{camera_id}', 1)
+
+
+# 单独的一个线程，往管道里边放入图片
+def queue_put(camera_id, dq):
+    while True:
+        while len(frame_cache) > 0:
+            dq.put(frame_cache.popleft())
+            time.sleep(0.001)
+
+        # 取图结束的时候，线程结束
+        if redis_client.get(f'g_bExit_{camera_id}') == '1':
+            break
+        time.sleep(0.1)
 
 
 def stop_camera(cam_obj, camera_id, **kwargs):

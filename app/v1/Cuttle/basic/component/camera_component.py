@@ -1,7 +1,7 @@
 import time
 import traceback
 from ctypes import *
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import deque
 # import multiprocessing as mp
 
@@ -55,8 +55,9 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                         print('内存提前分配完毕')
 
                 # 开一个线程，专门往管道里边放入图片
-                executer = ThreadPoolExecutor(max_workers=1, thread_name_prefix="camera_")
-                executer.submit(queue_put, camera_id, queue)
+                frame_cache.clear()
+                executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="camera_")
+                queue_put_thread = executor.submit(queue_put, camera_id, queue)
 
                 if not soft_sync:
                     # 开始拍照
@@ -102,6 +103,10 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
 
                 # 结束循环，关闭取图
                 redis_client.set(f"g_bExit_{camera_id}", "1")
+
+                for _ in as_completed([queue_put_thread]):
+                    pass
+
                 # 等拿图这里完全结束了，另一个进程中再执行其他的操作，这里做一个同步
                 ret_kwargs_queue.put('end')
         time.sleep(0.1)
@@ -293,14 +298,20 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
 # 单独的一个线程，往管道里边放入图片
 def queue_put(camera_id, dq):
     while True:
+        # 只要有数据就放入
         while len(frame_cache) > 0:
             dq.put(frame_cache.popleft())
-            time.sleep(0.001)
+            time.sleep(0.01)
 
         # 取图结束的时候，线程结束
         if redis_client.get(f'g_bExit_{camera_id}') == '1':
+            # 把剩余的图片，全部放入到管道中
+            while len(frame_cache) > 0:
+                dq.put(frame_cache.popleft())
+            frame_cache.clear()
             break
         time.sleep(0.1)
+    print('相机中放入管道的线程结束。。。')
 
 
 def stop_camera(cam_obj, camera_id, **kwargs):

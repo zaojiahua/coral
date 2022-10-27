@@ -17,8 +17,10 @@ GET_ONE_FRAME_TIMEOUT = 5
 # 整个过程中的帧率，所以加入这个数据结构，用来做统计，方便调试和测试性能
 frame_rate_dict = {}
 CamObjList = {}
+# 提前开辟图片的内存
 collate_content = []
-
+# 图片合成以后，先不要往管道里边放，放入管道是耗时操作，先保存起来，批量放或者开一个线程去放
+frame_cache = []
 
 # 注意这里是单独的一个进程，数据只能自己用，其他进程无法使用，进程间的通信使用queue
 # 相机初始化
@@ -46,7 +48,7 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                     width, height, _, _ = get_roi(device_label)
                     if width is not None and height is not None:
                         n_rgb_size = width * height * 3
-                        for i in range(int(CameraMax / 2)):
+                        for i in range(int(CameraMax)):
                             collate_content.append((c_ubyte * n_rgb_size)())
                         print('内存提前分配完毕')
 
@@ -253,9 +255,11 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
     image = np.asarray(content, dtype="uint8")
     image = image.reshape((st_frame_info.nHeight, st_frame_info.nWidth, 3))
     frame_num = st_frame_info.nFrameNum
-    dq.put({'image': image,
-            'host_timestamp': st_frame_info.nHostTimeStamp,
-            'frame_num': frame_num})
+    frame_cache.append({'image': image,
+                        'host_timestamp': st_frame_info.nHostTimeStamp,
+                        'frame_num': frame_num})
+    if frame_num % 2 == 0:
+        dq.put(frame_cache)
     del content
     del image
     del data_buf

@@ -35,12 +35,6 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                 # 统计帧率
                 frame_rate_dict[camera_id] = {'begin_time': -1, 'end_time': -1, 'pic_count': 0}
 
-                # 先销毁
-                if camera_dq_dict.get(camera_dq_key) is not None:
-                    del camera_dq_dict[camera_dq_key]
-                # 为了保证后续操作的统一性，将图片统一放到队列中
-                camera_dq_dict[camera_dq_key] = queue
-
                 temporary = kwargs.get('temporary', True)
                 soft_sync = kwargs.get('soft_sync', False)
                 response = camera_init_hk(camera_id, device_label, **kwargs)

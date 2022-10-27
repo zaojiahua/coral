@@ -8,7 +8,8 @@ from mcush import *
 
 from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com, IP_FILE_PATH
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
-from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open, MAX_SENSOR_VALUE
+from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open, MAX_SENSOR_VALUE, \
+    usb_power_open, usb_power_close
 
 
 class HandSerial:
@@ -113,24 +114,16 @@ class HandSerial:
 
 def controlUsbPower(status="ON"):
     try:
-        s = ShellLab.ShellLab(usb_power_com)
-
-        s.pinOutputLow('0.0')
-        s.pinOutputLow('0.1')
-        s.pinOutputLow('0.2')
-        s.pinOutputLow('0.3')
-
-        if status == "ON" or status == "init":
-            s.pinSetHigh('0.0')
-            s.pinSetHigh('0.3')
-            s.pinSetHigh('0.1')
-            s.pinSetHigh('0.2')
-        else:
-            s.pinSetLow('0.0')
-            s.pinSetLow('0.3')
-            s.pinSetLow('0.1')
-            s.pinSetLow('0.2')
-        return 0
+        ser = serial.Serial(usb_power_com, 9600, timeout=2)
+        order = usb_power_open if status == "ON" or status == 'init' else usb_power_close
+        send_order = bytes.fromhex(order)
+        ser.write(send_order)  # 发送数据
+        return_data = ser.read(16)  # 读取缓冲数据
+        print(len(return_data))
+        str_return_data = str(return_data.hex())
+        print("收到的回复是：", str_return_data)
+        if str_return_data == order:
+            return 0
     except Exception as e:
         if status == "init":
             return 0
@@ -244,7 +237,7 @@ class SensorSerial(HandSerial):
         if sensor_ret_value.count('f') == len(sensor_ret_value):
             return False
         value = int(sensor_ret_value, 16) / 10
-        if value > MAX_SENSOR_VALUE:    # 超过一定范围的力值也过滤掉
+        if value > MAX_SENSOR_VALUE:  # 超过一定范围的力值也过滤掉
             return False
         return value
 

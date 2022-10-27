@@ -344,6 +344,7 @@ class HandHandler(Handler, DefaultMixin):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
         sliding_order = self.__straight_sliding_order(axis[0], axis[1], self.speed, arm_num=kwargs["arm_num"])
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
+        if kwargs['arm_num'] == 1: time.sleep(0.5)
         return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     def reset_hand(self, reset_orders=arm_wait_position, rotate=False, **kwargs):

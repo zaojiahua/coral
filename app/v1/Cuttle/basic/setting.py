@@ -299,3 +299,7 @@ REFERENCE_VALUE = {
     "reference_53": {"dpi": 4.643, "m_location": [-18, 41]},
     "reference_54": {"dpi": 5.502, "m_location": [12, -87]},
 }
+
+# USB通断控制相关
+usb_power_open = "A00101A2"
+usb_power_close = "A00100A1"

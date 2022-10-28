@@ -211,8 +211,11 @@ class CameraHandler(Handler):
                     camera_in_loop()
                 else:
                     # 硬件同步
-                    with CameraPower(timeout=0):
-                        camera_in_loop()
+                    try:
+                        with CameraPower(timeout=0.1):
+                            camera_in_loop()
+                    except Exception as e:
+                        print('相机硬触发出现了问题', e)
 
                 for camera_id in camera_ids:
                     redis_client.set(f"g_bExit_{camera_id}", "1")

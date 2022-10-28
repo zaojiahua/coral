@@ -301,5 +301,8 @@ REFERENCE_VALUE = {
 }
 
 # USB通断控制相关
-usb_power_open = "A00101A2"
-usb_power_close = "A00100A1"
+usb_power_check_status = "A10102A4"
+usb_power_close = "A00101A2"
+usb_power_open = "A00100A1"
+usb_power_close_recv = "A10101A3"
+usb_power_open_recv = "A10101A3"

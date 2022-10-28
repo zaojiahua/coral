@@ -9,7 +9,7 @@ from mcush import *
 from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com, IP_FILE_PATH
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
 from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open, MAX_SENSOR_VALUE, \
-    usb_power_open, usb_power_close
+    usb_power_open, usb_power_close, usb_power_open_recv, usb_power_close_recv, usb_power_check_status
 
 
 class HandSerial:
@@ -115,20 +115,23 @@ class HandSerial:
 def controlUsbPower(status="ON"):
     try:
         ser = serial.Serial(usb_power_com, 9600, timeout=2)
-        order = usb_power_open if status == "ON" or status == 'init' else usb_power_close
-        send_order = bytes.fromhex(order)
-        ser.write(send_order)  # 发送数据
-        return_data = ser.read(16)  # 读取缓冲数据
-        print(len(return_data))
-        str_return_data = str(return_data.hex())
-        print("收到的回复是：", str_return_data)
-        if str_return_data == order:
-            return 0
-    except Exception as e:
+    except SerialException:
         if status == "init":
             return 0
-        print("Control usb power fail, info: ", str(e))
+        else:
+            raise ControlUSBPowerFail
+    order = usb_power_open if status == "ON" or status == 'init' else usb_power_close
+    status_order = usb_power_open_recv if status == "ON" or status == 'init' else usb_power_close_recv
+    send_order = bytes.fromhex(order)
+    ser.write(send_order)  # 发送数据
+    time.sleep(0.01)
+    order = bytes.fromhex(usb_power_check_status)
+    ser.write(order)
+    return_data = ser.read(8)  # 读取返回数据
+    str_return_data = str(return_data.hex()).upper()
+    if str_return_data != status_order:
         raise ControlUSBPowerFail
+    return 0
 
 
 # 相机的触发控制

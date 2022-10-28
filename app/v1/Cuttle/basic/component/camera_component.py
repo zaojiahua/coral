@@ -38,28 +38,27 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                 # 统计帧率
                 frame_rate_dict[camera_id] = {'begin_time': -1, 'end_time': -1, 'pic_count': 0}
 
-                temporary = kwargs.get('temporary', True)
-                soft_sync = kwargs.get('soft_sync', False)
-                response = camera_init_hk(camera_id, device_label, **kwargs)
-                print("half done camera init", device_label, 'temporary:', temporary)
-
-                # 性能测试的时候提前分配内存
-                if not temporary:
-                    width, height, _, _ = get_roi(device_label)
-                    if width is not None and height is not None:
-                        n_rgb_size = width * height * 3
-                        for i in range(int(CameraMax)):
-                            collate_content.append((c_ubyte * n_rgb_size)())
-                        print('内存提前分配完毕')
-
                 # 开一个线程，专门往管道里边放入图片
                 frame_cache.clear()
                 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="camera_")
                 queue_put_thread = executor.submit(queue_put, camera_id, queue)
 
-                if not soft_sync:
-                    # 开始拍照
-                    start_grabbing(camera_id)
+                temporary = kwargs.get('temporary', True)
+                response = camera_init_hk(camera_id, device_label, **kwargs)
+                print("half done camera init", device_label, 'temporary:', temporary)
+
+                # 性能测试的时候提前分配内存 应该单独放到一个队列里边去做
+                if not temporary and not kwargs.get('feature_test'):
+                    width, height, _, _ = get_roi(device_label, kwargs.get('sync_camera'))
+                    if width and height:
+                        n_rgb_size = width * height * 3
+                        print('size大小是', n_rgb_size)
+                        for i in range(int(CameraMax / 3)):
+                            collate_content.append((c_ubyte * n_rgb_size)())
+                        print('内存提前分配完毕')
+
+                # 开始拍照
+                start_grabbing(camera_id)
 
                 if temporary is True:
                     @func_set_timeout(timeout=GET_ONE_FRAME_TIMEOUT)
@@ -168,7 +167,7 @@ def camera_init_hk(camera_id, device_label, **kwargs):
     # 设置roi 多摄像机暂时不设置
     if not kwargs.get('original') and not kwargs.get('sync_camera'):
         width, height, offset_x, offset_y = get_roi(device_label)
-        if width is not None:
+        if width and height:
             check_result(CamObj.MV_CC_SetIntValue, 'Width', width)
             check_result(CamObj.MV_CC_SetIntValue, 'Height', height)
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offset_x)
@@ -193,19 +192,29 @@ def camera_init_hk(camera_id, device_label, **kwargs):
 
 
 # 获取设置的roi大小
-def get_roi(device_label):
-    from app.v1.device_common.device_model import Device
-    device_object = Device(pk=device_label)
-    if int(device_object.x1) == int(device_object.x2) == 0:
-        return None, None, None, None
+def get_roi(device_label, sync_camera=False):
+    width = height = offset_x = offset_y = 0
+    # 多相机合并的时候，没有设置roi，原图多大就是多大
+    if sync_camera:
+        for p_key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
+            if p_key[0] == 'Width':
+                width = p_key[1]
+            elif p_key[0] == 'Height':
+                height = p_key[1]
     else:
-        # 这里的4和16是软件设置的时候，必须是4和16的倍数
-        width = int(device_object.roi_x2) - int(device_object.roi_x1)
-        offset_x = int(device_object.roi_x1)
-        height = int(device_object.roi_y2) - int(device_object.roi_y1)
-        offset_y = int(device_object.roi_y1)
-        print('设置的roi是：', width, height, offset_x, offset_y)
-        return width, height, offset_x, offset_y
+        from app.v1.device_common.device_model import Device
+        device_object = Device(pk=device_label)
+        if not device_object.x1 or not device_object.x2 or (int(device_object.x1) == int(device_object.x2) == 0):
+            return 0, 0, 0, 0
+        else:
+            # 这里的4和16是软件设置的时候，必须是4和16的倍数
+            width = int(device_object.roi_x2) - int(device_object.roi_x1)
+            offset_x = int(device_object.roi_x1)
+            height = int(device_object.roi_y2) - int(device_object.roi_y1)
+            offset_y = int(device_object.roi_y1)
+
+    print('设置的roi是：', width, height, offset_x, offset_y)
+    return width, height, offset_x, offset_y
 
 
 # 开始拍照

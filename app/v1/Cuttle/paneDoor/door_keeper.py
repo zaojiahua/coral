@@ -101,6 +101,7 @@ class DoorKeeper(object):
                     camera_process = mp.Process(name=CAMERA_PROCESS_NAME, target=function, args=(
                         port, device_label, queue, kwargs_queue, ret_kwargs_queue))
                     print('-------摄像机进程开启-------', camera_process)
+                    kwargs_queue.put({'original': True})
                     redis_client.set(f"g_bExit_{port}", "0")
                     camera_process.start()
                     # 清空管道，否则残留着之前的图片

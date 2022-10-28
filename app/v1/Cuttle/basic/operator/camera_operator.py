@@ -2,12 +2,10 @@ import collections
 import os.path
 import re
 import time
-# 更高效，但不便于跨进程使用，待有性能要求时可以考虑deque
 from collections import deque
 
 import cv2
 import numpy as np
-from concurrent.futures import as_completed
 
 from app.execption.outer.error_code.camera import NoSrc, CameraInUse
 from app.v1.Cuttle.basic.operator.handler import Handler
@@ -66,6 +64,8 @@ class CameraHandler(Handler):
         # 多摄像机下当前合并到哪个帧号了
         self.cur_frame_num = 0
         self.src = None
+        # 多摄像机用来存储图片的缓存
+        self.cache_dict = {}
 
     def before_execute(self, **kwargs):
         # 解析adb指令，区分拍照还是录像
@@ -84,19 +84,28 @@ class CameraHandler(Handler):
     def clear_queue(self):
         camera_ids = get_camera_ids()
         for camera_id in camera_ids:
+            queue = camera_dq_dict.get(self._model.pk + camera_id)
             # 这里会阻塞 直到有元素
             if camera_ret_kwargs_dict[self._model.pk + camera_id].get() == 'end':
-                print(f'拍照流程完全结束 {camera_id}')
-            queue = camera_dq_dict.get(self._model.pk + camera_id)
+                print(f'拍照流程完全结束 {camera_id}', f'管道中还剩余的图片数量：{queue.qsize()}')
             for _ in range(queue.qsize()):
                 queue.get()
             print(f'当前管道是否清空 {camera_id}: {queue.qsize()}', queue.empty())
+
+    # 从管道中获取数据
+    def get_queue(self, max_count=CameraMax):
+        camera_ids = get_camera_ids()
+        for camera_id in camera_ids:
+            queue = camera_dq_dict.get(self._model.pk + camera_id)
+            current_count = 0
+            while queue.qsize() > 0 and current_count < max_count:
+                self.cache_dict[self._model.pk + camera_id].append(queue.get())
+                current_count += 1
 
     def snap_shot(self):
         # 摄像头数量不一样的时候，方案不同
         camera_ids = get_camera_ids()
 
-        futures = []
         temporary = False if len(camera_ids) > 1 else self.back_up_dq is None
         sync_camera = True if len(camera_ids) > 1 else False
         soft_sync = False
@@ -137,7 +146,7 @@ class CameraHandler(Handler):
                         self.back_up_dq.append(queue.get(False))
                         batch_size -= 1
                     # 如果达到了取图的最大限制，并且图片都取出来了，那多等待一些时间
-                    if redis_client.get(f"g_bExit_{camera_ids[0]}") == '1' and queue.empty():
+                    if redis_client.get(f"g_bExit_{camera_ids[0]}") == '1' and queue.qsize() == 0:
                         time.sleep(0.5)
 
                 redis_client.set(f"g_bExit_{camera_ids[0]}", "1")
@@ -168,68 +177,71 @@ class CameraHandler(Handler):
                     break
 
             need_back_up_dq = True
-            if self.high_exposure:
-                timeout = 0.4
-            else:
-                timeout = 0.1
+
+            # 初始化临时存放图片的缓存
+            for camera_id in camera_ids:
+                self.cache_dict[self._model.pk + camera_id] = deque(maxlen=CameraMax)
+
             # 实时的获取到图片
             if self.back_up_dq is not None:
                 need_back_up_dq = False
                 # 合成到某一个帧号
                 self.cur_frame_num = 0
-                merge_frame_num = 60
+                merge_frame_num = 30
 
+                # 取图的逻辑
                 def camera_in_loop():
                     empty_times = 0
                     while get_global_value(CAMERA_IN_LOOP):
                         # 必须等待，否则while死循环导致其他线程没有机会执行
-                        if redis_client.get(f"g_bExit_{camera_ids[0]}") == "0":
-                            time.sleep(merge_frame_num / FpsMax)
-                        if get_global_value(CAMERA_IN_LOOP):
-                            # 判断图片是否全部处理完毕
-                            self.cur_frame_num += merge_frame_num
-                            if self.merge_frame(camera_ids, self.cur_frame_num) == -1:
-                                empty_times += 1
-                                if empty_times > 3:
-                                    break
-                            else:
-                                empty_times = 0
+                        time.sleep(merge_frame_num / FpsMax)
+                        self.get_queue(merge_frame_num * 1.2)
+                        # 判断图片是否全部处理完毕
+                        self.cur_frame_num += merge_frame_num
+                        if self.merge_frame(camera_ids, self.cur_frame_num) == -1:
+                            empty_times += 1
+                            if empty_times > 3:
+                                break
+                        else:
+                            empty_times = 0
 
                 # 发送同步信号
                 if soft_sync:
                     # 软件同步
-                    for camera_id in camera_ids:
-                        start_grabbing(camera_id)
                     camera_in_loop()
                 else:
                     # 硬件同步
-                    with CameraPower(timeout=timeout):
+                    with CameraPower(timeout=0):
                         camera_in_loop()
 
+                for camera_id in camera_ids:
+                    redis_client.set(f"g_bExit_{camera_id}", "1")
+
                 # 后续再保存一些图片，因为结束点之后还需要一些图片
-                self.cur_frame_num += merge_frame_num
+                self.get_queue(FpsMax)
+                self.cur_frame_num += FpsMax
                 self.merge_frame(camera_ids, self.cur_frame_num)
-                # 如果依然在loop中，也就是达到了取图的最大限制，还没来得及处理图片，则把剩下的图片都合成完毕
-                if get_global_value(CAMERA_IN_LOOP):
-                    self.merge_frame(camera_ids)
             else:
-                if self.record_video:
-                    timeout = self.record_time
+                if self.high_exposure:
+                    timeout = 0.4
+                else:
+                    timeout = 0.1
+
                 # 发送同步信号
                 if soft_sync:
                     # 软件同步
-                    for camera_id in camera_ids:
-                        start_grabbing(camera_id)
                     time.sleep(timeout)
                 else:
                     # 硬件同步
                     with CameraPower(timeout=timeout):
                        pass
 
-            for camera_id in camera_ids:
-                redis_client.set(f"g_bExit_{camera_id}", "1")
-            for _ in as_completed(futures):
-                print('已经停止获取图片了')
+                for camera_id in camera_ids:
+                    redis_client.set(f"g_bExit_{camera_id}", "1")
+
+                # 最后才开始取图 这里有可能管道里边还没把图都放进去，但是只要有一张就行了，所以不用额外处理
+                # 如果非要等管道里边所有图片都放进去了，那会影响获取图片的时间
+                self.get_queue()
 
             # 最后再统一处理图片
             if need_back_up_dq:
@@ -238,8 +250,10 @@ class CameraHandler(Handler):
                 self.back_up_dq.clear()
 
             # 清空图片内存
+            self.clear_queue()
+            # 清空为了合并图片特意开的缓存
             for camera_id in camera_ids:
-                camera_dq_dict[self._model.pk + camera_id].clear()
+                self.cache_dict[self._model.pk + camera_id].clear()
 
         # 记录一下拼接以后的图片大小，后边计算的时候需要用到，只在第一次拼接的时候写入，在重置h矩阵的时候，需要将这个值删除
         if self.original and self.src is not None:
@@ -257,7 +271,7 @@ class CameraHandler(Handler):
 
         # 合并到指定帧号的图片
         try:
-            max_frame_num = max([int(camera_dq_dict.get(self._model.pk + camera_id)[-1]['frame_num'])
+            max_frame_num = min([int(self.cache_dict.get(self._model.pk + camera_id)[-1]['frame_num'])
                                  for camera_id in camera_ids])
         except IndexError:
             return -1
@@ -271,9 +285,9 @@ class CameraHandler(Handler):
         while True:
             stop_flag = True
             for camera_id in camera_ids:
-                if len(camera_dq_dict.get(self._model.pk + camera_id)) > 0 \
-                        and camera_dq_dict.get(self._model.pk + camera_id)[0]['frame_num'] <= merge_frame_num:
-                    src = camera_dq_dict.get(self._model.pk + camera_id).popleft()
+                if len(self.cache_dict.get(self._model.pk + camera_id)) > 0 \
+                        and self.cache_dict.get(self._model.pk + camera_id)[0]['frame_num'] <= merge_frame_num:
+                    src = self.cache_dict.get(self._model.pk + camera_id).popleft()
                     # 记录来源于哪个相机，方便后续处理
                     src['camera_id'] = camera_id
                     self.frames[src['frame_num']].append(src)
@@ -282,8 +296,8 @@ class CameraHandler(Handler):
                 break
 
         # 打印一下，方便debug，等成熟以后删除
-        # for frame_key in self.frames.keys():
-        #     print(frame_key, len(self.frames[frame_key]), '*' * 10)
+        for frame_key in self.frames.keys():
+            print(frame_key, len(self.frames[frame_key]), '*' * 10)
 
         if len(self.frames) == 0:
             return -1

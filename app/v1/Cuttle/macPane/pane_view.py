@@ -754,8 +754,8 @@ class PaneCoordinateView(MethodView):
 
         mask = mask_1 + mask_2
 
-        kernel = np.uint8(np.ones((3, 3)))
-        mask = cv2.dilate(mask, kernel, iterations=2)
+        # kernel = np.uint8(np.ones((3, 3)))
+        # mask = cv2.dilate(mask, kernel, iterations=2)
 
         # 获取符合条件的轮廓
         _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -765,7 +765,7 @@ class PaneCoordinateView(MethodView):
             # 遍历组成轮廓的每个坐标点
             m = cv2.moments(contour_points)
             # m00代表面积
-            if 50 < m['m00'] < 300:
+            if 50 < m['m00']:
                 # 获取对象的质心
                 cx = round(m['m10'] / m['m00'], 2)
                 cy = round(m['m01'] / m['m00'], 2)

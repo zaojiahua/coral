@@ -307,6 +307,7 @@ def queue_put(camera_id, dq):
         # 只要有数据就放入
         while len(frame_cache) > 0:
             dq.put(frame_cache.popleft())
+            # 放的越快，那边能处理过来的就越快，可以提高识别的速度
             time.sleep(0.005)
 
         # 取图结束的时候，线程结束

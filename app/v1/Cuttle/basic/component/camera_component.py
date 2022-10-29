@@ -174,7 +174,10 @@ def camera_init_hk(camera_id, device_label, **kwargs):
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offset_y)
 
     # 经过验证，以下增大帧率的方法是有效的，但是注意传入的数字，如果返回错误值，需要减小该数值
-    add_node_ret = CamObj.MV_CC_SetImageNodeNum(10)
+    if CORAL_TYPE == 5.4:
+        add_node_ret = CamObj.MV_CC_SetImageNodeNum(10)
+    else:
+        add_node_ret = CamObj.MV_CC_SetImageNodeNum(30)
     print("增大缓存节点结果", add_node_ret)
 
     stParam = MVCC_INTVALUE()

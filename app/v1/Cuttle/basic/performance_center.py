@@ -455,7 +455,6 @@ class PerformanceCenter(object):
     def picture_prepare(self, number, area):
         # use_icon_scope为true时裁剪snap图中真实icon出现的位置
         # use_icon_scope为false时裁剪snap图中refer中标记的configArea选区大致范围
-        print('准备图片：', number)
         picture = None
         max_retry_time = 10
         while max_retry_time >= 0:
@@ -473,6 +472,7 @@ class PerformanceCenter(object):
             max_retry_time -= 1
 
         if picture is not None:
+            print('准备图片：', number, ' 帧号：', picture_info['frame_num'])
             return [p[area[1]:area[3], area[0]:area[2]] for p in [picture, pic_next, pic_next_next]] + [timestamp]
         else:
             return None, None, None, None

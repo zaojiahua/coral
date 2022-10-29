@@ -89,7 +89,7 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                     begin_time = frame_rate_dict[camera_id]['begin_time']
                     # end_time 可能是达到了取图的最大限制，也可能是用户终止了
                     end_time = frame_rate_dict[camera_id]['end_time']
-                    frame_rate = pic_count / ((end_time - begin_time) / 1000)
+                    frame_rate = math.ceil(pic_count / ((end_time - begin_time) / 1000))
                     print(f'camera{camera_id}帧率是：', int(frame_rate), '^' * 10, pic_count, ((end_time - begin_time) / 1000))
 
                 if cam_obj is not None:
@@ -173,8 +173,9 @@ def camera_init_hk(camera_id, device_label, **kwargs):
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetX', offset_x)
             check_result(CamObj.MV_CC_SetIntValue, 'OffsetY', offset_y)
 
-    # add_node_ret = CamObj.MV_CC_SetImageNodeNum(10)
-    # print("增大缓存节点结果", add_node_ret)
+    # 经过验证，以下增大帧率的方法是有效的，但是注意传入的数字，如果返回错误值，需要减小该数值
+    add_node_ret = CamObj.MV_CC_SetImageNodeNum(10)
+    print("增大缓存节点结果", add_node_ret)
 
     stParam = MVCC_INTVALUE()
     memset(byref(stParam), 0, sizeof(MVCC_INTVALUE))
@@ -280,8 +281,6 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
     frame_cache.append({'image': image,
                         'host_timestamp': st_frame_info.nHostTimeStamp,
                         'frame_num': frame_num})
-    # if frame_num % 2 == 0:
-    #     dq.put(frame_cache)
     # print('4444444', (time.time() - b) * 1000)
     del content
     del image
@@ -308,7 +307,7 @@ def queue_put(camera_id, dq):
         # 只要有数据就放入
         while len(frame_cache) > 0:
             dq.put(frame_cache.popleft())
-            time.sleep(0.01)
+            time.sleep(0.005)
 
         # 取图结束的时候，线程结束
         if redis_client.get(f'g_bExit_{camera_id}') == '1':

@@ -377,7 +377,7 @@ class CameraHandler(Handler):
                 else:
                     result = np.rot90(self.get_roi(result), 3)
 
-            self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1})
+            self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1, 'frame_num': frame_num})
             del result
 
         if lost_frame_nums:

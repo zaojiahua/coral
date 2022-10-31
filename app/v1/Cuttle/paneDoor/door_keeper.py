@@ -7,11 +7,12 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict
+import multiprocessing as mp
 
 import numpy as np
 
 from app.config.ip import HOST_IP, ADB_TYPE
-from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com, REEF_DATE_TIME_FORMAT
+from app.config.setting import CORAL_TYPE, HARDWARE_MAPPING_LIST, rotate_com, REEF_DATE_TIME_FORMAT, CAMERA_PROCESS_NAME
 from app.config.log import DOOR_LOG_NAME
 from app.config.url import device_create_update_url, device_url, phone_model_url, device_assis_create_update_url, \
     device_assis_url, device_update_url, device_resolution_url
@@ -19,13 +20,15 @@ from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevi
     DeviceBindFail, DeviceWmSizeFail, DeviceAlreadyInCabinet, ArmNorEnough, AdbConnectFail
 from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
-from app.v1.Cuttle.basic.setting import hand_used_list
+from app.v1.Cuttle.basic.setting import hand_used_list, camera_dq_dict, CameraMax, camera_kwargs_dict, \
+    camera_ret_kwargs_dict
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
 from app.v1.device_common.device_model import Device, DeviceStatus
 from app.v1.stew.model.aide_monitor import AideMonitor
 from app.libs.adbutil import AdbCommand, get_room_version
 from app.execption.outer.error_code.camera import ArmReInit, NoCamera
+from redis_init import redis_client
 
 logger = logging.getLogger(DOOR_LOG_NAME)
 
@@ -83,9 +86,32 @@ class DoorKeeper(object):
 
             futures = []
             for port in available_port_list:
-                function, device_object = PaneConfigView.hardware_init(port, device_label, rotate=(port == rotate_com))
-                future = executer.submit(function, port, device_object, init=True, original=True, feature_test=True)
-                futures.append(future)
+                function, device_object, attribute = PaneConfigView.hardware_init(port, device_label, rotate=(port == rotate_com))
+
+                # 摄像机使用进程来创建，其他硬件使用线程的方式创建
+                if attribute == 'has_camera':
+                    # 必须等待一段时间 相机同时初始化有bug发生 以后解决吧
+                    # mp.set_start_method('spawn')
+                    queue = mp.Queue(maxsize=CameraMax)
+                    kwargs_queue = mp.Queue(maxsize=1)
+                    ret_kwargs_queue = mp.Queue(maxsize=1)
+                    camera_dq_dict[device_object.pk + port] = queue
+                    camera_kwargs_dict[device_object.pk + port] = kwargs_queue
+                    camera_ret_kwargs_dict[device_object.pk + port] = ret_kwargs_queue
+                    camera_process = mp.Process(name=CAMERA_PROCESS_NAME, target=function, args=(
+                        port, device_label, queue, kwargs_queue, ret_kwargs_queue))
+                    print('-------摄像机进程开启-------', camera_process)
+                    kwargs_queue.put({'original': True})
+                    redis_client.set(f"g_bExit_{port}", "0")
+                    camera_process.start()
+                    # 清空管道，否则残留着之前的图片
+                    queue.get()
+                    # 必须清理，否则会有bug
+                    ret_kwargs_queue.get()
+                else:
+                    future = executer.submit(function, port, device_object, init=True, original=True, feature_test=True)
+                    futures.append(future)
+
                 hand_used_list.append(port)
 
             for future in futures:

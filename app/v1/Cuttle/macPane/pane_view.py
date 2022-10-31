@@ -213,7 +213,7 @@ class PaneConfigView(MethodView):
             function, attribute = (hand_init, "has_arm")
             controlUsbPower(status='init')
         setattr(device_object, attribute, True)
-        return function, device_object
+        return function, device_object, attribute
 
 
 class PaneBorderView(MethodView):

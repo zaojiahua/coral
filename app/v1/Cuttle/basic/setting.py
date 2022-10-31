@@ -74,6 +74,10 @@ rotate_hand_serial_obj_dict = {}
 hand_origin_cmd_prefix = 'Hand'
 hand_used_list = []
 camera_dq_dict = {}
+# 将摄像机拍照需要的参数，传递到这里
+camera_kwargs_dict = {}
+# 将拍摄照片返回的参数，传递到这里，为了做进程之间的同步
+camera_ret_kwargs_dict = {}
 sensor_serial_obj_dict = {}
 
 # 相机的参数和柜子类型紧密相关，所以应该根据柜子类型来区分，而不是功能测试还是性能测试
@@ -105,7 +109,7 @@ else:
                                          ("PixelFormat", 0x01080009, 'enum'),
                                          ("ExposureTime", 3500.0)]
 
-camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 180.0)]
+camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
 # Tcab-5se功能测试使用的参数
 camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
                                       ('GammaEnable', True),
@@ -115,7 +119,7 @@ camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
                                 ("PixelFormat", 0x01080009, 'enum'),
                                 ("ExposureTime", 3500.0),
                                 ("AcquisitionFrameRate", 240.0)]
-camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 200.0)]
+camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
                     ("OffsetX", 0),
@@ -221,7 +225,6 @@ chinese_ingore = 0.55
 # 屏幕右侧开关占比
 right_switch_percent = 0.87
 
-CamObjList = {}
 normal_result = (False, None)
 blur_signal = "[B]"
 # 需要按常见顺序调整 亮度百分比的顺序 尽可能优先匹配到常见亮度变化。

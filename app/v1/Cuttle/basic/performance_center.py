@@ -67,12 +67,13 @@ class PerformanceCenter(object):
 
     @property
     def back_up_dq(self):
-        if len(get_camera_ids()) > 1:
-            return self.inner_back_up_dq
-        else:
-            # 其他类型的柜子就一个相机
-            for camera_key in camera_dq_dict:
-                return camera_dq_dict.get(camera_key)
+        return self.inner_back_up_dq
+        # if len(get_camera_ids()) > 1:
+        #     return self.inner_back_up_dq
+        # else:
+        #     # 其他类型的柜子就一个相机
+        #     for camera_key in camera_dq_dict:
+        #         return camera_dq_dict.get(camera_key)
 
     def get_back_up_image(self, image):
         if len(get_camera_ids()) > 1:
@@ -454,7 +455,6 @@ class PerformanceCenter(object):
     def picture_prepare(self, number, area):
         # use_icon_scope为true时裁剪snap图中真实icon出现的位置
         # use_icon_scope为false时裁剪snap图中refer中标记的configArea选区大致范围
-        print('准备图片：', number)
         picture = None
         max_retry_time = 10
         while max_retry_time >= 0:
@@ -472,6 +472,7 @@ class PerformanceCenter(object):
             max_retry_time -= 1
 
         if picture is not None:
+            print('准备图片：', number, ' 帧号：', picture_info['frame_num'])
             return [p[area[1]:area[3], area[0]:area[2]] for p in [picture, pic_next, pic_next_next]] + [timestamp]
         else:
             return None, None, None, None
@@ -507,6 +508,9 @@ class PerformanceCenter(object):
             del image_info['image']
         self.back_up_dq.clear()
         gc.collect()
+        # 单例模式，这里对变量进行清空，无论成功还是失败，肯定会调用这里
+        self.start_number = 0
+        self.start_timestamp = 0
         print('清空 back up dq 队列。。。。')
 
     def move_src_to_backup(self):

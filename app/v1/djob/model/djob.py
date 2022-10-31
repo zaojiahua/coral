@@ -23,6 +23,7 @@ from app.libs.adbutil import get_room_version
 from app.config.ip import ADB_TYPE
 from app.config.setting import CORAL_TYPE
 from app.libs.ospathutil import deal_dir_file
+from app.v1.Cuttle.basic.operator.image_operator import RECOGNIZE_WORDS
 
 """
 inner job 只有一个 job flow
@@ -174,6 +175,7 @@ class DJob(BaseModel):
 
         if len(rds_result) != 0:
             app_info = []
+            recognize_words = []
 
             def process_unit(eblock):
                 for unit_list in eblock.get('all_unit_list', []):
@@ -186,13 +188,22 @@ class DJob(BaseModel):
                             app_info.append({'package_name': unit.get('detail').get('package_name'),
                                              'app_version': unit.get('detail').get('app_version')})
 
+                        # 处理recognize_words这个特殊的字段
+                        if RECOGNIZE_WORDS in unit.get('detail', {}):
+                            recognize_words.append(unit['detail'][RECOGNIZE_WORDS])
+
             for job_flow in rds_result:
+                recognize_words = []
+
                 for eblock in job_flow.get('eblock_list', []):
                     if 'eblock_list' in eblock:
                         for inner_eblock in eblock.get('eblock_list', []):
                             process_unit(inner_eblock)
                     else:
                         process_unit(eblock)
+
+                if len(recognize_words) > 0:
+                    job_flow[RECOGNIZE_WORDS] = recognize_words
 
             if len(app_info) > 0:
                 json_data['app_info'] = json.dumps(app_info)

@@ -120,7 +120,7 @@ class CameraHandler(Handler):
             redis_client.set(f'camera_grabbing_{camera_id}', 0)
 
             # 设置参数，开始拍照
-            camera_kwargs_dict[self._model.pk + camera_id].put({
+            put_kwargs = {
                 'high_exposure': self.high_exposure,
                 'temporary': temporary,
                 'original': self.original,
@@ -128,7 +128,10 @@ class CameraHandler(Handler):
                 'feature_test': feature_test,
                 'modify_fps': self.modify_fps,
                 'soft_sync': soft_sync
-            })
+            }
+            camera_kwargs_dict[self._model.pk + camera_id].put(put_kwargs)
+            # 因为出现了bug，所以这里打印一下日志，后续解决了可以去掉打印
+            print('传给相机的参数是：', put_kwargs)
             redis_client.set(f"g_bExit_{camera_id}", '0')
 
         # 默认使用第一个相机中的截图

@@ -31,7 +31,7 @@ def tboard_init():
                     dut.remove()
                 else:
                     print(f'重新开始执行用例 {dut.device_label}')
-                    time.sleep(10)
+                    time.sleep(30)
                     # 这里有一小点问题，当上一个任务恰好执行完毕，提交了rds以后容器重启的话，current_job_index不应该减1
                     dut.current_job_index -= 1
                     dut.start_dut()

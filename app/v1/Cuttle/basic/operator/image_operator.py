@@ -149,6 +149,9 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def recognize_words(self, exec_content):
         data = self._wrapper_validate(exec_content, ImageSchemaCompatible)
         path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
+        # 将图片放大俩倍 识别效果更好
+        scale_pic = cv2.resize(cv2.imread(path), dsize=(0, 0), fx=2, fy=2)
+        cv2.imwrite(path, scale_pic)
         name = exec_content.get('requiredWords')
         reg_match = exec_content.get('regWords')
         with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:

@@ -591,9 +591,18 @@ class PerformanceCenter(object):
 
                 # 对丢帧检测的结果进行绘图
                 if self.start_method == 3:
-                    group_info = self.get_picture_group(cur_index)
                     picture = cv2.rectangle(picture.copy(), (self.end_area[0], self.end_area[1]),
                                             (self.end_area[2], self.end_area[3]), (0, 255, 0), 4)
+                    group_info = self.get_picture_group(cur_index)
+                    # 记录分组信息
+                    if group_info is not None:
+                        try:
+                            fps = round(1 / (group_info['end_time'] - group_info['start_time']) * 1000, 1)
+                        except ZeroDivisionError:
+                            fps = FpsMax
+                        # print(fps, group_info)
+                        picture = cv2.putText(picture.copy(), f'fps: {fps}', (self.end_area[0], self.end_area[1] - 10),
+                                              cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
 
                 # picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
                 picture_save = picture

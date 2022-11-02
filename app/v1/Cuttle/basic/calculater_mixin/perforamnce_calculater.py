@@ -236,7 +236,7 @@ class PerformanceMinix(object):
             performance = PerformanceCenter(self._model.pk, None, None,
                                             data.get("areas")[0], data.get("threshold", 0.99),
                                             self.kwargs.get("work_path"), fps=data.get("fps"))
-            performance.test_fps_lost(self._picture_changed)
+            performance.fps_lost()
             self.extra_result = performance.result
             return 0
         except Exception as e:

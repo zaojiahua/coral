@@ -67,6 +67,8 @@ class PerformanceCenter(object):
         self.kwargs = kwargs
         # 图片保存的路径是固定的
         self.result = {'url_prefix': "path=" + self.work_path}
+        # 记录丢帧检测的所有组数
+        self.groups = []
 
     @property
     def back_up_dq(self):
@@ -392,7 +394,7 @@ class PerformanceCenter(object):
         cv2.rectangle(pic, (x1, y1), (x4, y4), (0, 255, 0), 4)
         cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), pic)
 
-    def test_fps_lost(self, judge_function):
+    def fps_lost(self):
         # 必须找到一个变化的区间才能继续往下判断
         if not self.start_number:
             self.start_end_loop_not_found(VideoStartPointNotFound())
@@ -405,7 +407,7 @@ class PerformanceCenter(object):
         # 一组的第一张图片
         group_start_pic = None
         # 记录所有的组数
-        groups = []
+        self.groups = []
         current_group = {}
 
         while self.loop_flag:
@@ -427,7 +429,7 @@ class PerformanceCenter(object):
                     # 记录旧的组数
                     current_group['end_number'] = number - 1
                     current_group['end_time'] = self.back_up_dq[number - 1]['host_timestamp']
-                    groups.append(current_group)
+                    self.groups.append(current_group)
                     print('产生出来一组帧：', current_group)
                     # 产生新的一组
                     current_group = {'start_number': number, 'start_time': timestamp}
@@ -501,31 +503,6 @@ class PerformanceCenter(object):
             return [p[area[1]:area[3], area[0]:area[2]] for p in [picture, pic_next, pic_next_next]] + [timestamp]
         else:
             return None, None, None, None
-
-    def picture_prepare_for_fps_lost(self, number, skip=2):
-        for i in range(3):
-            try:
-                for i in range(skip + 1):
-                    pic = self.back_up_dq.popleft()
-                    if i == 0:
-                        pic_original = pic
-                    elif i == skip:
-                        pic_compare_1 = pic
-                    cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), pic)
-                    number += 1
-                pic_compare_2 = self.back_up_dq[skip - 1]
-                break
-            except IndexError as e:
-                print("error in picture_prepare", repr(e))
-                time.sleep(0.05)
-        h, w = pic_original.shape[:2]
-        area = [int(i) if i > 0 else 0 for i in
-                [self.scope[0] * w, self.scope[1] * h, self.scope[2] * w, self.scope[3] * h]] \
-            if 0 < all(i <= 1 for i in self.scope) else [int(i) for i in self.scope]
-        pic_original = pic_original[area[1]:area[3], area[0]:area[2]]
-        pic_compare_1 = pic_compare_1[area[1]:area[3], area[0]:area[2]]
-        pic_compare_2 = pic_compare_2[area[1]:area[3], area[0]:area[2]]
-        return number, pic_original, pic_compare_1, pic_compare_2
 
     def back_up_clear(self):
         while len(self.back_up_dq) > 0:
@@ -612,6 +589,12 @@ class PerformanceCenter(object):
                                                   (20, 400 + force_index * 20),
                                                   cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
 
+                # 对丢帧检测的结果进行绘图
+                if self.start_method == 3:
+                    group_info = self.get_picture_group(cur_index)
+                    picture = cv2.rectangle(picture.copy(), (self.end_area[0], self.end_area[1]),
+                                            (self.end_area[2], self.end_area[3]), (0, 255, 0), 4)
+
                 # picture_save = cv2.resize(picture, dsize=(0, 0), fx=0.7, fy=0.7)
                 picture_save = picture
                 if find_end and hasattr(self, "draw_rec") and \
@@ -676,3 +659,9 @@ class PerformanceCenter(object):
             else:
                 return picture_index, host_timestamp
         return pic_number - 1, host_timestamp
+
+    # 获得当前图片对应的组数数据
+    def get_picture_group(self, number):
+        for group in self.groups:
+            if group['start_number'] <= number <= group['end_number']:
+                return group

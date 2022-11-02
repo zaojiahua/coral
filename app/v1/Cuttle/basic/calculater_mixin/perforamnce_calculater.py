@@ -238,8 +238,7 @@ class PerformanceMinix(object):
                                             self.kwargs.get("work_path"), fps=data.get("fps"))
             performance.test_fps_lost(self._picture_changed)
             self.extra_result = performance.result
-            result = 0 if performance.result.get("fps_lost") == False else 1
-            return result
+            return 0
         except Exception as e:
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
             self.wait_end()

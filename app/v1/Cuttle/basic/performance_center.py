@@ -29,10 +29,12 @@ class PerformanceCenter(object):
     inner_back_up_dq = deque(maxlen=CameraMax)
     # 0: _black_field 1: 按下压感 2: 抬起压感 3: 图标膨胀
     start_method = 0
-    end_number = 0
     start_area = None
     start_number = 0
     start_timestamp = 0
+    # 终点相关
+    end_number = 0
+    end_area = None
     # 压感相关
     max_force = 0
     sensor_index = None
@@ -49,7 +51,6 @@ class PerformanceCenter(object):
 
     def __init__(self, device_id, icon_area, refer_im_path, scope, threshold, work_path: str, **kwargs):
         self.device_id = device_id
-        self.result = {}
         # 使用黑色区域时，icon_scope为icon实际出现在snap图中的位置，使用icon surf时icon_scope为编辑时出现在refer图中的位置
         # 使用选区变化/不变时 icon_scope 为None
         # icon 和scope 这里都是相对的坐标
@@ -64,6 +65,8 @@ class PerformanceCenter(object):
             os.makedirs(work_path)
         self.work_path = work_path
         self.kwargs = kwargs
+        # 图片保存的路径是固定的
+        self.result = {'url_prefix': "path=" + self.work_path}
 
     @property
     def back_up_dq(self):
@@ -236,9 +239,6 @@ class PerformanceCenter(object):
     def start_end_loop_not_found(self, exp=None):
         set_global_value(CAMERA_IN_LOOP, False)
 
-        # result数据的写入 只有在end的时候是有效的
-        self.result['url_prefix'] = "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path # noqa
-
         if 'time_per_unit' not in self.result or self.start_method in [1, 2]:
             self.result['time_per_unit'] = round(1 / FpsMax, 4)
 
@@ -319,15 +319,15 @@ class PerformanceCenter(object):
             # 准确度上就是有50%概率晚一帧，不过在240帧水平上，1帧误差可以接受
             # 这部分我们自己知道就好，千万别给客户解释出去了。
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number, area)
-            if picture is None:
-                print('图片不够 loop 2')
+            if picture is None or number >= CameraMax - 2:
+                print('图片不够或者已经达到了取图的最大值')
                 # 用上一次的图片时间，计算time per unit
                 _, __, ___, pre_timestamp = self.picture_prepare(number - 2, area)
                 job_duration = max(round((pre_timestamp - self.start_timestamp) / 1000, 3), 0)
                 time_per_unit = round(job_duration / (number - 2 - self.start_number), 4)
-                self.result = {'picture_count': number - 1,
-                               "start_point": self.start_number,
-                               "time_per_unit": time_per_unit}
+                self.result['picture_count'] = number - 1
+                self.result['start_point'] = self.start_number
+                self.result['time_per_unit'] = time_per_unit
                 self.start_end_loop_not_found()
             number += 2
 
@@ -363,26 +363,13 @@ class PerformanceCenter(object):
                 time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
                 picture_count = int(self.end_number + FpsMax - 1)
 
-                self.result = {"start_point": self.start_number, "end_point": self.end_number,
-                               "job_duration": job_duration,
-                               "time_per_unit": time_per_unit,
-                               "picture_count": len(self.back_up_dq)
-                               if len(self.back_up_dq) < picture_count else picture_count,
-                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path} # noqa
+                self.result['start_point'] = self.start_number
+                self.result['end_point'] = self.end_number
+                self.result['job_duration'] = job_duration
+                self.result['time_per_unit'] = time_per_unit
+                self.result['picture_count'] = len(self.back_up_dq) \
+                    if len(self.back_up_dq) < picture_count else picture_count
                 break
-            # 最后一张在prepare的时候就拿不到了 一次拿俩张图
-            elif number >= CameraMax - 2:
-                job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
-                time_per_unit = round(job_duration / (number - self.start_number), 4)
-
-                self.result = {"start_point": self.start_number,
-                               "time_per_unit": time_per_unit,
-                               "picture_count": number,
-                               "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-                self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                print('结束点图片判断超出最大数量')
-                self.start_end_loop_not_found()
-            del picture, next_picture, third_pic
         # 判断取图的线程是否完全终止
         for _ in as_completed([self.move_src_future]):
             print('move src 线程结束')
@@ -406,50 +393,64 @@ class PerformanceCenter(object):
         cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), pic)
 
     def test_fps_lost(self, judge_function):
-        self.start_end_loop_not_found()
-        # 这个方法还没完全做好，这仅当个思路吧
-        # 丢帧检测的单独方法，原理是看滑动时没帧图片是不是和上一帧相同，
-        # 同样由于机械臂硬件无法获取终止滑动的时间，所以与上一帧相同的图片可能为丢帧，也可能为滑动已经停止
-        # 需要设定为候选candidate，再继续看后续后面连续几（5）帧，如果都不变默认为已经停止
-        # if self.kwargs.get("fps") not in [60, 90, 120]:
-        #     raise FpsLostWrongValue
-        # if hasattr(self, "candidate"):
-        #     delattr(self, "candidate")
-        # number = self.start_number + 1
-        # skip = 2 if self.kwargs.get("fps") == 120 else 4
-        # for i in range(FpsMax * 3):
-        #     number, picture_original, picture_comp_1, picture_comp_2 = self.picture_prepare_for_fps_lost(number, skip)
-        #     if judge_function(picture_original, picture_comp_1, picture_comp_2, min(self.threshold + 0.005, 1),
-        #                       fps_lost=True) == False:
-        #         self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-        #         if hasattr(self, "candidate") and number - self.candidate >= skip * 4:
-        #             self.result = {"fps_lost": False,
-        #                            "picture_count": number + 29,
-        #                            "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-        #             self.end_number = number
-        #             self.move_flag = False
-        #             break
-        #         elif hasattr(self, "candidate"):
-        #             continue
-        #         else:
-        #             self.candidate = number - 1
-        #             continue
-        #     else:
-        #         if hasattr(self, "candidate"):
-        #             self.result = {"fps_lost": True, "lose_frame_point": self.candidate,
-        #                            "picture_count": number + 29,
-        #                            "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-        #             self.end_number = number
-        #             self.move_flag = False
-        #             break
-        #     if number >= CameraMax / 2:
-        #         self.move_flag = False
-        #         self.back_up_dq.clear()
-        #         raise VideoEndPointNotFound
-        # else:
-        #     self.result = {"fps_lost": False}
-        #     self.end_number = number
-        #     self.move_flag = False
+        # 必须找到一个变化的区间才能继续往下判断
+        if not self.start_number:
+            self.start_end_loop_not_found(VideoStartPointNotFound())
+
+        number = self.start_number
+        print("end loop start... now number:", number)
+
+        # 感兴趣的区域只需要计算一次即可，因为每张图片大小都是一样的，感兴趣的区域也没有变过
+        self.end_area = self.get_area(self.scope)
+        # 一组的第一张图片
+        group_start_pic = None
+        # 记录所有的组数
+        groups = []
+        current_group = {}
+
+        while self.loop_flag:
+            number += 1
+            picture, _, _, timestamp = self.picture_prepare(number, self.end_area)
+            if picture is None or number >= CameraMax - 1:
+                print('图片不够或已经达到了取图的最大值')
+                self.result['picture_count'] = number - 1
+                self.result['start_point'] = self.start_number
+                self.start_end_loop_not_found()
+
+            if group_start_pic is None:
+                group_start_pic = picture
+                current_group['start_number'] = number
+                current_group['start_time'] = timestamp
+                continue
+            else:
+                if self.picture_changed(group_start_pic, picture, self.threshold):
+                    # 记录旧的组数
+                    current_group['end_number'] = number - 1
+                    current_group['end_time'] = self.back_up_dq[number - 1]['host_timestamp']
+                    groups.append(current_group)
+                    print('产生出来一组帧：', current_group)
+                    # 产生新的一组
+                    current_group = {'start_number': number, 'start_time': timestamp}
+                    group_start_pic = picture
+                else:
+                    # 连续多张图片没有变化就认为找到了终点 能检测到的最低帧率是10
+                    if current_group['start_number'] < number - FpsMax / 10:
+                        print('找到终点了', number)
+                        self.end_number = number
+                        # 保留1s的图片 方便用户查看
+                        if len(self.back_up_dq) < number + 1 * FpsMax:
+                            time.sleep(1)
+
+                        set_global_value(CAMERA_IN_LOOP, False)
+                        picture_count = int(self.end_number + FpsMax - 1)
+                        self.result['start_point'] = self.start_number
+                        self.result['end_point'] = self.end_number
+                        self.result['picture_count'] = len(self.back_up_dq) \
+                            if len(self.back_up_dq) < picture_count else picture_count
+                        break
+        # 判断取图的线程是否完全终止
+        for _ in as_completed([self.move_src_future]):
+            print('move src 线程结束')
         return 0
 
     def get_area(self, scope, h=None, w=None):

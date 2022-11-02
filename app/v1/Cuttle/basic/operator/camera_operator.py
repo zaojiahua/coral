@@ -112,27 +112,36 @@ class CameraHandler(Handler):
         # 如果录像的话，则按照性能测试来录像
         feature_test = False if self.record_video else self.back_up_dq is None
         for camera_id in camera_ids:
-            # 相机正在获取图片的时候 不能再次使用
-            if redis_client.get(f"g_bExit_{camera_id}") == "0":
-                raise CameraInUse()
+            max_retry = 3
+            # 存在初始化失败的可能
+            while max_retry > 0:
+                # 相机正在获取图片的时候 不能再次使用
+                if redis_client.get(f"g_bExit_{camera_id}") == "0":
+                    raise CameraInUse()
 
-            redis_client.set(f"camera_loop_{camera_id}", 0)
-            redis_client.set(f'camera_grabbing_{camera_id}', 0)
+                redis_client.set(f"camera_loop_{camera_id}", 0)
+                redis_client.set(f'camera_grabbing_{camera_id}', 0)
 
-            # 设置参数，开始拍照
-            put_kwargs = {
-                'high_exposure': self.high_exposure,
-                'temporary': temporary,
-                'original': self.original,
-                'sync_camera': sync_camera,
-                'feature_test': feature_test,
-                'modify_fps': self.modify_fps,
-                'soft_sync': soft_sync
-            }
-            camera_kwargs_dict[self._model.pk + camera_id].put(put_kwargs)
-            # 因为出现了bug，所以这里打印一下日志，后续解决了可以去掉打印
-            print('传给相机的参数是：', put_kwargs)
-            redis_client.set(f"g_bExit_{camera_id}", '0')
+                # 设置参数，开始拍照
+                put_kwargs = {
+                    'high_exposure': self.high_exposure,
+                    'temporary': temporary,
+                    'original': self.original,
+                    'sync_camera': sync_camera,
+                    'feature_test': feature_test,
+                    'modify_fps': self.modify_fps,
+                    'soft_sync': soft_sync
+                }
+                camera_kwargs_dict[self._model.pk + camera_id].put(put_kwargs)
+                # 因为出现了bug，所以这里打印一下日志，后续解决了可以去掉打印
+                print('传给相机的参数是：', put_kwargs)
+                redis_client.set(f"g_bExit_{camera_id}", '0')
+                # 判断初始化结果，如果初始化失败再次尝试
+                init_success = camera_ret_kwargs_dict[self._model.pk + camera_id].get()
+                if init_success == 'success':
+                    break
+                else:
+                    max_retry -= 1
 
         # 默认使用第一个相机中的截图
         if len(camera_ids) == 1:

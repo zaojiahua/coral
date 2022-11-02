@@ -32,7 +32,7 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
             print('camera_id:', camera_id)
 
             try:
-                kwargs = {} if kwargs_queue.empty() else kwargs_queue.get()
+                kwargs = kwargs_queue.get()
                 print('kwargs', kwargs)
 
                 # 统计帧率
@@ -46,6 +46,9 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                 temporary = kwargs.get('temporary', True)
                 response = camera_init_hk(camera_id, device_label, **kwargs)
                 print("half done camera init", device_label, 'temporary:', temporary)
+
+                # 初始化没问题的话，通知主进程
+                ret_kwargs_queue.put('success')
 
                 # 性能测试的时候提前分配内存 应该单独放到一个队列里边去做
                 if not temporary and not kwargs.get('feature_test'):
@@ -70,6 +73,8 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                     camera_start_hk(camera_id, queue, *response, temporary=temporary)
 
             except Exception as e:
+                # 初始化失败通知主进程，重新初始化
+                ret_kwargs_queue.put('fail')
                 print('相机初始化异常：', e)
                 print(traceback.format_exc())
             except func_timeout.exceptions.FunctionTimedOut as e:

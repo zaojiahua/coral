@@ -106,7 +106,8 @@ class DoorKeeper(object):
                     camera_process.start()
                     # 清空管道，否则残留着之前的图片
                     queue.get()
-                    # 必须清理，否则会有bug
+                    # 必须清理，否则会有bug 一次是初始化的结果 另一个是最后的结果
+                    ret_kwargs_queue.get()
                     ret_kwargs_queue.get()
                 else:
                     future = executer.submit(function, port, device_object, init=True, original=True, feature_test=True)

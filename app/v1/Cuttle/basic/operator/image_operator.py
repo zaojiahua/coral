@@ -149,27 +149,31 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
     def recognize_words(self, exec_content):
         data = self._wrapper_validate(exec_content, ImageSchemaCompatible)
         path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
-        # 将图片放大俩倍 识别效果更好
-        scale_pic = cv2.resize(cv2.imread(path), dsize=(0, 0), fx=2, fy=2)
-        cv2.imwrite(path, scale_pic)
         name = exec_content.get('requiredWords')
         reg_match = exec_content.get('regWords')
-        with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
-            self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
-            result = ocr_obj.get_result()
-            if isinstance(result, list) and len(result) > 0:
-                words = result[0].get("text")
-                print('ocr以后的内容是：', words)
-                # 判断是否含有正则表达式，有的话就应用
-                if reg_match:
-                    match_result = re.findall(reg_match, words)
-                    if match_result:
-                        words = match_result[0]
-                    else:
-                        words = ''
-                print('正则以后的内容是：', words)
-                self.extra_result[RECOGNIZE_WORDS] = {name: words}
-                return 0
+        for scale in [1, 2]:
+            if scale != 1:
+                # 将图片放大俩倍 识别效果更好
+                scale_pic = cv2.resize(cv2.imread(path), dsize=(0, 0), fx=2, fy=2)
+                path = path[:-4] + f'_{scale}' + '.png'
+                cv2.imwrite(path, scale_pic)
+            with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
+                self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
+                result = ocr_obj.get_result()
+                if isinstance(result, list) and len(result) > 0:
+                    words = result[0].get("text")
+                    print('ocr以后的内容是：', words)
+                    # 判断是否含有正则表达式，有的话就应用
+                    if reg_match:
+                        match_result = re.findall(reg_match, words)
+                        if match_result:
+                            words = match_result[0]
+                        else:
+                            words = ''
+                    print('正则以后的内容是：', words)
+                    if words:
+                        self.extra_result[RECOGNIZE_WORDS] = {name: words}
+                        return 0
         self.extra_result[RECOGNIZE_WORDS] = {name: ''}
         return 1
 

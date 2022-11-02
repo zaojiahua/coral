@@ -211,7 +211,6 @@ class PerformanceMinix(object):
             self.extra_result = performance.result
             return 0
         except APIException as e:
-            self.image = performance.tguard_picture_path if hasattr(performance, "tguard_picture_path") else None
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
             self.wait_end()
             if hasattr(e, 'error_code'):
@@ -229,7 +228,7 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, None, None,
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"))
-        return performance.start_loop(self._picture_changed)
+        return performance.start_loop(start_method=3)
 
     def end_point_with_fps_lost(self, exec_content):
         try:
@@ -240,10 +239,10 @@ class PerformanceMinix(object):
             performance.test_fps_lost(self._picture_changed)
             self.extra_result = performance.result
             result = 0 if performance.result.get("fps_lost") == False else 1
-            self.image = performance.tguard_picture_path
             return result
-        except APIException as e:
-            self.image = performance.tguard_picture_path
+        except Exception as e:
+            self.extra_result = performance.result if isinstance(performance.result, dict) else {}
+            self.wait_end()
             return 1
 
     def test_performance_with_point(self, exec_content):

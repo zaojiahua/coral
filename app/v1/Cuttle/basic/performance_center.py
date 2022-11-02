@@ -68,12 +68,6 @@ class PerformanceCenter(object):
     @property
     def back_up_dq(self):
         return self.inner_back_up_dq
-        # if len(get_camera_ids()) > 1:
-        #     return self.inner_back_up_dq
-        # else:
-        #     # 其他类型的柜子就一个相机
-        #     for camera_key in camera_dq_dict:
-        #         return camera_dq_dict.get(camera_key)
 
     def get_back_up_image(self, image):
         if len(get_camera_ids()) > 1:
@@ -88,7 +82,7 @@ class PerformanceCenter(object):
         return src[int(device_obj.y1) - int(device_obj.roi_y1): int(device_obj.y2) - int(device_obj.roi_y1),
                    int(device_obj.x1) - int(device_obj.roi_x1): int(device_obj.x2) - int(device_obj.roi_x1)]
 
-    def start_judge_function(self, picture, threshold, number=None, timestamp=None):
+    def start_judge_function(self, picture, threshold, number=None, timestamp=None, next_pic=None):
         if self.start_method == 0:
             is_find = self._black_field(picture, threshold)
             if is_find and timestamp is not None:
@@ -98,9 +92,26 @@ class PerformanceCenter(object):
             is_find = self.sensor_press_down()
         elif self.start_method == 2:
             is_find = self.sensor_press_down(up=True)
+        elif self.start_method == 3:
+            is_find = self.picture_changed(picture, next_pic, threshold)
+            if is_find and timestamp is not None:
+                self.start_number = number
+                self.start_timestamp = timestamp
         else:
             is_find = False
         return is_find
+
+    # 判断图片是否发生了变化
+    @staticmethod
+    def picture_changed(picture, next_pic, threshold):
+        difference_threshold = 25
+        difference = np.absolute(np.subtract(picture, next_pic))
+        # result结果代表相似性
+        result = np.count_nonzero(difference < difference_threshold)
+        result2 = np.count_nonzero(difference > (255 - difference_threshold))
+        standard = picture.shape[0] * picture.shape[1] * picture.shape[2]
+        match_ratio = ((result + result2) / standard)
+        return match_ratio < threshold
 
     @staticmethod
     def black_field(picture):
@@ -197,8 +208,8 @@ class PerformanceCenter(object):
             # 裁剪图片获取当前和下两张
             # start点的确认主要就是判定是否特定位置全部变成了黑色，既_black_field方法 （主要）/丢帧检测时是判定区域内有无变化（稀有）
             # 这部分如果是判定是否变成黑色（黑色就是机械臂刚要点下的时候，挡住图标所以黑色），其实只用到当前图，下两张没有使用
-            if self.start_method == 0:
-                picture, _, __, timestamp = self.picture_prepare(number, area)
+            if self.start_method in [0, 3]:
+                picture, next_pic, __, timestamp = self.picture_prepare(number, area)
                 if picture is None:
                     print('图片不够，start loop')
                     self.start_end_loop_not_found(VideoStartPointNotFound())
@@ -206,10 +217,11 @@ class PerformanceCenter(object):
                 # 传感器判断起点不需要图片
                 picture = None
                 timestamp = None
+                next_pic = None
 
             # judge_function 返回True时 即发现了起始点
-            if self.start_judge_function(picture, self.threshold, number, timestamp):
-                print(f"循环到的次数 :{number} 发现了起始点 ::{self.start_number}", '!' * 10)
+            if self.start_judge_function(picture, self.threshold, number, timestamp, next_pic):
+                print(f"循环到的次数 :{number} 发现了起始点 :{self.start_number}", '!' * 10)
                 break
             elif number >= CameraMax / 2:
                 print(f'找不到起点了，开始退出。。。{number}')
@@ -247,6 +259,17 @@ class PerformanceCenter(object):
         self.back_up_clear()
         print('清空 back up dq 队列。。。。')
         raise exp or VideoEndPointNotFound()
+
+    # 终点的判断方法
+    def end_judge_function(self, picture, threshold, number=None, timestamp=None):
+        if self.end_method == 0:
+            pass
+        elif self.end_method == 1:
+            pass
+        elif self.end_method == 2:
+            pass
+        else:
+            pass
 
     def end_loop(self, judge_function):
         # 找到起点的时候，一定有有效的起始时间
@@ -383,49 +406,50 @@ class PerformanceCenter(object):
         cv2.imwrite(os.path.join(self.work_path, f"{number}.jpg"), pic)
 
     def test_fps_lost(self, judge_function):
+        self.start_end_loop_not_found()
         # 这个方法还没完全做好，这仅当个思路吧
         # 丢帧检测的单独方法，原理是看滑动时没帧图片是不是和上一帧相同，
         # 同样由于机械臂硬件无法获取终止滑动的时间，所以与上一帧相同的图片可能为丢帧，也可能为滑动已经停止
         # 需要设定为候选candidate，再继续看后续后面连续几（5）帧，如果都不变默认为已经停止
-        if self.kwargs.get("fps") not in [60, 90, 120]:
-            raise FpsLostWrongValue
-        if hasattr(self, "candidate"):
-            delattr(self, "candidate")
-        number = self.start_number + 1
-        skip = 2 if self.kwargs.get("fps") == 120 else 4
-        for i in range(FpsMax * 3):
-            number, picture_original, picture_comp_1, picture_comp_2 = self.picture_prepare_for_fps_lost(number, skip)
-            if judge_function(picture_original, picture_comp_1, picture_comp_2, min(self.threshold + 0.005, 1),
-                              fps_lost=True) == False:
-                self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
-                if hasattr(self, "candidate") and number - self.candidate >= skip * 4:
-                    self.result = {"fps_lost": False,
-                                   "picture_count": number + 29,
-                                   "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-                    self.end_number = number
-                    self.move_flag = False
-                    break
-                elif hasattr(self, "candidate"):
-                    continue
-                else:
-                    self.candidate = number - 1
-                    continue
-            else:
-                if hasattr(self, "candidate"):
-                    self.result = {"fps_lost": True, "lose_frame_point": self.candidate,
-                                   "picture_count": number + 29,
-                                   "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
-                    self.end_number = number
-                    self.move_flag = False
-                    break
-            if number >= CameraMax / 2:
-                self.move_flag = False
-                self.back_up_dq.clear()
-                raise VideoEndPointNotFound
-        else:
-            self.result = {"fps_lost": False}
-            self.end_number = number
-            self.move_flag = False
+        # if self.kwargs.get("fps") not in [60, 90, 120]:
+        #     raise FpsLostWrongValue
+        # if hasattr(self, "candidate"):
+        #     delattr(self, "candidate")
+        # number = self.start_number + 1
+        # skip = 2 if self.kwargs.get("fps") == 120 else 4
+        # for i in range(FpsMax * 3):
+        #     number, picture_original, picture_comp_1, picture_comp_2 = self.picture_prepare_for_fps_lost(number, skip)
+        #     if judge_function(picture_original, picture_comp_1, picture_comp_2, min(self.threshold + 0.005, 1),
+        #                       fps_lost=True) == False:
+        #         self.tguard_picture_path = os.path.join(self.work_path, f"{number - 1}.jpg")
+        #         if hasattr(self, "candidate") and number - self.candidate >= skip * 4:
+        #             self.result = {"fps_lost": False,
+        #                            "picture_count": number + 29,
+        #                            "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+        #             self.end_number = number
+        #             self.move_flag = False
+        #             break
+        #         elif hasattr(self, "candidate"):
+        #             continue
+        #         else:
+        #             self.candidate = number - 1
+        #             continue
+        #     else:
+        #         if hasattr(self, "candidate"):
+        #             self.result = {"fps_lost": True, "lose_frame_point": self.candidate,
+        #                            "picture_count": number + 29,
+        #                            "url_prefix": "http://" + HOST_IP + ":5000/pane/performance_picture/?path=" + self.work_path}
+        #             self.end_number = number
+        #             self.move_flag = False
+        #             break
+        #     if number >= CameraMax / 2:
+        #         self.move_flag = False
+        #         self.back_up_dq.clear()
+        #         raise VideoEndPointNotFound
+        # else:
+        #     self.result = {"fps_lost": False}
+        #     self.end_number = number
+        #     self.move_flag = False
         return 0
 
     def get_area(self, scope, h=None, w=None):

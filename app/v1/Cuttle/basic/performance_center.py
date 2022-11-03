@@ -189,14 +189,11 @@ class PerformanceCenter(object):
         return picture[area[1]:area[3], area[0]:area[2]]
 
     def camera_loop(self):
-        print("start_loop3", "&&&&&&&&&" * 10)
         set_global_value(CAMERA_IN_LOOP, True)
         executer = ThreadPoolExecutor()
         self.move_src_future = executer.submit(self.move_src_to_backup)
 
     def start_loop(self, start_method=0):
-        print("start_loop1", "&&&&&&&&&"*10)
-        print("set_shot_time: ", self.set_shot_time)
         number = 0
         self.start_method = start_method
         self.start_number = 0
@@ -207,7 +204,7 @@ class PerformanceCenter(object):
         self.force_dict = collections.defaultdict(list)
 
         self.camera_loop()
-        print("start_loop2", "&&&&&&&&&" * 10)
+
         # 感兴趣的区域只需要计算一次即可，因为每张图片大小都是一样的，感兴趣的区域也没有变过
         area = self.get_area(self.scope if self.start_method != 0 else self.icon_scope)
         self.start_area = area

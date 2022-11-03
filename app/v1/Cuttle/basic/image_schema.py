@@ -83,10 +83,9 @@ def verify_input_fps(input_fps):
     1. default
     2. 非default需要大于0且小于该柜子最小帧率
     """
-    from app.config.setting import CORAL_TYPE
-    from app.v1.Cuttle.basic.setting import MAX_FPS
+    from app.v1.Cuttle.basic.setting import FpsMax
     if input_fps != "default":
-        if float(input_fps) > MAX_FPS['max_fps_' + str(int(CORAL_TYPE * 10))] or float(input_fps) <= 0:
+        if float(input_fps) > FpsMax or float(input_fps) <= 0:
             raise MaxFpsSupport
 
 

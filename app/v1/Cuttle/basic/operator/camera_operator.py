@@ -54,7 +54,7 @@ class CameraHandler(Handler):
         # 性能测试的时候，用来实时的存放图片，如果传入这个参数，则可以实时的获取dp里边的图片
         self.back_up_dq = kwargs.get('back_up_dq')
         self.modify_fps = kwargs.get("modify_fps")
-        self.set_fps = kwargs.get('set_fps', "default")
+        self.set_fps = kwargs.get('set_fps', FpsMax)
         # 图片拼接时候用到的几个参数
         self.x_min = None
         self.y_min = None

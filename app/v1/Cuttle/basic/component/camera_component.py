@@ -169,7 +169,7 @@ def camera_init_hk(camera_id, device_label, **kwargs):
             elif isinstance(key[1], float):
                 check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
 
-    if kwargs.get('set_fps', 'default') != "default":
+    if kwargs.get('set_fps', FpsMax) != FpsMax:
         check_result(CamObj.MV_CC_SetFloatValue, "AcquisitionFrameRate", float(kwargs.get('set_fps')))
 
     # 设置roi 多摄像机暂时不设置

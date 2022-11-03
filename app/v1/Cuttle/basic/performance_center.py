@@ -65,7 +65,7 @@ class PerformanceCenter(object):
             os.makedirs(work_path)
         self.work_path = work_path
         self.kwargs = kwargs
-        self.set_fps = kwargs.get('set_fps', 'default')
+        self.set_fps = kwargs.get('set_fps', FpsMax)
         # 图片保存的路径是固定的
         self.result = {'url_prefix': "path=" + self.work_path}
 

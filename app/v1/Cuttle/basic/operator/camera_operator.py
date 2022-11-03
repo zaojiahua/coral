@@ -54,6 +54,7 @@ class CameraHandler(Handler):
         # 性能测试的时候，用来实时的存放图片，如果传入这个参数，则可以实时的获取dp里边的图片
         self.back_up_dq = kwargs.get('back_up_dq')
         self.modify_fps = kwargs.get("modify_fps")
+        self.set_fps = kwargs.get('set_fps', "default")
         # 图片拼接时候用到的几个参数
         self.x_min = None
         self.y_min = None
@@ -130,7 +131,8 @@ class CameraHandler(Handler):
                     'sync_camera': sync_camera,
                     'feature_test': feature_test,
                     'modify_fps': self.modify_fps,
-                    'soft_sync': soft_sync
+                    'soft_sync': soft_sync,
+                    'set_fps': self.set_fps
                 }
                 camera_kwargs_dict[self._model.pk + camera_id].put(put_kwargs)
                 # 因为出现了bug，所以这里打印一下日志，后续解决了可以去掉打印

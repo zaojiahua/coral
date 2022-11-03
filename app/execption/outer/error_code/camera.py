@@ -72,3 +72,9 @@ class MergeShapeNone(APIException):
     error_code = 5010
     code = 400
     description = "请先进行图像拼接！"
+
+
+class MaxFpsSupport(APIException):
+    error_code = 5011
+    code = 400
+    description = "设置的帧率超过了该柜型可支持的最大帧率"

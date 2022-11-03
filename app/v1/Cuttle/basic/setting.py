@@ -153,7 +153,14 @@ camera_params_54 = [("OffsetY", 0),
 
 high_exposure_params = [("ExposureTime", 200000.0),
                         ("Gain", 15)]
-
+# 所有柜子的最高帧率
+MAX_FPS = {
+    "max_fps_50": 240,
+    "max_fps_51": 60,
+    "max_fps_52": 240,
+    "max_fps_53": 240,
+    "max_fps_54": 480,
+}
 # 俩个同步相机的参数
 sync_camera_params = [('TriggerMode', 1, 'enum'),
                       ('TriggerSource', 0, 'enum'),

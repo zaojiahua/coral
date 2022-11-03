@@ -65,6 +65,7 @@ class PerformanceCenter(object):
             os.makedirs(work_path)
         self.work_path = work_path
         self.kwargs = kwargs
+        self.set_fps = kwargs.get('set_fps', 'default')
         # 图片保存的路径是固定的
         self.result = {'url_prefix': "path=" + self.work_path}
 
@@ -545,7 +546,7 @@ class PerformanceCenter(object):
         # 这里会阻塞，一直在获取图片
         try:
             device_obj.get_snapshot(image_path='', max_retry_time=1,
-                                    timeout=10 * 60, back_up_dq=self.back_up_dq, modify_fps=True)
+                                    timeout=10 * 60, back_up_dq=self.back_up_dq, modify_fps=True, set_fps=self.set_fps)
         except Exception as e:
             print(e)
             traceback.print_exc()

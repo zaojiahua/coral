@@ -4,6 +4,8 @@ import os
 import cv2
 from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE
 
+from app.execption.outer.error_code.camera import MaxFpsSupport
+
 
 def verify_exist(path):
     if not os.path.exists(path):
@@ -73,6 +75,19 @@ def verify_image(image_path):
     s = im.shape[0] * im.shape[1]
     if s < 100:
         raise ValidationError('image need bigger size ')
+
+
+def verify_input_fps(input_fps):
+    """
+    验证帧率，验证条件：
+    1. default
+    2. 非default需要大于0且小于该柜子最小帧率
+    """
+    from app.config.setting import CORAL_TYPE
+    from app.v1.Cuttle.basic.setting import MAX_FPS
+    if input_fps != "default":
+        if float(input_fps) > MAX_FPS['max_fps_' + str(int(CORAL_TYPE * 10))] or float(input_fps) <= 0:
+            raise MaxFpsSupport
 
 
 def verify_has_grep(cmd):
@@ -326,6 +341,7 @@ class SimpleVideoPullSchema(Schema):
 
 class PerformanceSchemaCompare(Schema):
     config = fields.String(data_key="configArea")
+    set_fps = fields.String(required=False, data_key="setFpsByUser", validate=verify_input_fps)
 
     class Meta:
         unknown = INCLUDE
@@ -340,10 +356,12 @@ class PerformanceSchemaCompare(Schema):
                 threshold = float(json_data.get("threshold", 0.99))
             data["areas"] = areas if areas != [] else [[1, 1, 1, 1]]
             data["threshold"] = threshold
+            data['set_fps'] = float(data.get('set_fps')) if data.get('set_fps', 'default') != "default" else "default"
             return data
-        except (FileNotFoundError,TypeError):
+        except (FileNotFoundError, TypeError):
             data["areas"] = [[0, 0, 1, 1]]
             data["threshold"] = 0.99
+            data['set_fps'] = float(data.get('set_fps')) if data.get('set_fps', 'default') != "default" else "default"
             return data
 
 
@@ -354,6 +372,7 @@ class PerformanceSchemaFps(PerformanceSchemaCompare):
 class PerformanceSchema(PerformanceSchemaCompare):
     icon_config = fields.String(required=True, data_key="configFile")
     refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
+    set_fps = fields.String(required=False, data_key="setFpsByUser", validate=verify_input_fps)
 
     @post_load()
     def explain(self, data, **kwargs):
@@ -369,4 +388,5 @@ class PerformanceSchema(PerformanceSchemaCompare):
             icon_threshold = 0.99
         data["icon_areas"] = icon_areas if icon_areas != [] else [[0, 0, 1, 1]]
         data["threshold"] = icon_threshold
+        data['set_fps'] = int(data.get('set_fps')) if data.get('set_fps', 'default') != "default" else "default"
         return data

@@ -94,11 +94,6 @@ def verify_shot_time(input_shot_time):
         raise MaxShotTimeSupport
 
 
-def get_shot_time(input_fps):
-    max_shot_time = round(CameraMax / input_fps)
-    return max_shot_time
-
-
 def verify_has_grep(cmd):
     if not "grep" in cmd and not "findstr" in cmd:
         raise ValidationError('input adb order should have "grep"/"findstr" ')
@@ -359,8 +354,8 @@ class PerformanceSchemaCompare(Schema):
     @post_load()
     def explain(self, data, **kwargs):
         data['set_fps'] = float(data.get('set_fps')) if data.get('set_fps', 'default') != "default" else FpsMax
-        if data.get('set_shot_time', 'default') != "default" and float(data.get('set_shot_time')) <= get_shot_time(
-                data['set_fps']):
+        if data.get('set_shot_time', 'default') != "default" and (
+                float(data.get('set_shot_time')) * data['set_fps']) <= CameraMax:
             data['set_shot_time'] = float(data.get('set_shot_time'))
         elif data.get('set_shot_time', "default") == 'default':
             data['set_shot_time'] = "default"

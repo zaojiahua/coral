@@ -161,15 +161,17 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
                 self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
                 result = ocr_obj.get_result()
                 if isinstance(result, list) and len(result) > 0:
-                    words = result[0].get("text")
-                    print('ocr以后的内容是：', words)
-                    # 判断是否含有正则表达式，有的话就应用
-                    if reg_match:
-                        match_result = re.findall(reg_match, words)
-                        if match_result:
-                            words = match_result[0]
-                        else:
-                            words = ''
+                    for i in result:
+                        words = result[i].get("text")
+                        print('ocr以后的内容是：', words)
+                        # 判断是否含有正则表达式，有的话就应用
+                        if reg_match:
+                            match_result = re.findall(reg_match, words)
+                            if match_result:
+                                words = match_result[0]
+                                break
+                            else:
+                                words = ''
                     print('正则以后的内容是：', words)
                     if words:
                         self.extra_result[RECOGNIZE_WORDS] = {name: words}

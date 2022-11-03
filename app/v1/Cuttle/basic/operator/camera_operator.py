@@ -55,6 +55,7 @@ class CameraHandler(Handler):
         self.back_up_dq = kwargs.get('back_up_dq')
         self.modify_fps = kwargs.get("modify_fps")
         self.set_fps = kwargs.get('set_fps', FpsMax)
+        self.set_shot_time = kwargs.get('set_shot_time', 'default')
         # 图片拼接时候用到的几个参数
         self.x_min = None
         self.y_min = None
@@ -132,7 +133,8 @@ class CameraHandler(Handler):
                     'feature_test': feature_test,
                     'modify_fps': self.modify_fps,
                     'soft_sync': soft_sync,
-                    'set_fps': self.set_fps
+                    'set_fps': self.set_fps,
+                    'set_shot_time': self.set_shot_time
                 }
                 camera_kwargs_dict[self._model.pk + camera_id].put(put_kwargs)
                 # 因为出现了bug，所以这里打印一下日志，后续解决了可以去掉打印

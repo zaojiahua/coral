@@ -90,7 +90,7 @@ def verify_input_fps(input_fps):
 
 
 def verify_shot_time(input_shot_time):
-    if float(input_shot_time) < 0:
+    if input_shot_time != "default" and float(input_shot_time) < 0:
         raise MaxShotTimeSupport
 
 
@@ -362,6 +362,8 @@ class PerformanceSchemaCompare(Schema):
         if data.get('set_shot_time', 'default') != "default" and float(data.get('set_shot_time')) <= get_shot_time(
                 data['set_fps']):
             data['set_shot_time'] = float(data.get('set_shot_time'))
+        elif data.get('set_shot_time', "default") == 'default':
+            data['set_shot_time'] = "default"
         else:
             raise MaxShotTimeSupport
         try:

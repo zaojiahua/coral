@@ -86,7 +86,8 @@ class PerformanceMinix(object):
         # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"), )
+                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point(self, exec_content):
@@ -142,7 +143,8 @@ class PerformanceMinix(object):
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),)
+                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point_fixed(self, exec_content):
@@ -165,7 +167,8 @@ class PerformanceMinix(object):
             return 0
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),)
+                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     # 下面几个就是上面那几个结束点版本

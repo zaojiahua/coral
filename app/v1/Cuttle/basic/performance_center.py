@@ -66,6 +66,7 @@ class PerformanceCenter(object):
         self.work_path = work_path
         self.kwargs = kwargs
         self.set_fps = kwargs.get('set_fps', FpsMax)
+        self.set_shot_time = kwargs.get('set_shot_time', "default")
         # 图片保存的路径是固定的
         self.result = {'url_prefix': "path=" + self.work_path}
 
@@ -188,11 +189,14 @@ class PerformanceCenter(object):
         return picture[area[1]:area[3], area[0]:area[2]]
 
     def camera_loop(self):
+        print("start_loop3", "&&&&&&&&&" * 10)
         set_global_value(CAMERA_IN_LOOP, True)
         executer = ThreadPoolExecutor()
         self.move_src_future = executer.submit(self.move_src_to_backup)
 
     def start_loop(self, start_method=0):
+        print("start_loop1", "&&&&&&&&&"*10)
+        print("set_shot_time: ", self.set_shot_time)
         number = 0
         self.start_method = start_method
         self.start_number = 0
@@ -203,7 +207,7 @@ class PerformanceCenter(object):
         self.force_dict = collections.defaultdict(list)
 
         self.camera_loop()
-
+        print("start_loop2", "&&&&&&&&&" * 10)
         # 感兴趣的区域只需要计算一次即可，因为每张图片大小都是一样的，感兴趣的区域也没有变过
         area = self.get_area(self.scope if self.start_method != 0 else self.icon_scope)
         self.start_area = area
@@ -546,7 +550,8 @@ class PerformanceCenter(object):
         # 这里会阻塞，一直在获取图片
         try:
             device_obj.get_snapshot(image_path='', max_retry_time=1,
-                                    timeout=10 * 60, back_up_dq=self.back_up_dq, modify_fps=True, set_fps=self.set_fps)
+                                    timeout=10 * 60, back_up_dq=self.back_up_dq, modify_fps=True, set_fps=self.set_fps,
+                                    set_shot_time=self.set_shot_time)
         except Exception as e:
             print(e)
             traceback.print_exc()

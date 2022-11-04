@@ -26,7 +26,7 @@ frame_cache = deque(maxlen=CameraMax)
 # 注意这里是单独的一个进程，数据只能自己用，其他进程无法使用，进程间的通信使用queue
 # 相机初始化
 def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue):
-    while True:
+    while redis_client.get(f"camera_process_{camera_id}") == '1':
         if redis_client.get(f"g_bExit_{camera_id}") == '0':
             # 根据camera_id来支持多摄像头的方案
             print('camera_id:', camera_id)
@@ -112,6 +112,8 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
                 # 等拿图这里完全结束了，另一个进程中再执行其他的操作，这里做一个同步
                 ret_kwargs_queue.put('end')
         time.sleep(0.1)
+    # 重新注册的时候会发生异常，所以做移除处理
+    destroy_camera(camera_id)
 
 
 def camera_init_hk(camera_id, device_label, **kwargs):
@@ -341,6 +343,16 @@ def stop_camera(cam_obj, camera_id, **kwargs):
         # del cam_obj
         # del CamObjList[camera_id]
     print("stop camera finished..[Debug]")
+
+
+def destroy_camera(camera_id):
+    cam_obj = CamObjList[camera_id]
+    if cam_obj is not None:
+        cam_obj.MV_CC_CloseDevice()
+        cam_obj.MV_CC_DestroyHandle()
+        # 销毁
+        del cam_obj
+        del CamObjList[camera_id]
 
 
 def check_result(func, *args):

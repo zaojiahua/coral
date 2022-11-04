@@ -103,6 +103,7 @@ class DoorKeeper(object):
                     print('-------摄像机进程开启-------', camera_process)
                     kwargs_queue.put({'original': True})
                     redis_client.set(f"g_bExit_{port}", "0")
+                    redis_client.set(f"camera_process_{port}", '1')
                     camera_process.start()
                     # 清空管道，否则残留着之前的图片
                     queue.get()

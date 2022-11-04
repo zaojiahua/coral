@@ -24,6 +24,7 @@ from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COOR
     COMPUTE_M_LOCATION, hand_serial_obj_dict, rotate_hand_serial_obj_dict, sensor_serial_obj_dict
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.execption.outer.error_code.camera import CoordinateConvert, MergeShapeNone
+from redis_init import redis_client
 
 
 class DeviceStatus(object):
@@ -424,6 +425,10 @@ class Device(BaseModel):
         if CORAL_TYPE >= 5:
             hand_serial_obj_dict.clear()
             sensor_serial_obj_dict.clear()
+            if self.has_camera:
+                # 先简单处理
+                redis_client.set(f"camera_process_1", '0')
+                redis_client.set(f"camera_process_2", '0')
         if CORAL_TYPE == 3:
             rotate_hand_serial_obj_dict.clear()
         # 移除僚机信息

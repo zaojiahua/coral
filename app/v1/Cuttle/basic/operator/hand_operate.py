@@ -292,7 +292,7 @@ class HandHandler(Handler, DefaultMixin):
             self.kwargs["exec_repeat_sliding_obj"].send_list_order(self.kwargs["repeat_sliding_order"],
                                                                    ignore_reset=ignore_reset)
             time.sleep(0.5)
-        self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=repeat_time * 8)
+        self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=repeat_time * 8 * 4)
         return 0
 
     def record_repeat_count(self, *args, **kwargs):

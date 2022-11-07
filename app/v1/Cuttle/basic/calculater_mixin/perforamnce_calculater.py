@@ -74,7 +74,7 @@ class PerformanceMinix(object):
             # 异步延迟执行点击操作，确保另外一个线程的照片可以涵盖到这个操作
             executer.submit(self.delay_exec,
                             ocr_obj.point,
-                            is_init=True)\
+                            is_init=True) \
                 .add_done_callback(executor_callback)
             # 兼容其他多选区的格式，增加一层
             # 因为PerformanceCenter内部需要根据起点icon x方向位置，计算阴影补偿，所以此处再统一换回摄像头下的相对坐标
@@ -86,7 +86,8 @@ class PerformanceMinix(object):
         # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"))
+                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point(self, exec_content):
@@ -142,7 +143,8 @@ class PerformanceMinix(object):
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"))
+                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point_fixed(self, exec_content):
@@ -165,7 +167,8 @@ class PerformanceMinix(object):
             return 0
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"))
+                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     # 下面几个就是上面那几个结束点版本
@@ -305,21 +308,21 @@ class PerformanceMinix(object):
         result2 = np.count_nonzero(230 < difference)
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
-        final_result = match_ratio < (1.97-threshold)
+        final_result = match_ratio < (1.97 - threshold)
         if third_pic is not None:
             difference_2 = np.absolute(np.subtract(last_pic, third_pic))
             result_2 = np.count_nonzero(difference_2 < 25)
             result2_2 = np.count_nonzero(230 < difference_2)
             standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
             match_ratio_2 = ((result_2 + result2_2) / standard)
-            final_result_2 = match_ratio_2 < (1.95-threshold)
+            final_result_2 = match_ratio_2 < (1.95 - threshold)
         else:
             final_result_2 = True
             match_ratio_2 = 1
         if fps_lost:
             return not (not final_result and not final_result_2)
         # print(match_ratio_2,match_ratio)
-        return (final_result_2 and final_result) or match_ratio_2 < (1.94-threshold)
+        return (final_result_2 and final_result) or match_ratio_2 < (1.94 - threshold)
 
     def delay_exec(self, function, *args, **kwargs):
         # 5双摄升级版的柜子，机械臂离设备比较近，等待时间需要长一点，否则机械臂按完以后压力传感器才开始获取压力值

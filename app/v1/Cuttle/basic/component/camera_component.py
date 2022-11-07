@@ -33,7 +33,7 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
 
             try:
                 kwargs = kwargs_queue.get()
-                print('kwargs', kwargs)
+                print('kwargs：', kwargs)
 
                 # 统计帧率
                 frame_rate_dict[camera_id] = {'begin_time': -1, 'end_time': -1, 'pic_count': 0}
@@ -70,7 +70,9 @@ def camera_start(camera_id, device_label, queue, kwargs_queue, ret_kwargs_queue)
 
                     _inner_func()
                 else:
-                    camera_start_hk(camera_id, queue, *response, temporary=temporary)
+                    camera_start_hk(camera_id, queue, *response, temporary=temporary,
+                                    set_fps=kwargs.get("set_fps", FpsMax),
+                                    set_shot_time=kwargs.get("set_shot_time", "default"))
 
             except Exception as e:
                 # 初始化失败通知主进程，重新初始化
@@ -171,6 +173,9 @@ def camera_init_hk(camera_id, device_label, **kwargs):
             elif isinstance(key[1], float):
                 check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
 
+    if kwargs.get('set_fps', FpsMax) != FpsMax:
+        check_result(CamObj.MV_CC_SetFloatValue, "AcquisitionFrameRate", float(kwargs.get('set_fps')))
+
     # 设置roi 多摄像机暂时不设置
     if not kwargs.get('original') and not kwargs.get('sync_camera'):
         width, height, offset_x, offset_y = get_roi(device_label)
@@ -236,7 +241,8 @@ def start_grabbing(camera_id):
 
 
 # temporary：性能测试的时候需要持续不断的往队列里边放图片，但是在其他情况，只需要获取当时的一张截图即可
-def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temporary=True):
+def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temporary=True, set_fps=FpsMax,
+                    set_shot_time="default"):
     # 这个是海康摄像头持续获取图片的方法，原理还是用ctypes模块调用.dll或者.so文件中的变量
     cam_obj = CamObjList[camera_id]
     # 走到这里以后，设置一个标记，代表相机开始工作了
@@ -251,14 +257,15 @@ def camera_start_hk(camera_id, dq, data_buf, n_payload_size, st_frame_info, temp
         # 这个一个轮询的请求，5毫秒timeout，去获取图片
         ret = cam_obj.MV_CC_GetOneFrameTimeout(byref(data_buf), n_payload_size, st_frame_info, 5)
         if ret == 0:
-            camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id)
+            camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id, set_fps=set_fps,
+                            set_shot_time=set_shot_time)
             if temporary is True:
                 redis_client.set(f'g_bExit_{camera_id}', 1)
         else:
             continue
 
 
-def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
+def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id, set_fps=FpsMax, set_shot_time="default"):
     # 当摄像头有最新照片后，创建一个stConvertParam的结构体去获取实际图片和图片信息，
     # pDstBuffer这个指针指向真实图片数据的缓存
     b = time.time()
@@ -306,7 +313,8 @@ def camera_snapshot(dq, data_buf, st_frame_info, cam_obj, camera_id):
     print(f'camera{camera_id}获取到图片了', frame_num, ' ' * 5, frame_rate_dict[camera_id]['pic_count'], ' ' * 2, st_frame_info.nHostTimeStamp)
     # print('555555', (time.time() - b) * 1000)
     # 还有一个条件可以终止摄像机获取图片，就是每次获取的图片数量有个最大值，超过了最大值，本次获取必须终止，否则内存太大
-    if frame_num >= CameraMax:
+    max_shot_count = CameraMax if set_shot_time == "default" else round(set_shot_time * set_fps)
+    if frame_num >= max_shot_count:
         print('达到了取图的最大限制！！！')
         redis_client.set(f'g_bExit_{camera_id}', 1)
 

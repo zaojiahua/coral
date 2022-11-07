@@ -21,7 +21,7 @@ from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
 from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, \
-    COMPUTE_M_LOCATION, hand_serial_obj_dict, rotate_hand_serial_obj_dict, sensor_serial_obj_dict
+    COMPUTE_M_LOCATION, hand_serial_obj_dict, rotate_hand_serial_obj_dict, sensor_serial_obj_dict, FpsMax
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.execption.outer.error_code.camera import CoordinateConvert, MergeShapeNone
 from redis_init import redis_client
@@ -605,7 +605,7 @@ class Device(BaseModel):
     # 将截图获取统一到这里
     def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None,
                      max_retry_time=None, record_video=False, record_time=0, timeout=None, back_up_dq=None,
-                     modify_fps=False):
+                     modify_fps=False, set_fps=FpsMax, set_shot_time="default"):
         jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
                        "execCmdList": [
                            f"adb -s {connect_number if connect_number is not None else self.connect_number} "
@@ -618,7 +618,9 @@ class Device(BaseModel):
                        'max_retry_time': max_retry_time,
                        'timeout': timeout,
                        'back_up_dq': back_up_dq,
-                       'modify_fps': modify_fps})
+                       'modify_fps': modify_fps,
+                       'set_fps': set_fps,
+                       'set_shot_time': set_shot_time})
         if self.has_camera and connect_number is None:
             handler_type = "CameraHandler"
         else:

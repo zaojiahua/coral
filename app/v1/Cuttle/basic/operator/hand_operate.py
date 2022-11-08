@@ -393,16 +393,34 @@ class HandHandler(Handler, DefaultMixin):
         ]
         for point_index in range(len(points)):
             point = points[point_index]
-            sliding_order += ['G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], point[2], self.speed)]
+            speed = MOVE_SPEED if point_index == 0 else self.speed
+            sliding_order += ['G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], point[2], speed)]
         # 最后再加一条，抬起来的指令
         sliding_order += ['G01 X%0.1fY%0.1fZ%dF%d \r\n' % (points[-1][0], points[-1][1], Z_UP, MOVE_SPEED)]
 
-        # 3条3条的发送过去
-        step = 3
-        for order_index in range(0, len(sliding_order), step):
-            ignore_reset = False if (order_index + step) >= len(sliding_order) else True
-            exec_serial_obj.send_list_order(sliding_order[order_index:order_index + step], ignore_reset=ignore_reset)
-            exec_serial_obj.recv()
+        # 1条31的发送过去
+        exec_serial_obj.recv(buffer_size=128, is_init=True)
+        for order_index in range(0, len(sliding_order), 1):
+            ignore_reset = False if (order_index + 1) >= len(sliding_order) else True
+            begin_time = time.time()
+            exec_serial_obj.send_list_order(sliding_order[order_index:order_index + 1], ignore_reset=ignore_reset)
+            exec_serial_obj.recv(buffer_size=8, is_init=True)
+
+            # 根据距离，自己计算等待时间
+            regex = re.compile("[-\d.]+")
+            if order_index == 0:
+                begin_point = [float(point) for point in re.findall(regex, arm_wait_position)[1:4]]
+            else:
+                begin_point = [float(point) for point in re.findall(regex, sliding_order[order_index - 1])[1:4]]
+            end_point = [float(point) for point in re.findall(regex, sliding_order[order_index])[1:4]]
+            distance = round(np.linalg.norm(np.array(end_point) - np.array(begin_point)), 2)
+            speed = int(re.findall(regex, sliding_order[order_index])[-1])
+            print(distance, speed)
+
+            # 换算成以秒为单位的时间
+            spend_time = (distance / speed) * 60
+            while time.time() - begin_time < spend_time:
+                time.sleep(0.1)
 
     def back(self, _, **kwargs):
         # 按返回键，需要在5#型柜 先配置过返回键的位置
@@ -602,19 +620,19 @@ class HandHandler(Handler, DefaultMixin):
         """
         from app.v1.Cuttle.macPane.pane_view import ClickCenterPointFive
         # 保存到rds目录中，这样方便调试
-        filename = os.path.join(self.kwargs.get("rds_work_path"), f'break_point.png')
+        filename = os.path.join('break_point.png')
         result_filename = os.path.join(self.kwargs.get("rds_work_path"), f'result.png')
 
         self.continuous_swipe_2(pix_point)
 
         # 根据坐标点先做一个等待，等后期优化
-        time.sleep(2 * len(pix_point))
+        time.sleep(1)
         device_obj = self.get_device_obj()
         device_obj.get_snapshot(filename, max_retry_time=1, original=False)
         click_center_point_five = ClickCenterPointFive()
         success = click_center_point_five.get_contours(filename, result_filename)
 
-        return success
+        return success if success == 0 else 1
 
     def get_point_dis(self, points, pix_points, dis_filename, cur_index):
         # 计算俩点之间的距离

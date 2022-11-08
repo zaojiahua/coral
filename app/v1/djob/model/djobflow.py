@@ -435,6 +435,9 @@ class DJobFlow(BaseModel):
                 #     self.job_duration = unit.detail.get("time", float(0.0))
                 result = unit.detail.get("result", None)  # 存在没有结果表明未执行完成
                 if unit.execModName == ADBC_TYPE:
+                    if result is not None:
+                        if unit.finalResult:  # 是否将当前unit结果作为最终结果
+                            self.job_assessment_value = result
                     if result is not None and result < 0:
                         self.recent_adb_wrong_code = result
                         self.block_recent_adb_wrong_code = result

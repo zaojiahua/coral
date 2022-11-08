@@ -90,6 +90,7 @@ class PerformanceCenter(object):
                    int(device_obj.x1) - int(device_obj.roi_x1): int(device_obj.x2) - int(device_obj.roi_x1)]
 
     def start_judge_function(self, picture, threshold, number=None, timestamp=None, next_pic=None):
+        is_find = False
         if self.start_method == 0:
             is_find = self._black_field(picture, threshold)
             if is_find and timestamp is not None:
@@ -104,6 +105,11 @@ class PerformanceCenter(object):
             if is_find and timestamp is not None:
                 self.start_number = number
                 self.start_timestamp = timestamp
+        elif self.start_method == 4:
+            if number >= 2:
+                self.start_number = number
+                self.start_timestamp = time.time()
+                is_find = True
         else:
             is_find = False
         return is_find

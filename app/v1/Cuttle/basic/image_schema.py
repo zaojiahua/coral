@@ -343,8 +343,7 @@ class SimpleVideoPullSchema(Schema):
     fileName = fields.String(required=True, validate=has_format)
 
 
-class PerformanceSchemaCompare(Schema):
-    config = fields.String(data_key="configArea")
+class PerformanceFpsShotTimeSchema(Schema):
     set_fps = fields.String(required=False, data_key="setFpsByUser", validate=verify_input_fps)
     set_shot_time = fields.String(required=False, data_key="setShotTime", validate=verify_shot_time)
 
@@ -374,6 +373,15 @@ class PerformanceSchemaCompare(Schema):
             data["areas"] = [[0, 0, 1, 1]]
             data["threshold"] = 0.99
             return data
+
+
+class PerformanceSchemaCompare(PerformanceFpsShotTimeSchema):
+    config = fields.String(data_key="configArea")
+
+
+class PerformanceKeyNameSchema(PerformanceFpsShotTimeSchema):
+    key_name = fields.String(data_key="keyName")
+    press_time = fields.String(required=False, data_key="pressTime")
 
 
 class PerformanceSchemaFps(PerformanceSchemaCompare):

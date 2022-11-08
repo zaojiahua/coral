@@ -9,11 +9,13 @@ from app.execption.outer.error import APIException
 from app.execption.outer.error_code.imgtool import IconTooWeek, NotFindIcon
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.complex_center import Complex_Center
-from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
+from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps, \
+    PerformanceKeyNameSchema
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
 from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate
 from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
+from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec
 
 
 class PerformanceMinix(object):
@@ -170,6 +172,32 @@ class PerformanceMinix(object):
                                         self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
                                         set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
+
+    # 性能测试起点，按压自定义按键
+    def start_point_with_press_key(self, exec_content):
+        data = self._validate(exec_content, PerformanceKeyNameSchema)
+        cmd_list = [f"press custom-point {data['key_name']} {data['press_time']}"]
+        request_body = adb_unit_maker(cmd_list, self._model.pk, self._model.pk)
+        request_body['execCmdList'] = cmd_list
+
+        # 开始点击自定义按键
+        executer = ThreadPoolExecutor()
+        executer.submit(self.delay_exec, handler_exec, request_body, 'HandHandler')
+
+        # 对试运行的unit只进行点击，不计算时间
+        if self.kwargs.get("test_running"):
+            return 0
+
+        # 创建performance对象，并开始找起始点
+        performance = PerformanceCenter(self._model.pk,
+                                        None,
+                                        None,
+                                        [0, 0, 1, 1],
+                                        None,
+                                        self.kwargs.get("work_path"),
+                                        set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
+        return performance.start_loop(4)
 
     # 下面几个就是上面那几个结束点版本
     def end_point_with_icon(self, exec_content):

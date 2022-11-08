@@ -11,14 +11,14 @@ import cv2
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 
-from app.config.ip import HOST_IP
 from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_all_sensor_connect
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
-    CAMERA_IN_LOOP, sensor_serial_obj_dict, get_global_value, camera_dq_dict
+    CAMERA_IN_LOOP, sensor_serial_obj_dict, get_global_value, camera_dq_dict, CLICK_TIME
 from app.v1.Cuttle.basic.operator.camera_operator import get_camera_ids
 from app.config.setting import CORAL_TYPE
+from redis_init import redis_client
 
 sp = '/' if platform.system() == 'Linux' else '\\'
 EXTRA_PIC_NUMBER = 40
@@ -106,10 +106,14 @@ class PerformanceCenter(object):
                 self.start_number = number
                 self.start_timestamp = timestamp
         elif self.start_method == 4:
-            if number >= 2:
-                self.start_number = number
-                self.start_timestamp = time.time()
-                is_find = True
+            click_time = redis_client.get(CLICK_TIME)
+            if click_time is not None and click_time != '0':
+                if time.time() >= float(click_time):
+                    # 转换为毫秒
+                    self.start_timestamp = float(click_time) * 1000
+                    self.start_number, _ = self.get_picture_number(self.start_timestamp)
+                    is_find = True
+            time.sleep(0.1)
         else:
             is_find = False
         return is_find
@@ -546,11 +550,12 @@ class PerformanceCenter(object):
         if hasattr(self, 'end_number') and self.end_number:
             find_end = True
 
-        # 如果是双摄，图片没有来得及合并，找的起点图片会小，所以重新设置一下起点的值
-        if self.start_method in [1, 2] and CORAL_TYPE != 5.2:
+        # 如果是双摄，图片没有来得及合并，找的起点图片偏小，所以重新设置一下起点的值
+        if self.start_method in [1, 2, 4]:
             if 'start_point' in self.result:
                 self.start_number, host_timestamp = self.get_picture_number(self.start_timestamp)
                 self.bias = self.start_number
+                print('在最后重新设置起始点：', self.start_number)
                 self.result['start_point'] = self.start_number
                 if find_end:
                     # 修改time_per_unit，便于前端计算

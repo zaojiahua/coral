@@ -12,7 +12,7 @@ from app.v1.Cuttle.basic.complex_center import Complex_Center
 from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps, \
     PerformanceKeyNameSchema
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, CLICK_TIME
 from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
 from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec
@@ -353,6 +353,9 @@ class PerformanceMinix(object):
         return (final_result_2 and final_result) or match_ratio_2 < (1.94 - threshold)
 
     def delay_exec(self, function, *args, **kwargs):
+        # 涉及到点击动作的时间，这里重置
+        redis_client.set(CLICK_TIME, 0)
+
         # 5双摄升级版的柜子，机械臂离设备比较近，等待时间需要长一点，否则机械臂按完以后压力传感器才开始获取压力值
         if CORAL_TYPE == 5:
             time.sleep(kwargs.get("sleep", 1.3))

@@ -34,7 +34,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
-    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE
+    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -45,6 +45,7 @@ from redis_init import redis_client
 import copy
 
 from app.v1.Cuttle.basic.setting import COMPUTE_M_LOCATION
+from app.v1.Cuttle.basic.common_utli import hand_move_times
 
 ip = copy.copy(HOST_IP)
 logger = logging.getLogger(PANE_LOG_NAME)
@@ -451,12 +452,19 @@ class PaneClickTestView(MethodView):
         """
         is_exec_loop: 是否正在执行测试点击多次
         """
+        # 在这里计算点击或者按压的时间点 写入到redis中，用来辅助性能测试
+        move_times = hand_move_times(orders)
         if exec_action == "click":
             exec_serial_obj.send_out_key_order(orders[:2], others_orders=[orders[-1]], wait_time=wait_time,
                                                ignore_reset=ignore_reset)
+            # 需要注意可能存在多个机械臂
+            redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
+                             wait_time + ACCELERATION_TIME)
         elif exec_action == "press":
             exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=wait_time,
                                                ignore_reset=ignore_reset)
+            redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
+                             move_times[2] + wait_time + ACCELERATION_TIME)
         else:
             pass
         exec_serial_obj.recv()

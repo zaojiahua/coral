@@ -196,5 +196,7 @@ class Dut(BaseModel):
             msg = self.job_msg[job_label]
             if 'job_parameter' in msg and 'standby_time' in msg['job_parameter']:
                 total_standby_time += msg['job_parameter']['standby_time']
+        print('job message 是：', self.job_msg)
+        print('current job index:', self.current_job_index)
         print('总的待机时长是：', total_standby_time)
         return total_standby_time

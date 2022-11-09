@@ -184,7 +184,8 @@ class AdbHandler(Handler, ChineseMixin):
                                      f'{datetime.now().strftime(REEF_DATE_TIME_FORMAT)}')
                     # 通知reef
                     tboard_id = dut.pk.split('_')[-1]
-                    res = request(method="POST", json={'device': device.id, 'tboard': tboard_id},
+                    total_standby_time = dut.get_current_standby_time()
+                    res = request(method="POST", json={'device': device.id, 'tboard': tboard_id, 'standby_time': total_standby_time},
                                   url=battery_life_url)
                     print('空电关机reef的返回值是：', res)
                     dut.insert_special_djob()

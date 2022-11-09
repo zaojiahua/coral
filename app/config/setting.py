@@ -96,6 +96,8 @@ else:
     HARDWARE_MAPPING_LIST = ['1', arm_com, arm_com_sensor]
 
 Bugreport_file_name = "bugreport.zip"
+BUGREPORT = 'bugreport'
+JOB_SHARE = 'job_share'
 
 PICTURE_COMPRESS_RATIO = 0.5
 

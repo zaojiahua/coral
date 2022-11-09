@@ -9,7 +9,7 @@ import cv2
 from astra import models
 
 from app.config.ip import ADB_TYPE
-from app.config.setting import Bugreport_file_name, PICTURE_COMPRESS_RATIO
+from app.config.setting import Bugreport_file_name, PICTURE_COMPRESS_RATIO, BUGREPORT
 from app.config.url import device_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import AssistDeviceOrderError, AssistDeviceNotFind
@@ -274,7 +274,7 @@ class Unit(BaseModel):
         """
         self.remove_duplicate_pic(self.unit_work_path)
         for file in os.listdir(self.unit_work_path):
-            if file == Bugreport_file_name and self.assistDevice:
+            if BUGREPORT in file and self.assistDevice:
                 target_name = f"({handler.block_index}_{self.unit_list_index}){file.split('.')[0]}-{self.assistDevice}.{file.split('.')[1]}"
             else:
                 target_name = f"({handler.block_index}_{self.unit_list_index}){file}"
@@ -282,7 +282,7 @@ class Unit(BaseModel):
             # 一个公共读的目录 一个block内的其他unit需要用到之前unit的图片 或者跨block图片的使用 所以需要复制到一个公共的读目录以供其他unit使用
             target_read_path = os.path.join(handler.work_path, file)
             # 普通unit产生的图片可能会被下一个unit使用，因此只能copy
-            if file in save_list:
+            if file in save_list or BUGREPORT in file:
                 # 循环执行用例的时候，文件名是相同的，需要进行覆盖
                 shutil.copyfile(os.path.join(self.unit_work_path, file), target_read_path)
                 if not os.path.exists(target_path):

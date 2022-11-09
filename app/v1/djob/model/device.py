@@ -14,6 +14,8 @@ class DjobDevice(BaseModel):
     base_path = models.CharField()
     rds_data_path = models.CharField()
     djob_work_path = models.CharField()
+    # 该目录会跨多个job，不会删除
+    share_path = models.CharField()
     device_label = models.CharField()
     temp_port = OwnerList()
 

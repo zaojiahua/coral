@@ -7,7 +7,7 @@ from shutil import copyfile
 
 from astra import models
 
-from app.config.setting import JOB_SYN_RESOURCE_DIR
+from app.config.setting import JOB_SYN_RESOURCE_DIR, BUGREPORT
 from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url, upload_rds_zip_file_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import JobExecBodyException, JobExecUnknownException, \
@@ -348,6 +348,7 @@ class DJobFlow(BaseModel):
             "block_source": "Djob",
             "work_path": self.device.djob_work_path,
             "rds_path": self.device.rds_data_path,
+            'share_path': self.device.share_path,
             "temp_port_list": self.device.temp_port.lrange(0, -1),
             "ip_address": self.device.ip_address,
             **job_node.exec_node_dict,
@@ -513,8 +514,11 @@ class DJobFlow(BaseModel):
                         self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
                 if file_name.endswith((".txt", ".log", ".json")):
                     self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
-                # elif file_name.endswith(".zip"):
-                #     self._send_file(base_data, file_name, file_path, upload_rds_zip_file_url,"zip_file")
+                # 针对bugreport的特殊逻辑
+                elif BUGREPORT in file_name:
+                    name_frag = file_name[:-4].split('_')
+                    if len(name_frag) > 0 and name_frag[-1].isdigit():
+                        self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
 
         for djob_instance in self.inner_job_list:
             # inner job的 依赖文件上传

@@ -461,10 +461,11 @@ class PaneClickTestView(MethodView):
             redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
                              wait_time + ACCELERATION_TIME)
         elif exec_action == "press":
+            redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
+                             move_times[2] + wait_time)
+            print('按压的时间点：', redis_client.get(CLICK_TIME))
             exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=wait_time,
                                                ignore_reset=ignore_reset)
-            redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
-                             move_times[2] + wait_time + ACCELERATION_TIME)
         else:
             pass
         exec_serial_obj.recv()

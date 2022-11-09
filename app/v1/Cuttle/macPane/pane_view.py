@@ -459,10 +459,10 @@ class PaneClickTestView(MethodView):
                                                ignore_reset=ignore_reset)
             # 需要注意可能存在多个机械臂
             redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
-                             wait_time + ACCELERATION_TIME)
+                             ACCELERATION_TIME)
         elif exec_action == "press":
             redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
-                             move_times[2] + wait_time)
+                             move_times[2] + ACCELERATION_TIME)
             print('按压的时间点：', redis_client.get(CLICK_TIME))
             exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=wait_time,
                                                ignore_reset=ignore_reset)

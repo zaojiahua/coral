@@ -313,4 +313,4 @@ usb_power_open_recv = "A10101A3"
 # 机械臂的点击时间
 CLICK_TIME = 'click_time'
 # 机械臂移动起来的加速度时间
-ACCELERATION_TIME = 0.032
+ACCELERATION_TIME = 0.040

@@ -455,11 +455,11 @@ class PaneClickTestView(MethodView):
         # 在这里计算点击或者按压的时间点 写入到redis中，用来辅助性能测试
         move_times = hand_move_times(orders)
         if exec_action == "click":
-            exec_serial_obj.send_out_key_order(orders[:2], others_orders=[orders[-1]], wait_time=wait_time,
-                                               ignore_reset=ignore_reset)
             # 需要注意可能存在多个机械臂
             redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
                              ACCELERATION_TIME)
+            exec_serial_obj.send_out_key_order(orders[:2], others_orders=[orders[-1]], wait_time=wait_time,
+                                               ignore_reset=ignore_reset)
         elif exec_action == "press":
             redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
                              move_times[2] + ACCELERATION_TIME)

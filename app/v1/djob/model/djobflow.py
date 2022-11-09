@@ -515,7 +515,7 @@ class DJobFlow(BaseModel):
                 if file_name.endswith((".txt", ".log", ".json")):
                     self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
                 # 针对bugreport的特殊逻辑
-                elif BUGREPORT in file_name:
+                elif BUGREPORT in file_name and int(job_assessment_value) == 0:
                     name_frag = file_name[:-4].split('_')
                     if len(name_frag) > 0 and name_frag[-1].isdigit():
                         self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")

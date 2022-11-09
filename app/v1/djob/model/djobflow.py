@@ -18,7 +18,7 @@ from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, DictF
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request, request_file
 from app.libs.log import setup_logger
-from app.libs.ospathutil import file_rename_from_path
+from app.libs.ospathutil import file_rename_from_path, deal_dir_file
 from app.v1.djob.config.setting import NORMAL_TYPE, SWITCH_TYPE, END_TYPE, FAILED_TYPE, ADBC_TYPE, TEMPER_TYPE, \
     IMGTOOL_TYPE, SUCCESS_TYPE, SUCCESS, FAILED, INNER_DJOB_TYPE, DJOB, COMPLEX_TYPE, ERROR_FILE_DIR, ABNORMAL_TYPE, \
     ABNORMAL, TERMINATE_TYPE, TERMINATE
@@ -523,6 +523,13 @@ class DJobFlow(BaseModel):
         for djob_instance in self.inner_job_list:
             # inner job的 依赖文件上传
             djob_instance.push_log_and_pic(base_data, job_assessment_value, flow_id=flow_id)
+
+        # 将共享目录下的文件进行上传，上传完以后需要删除文件，否则下次还会上传
+        for file_name in os.listdir(self.device.share_path):
+            file_path = os.path.join(self.device.share_path, file_name)
+            if os.path.getsize(file_path):
+                self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
+            deal_dir_file(file_path)
 
     def _send_file(self, base_data, file_name, file_path, url, key):
         base_data["file_name"] = file_name

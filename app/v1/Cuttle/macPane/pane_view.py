@@ -34,7 +34,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
-    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME
+    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME, HAND_MAX_X, Z_POINT_FILE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -553,25 +553,22 @@ class PaneClickZDown(MethodView):
     def post(self):
         arm_num = request.get_json().get('arm_num', 0)
         recv_z_down = request.get_json()["z_down"]
+        # 存放用户选择的[+x, -y]坐标，当arm_num=1时，相应的坐标也会处理成右机械臂适合的坐标值
+        point = request.get_json().get('point')
         device_label = request.get_json()["device_label"]
         device_obj = Device(pk=device_label)
         click_z = -recv_z_down + float(device_obj.ply) if CORAL_TYPE != 5.3 else -recv_z_down
         exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
         if CORAL_TYPE == 5.3:  # 5d
-            click_xy = [160, -100] if arm_num == 0 else [-160, -100]
-            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1) if arm_num == 1 else exec_serial_obj
-        elif CORAL_TYPE == 5.2:  # 5se
-            click_xy = [90, -120]
-        elif CORAL_TYPE in [5, 5.4]:  # 5升级版加了延长杆
-            click_xy = [85, -170]
-        else:  # 5l
-            click_xy = [170, -170]
+            if arm_num == 1:
+                exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
+                point = [-(HAND_MAX_X - point[0]), point[1]]
         orders = [
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], click_z + 5, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], click_z, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], Z_UP, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z + 5, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], Z_UP, MOVE_SPEED),
         ]
-        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click")
+        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click", wait_time=2)
         return jsonify(dict(error_code=0))
 
 
@@ -587,6 +584,11 @@ class PaneUpdateZDown(MethodView):
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=device_label)
         device_obj.update_m_location()
+        click_xy = request.get_json()["click_xy"]
+        click_xy_1 = request.get_json()["click_xy_1"] if CORAL_TYPE == 5.3 else click_xy
+        with open(Z_POINT_FILE, "w+") as f:
+            f.write(f"click_xy={click_xy}\n")
+            f.write(f"click_xy_1={click_xy_1}\n")
         return jsonify(dict(error_code=0))
 
 
@@ -596,7 +598,28 @@ class PaneGetZDown(MethodView):
         data = {"z_down": -Z_DOWN}
         if CORAL_TYPE == 5.3:
             data.update({'z_down_1': (-Z_DOWN if not Z_DOWN_1 else -Z_DOWN_1)})
-
+        click_xy = []
+        if not os.path.exists(Z_POINT_FILE):
+            if CORAL_TYPE == 5.3:  # 5d
+                click_xy = [100, -100]
+                data.update({'click_xy_1': [200, -100]})
+            elif CORAL_TYPE == 5.2:  # 5se
+                click_xy = [90, -120]
+            elif CORAL_TYPE in [5, 5.4]:  # 5升级版加了延长杆
+                click_xy = [85, -170]
+            else:  # 5l
+                click_xy = [170, -170]
+        else:
+            with open(Z_POINT_FILE, 'rt') as f:
+                for line in f.readlines():
+                    key, value = line.strip('\n').split('=')
+                    if key == 'click_xy':
+                        click_xy = eval(value)
+                    if key == 'click_xy_1':
+                        click_xy_1 = eval(value)
+                if CORAL_TYPE == 5.3:
+                    data.update({'click_xy_1': click_xy_1})
+        data.update({'click_xy': click_xy})
         return jsonify(dict(error_code=0, data=data))
 
 

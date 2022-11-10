@@ -284,6 +284,7 @@ SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
 click_loop_stop_flag = True  # 如果为True, 则停止多次点击
 set_global_value("click_loop_stop_flag", click_loop_stop_flag)
 COORDINATE_POINT_FILE = "app/config/point.py"
+Z_POINT_FILE = "app/config/zpoint.py"
 
 # 相机外触发端子的指令
 camera_power_open = "01050000ff008c3a"

@@ -132,7 +132,10 @@ class PerformanceCenter(object):
 
     @staticmethod
     def black_field(picture):
-        picture = cv2.cvtColor(picture, cv2.COLOR_BGR2GRAY)
+        try:
+            picture = cv2.cvtColor(picture, cv2.COLOR_BGR2GRAY)
+        except Exception as e:
+            print('black field 出错', e, picture.shape)
         ret, picture = cv2.threshold(picture, 40, 255, cv2.THRESH_BINARY)
         result = np.count_nonzero(picture < 40)
         standard = picture.shape[0] * picture.shape[1]

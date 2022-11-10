@@ -553,7 +553,7 @@ class PaneClickZDown(MethodView):
         if CORAL_TYPE == 5.3:  # 5d
             if arm_num == 1:
                 exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
-                point = [HAND_MAX_X - point[0], point[1]]
+                point = [-(HAND_MAX_X - point[0]), point[1]]
         orders = [
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z + 5, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z, MOVE_SPEED),

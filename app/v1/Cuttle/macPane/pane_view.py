@@ -568,6 +568,10 @@ class PaneClickZDown(MethodView):
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], Z_UP, MOVE_SPEED),
         ]
+        # 判断机械臂状态是否在执行循环
+        if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):
+            return jsonify(dict(error_code=UsingHandFail.error_code,
+                                description=UsingHandFail.description))
         PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click", wait_time=2)
         return jsonify(dict(error_code=0))
 
@@ -810,7 +814,7 @@ class PaneCoordinateView(MethodView):
             for i in range(len(all_contours)):
                 for j in range(i + 1, len(all_contours)):
                     # x坐标基本一样
-                    if abs(all_contours[i][0][0] - all_contours[j][0][0]) < 5 and abs(
+                    if abs(all_contours[i][0][0] - all_contours[j][0][0]) < 6 and abs(
                             all_contours[i][0][1] - all_contours[j][0][1]) > 100:
                         return [all_contours[i], all_contours[j]]
 

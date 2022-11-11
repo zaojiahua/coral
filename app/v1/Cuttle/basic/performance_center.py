@@ -92,10 +92,12 @@ class PerformanceCenter(object):
     def start_judge_function(self, picture, threshold, number=None, timestamp=None, next_pic=None):
         is_find = False
         if self.start_method == 0:
-            is_find = self._black_field(picture, threshold)
-            if is_find and timestamp is not None:
-                self.start_number = number
-                self.start_timestamp = timestamp
+            # 传过来的图片不知为何，有可能是空的
+            if picture is not None:
+                is_find = self._black_field(picture, threshold)
+                if is_find and timestamp is not None:
+                    self.start_number = number
+                    self.start_timestamp = timestamp
         elif self.start_method == 1:
             is_find = self.sensor_press_down()
         elif self.start_method == 2:

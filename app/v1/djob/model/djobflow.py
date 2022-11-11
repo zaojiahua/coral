@@ -71,6 +71,12 @@ class DJobFlow(BaseModel):
     lose_frame_point = models.IntegerField()  # 记录性能测试记录的总图片
     url_prefix = models.CharField()  # 记录性能测试存图的url前缀
     time_per_unit = OwnerFloatField()  # 记录性能测试存图单位
+    frame_data = OwnerList(to=dict)
+    start_method = models.IntegerField()
+    end_method = models.IntegerField()
+    set_fps = OwnerFloatField()
+    fps = OwnerFloatField()
+    set_shot_time = OwnerFloatField()
     rds = OwnerForeignKey(to=RDS)  # 记录rds 详细结果,用于分析
     assist_device_serial_number = models.IntegerField()  # 记录僚机信息default 为 0 目前支持序列号 【1，2，3】
     inner_job_list = OwnerList(to="app.v1.djob.model.djobflow.DJobFlow")
@@ -406,7 +412,7 @@ class DJobFlow(BaseModel):
         :return:
         """
         rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit",
-                         "lose_frame_point"]
+                         "lose_frame_point", 'start_method', 'end_method', 'set_fps', 'set_shot_time', 'fps']
         self.recent_img_res_list = None  # 每一个block 产生的结果会覆盖recent_img_res_list
         self.recent_img_rpop_list = None
         self.block_recent_adb_wrong_code = 0
@@ -428,12 +434,15 @@ class DJobFlow(BaseModel):
 
                 # 存在却没有结果表明未执行完成或未执行,
                 # 因为创建eblock时就会创建unit,但是只有执行完的unit才由result
-                result = unit.detail.get("result", None)
                 for key in rds_info_list:
                     if unit.detail.get(key):
                         setattr(self, key, unit.detail.get(key))
-                # if self.job_duration == float(0):  # 获取第一个time(并不是用例执行时间,是性能用例测量的时间)
-                #     self.job_duration = unit.detail.get("time", float(0.0))
+
+                # 保存每一帧的数据
+                if unit.detail.get('frame_data'):
+                    for frame_info in unit.detail.get('frame_data'):
+                        self.frame_data.lpush(frame_info)
+
                 result = unit.detail.get("result", None)  # 存在没有结果表明未执行完成
                 if unit.execModName == ADBC_TYPE:
                     if result is not None:

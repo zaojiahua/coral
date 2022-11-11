@@ -33,6 +33,7 @@ class PerformanceCenter(object):
     start_number = 0
     start_timestamp = 0
     # 终点相关
+    end_method = 0
     end_number = 0
     end_area = None
     # 压感相关
@@ -66,9 +67,9 @@ class PerformanceCenter(object):
         self.work_path = work_path
         self.kwargs = kwargs
         self.set_fps = kwargs.get('set_fps', FpsMax)
-        self.set_shot_time = kwargs.get('set_shot_time', "default")
+        self.set_shot_time = kwargs.get('set_shot_time', CameraMax / FpsMax)
         # 图片保存的路径是固定的
-        self.result = {'url_prefix': "path=" + self.work_path}
+        self.result = {'url_prefix': "path=" + self.work_path, 'frame_data': []}
         # 记录丢帧检测的所有组数
         self.groups = []
 
@@ -538,9 +539,10 @@ class PerformanceCenter(object):
         device_obj = Device(pk=self.device_id)
         # 这里会阻塞，一直在获取图片
         try:
-            device_obj.get_snapshot(image_path='', max_retry_time=1,
-                                    timeout=10 * 60, back_up_dq=self.back_up_dq, modify_fps=True, set_fps=self.set_fps,
-                                    set_shot_time=self.set_shot_time)
+            snapshot_result = device_obj.get_snapshot(image_path='', max_retry_time=1, timeout=10 * 60,
+                                                      back_up_dq=self.back_up_dq, modify_fps=True, set_fps=self.set_fps,
+                                                      set_shot_time=self.set_shot_time)
+            print('snap shot返回值：', snapshot_result)
         except Exception as e:
             print(e)
             traceback.print_exc()
@@ -571,6 +573,7 @@ class PerformanceCenter(object):
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
         print('保存图片时候的end number', end_number, '*' * 10)
+
         try:
             for cur_index in range(end_number):
                 picture_info = self.back_up_dq[cur_index]
@@ -589,6 +592,7 @@ class PerformanceCenter(object):
                                                 (self.start_area[2], self.start_area[3]), (0, 0, 255), 2)
                         picture = cv2.putText(picture.copy(), str(match_ratio), (self.start_area[2] + 10, self.start_area[1] + 10),
                                               cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 3)
+                        picture_info['parameter'] = str(match_ratio)
                     elif self.start_method in [1, 2]:
                         host_timestamp = picture_info['host_timestamp']
                         force, timestamp = self.get_force(host_timestamp)
@@ -634,6 +638,32 @@ class PerformanceCenter(object):
                     # 已经在结束点画了图
                     if cur_index != (end_number - 1) or not find_end:
                         cv2.imwrite(os.path.join(self.work_path, f"{cur_index}.jpg"), picture_save)
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+
+        try:
+            self.result['start_method'] = self.start_method + 1
+            self.result['end_method'] = self.end_method + 1
+            self.result['set_fps'] = self.set_fps
+            self.result['set_shot_time'] = self.set_shot_time
+            # 保存性能测试过程中的相关数据，推送到服务器，方便前端展示
+            for frame_num in range(min(len(self.back_up_dq), end_number + int(1 * FpsMax))):
+                frame_data = {}
+                picture_info = self.back_up_dq[frame_num]
+                frame_data['frame_num'] = frame_num
+                frame_data['timestamp'] = picture_info['host_timestamp']
+                frame_data['parameter'] = picture_info.get('parameter')
+                try:
+                    frame_data['frame_duration'] = self.back_up_dq[frame_num + 1]['host_timestamp'] - \
+                                                   picture_info['host_timestamp']
+                except IndexError:
+                    pass
+                self.result['frame_data'].append(frame_data)
+            if len(self.result['frame_data']) > 0:
+                self.result['fps'] = round(len(self.result['frame_data']) /
+                                              ((self.result['frame_data'][-1]['timestamp'] -
+                                               self.result['frame_data'][0]['timestamp']) / 1000), 0)
         except Exception as e:
             print(e)
             traceback.print_exc()

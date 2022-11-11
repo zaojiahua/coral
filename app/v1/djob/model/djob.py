@@ -63,8 +63,14 @@ class DJob(BaseModel):
     picture_count = models.IntegerField()  # 记录性能测试记录的总图片
     url_prefix = models.CharField()  # 记录性能测试存图的url前缀
     time_per_unit = OwnerFloatField()  # 记录性能测试存图单位时间
+    frame_data = OwnerList(to=dict)
+    start_method = models.IntegerField()
+    end_method = models.IntegerField()
+    set_fps = OwnerFloatField()
+    fps = OwnerFloatField()
+    set_shot_time = OwnerFloatField()
     rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit",
-                     "lose_frame_point"]
+                     "lose_frame_point", 'start_method', 'end_method', 'set_fps', 'set_shot_time', 'fps']
     # 特殊特征的rds提取和标识
     rds_feature_list = ['filter']
 
@@ -122,6 +128,11 @@ class DJob(BaseModel):
                 if getattr(djob_flow, key):
                     setattr(self, key, getattr(djob_flow, key))
 
+            # 保存帧数据
+            if djob_flow.frame_data:
+                for frame_info in djob_flow.frame_data:
+                    self.frame_data.lpush(frame_info)
+
     def postprocess(self):
         """
         结果处理
@@ -172,6 +183,12 @@ class DJob(BaseModel):
         for key in self.rds_info_list:
             if getattr(self, key):
                 json_data[key] = getattr(self, key)
+
+        # 保存frame_data的数据
+        if self.frame_data:
+            json_data['frame_data'] = []
+            for frame_info in self.frame_data:
+                json_data['frame_data'].append(frame_info)
 
         if len(rds_result) != 0:
             app_info = []

@@ -167,6 +167,7 @@ class AdbHandler(Handler, ChineseMixin):
 
             # 连接不上的时候，判断是否发生了关机
             serial_number = self.str_func(f'lsusb -v | grep iSerial | grep {connect_number}')
+            print('当前的电量是：', device.battery_level)
             if self._model.disconnect_times == 1 \
                     and connect_number not in serial_number \
                     and device.battery_level <= POWER_OFF_BATTERY_LEVEL:

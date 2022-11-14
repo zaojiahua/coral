@@ -64,7 +64,7 @@ class MonkeyManager(object):
                 # 脚本推送需要一定的时间
                 while push_proc.poll() is None:
                     time.sleep(1)
-                print('monkey脚本推送测试机结果：', self.get_execute_result(push_proc))
+                # print('monkey脚本推送测试机结果：', self.get_execute_result(push_proc))
 
             # 创建一个目录用来存放日志文件
             log_path = self.get_monkey_log_path(device_label)
@@ -73,7 +73,7 @@ class MonkeyManager(object):
             monkey_cmd = self.monkey_script.format(device_label=device_label,
                                                    running_log=os.path.join(log_path, RUNNING_LOG),
                                                    error_log=os.path.join(log_path, ERROR_LOG))
-            print(monkey_cmd)
+            # print(monkey_cmd)
             monkey_proc = subprocess.Popen(monkey_cmd,
                                            shell=True,
                                            stdout=subprocess.PIPE,
@@ -82,10 +82,11 @@ class MonkeyManager(object):
             time.sleep(1)
             if monkey_proc.poll() is None:
                 self.device_dict[device_label] = monkey_proc
-                print(f'{device_label}创建monkey进程成功：{self.device_dict[device_label].pid}')
+                # print(f'{device_label}创建monkey进程成功：{self.device_dict[device_label].pid}')
             else:
+                pass
                 # 创建失败的时候，打印错误原因
-                print(f'{device_label}创建monkey进程失败', self.get_execute_result(monkey_proc))
+                # print(f'{device_label}创建monkey进程失败', self.get_execute_result(monkey_proc))
 
     # 将设备从监控中移除，因为有设备可能error或者offline
     def remove_device(self, device_label):
@@ -104,7 +105,7 @@ class MonkeyManager(object):
                         monkey_proc = self.device_dict[device_label]
                         # 说明monkey脚本不再执行了，这个时候判断究竟是何种异常引发的错误，也有可能是脚本运行完成自动终止了
                         if monkey_proc is not None and monkey_proc.poll() is not None:
-                            print('检测是否有异常发生')
+                            # print('检测是否有异常发生')
                             self.check_exception(device_label)
                             # 重新启动monkey脚本
                             del monkey_proc

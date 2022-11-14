@@ -7,7 +7,7 @@ from shutil import copyfile
 
 from astra import models
 
-from app.config.setting import JOB_SYN_RESOURCE_DIR
+from app.config.setting import JOB_SYN_RESOURCE_DIR, BUGREPORT
 from app.config.url import upload_rds_screen_shot_url, upload_rds_log_file_url, upload_rds_zip_file_url
 from app.execption.outer.error import APIException
 from app.execption.outer.error_code.djob import JobExecBodyException, JobExecUnknownException, \
@@ -18,7 +18,7 @@ from app.libs.extension.field import OwnerBooleanHash, OwnerDateTimeField, DictF
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request, request_file
 from app.libs.log import setup_logger
-from app.libs.ospathutil import file_rename_from_path
+from app.libs.ospathutil import file_rename_from_path, deal_dir_file
 from app.v1.djob.config.setting import NORMAL_TYPE, SWITCH_TYPE, END_TYPE, FAILED_TYPE, ADBC_TYPE, TEMPER_TYPE, \
     IMGTOOL_TYPE, SUCCESS_TYPE, SUCCESS, FAILED, INNER_DJOB_TYPE, DJOB, COMPLEX_TYPE, ERROR_FILE_DIR, ABNORMAL_TYPE, \
     ABNORMAL, TERMINATE_TYPE, TERMINATE
@@ -71,6 +71,12 @@ class DJobFlow(BaseModel):
     lose_frame_point = models.IntegerField()  # 记录性能测试记录的总图片
     url_prefix = models.CharField()  # 记录性能测试存图的url前缀
     time_per_unit = OwnerFloatField()  # 记录性能测试存图单位
+    frame_data = OwnerList(to=dict)
+    start_method = models.IntegerField()
+    end_method = models.IntegerField()
+    set_fps = OwnerFloatField()
+    fps = OwnerFloatField()
+    set_shot_time = OwnerFloatField()
     rds = OwnerForeignKey(to=RDS)  # 记录rds 详细结果,用于分析
     assist_device_serial_number = models.IntegerField()  # 记录僚机信息default 为 0 目前支持序列号 【1，2，3】
     inner_job_list = OwnerList(to="app.v1.djob.model.djobflow.DJobFlow")
@@ -348,6 +354,7 @@ class DJobFlow(BaseModel):
             "block_source": "Djob",
             "work_path": self.device.djob_work_path,
             "rds_path": self.device.rds_data_path,
+            'share_path': self.device.share_path,
             "temp_port_list": self.device.temp_port.lrange(0, -1),
             "ip_address": self.device.ip_address,
             **job_node.exec_node_dict,
@@ -363,7 +370,7 @@ class DJobFlow(BaseModel):
 
         switch_node_dict = self.switch_node_dict
 
-        if switch_node_dict.setdefault(job_node.node_key, 0) >= int(job_node.max_time):
+        if switch_node_dict.setdefault(job_node.node_key, 0) >= int(job_node.max_time or 0):
             # 如果任务执行循环是else分支会造成死循环，需要避免,因此采用向上抛出异常
             # raise JobMaxRetryCycleException()
             # 超过最大的循环次数，走else分支
@@ -405,7 +412,7 @@ class DJobFlow(BaseModel):
         :return:
         """
         rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit",
-                         "lose_frame_point"]
+                         "lose_frame_point", 'start_method', 'end_method', 'set_fps', 'set_shot_time', 'fps']
         self.recent_img_res_list = None  # 每一个block 产生的结果会覆盖recent_img_res_list
         self.recent_img_rpop_list = None
         self.block_recent_adb_wrong_code = 0
@@ -427,12 +434,15 @@ class DJobFlow(BaseModel):
 
                 # 存在却没有结果表明未执行完成或未执行,
                 # 因为创建eblock时就会创建unit,但是只有执行完的unit才由result
-                result = unit.detail.get("result", None)
                 for key in rds_info_list:
                     if unit.detail.get(key):
                         setattr(self, key, unit.detail.get(key))
-                # if self.job_duration == float(0):  # 获取第一个time(并不是用例执行时间,是性能用例测量的时间)
-                #     self.job_duration = unit.detail.get("time", float(0.0))
+
+                # 保存每一帧的数据
+                if unit.detail.get('frame_data'):
+                    for frame_info in unit.detail.get('frame_data'):
+                        self.frame_data.lpush(frame_info)
+
                 result = unit.detail.get("result", None)  # 存在没有结果表明未执行完成
                 if unit.execModName == ADBC_TYPE:
                     if result is not None:
@@ -513,12 +523,22 @@ class DJobFlow(BaseModel):
                         self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
                 if file_name.endswith((".txt", ".log", ".json")):
                     self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
-                # elif file_name.endswith(".zip"):
-                #     self._send_file(base_data, file_name, file_path, upload_rds_zip_file_url,"zip_file")
+                # 针对bugreport的特殊逻辑
+                elif BUGREPORT in file_name and int(job_assessment_value) == 0:
+                    name_frag = file_name[:-4].split('_')
+                    if len(name_frag) > 0 and name_frag[-1].isdigit():
+                        self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
 
         for djob_instance in self.inner_job_list:
             # inner job的 依赖文件上传
             djob_instance.push_log_and_pic(base_data, job_assessment_value, flow_id=flow_id)
+
+        # 将共享目录下的文件进行上传，上传完以后需要删除文件，否则下次还会上传
+        for file_name in os.listdir(self.device.share_path):
+            file_path = os.path.join(self.device.share_path, file_name)
+            if os.path.getsize(file_path):
+                self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
+            deal_dir_file(file_path)
 
     def _send_file(self, base_data, file_name, file_path, url, key):
         base_data["file_name"] = file_name

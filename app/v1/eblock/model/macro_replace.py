@@ -18,6 +18,7 @@ block_index = "<blockIndex>"
 block_input_path = "<blkInpPath>"
 block_output_path = "<blkOutPath>"
 rds_data_path = "<rdsDatPath>"
+share_data_path = '<shareDataPath>'
 copy_singal = "<copy2rdsDatPath>"
 device_temp_port_list = "<deviceTemperPort>"
 long_time_sleep_tag = "<longTimeSleepTag_"
@@ -78,6 +79,7 @@ class MacroHandler(object):
         self.ip_address = ip_address
         # 动态参数
         self.job_parameter = kwargs.get('job_parameter', {})
+        self.share_path = kwargs.get('share_path')
 
     def replace(self, cmd, unit_work_path, cmd_key=None, **kwargs):
         assist_device_ident = kwargs.pop("assist_device_ident", None)
@@ -172,6 +174,9 @@ class MacroHandler(object):
                 cmd = cmd.replace(work_path_macro, unit_work_path)
         if rds_data_path in cmd:
             cmd = cmd.replace(rds_data_path, self.rds_path + os.path.sep)
+        # 支持共享目录的宏
+        if share_data_path in cmd:
+            cmd = cmd.replace(share_data_path, self.share_path)
         if not self.device_temp_port_list and device_temp_port_list in cmd:
             cmd = ""
         if device_temp_port_list in cmd and self.device_temp_port_list:

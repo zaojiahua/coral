@@ -1,7 +1,6 @@
 import logging
 import math
 import os.path
-import platform
 import random
 import shutil
 import subprocess
@@ -19,13 +18,14 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, Z_DOWN, CORAL_TYPE, arm_com, arm_com_1_sensor, BASE_DIR
+    arm_com_1, CORAL_TYPE, arm_com, arm_com_1_sensor, IP_FILE_PATH
 from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail, CoordinateConvert, \
     MergeShapeNone
-from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit
+from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit, \
+    CrossMax
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
-from app.v1.Cuttle.basic.hand_serial import controlUsbPower
+from app.v1.Cuttle.basic.hand_serial import controlUsbPower, read_z_down_from_file
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler, judge_start_x, \
@@ -34,7 +34,7 @@ from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
-    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP
+    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME, HAND_MAX_X, Z_POINT_FILE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -45,6 +45,7 @@ from redis_init import redis_client
 import copy
 
 from app.v1.Cuttle.basic.setting import COMPUTE_M_LOCATION
+from app.v1.Cuttle.basic.common_utli import hand_move_times
 
 ip = copy.copy(HOST_IP)
 logger = logging.getLogger(PANE_LOG_NAME)
@@ -213,7 +214,7 @@ class PaneConfigView(MethodView):
             function, attribute = (hand_init, "has_arm")
             controlUsbPower(status='init')
         setattr(device_object, attribute, True)
-        return function, device_object
+        return function, device_object, attribute
 
 
 class PaneBorderView(MethodView):
@@ -326,12 +327,15 @@ class PaneClickTestView(MethodView):
                                                                   device_point)
 
         # 获取执行动作需要的信息
-        exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label,
-                                                                  roi=device_point)
-
-        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+        try:
+            exec_serial_obj, orders, exec_action = self.get_exec_info(click_x, click_y, click_z, device_label,
+                                                                      roi=device_point)
+        except TcabNotAllowExecThisUnit:
             return jsonify(dict(error_code=TcabNotAllowExecThisUnit.error_code,
                                 description=TcabNotAllowExecThisUnit.description))
+        except CoordinatesNotReasonable:
+            return jsonify(dict(error_code=CoordinatesNotReasonable.error_code,
+                                description=CoordinatesNotReasonable.description))
 
         # 判断机械臂状态是否在执行循环
         if not get_global_value("click_loop_stop_flag"):
@@ -367,46 +371,43 @@ class PaneClickTestView(MethodView):
         return: serial_obj, orders
         """
         is_left_side = False
-        if CORAL_TYPE == 5.3:
-            exec_action = "click"
+        location = get_global_value("m_location")
+        device_obj = Device(pk=device_label)
+        exec_action = None
+        if not COMPUTE_M_LOCATION:
+            # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
+            DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                      location[0] + float(device_obj.width), location[0],
+                                                      location[2])
+            if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
+                is_left_side = True
         else:
-            # 判断是否是按压侧边键
-            location = get_global_value("m_location")
+            dpi = get_global_value('pane_dpi')
+            if dpi is None or roi is None:
+                raise CoordinateConvert()
             try:
-                device_obj = Device(pk=device_label)
-                if not COMPUTE_M_LOCATION:
-                    # 如果采用动态计算m_location的方式，用户不再需要填设备宽高，按照roi来进行判断
-                    DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                              location[0] + float(device_obj.width), location[0],
-                                                              location[2])
-                    if click_x < location[0] or (click_x - location[0]) <= X_SIDE_OFFSET_DISTANCE:
-                        is_left_side = True
-                else:
-                    dpi = get_global_value('pane_dpi')
-                    if dpi is None or roi is None:
-                        raise CoordinateConvert()
-                    try:
-                        h, w, _ = get_global_value('merge_shape')
-                    except Exception:
-                        raise MergeShapeNone()
+                h, w, _ = get_global_value('merge_shape')
+            except Exception:
+                raise MergeShapeNone()
 
-                    # 目前5d不支持点击侧边键
-                    if CORAL_TYPE == 5.3:
-                        min_x = location[0] + roi[1] / dpi
-                        max_x = location[0] + roi[3] / dpi
-                        DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                                  max_x, min_x, location[2])
-                    else:
-                        min_x = location[0] + (h - roi[3]) / dpi
-                        max_x = location[0] + (h - roi[1]) / dpi
-                        DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
-                                                                  max_x, min_x, location[2])
+            device_scope = PaneClickTestView.get_device_scope(roi, location, dpi, h, w)
+            # 点的位置在屏幕内一定为点击，屏幕外一定是按压
+            exec_action = "click" if (device_scope[0] <= click_x <= device_scope[1]) and (
+                    device_scope[2] <= click_y <= device_scope[3]) else "press"
 
-                    if click_x < min_x or (click_x - min_x) <= X_SIDE_OFFSET_DISTANCE:
-                        is_left_side = True
-                exec_action = "press"
-            except CoordinatesNotReasonable:
-                exec_action = "click"
+            # 带传感器的柜子不允许按压
+            if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+                raise TcabNotAllowExecThisUnit
+
+            # 其他柜型（5L-5.1，5se-5.2）支持按压，但需要判断按压侧边键位置的合理性
+            if exec_action == "press":
+                min_x = location[0] + (h - roi[3]) / dpi
+                max_x = location[0] + (h - roi[1]) / dpi
+                DefaultMixin.judge_coordinates_reasonable([click_x, click_y, click_z],
+                                                          max_x, min_x, location[2])
+
+                if click_x < min_x or (click_x - min_x) <= X_SIDE_OFFSET_DISTANCE:
+                    is_left_side = True
 
         if exec_action == "click":
             exec_serial_obj, arm_num = judge_start_x(click_x, device_label)
@@ -427,14 +428,42 @@ class PaneClickTestView(MethodView):
         return exec_serial_obj, orders, exec_action
 
     @staticmethod
+    def get_device_scope(roi, location, dpi, h, w):
+        """
+        判断点击点是否在roi范围内
+        click: 物理坐标值, [x, y] or [x, y, z]
+        需求得最大[min_x, max_x], [mix_y, mix_y]
+        """
+        if CORAL_TYPE in [5.3]:
+            min_x = location[0] + roi[1] / dpi
+            max_x = location[0] + roi[3] / dpi
+            min_y = -location[1] + (w - roi[2]) / dpi
+            max_y = -location[1] + (w - roi[0]) / dpi
+        else:
+            min_x = location[0] + (h - roi[3]) / dpi
+            max_x = location[0] + (h - roi[1]) / dpi
+            min_y = -location[1] + roi[0] / dpi
+            max_y = -location[1] + roi[2] / dpi
+
+        return [min_x, max_x, min_y, max_y]
+
+    @staticmethod
     def exec_hand_action(exec_serial_obj, orders, exec_action, ignore_reset=False, wait_time=0):
         """
         is_exec_loop: 是否正在执行测试点击多次
         """
+        # 在这里计算点击或者按压的时间点 写入到redis中，用来辅助性能测试
+        move_times = hand_move_times(orders)
         if exec_action == "click":
+            # 需要注意可能存在多个机械臂
+            redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
+                             ACCELERATION_TIME)
             exec_serial_obj.send_out_key_order(orders[:2], others_orders=[orders[-1]], wait_time=wait_time,
                                                ignore_reset=ignore_reset)
         elif exec_action == "press":
+            redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
+                             move_times[2] + ACCELERATION_TIME)
+            print('按压的时间点：', redis_client.get(CLICK_TIME))
             exec_serial_obj.send_out_key_order(orders[:3], others_orders=orders[3:], wait_time=wait_time,
                                                ignore_reset=ignore_reset)
         else:
@@ -484,28 +513,16 @@ class PaneUpdateMLocation(MethodView):
 
     @staticmethod
     def update_ip_file(location_name, new_data):
-        is_kuohao = True
-        if platform.system() == 'Linux':
-            file = '/app/source/ip.py'
-        else:
-            file = os.path.join(BASE_DIR, "app", "config", "ip.py")
-        old_data = None
-        with open(file, "r", encoding="utf-8") as f:
+        with open(IP_FILE_PATH, "r", encoding="utf-8") as f:
             content = ""
             for line in f:
                 if location_name in line and not line.startswith("#"):
-                    # 带[]
-                    if "[" in line:
-                        is_kuohao = False
-                        old_data = line.split("=")[1].split("]")[0].strip(" ")
-                    else:
-                        old_data = line.split("=")[1]
-                    print("老数据：", old_data)
+                    print("被替换的数据是： ", line)
                     continue
                 content += line
 
         new_content = content + "\n" + (location_name + "=" + str(new_data))
-        with open(file, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
+        with open(IP_FILE_PATH, "w", encoding='utf-8') as f2:  # 再次打开test.txt文本文件
             f2.write(new_content)  # 将替换后的内容写入到test.txt文本文件中
 
 
@@ -536,25 +553,26 @@ class PaneClickZDown(MethodView):
     def post(self):
         arm_num = request.get_json().get('arm_num', 0)
         recv_z_down = request.get_json()["z_down"]
+        # 存放用户选择的[+x, -y]坐标，当arm_num=1时，相应的坐标也会处理成右机械臂适合的坐标值
+        point = request.get_json().get('point')
         device_label = request.get_json()["device_label"]
         device_obj = Device(pk=device_label)
         click_z = -recv_z_down + float(device_obj.ply) if CORAL_TYPE != 5.3 else -recv_z_down
         exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
         if CORAL_TYPE == 5.3:  # 5d
-            click_xy = [160, -100] if arm_num == 0 else [-160, -100]
-            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1) if arm_num == 1 else exec_serial_obj
-        elif CORAL_TYPE == 5.2:  # 5se
-            click_xy = [90, -120]
-        elif CORAL_TYPE == 5:  # 5升级版加了延长杆
-            click_xy = [85, -170]
-        else:  # 5l
-            click_xy = [170, -170]
+            if arm_num == 1:
+                exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
+                point = [-(HAND_MAX_X - point[0]), point[1]]
         orders = [
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], click_z + 5, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], click_z, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (click_xy[0], click_xy[1], Z_UP, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z + 5, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], Z_UP, MOVE_SPEED),
         ]
-        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click")
+        # 判断机械臂状态是否在执行循环
+        if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):
+            return jsonify(dict(error_code=UsingHandFail.error_code,
+                                description=UsingHandFail.description))
+        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click", wait_time=2)
         return jsonify(dict(error_code=0))
 
 
@@ -562,48 +580,126 @@ class PaneUpdateZDown(MethodView):
 
     def post(self):
         Z_DOWN = -request.get_json()["z_down"]
-        set_global_value('Z_DOWN', Z_DOWN)
-        m_location = get_global_value("m_location")
+        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
         if CORAL_TYPE == 5.3:
             Z_DOWN_1 = - request.get_json()["z_down_1"]
-            set_global_value('Z_DOWN_1', Z_DOWN_1)
-            set_global_value("m_location", [m_location[0], m_location[1], Z_DOWN])
             PaneUpdateMLocation.update_ip_file('Z_DOWN_1', Z_DOWN_1)
-        else:
-            device_label = request.get_json()["device_label"]
-            from app.v1.device_common.device_model import Device
-            device_obj = Device(pk=device_label)
-            set_global_value('m_location', [m_location[0], m_location[1], Z_DOWN + float(device_obj.ply)])
-        PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
+        device_label = request.get_json()["device_label"]
+        from app.v1.device_common.device_model import Device
+        device_obj = Device(pk=device_label)
+        device_obj.update_m_location()
+        click_xy = request.get_json()["click_xy"]
+        click_xy_1 = request.get_json()["click_xy_1"] if CORAL_TYPE == 5.3 else click_xy
+        with open(Z_POINT_FILE, "w+") as f:
+            f.write(f"click_xy={click_xy}\n")
+            f.write(f"click_xy_1={click_xy_1}\n")
         return jsonify(dict(error_code=0))
 
 
 class PaneGetZDown(MethodView):
     def get(self):
-        data = {"z_down": -get_global_value('Z_DOWN_INIT')}
+        Z_DOWN, Z_DOWN_1 = read_z_down_from_file()
+        data = {"z_down": -Z_DOWN}
         if CORAL_TYPE == 5.3:
-            data.update({'z_down_1': -get_global_value("Z_DOWN_1")})
-
+            data.update({'z_down_1': (-Z_DOWN if not Z_DOWN_1 else -Z_DOWN_1)})
+        click_xy = []
+        if not os.path.exists(Z_POINT_FILE):
+            if CORAL_TYPE == 5.3:  # 5d
+                click_xy = [100, -100]
+                data.update({'click_xy_1': [200, -100]})
+            elif CORAL_TYPE == 5.2:  # 5se
+                click_xy = [90, -120]
+            elif CORAL_TYPE in [5, 5.4]:  # 5升级版加了延长杆
+                click_xy = [85, -170]
+            else:  # 5l
+                click_xy = [170, -170]
+        else:
+            with open(Z_POINT_FILE, 'rt') as f:
+                for line in f.readlines():
+                    key, value = line.strip('\n').split('=')
+                    if key == 'click_xy':
+                        click_xy = eval(value)
+                    if key == 'click_xy_1':
+                        click_xy_1 = eval(value)
+                if CORAL_TYPE == 5.3:
+                    data.update({'click_xy_1': click_xy_1})
+        data.update({'click_xy': click_xy})
         return jsonify(dict(error_code=0, data=data))
+
+
+# 获取坐标换算时的点击坐标
+class PaneGetCoordinateView(MethodView):
+
+    def get(self):
+        start_point, end_point = [], []
+        if not os.path.exists(COORDINATE_POINT_FILE):
+            # 使用默认值
+            if CORAL_TYPE == 5.3:
+                start_point, end_point = [100, -100], [200, -100]
+            elif CORAL_TYPE == 5:
+                start_point, end_point = [55, -250], [90, -250]
+            elif CORAL_TYPE == 5.4:
+                start_point, end_point = [35, -210], [85, -210]
+            elif CORAL_TYPE == 5.1:
+                start_point, end_point = [110, -220], [160, -220]
+            else:
+                start_point, end_point = [50, -120], [100, -120]
+        else:
+            with open(COORDINATE_POINT_FILE, 'rt') as f:
+                for line in f.readlines():
+                    key, value = line.strip('\n').split('=')
+                    if key == 'start_point':
+                        start_point = eval(value)
+                    if key == 'end_point':
+                        end_point = eval(value)
+        return jsonify(dict(error_code=0, data={"start_point": start_point, "end_point": end_point}))
+
+
+# 点击坐标换算的物理坐标点
+class PaneClickCoordinateView(MethodView):
+    """
+    点一个物理坐标点
+    device_label, x, y
+    """
+
+    def post(self):
+        device_label = request.get_json()["device_label"]
+        point = request.get_json()["point"]
+        judge_ret = DefaultMixin.judge_coordinate_in_arm(point)
+        if not judge_ret:
+            return jsonify(dict(error_code=CrossMax.error_code,
+                                description=CrossMax.description))
+        # 获取机械臂执行对象
+        exec_serial_obj, arm_num = judge_start_x(point[0], device_label)
+        axis = pre_point([point[0], abs(point[1])], arm_num=arm_num)
+
+        # 判断机械臂状态是否在执行循环
+        if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):
+            return jsonify(dict(error_code=UsingHandFail.error_code,
+                                description=UsingHandFail.description))
+
+        # 执行点击
+        orders = [
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2] + 5, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], axis[2], MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (axis[0], axis[1], Z_UP, MOVE_SPEED),
+        ]
+        exec_serial_obj.send_list_order(orders)
+        exec_serial_obj.recv()
+        return jsonify(dict(error_code=0))
 
 
 # 5D等自动建立坐标系统
 class PaneCoordinateView(MethodView):
     # 确定俩件事情，一个是比例，也就是一个像素等于实际多少毫米。另一个是图片坐标系统下的原点实际的坐标值。
     def post(self):
+        positions = [[request.get_json()["start_point"], request.get_json()["end_point"]]]
         dpi = 0
         m_location = [0, 0, 0]
         # 让机械臂点击一个点，在屏幕上留下了一个记号A，再让机械臂点击另一个点，在屏幕上留下了记号B
         # 计算A、B俩点的像素距离，和实际距离的比，就得到了比例。根据比例，计算原点的坐标值。
         # 找到主机械臂，让主机械臂移动即可
         # 双指的范围更大，点击的时候尽量在中间点击即可
-        if CORAL_TYPE == 5.3:
-            positions = [[[100, -100], [200, -100]]]
-        elif CORAL_TYPE == 5:
-            positions = [[[55, -250], [90, -250]]]
-        else:
-            positions = [[[130, -120], [190, -120]]]
-
         all_dpi = []
         all_m_location = []
         for pos_a, pos_b in positions:
@@ -651,7 +747,15 @@ class PaneCoordinateView(MethodView):
             f.writelines(f'pane_dpi={result_dpi}\n')
             f.writelines(f'merge_shape={merge_shape}\n')
 
-        return jsonify(dict(error_code=0, data={'dpi': result_dpi, 'm_location': list(result_m_location)}))
+        # 坐标换算完成
+        with open(COORDINATE_POINT_FILE, "w+") as f:
+            f.write(f"start_point={positions[0][0]}\n")
+            f.write(f"end_point={positions[0][1]}\n")
+
+        reference_dpi = REFERENCE_VALUE["reference_" + str(int(CORAL_TYPE * 10))]["dpi"]
+        reference_location = REFERENCE_VALUE["reference_" + str(int(CORAL_TYPE * 10))]["m_location"]
+        return jsonify(dict(error_code=0,
+                            description=f"坐标换算完成。dpi为【{dpi}】,参考值【{reference_dpi}】；mlocation为【{m_location[0]},{m_location[1]}】，参考值为【{reference_location[0]}, {reference_location[1]}】"))
 
     # 传入x,y俩个值即可
     @staticmethod
@@ -686,8 +790,8 @@ class PaneCoordinateView(MethodView):
 
         mask = mask_1 + mask_2
 
-        kernel = np.uint8(np.ones((3, 3)))
-        mask = cv2.dilate(mask, kernel, iterations=2)
+        # kernel = np.uint8(np.ones((3, 3)))
+        # mask = cv2.dilate(mask, kernel, iterations=2)
 
         # 获取符合条件的轮廓
         _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -697,11 +801,11 @@ class PaneCoordinateView(MethodView):
             # 遍历组成轮廓的每个坐标点
             m = cv2.moments(contour_points)
             # m00代表面积
-            if m['m00'] > 50:
+            if 50 < m['m00']:
                 # 获取对象的质心
                 cx = round(m['m10'] / m['m00'], 2)
                 cy = round(m['m01'] / m['m00'], 2)
-                if w * 0.1 < cx < w * 0.9:
+                if w * 0.2 < cx < w * 0.9:
                     bx, by, bw, bh = cv2.boundingRect(contour_points)
                     if 0.7 < bw / bh < 1.3:
                         target_contours.append(np.array([[cx, cy]]))
@@ -710,7 +814,8 @@ class PaneCoordinateView(MethodView):
             for i in range(len(all_contours)):
                 for j in range(i + 1, len(all_contours)):
                     # x坐标基本一样
-                    if abs(all_contours[i][0][0] - all_contours[j][0][0]) < 5:
+                    if abs(all_contours[i][0][0] - all_contours[j][0][0]) < 6 and abs(
+                            all_contours[i][0][1] - all_contours[j][0][1]) > 100:
                         return [all_contours[i], all_contours[j]]
 
         print(target_contours)
@@ -737,7 +842,7 @@ class PaneCoordinateView(MethodView):
                 # 计算左下角的m_location
                 # m_y = round(pos_a[1] - (w - cal_point[0][0]) / dpi, 2)
 
-            return dpi, [m_x, m_y, Z_DOWN]
+            return dpi, [m_x, m_y]
 
         # 画出轮廓，方便测试
         img = cv2.drawContours(img, contours, -1, (0, 255, 0), 3)

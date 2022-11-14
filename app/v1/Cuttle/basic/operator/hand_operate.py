@@ -10,7 +10,7 @@ import numpy as np
 from app.config.setting import CORAL_TYPE, arm_com, arm_com_1
 from app.config.url import phone_model_url
 from app.execption.outer.error_code.hands import KeyPositionUsedBeforesSet, ChooseSerialObjFail, InvalidCoordinates, \
-    RepeatTimeInvalid, TcabNotAllowExecThisUnit
+    RepeatTimeInvalid, TcabNotAllowExecThisUnit, CoordinatesNotReasonable
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower, SensorSerial
@@ -100,11 +100,12 @@ def pre_point(point, arm_num=0):
                 副机械臂编号为1，机械臂原点在右上角，其x,y为[-x, -y]， 且 x 坐标为 -(MAX_X - point[0])
 
     """
-    z_point = point[2] if len(point) == 3 else get_global_value('m_location')[2]
+    z_point = point[2] if len(point) == 3 else get_global_value('Z_DOWN')
     if arm_num == 0:
         return [point[0], -point[1], z_point]
     if arm_num == 1:
-        z_point = point[2] if len(point) == 3 else get_global_value('Z_DOWN_1')
+        if CORAL_TYPE == 5.3:
+            z_point = get_global_value('Z_DOWN_1')
         x_point = HAND_MAX_X - point[0]
         return [-x_point, -point[1], z_point]
     raise ChooseSerialObjFail
@@ -286,12 +287,12 @@ class HandHandler(Handler, DefaultMixin):
             repeat_time = self.speed  # 为整型，且需在1-10之间
         else:
             raise RepeatTimeInvalid
-        for i in range(repeat_time):
-            ignore_reset = False if i == (repeat_time - 1) else True
+        for repeat_num in range(repeat_time):
+            ignore_reset = False if repeat_num == (repeat_time - 1) else True
             self.kwargs["exec_repeat_sliding_obj"].send_list_order(self.kwargs["repeat_sliding_order"],
                                                                    ignore_reset=ignore_reset)
-
-        self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=repeat_time * 8)
+            time.sleep(0.5)
+        self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=repeat_time * 8 * 4)
         return 0
 
     def record_repeat_count(self, *args, **kwargs):
@@ -344,6 +345,7 @@ class HandHandler(Handler, DefaultMixin):
             axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
         sliding_order = self.__straight_sliding_order(axis[0], axis[1], self.speed, arm_num=kwargs["arm_num"])
         kwargs["exec_serial_obj"].send_list_order(sliding_order)
+        if kwargs['arm_num'] == 1: time.sleep(0.5)
         return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
     def reset_hand(self, reset_orders=arm_wait_position, rotate=False, **kwargs):
@@ -476,12 +478,16 @@ class HandHandler(Handler, DefaultMixin):
         device_obj = Device(pk=self._model.pk)
         roi = [device_obj.x1, device_obj.y1, device_obj.x2, device_obj.y2]
         from app.v1.Cuttle.macPane.pane_view import PaneClickTestView
-        exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1], pix_point[2],
-                                                                               self._model.pk,
-                                                                               roi=[float(value) for value in roi],
-                                                                               is_normal_speed=True)
-        if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+        try:
+            exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1],
+                                                                                   pix_point[2],
+                                                                                   self._model.pk,
+                                                                                   roi=[float(value) for value in roi],
+                                                                                   is_normal_speed=True)
+        except TcabNotAllowExecThisUnit:
             raise TcabNotAllowExecThisUnit
+        except CoordinatesNotReasonable:
+            raise CoordinatesNotReasonable
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
         return ret
 

@@ -1,8 +1,10 @@
+import multiprocessing
+
 import requests
 from flask import Flask
 from flask_cors import CORS
 
-from app.config.setting import EXPOSE_HEADERS, SERVER_INIT
+from app.config.setting import EXPOSE_HEADERS, SERVER_INIT, CAMERA_PROCESS_NAME
 from app.v1.Cuttle.basic.url import basic
 from app.v1.Cuttle.boxSvc.url import resource
 from app.v1.Cuttle.macPane.init import pane_init
@@ -70,4 +72,6 @@ def create_app():
     return flask_app
 
 
-app = create_app()
+# 将摄像机获取图片的服务，做成一个单独的进程，这样可以提高帧率，还能保证不丢帧
+if multiprocessing.current_process().name != CAMERA_PROCESS_NAME:
+    app = create_app()

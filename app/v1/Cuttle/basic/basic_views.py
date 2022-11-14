@@ -37,6 +37,8 @@ class UnitFactory(object):
     def create(handler_type, input_data) -> dict:
         # 所有unit的入口文件
         pk = input_data.get("device_label")
+        # 标记是哪个handler进行的处理，针对不同的handler，在基类中做不同的操作
+        input_data['handler_type'] = handler_type
         from app.v1.device_common.device_model import Device
         model_obj = Device(pk=pk)
         # 此处，会根据handler_type(是个字符串)实例化一个对应的handler（eg:AdbHandler,ImageHandler），并把刚刚的model，

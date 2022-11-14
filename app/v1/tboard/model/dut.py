@@ -187,3 +187,16 @@ class Dut(BaseModel):
             }
             logger.info(f"send insert djob, body：{json_data}")
             return insert_djob_inner(**json_data)
+
+    # 获取用例执行到现在的待机时间
+    def get_current_standby_time(self):
+        total_standby_time = 0
+        for job_index in range(self.current_job_index):
+            job_label = self.get_job_label_by_index(self.current_job_index)
+            msg = self.job_msg[job_label]
+            if 'job_parameter' in msg and 'standby_time' in msg['job_parameter']:
+                total_standby_time += msg['job_parameter']['standby_time']
+        print('job message 是：', self.job_msg)
+        print('current job index:', self.current_job_index)
+        print('总的待机时长是：', total_standby_time)
+        return total_standby_time

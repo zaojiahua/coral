@@ -2,9 +2,10 @@ import os
 import time
 
 from app.config.ip import HOST_IP
-from app.libs.ospathutil import makedirs_new_folder
+from app.libs.ospathutil import makedirs_new_folder, asure_path_exist
 from app.v1.djob.config.setting import BASE_PATH, RDS_DATA_PATH_NAME, DJOB_WORK_PATH_NAME
 from app.v1.djob.model.device import DjobDevice
+from app.config.setting import PROJECT_SIBLING_DIR, JOB_SHARE
 
 
 class DeviceViewModel:
@@ -20,10 +21,13 @@ class DeviceViewModel:
 
         self.rds_data_path = os.path.join(self.base_path, str(flow_id), RDS_DATA_PATH_NAME) + os.sep
         self.djob_work_path = os.path.join(self.base_path, str(flow_id), DJOB_WORK_PATH_NAME) + os.sep
+        # 跨job可以放的一个路径 一个不会删除的目录，里边的文件处理完了需要自己删除
+        self.share_path = os.path.join(PROJECT_SIBLING_DIR, "Pacific", device_label, JOB_SHARE) + os.sep
 
     def to_model(self):
         makedirs_new_folder(self.rds_data_path)
         makedirs_new_folder(self.djob_work_path)  # if exist delete
+        asure_path_exist(self.share_path)
 
         self._get_device_msg()
 

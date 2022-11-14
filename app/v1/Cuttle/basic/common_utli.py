@@ -1,10 +1,11 @@
 import random
+import re
 
 import cv2
 import numpy as np
 
 from app.execption.outer.error_code.imgtool import ColorPositionCrossMax
-from app.v1.Cuttle.basic.setting import blur_signal
+from app.v1.Cuttle.basic.setting import blur_signal, arm_wait_position
 
 
 def get_file_name(path):
@@ -142,3 +143,27 @@ def suit_for_blur(exec_content):
     is_blur = True if exec_content.get(key, "").startswith(blur_signal) else False
     exec_content[key] = exec_content.get(key, "").replace(blur_signal, "")
     return exec_content, is_blur
+
+
+# 计算机械臂执行某一步指令需要的时间
+def hand_move_times(orders):
+    spend_times = []
+    for order_index in range(len(orders)):
+        # 根据距离，自己计算等待时间
+        regex = re.compile("[-\d.]+")
+        if order_index == 0:
+            begin_point = [float(point) for point in re.findall(regex, arm_wait_position)[1:4]]
+        else:
+            begin_point = [float(point) for point in re.findall(regex, orders[order_index - 1])[1:4]]
+
+        end_point = [float(point) for point in re.findall(regex, orders[order_index])[1:4]]
+        distance = round(np.linalg.norm(np.array(end_point) - np.array(begin_point)), 2)
+        speed = int(re.findall(regex, orders[order_index])[-1])
+        print(distance, speed)
+
+        # 换算成以秒为单位的时间
+        spend_time = (distance / speed) * 60
+        spend_times.append(spend_time)
+
+    print('移动过程中的所有耗时如下：', spend_times)
+    return spend_times

@@ -9,11 +9,13 @@ from app.execption.outer.error import APIException
 from app.execption.outer.error_code.imgtool import IconTooWeek, NotFindIcon
 from app.libs.thread_extensions import executor_callback
 from app.v1.Cuttle.basic.complex_center import Complex_Center
-from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps
+from app.v1.Cuttle.basic.image_schema import PerformanceSchema, PerformanceSchemaCompare, PerformanceSchemaFps, \
+    PerformanceKeyNameSchema
 from app.v1.Cuttle.basic.performance_center import PerformanceCenter
-from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate
+from app.v1.Cuttle.basic.setting import icon_threshold_camera, icon_rate, CLICK_TIME
 from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
+from app.v1.Cuttle.basic.common_utli import adb_unit_maker, handler_exec
 
 
 class PerformanceMinix(object):
@@ -74,7 +76,7 @@ class PerformanceMinix(object):
             # 异步延迟执行点击操作，确保另外一个线程的照片可以涵盖到这个操作
             executer.submit(self.delay_exec,
                             ocr_obj.point,
-                            is_init=True)\
+                            is_init=True) \
                 .add_done_callback(executor_callback)
             # 兼容其他多选区的格式，增加一层
             # 因为PerformanceCenter内部需要根据起点icon x方向位置，计算阴影补偿，所以此处再统一换回摄像头下的相对坐标
@@ -86,7 +88,8 @@ class PerformanceMinix(object):
         # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"))
+                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point(self, exec_content):
@@ -142,7 +145,8 @@ class PerformanceMinix(object):
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"))
+                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point_fixed(self, exec_content):
@@ -165,8 +169,35 @@ class PerformanceMinix(object):
             return 0
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"))
+                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
+
+    # 性能测试起点，按压自定义按键
+    def start_point_with_press_key(self, exec_content):
+        data = self._validate(exec_content, PerformanceKeyNameSchema)
+        cmd_list = [f"press custom-point {data['key_name']} {data['press_time']}"]
+        request_body = adb_unit_maker(cmd_list, self._model.pk, self._model.pk)
+        request_body['execCmdList'] = cmd_list
+
+        # 开始点击自定义按键
+        executer = ThreadPoolExecutor()
+        executer.submit(self.delay_exec, handler_exec, request_body, 'HandHandler')
+
+        # 对试运行的unit只进行点击，不计算时间
+        if self.kwargs.get("test_running"):
+            return 0
+
+        # 创建performance对象，并开始找起始点
+        performance = PerformanceCenter(self._model.pk,
+                                        None,
+                                        None,
+                                        [0, 0, 1, 1],
+                                        None,
+                                        self.kwargs.get("work_path"),
+                                        set_fps=data.get("set_fps"),
+                                        set_shot_time=data.get("set_shot_time"))
+        return performance.start_loop(4)
 
     # 下面几个就是上面那几个结束点版本
     def end_point_with_icon(self, exec_content):
@@ -211,7 +242,6 @@ class PerformanceMinix(object):
             self.extra_result = performance.result
             return 0
         except APIException as e:
-            self.image = performance.tguard_picture_path if hasattr(performance, "tguard_picture_path") else None
             self.extra_result = performance.result if isinstance(performance.result, dict) else {}
             self.wait_end()
             if hasattr(e, 'error_code'):
@@ -229,7 +259,7 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, None, None,
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"))
-        return performance.start_loop(self._picture_changed)
+        return performance.start_loop(start_method=3)
 
     def end_point_with_fps_lost(self, exec_content):
         try:
@@ -237,13 +267,12 @@ class PerformanceMinix(object):
             performance = PerformanceCenter(self._model.pk, None, None,
                                             data.get("areas")[0], data.get("threshold", 0.99),
                                             self.kwargs.get("work_path"), fps=data.get("fps"))
-            performance.test_fps_lost(self._picture_changed)
+            performance.fps_lost()
             self.extra_result = performance.result
-            result = 0 if performance.result.get("fps_lost") == False else 1
-            self.image = performance.tguard_picture_path
-            return result
-        except APIException as e:
-            self.image = performance.tguard_picture_path
+            return 0
+        except Exception as e:
+            self.extra_result = performance.result if isinstance(performance.result, dict) else {}
+            self.wait_end()
             return 1
 
     def test_performance_with_point(self, exec_content):
@@ -307,26 +336,33 @@ class PerformanceMinix(object):
         result2 = np.count_nonzero(230 < difference)
         standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
         match_ratio = ((result + result2) / standard)
-        final_result = match_ratio < (1.97-threshold)
+        final_result = match_ratio < (1.97 - threshold)
         if third_pic is not None:
             difference_2 = np.absolute(np.subtract(last_pic, third_pic))
             result_2 = np.count_nonzero(difference_2 < 25)
             result2_2 = np.count_nonzero(230 < difference_2)
             standard = last_pic.shape[0] * last_pic.shape[1] * last_pic.shape[2]
             match_ratio_2 = ((result_2 + result2_2) / standard)
-            final_result_2 = match_ratio_2 < (1.95-threshold)
+            final_result_2 = match_ratio_2 < (1.95 - threshold)
         else:
             final_result_2 = True
             match_ratio_2 = 1
         if fps_lost:
             return not (not final_result and not final_result_2)
         # print(match_ratio_2,match_ratio)
-        return (final_result_2 and final_result) or match_ratio_2 < (1.94-threshold)
+        return (final_result_2 and final_result) or match_ratio_2 < (1.94 - threshold)
 
     def delay_exec(self, function, *args, **kwargs):
+        # 涉及到点击动作的时间，这里重置
+        redis_client.set(CLICK_TIME, 0)
+
         # 5双摄升级版的柜子，机械臂离设备比较近，等待时间需要长一点，否则机械臂按完以后压力传感器才开始获取压力值
         if CORAL_TYPE == 5:
             time.sleep(kwargs.get("sleep", 1.3))
+        elif CORAL_TYPE == 5.2:
+            time.sleep(kwargs.get("sleep", 1.3))
+        elif CORAL_TYPE == 5.4:
+            time.sleep(kwargs.get("sleep", 2))
         else:
             time.sleep(kwargs.get("sleep", 0.3))
         return function(*args, **kwargs)

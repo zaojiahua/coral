@@ -6,9 +6,10 @@ from serial import SerialException
 
 from mcush import *
 
-from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com
+from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com, IP_FILE_PATH
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
-from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open
+from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open, MAX_SENSOR_VALUE, \
+    usb_power_open, usb_power_close, usb_power_open_recv, usb_power_close_recv, usb_power_check_status
 
 
 class HandSerial:
@@ -113,29 +114,24 @@ class HandSerial:
 
 def controlUsbPower(status="ON"):
     try:
-        s = ShellLab.ShellLab(usb_power_com)
-
-        s.pinOutputLow('0.0')
-        s.pinOutputLow('0.1')
-        s.pinOutputLow('0.2')
-        s.pinOutputLow('0.3')
-
-        if status == "ON" or status == "init":
-            s.pinSetHigh('0.0')
-            s.pinSetHigh('0.3')
-            s.pinSetHigh('0.1')
-            s.pinSetHigh('0.2')
-        else:
-            s.pinSetLow('0.0')
-            s.pinSetLow('0.3')
-            s.pinSetLow('0.1')
-            s.pinSetLow('0.2')
-        return 0
-    except Exception as e:
+        ser = serial.Serial(usb_power_com, 9600, timeout=2)
+    except SerialException:
         if status == "init":
             return 0
-        print("Control usb power fail, info: ", str(e))
+        else:
+            raise ControlUSBPowerFail
+    order = usb_power_open if status == "ON" or status == 'init' else usb_power_close
+    status_order = usb_power_open_recv if status == "ON" or status == 'init' else usb_power_close_recv
+    send_order = bytes.fromhex(order)
+    ser.write(send_order)  # 发送数据
+    time.sleep(0.01)
+    order = bytes.fromhex(usb_power_check_status)
+    ser.write(order)
+    return_data = ser.read(8)  # 读取返回数据
+    str_return_data = str(return_data.hex()).upper()
+    if str_return_data != status_order:
         raise ControlUSBPowerFail
+    return 0
 
 
 # 相机的触发控制
@@ -244,4 +240,18 @@ class SensorSerial(HandSerial):
         if sensor_ret_value.count('f') == len(sensor_ret_value):
             return False
         value = int(sensor_ret_value, 16) / 10
+        if value > MAX_SENSOR_VALUE:  # 超过一定范围的力值也过滤掉
+            return False
         return value
+
+
+def read_z_down_from_file():
+    Z_DOWN = None
+    Z_DOWN_1 = None
+    with open(IP_FILE_PATH, "r", encoding="utf-8") as f:
+        for line in f:
+            if "Z_DOWN" in line and line[0] != '#' and "_1" not in line:
+                Z_DOWN = float(line.split('=')[1].split('#')[0])
+            if "Z_DOWN_1" in line and line[0] != '#' and CORAL_TYPE == 5.3:
+                Z_DOWN_1 = float(line.split('=')[1].split('#')[0])
+    return Z_DOWN, Z_DOWN_1

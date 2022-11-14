@@ -96,6 +96,8 @@ else:
     HARDWARE_MAPPING_LIST = ['1', arm_com, arm_com_sensor]
 
 Bugreport_file_name = "bugreport.zip"
+BUGREPORT = 'bugreport'
+JOB_SHARE = 'job_share'
 
 PICTURE_COMPRESS_RATIO = 0.5
 
@@ -103,6 +105,12 @@ if sys.platform.startswith("win"):
     find_command = "findstr"
 else:
     find_command = "grep"
+
+if platform.system() == 'Linux':
+    IP_FILE_PATH = '/app/source/ip.py'
+else:
+    IP_FILE_PATH = os.path.join(BASE_DIR, "app", "config", "ip.py")
+
 
 ERROR_CODE_FILE = 'error_code.csv'
 
@@ -118,3 +126,5 @@ email_addresses = {
 
 # tboard mapping 临时性的跑通方案 用来记录哪些job还没有执行以及job对应的一些参数
 tboard_mapping = {}
+
+CAMERA_PROCESS_NAME = 'process-camera'

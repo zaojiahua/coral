@@ -10,6 +10,7 @@ from app.config.url import device_create_update_url, device_url, device_phone_mo
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
+from app.v1.Cuttle.basic.hand_serial import read_z_down_from_file
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.boxSvc.box_views import get_port_temperature
 from app.v1.device_common.setting import key_map_position, default_key_map_position
@@ -19,10 +20,11 @@ from app.v1.tboard.model.dut import Dut
 from app.execption.outer.error_code.djob import DeviceStatusError
 from app.libs.extension.field import OwnerList
 from app.config.setting import CORAL_TYPE
-from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, Z_DOWN, \
-    COMPUTE_M_LOCATION
+from app.v1.Cuttle.basic.setting import set_global_value, get_global_value, COORDINATE_CONFIG_FILE, \
+    COMPUTE_M_LOCATION, hand_serial_obj_dict, rotate_hand_serial_obj_dict, sensor_serial_obj_dict, FpsMax
 from app.v1.Cuttle.basic.basic_views import UnitFactory
 from app.execption.outer.error_code.camera import CoordinateConvert, MergeShapeNone
+from redis_init import redis_client
 
 
 class DeviceStatus(object):
@@ -420,6 +422,15 @@ class Device(BaseModel):
         if self.ip_address != "0.0.0.0":
             h = AdbHandler(model=self)
             h.disconnect()
+        if CORAL_TYPE >= 5:
+            hand_serial_obj_dict.clear()
+            sensor_serial_obj_dict.clear()
+            if self.has_camera:
+                # 先简单处理
+                redis_client.set(f"camera_process_1", '0')
+                redis_client.set(f"camera_process_2", '0')
+        if CORAL_TYPE == 3:
+            rotate_hand_serial_obj_dict.clear()
         # 移除僚机信息
         self.remove_subsidiary_device()
         self.remove()
@@ -451,7 +462,7 @@ class Device(BaseModel):
         while self.flag:
             time.sleep(2)
             if self.status == DeviceStatus.ERROR:
-                continue
+                break
             try:
                 if self.power_port:
                     aide_monitor_instance.start_battery_management()
@@ -475,7 +486,11 @@ class Device(BaseModel):
     def update_m_location(self):
         if CORAL_TYPE in [1, 2, 3]:
             return
-
+        Z_DOWN, Z_DOWN_1 = read_z_down_from_file()
+        if not Z_DOWN:
+            self.logger.error('缺少必要的Z_DOWN相关配置, 请检查配置文件！！！')
+        if CORAL_TYPE == 5.3 and (not Z_DOWN_1):
+            Z_DOWN_1 = Z_DOWN
         # 新的坐标换算和5D保持一样，也可以使用原始的坐标换算方式
         if CORAL_TYPE == 5.3 or COMPUTE_M_LOCATION:
             if not os.path.exists(COORDINATE_CONFIG_FILE):
@@ -506,17 +521,17 @@ class Device(BaseModel):
             if m_location is not None:
                 set_global_value('m_location',
                                  [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
+        if CORAL_TYPE == 5.3:
+            set_global_value('Z_DOWN', Z_DOWN)
+            set_global_value('Z_DOWN_1', Z_DOWN_1)
 
         if get_global_value('m_location'):
             if len(get_global_value('m_location')) == 3:
                 self.screen_z = str(get_global_value('m_location')[2])
                 set_global_value('Z_DOWN', get_global_value('m_location')[2])
             print('new Z_DOWN', get_global_value('Z_DOWN'))
-        elif Z_DOWN:
-            if CORAL_TYPE == 5.3:
-                set_global_value('Z_DOWN', Z_DOWN)
-            else:
-                set_global_value('Z_DOWN', round(Z_DOWN + float(self.ply), 2))
+        elif Z_DOWN and CORAL_TYPE != 5.3:
+            set_global_value('Z_DOWN', round(Z_DOWN + float(self.ply), 2))
             print('new Z_DOWN', get_global_value('Z_DOWN'))
 
     # 获取5l柜的点击坐标
@@ -590,7 +605,7 @@ class Device(BaseModel):
     # 将截图获取统一到这里
     def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None,
                      max_retry_time=None, record_video=False, record_time=0, timeout=None, back_up_dq=None,
-                     modify_fps=False):
+                     modify_fps=False, set_fps=FpsMax, set_shot_time="default"):
         jsdata = dict({"requestName": "AddaExecBlock", "execBlockName": "snap_shot",
                        "execCmdList": [
                            f"adb -s {connect_number if connect_number is not None else self.connect_number} "
@@ -603,7 +618,9 @@ class Device(BaseModel):
                        'max_retry_time': max_retry_time,
                        'timeout': timeout,
                        'back_up_dq': back_up_dq,
-                       'modify_fps': modify_fps})
+                       'modify_fps': modify_fps,
+                       'set_fps': set_fps,
+                       'set_shot_time': set_shot_time})
         if self.has_camera and connect_number is None:
             handler_type = "CameraHandler"
         else:

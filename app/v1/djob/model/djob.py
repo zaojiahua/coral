@@ -23,6 +23,7 @@ from app.libs.adbutil import get_room_version
 from app.config.ip import ADB_TYPE
 from app.config.setting import CORAL_TYPE
 from app.libs.ospathutil import deal_dir_file
+from app.v1.Cuttle.basic.operator.image_operator import RECOGNIZE_WORDS
 
 """
 inner job 只有一个 job flow
@@ -62,8 +63,14 @@ class DJob(BaseModel):
     picture_count = models.IntegerField()  # 记录性能测试记录的总图片
     url_prefix = models.CharField()  # 记录性能测试存图的url前缀
     time_per_unit = OwnerFloatField()  # 记录性能测试存图单位时间
+    frame_data = OwnerList(to=dict)
+    start_method = models.IntegerField()
+    end_method = models.IntegerField()
+    set_fps = OwnerFloatField()
+    fps = OwnerFloatField()
+    set_shot_time = OwnerFloatField()
     rds_info_list = ["job_duration", "start_point", "end_point", "picture_count", "url_prefix", "time_per_unit",
-                     "lose_frame_point"]
+                     "lose_frame_point", 'start_method', 'end_method', 'set_fps', 'set_shot_time', 'fps']
     # 特殊特征的rds提取和标识
     rds_feature_list = ['filter']
 
@@ -121,6 +128,11 @@ class DJob(BaseModel):
                 if getattr(djob_flow, key):
                     setattr(self, key, getattr(djob_flow, key))
 
+            # 保存帧数据
+            if djob_flow.frame_data:
+                for frame_info in djob_flow.frame_data:
+                    self.frame_data.lpush(frame_info)
+
     def postprocess(self):
         """
         结果处理
@@ -172,8 +184,15 @@ class DJob(BaseModel):
             if getattr(self, key):
                 json_data[key] = getattr(self, key)
 
+        # 保存frame_data的数据
+        if self.frame_data:
+            json_data['frame_data'] = []
+            for frame_info in self.frame_data:
+                json_data['frame_data'].append(frame_info)
+
         if len(rds_result) != 0:
             app_info = []
+            recognize_words = []
 
             def process_unit(eblock):
                 for unit_list in eblock.get('all_unit_list', []):
@@ -186,13 +205,22 @@ class DJob(BaseModel):
                             app_info.append({'package_name': unit.get('detail').get('package_name'),
                                              'app_version': unit.get('detail').get('app_version')})
 
+                        # 处理recognize_words这个特殊的字段
+                        if RECOGNIZE_WORDS in unit.get('detail', {}):
+                            recognize_words.append(unit['detail'][RECOGNIZE_WORDS])
+
             for job_flow in rds_result:
+                recognize_words = []
+
                 for eblock in job_flow.get('eblock_list', []):
                     if 'eblock_list' in eblock:
                         for inner_eblock in eblock.get('eblock_list', []):
                             process_unit(inner_eblock)
                     else:
                         process_unit(eblock)
+
+                if len(recognize_words) > 0:
+                    job_flow[RECOGNIZE_WORDS] = recognize_words
 
             if len(app_info) > 0:
                 json_data['app_info'] = json.dumps(app_info)

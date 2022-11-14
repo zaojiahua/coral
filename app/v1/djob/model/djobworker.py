@@ -49,7 +49,7 @@ class DJobWorker(BaseModel):
                 self.logger.info("callback finished ")
 
             self.using_djob.finish = True
-            self.remove_job_from_tboard_mapping()
+            # self.remove_job_from_tboard_mapping()
             self.using_djob.remove()
             self.logger.info("djob_process finished  now start next djob")
 

@@ -1,5 +1,5 @@
 import os
-import random
+import re
 import shutil
 
 import cv2
@@ -23,6 +23,7 @@ from app.v1.eblock.model.bounced_words import BouncedWords
 from app.execption.outer.error_code.djob import ImageIsNoneException
 
 VideoSearchPosition = 0.5
+RECOGNIZE_WORDS = 'recognize_words'
 
 
 class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin, ColorMixin, PerformanceMinix,
@@ -46,6 +47,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
 
     skip_list = ["realtime_picture_compare", "end_point_with_fps_lost"]
 
+    # 跟图标识别相关的
     def img_compare_func3(self, exec_content, **kwargs) -> int:
         # 图像对比，均值方差对比方法，现在基本不在用了。
         data = self._validate(exec_content, ImageSchemaCompatible)
@@ -121,6 +123,7 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
                 self.image = ocr_obj.default_pic_path
                 data['input_im'] = self.image
 
+    # 跟文字识别相关的
     def words_prepare(self, exec_content, key):
         # 输入图片不是必须的
         data = self._wrapper_validate(exec_content, ImageBasicSchemaCompatible)
@@ -141,6 +144,40 @@ class ImageHandler(Handler, FeatureCompareMixin, PreciseMixin, AreaSelectedMixin
             words = result[0].get("text")
             self._write_down(data.get("output_path"), f"{words}")
         return 0
+
+    # 将文字识别出来
+    def recognize_words(self, exec_content):
+        data = self._wrapper_validate(exec_content, ImageSchemaCompatible)
+        path = self._crop_image_and_save(data.get("input_im"), data.get("areas")[0])
+        name = exec_content.get('requiredWords')
+        reg_match = exec_content.get('regWords')
+        for scale in [1, 2]:
+            if scale != 1:
+                # 将图片放大俩倍 识别效果更好
+                scale_pic = cv2.resize(cv2.imread(path), dsize=(0, 0), fx=2, fy=2)
+                path = path[:-4] + f'_{scale}' + '.png'
+                cv2.imwrite(path, scale_pic)
+            with Complex_Center(inputImgFile=path, **self.kwargs) as ocr_obj:
+                self.extra_result['not_compress_png_list'].append(ocr_obj.get_pic_path())
+                result = ocr_obj.get_result()
+                if isinstance(result, list) and len(result) > 0:
+                    for i in range(0, len(result)):
+                        words = result[i].get("text")
+                        print('ocr以后的内容是：', words)
+                        # 判断是否含有正则表达式，有的话就应用
+                        if reg_match:
+                            match_result = re.findall(reg_match, words)
+                            if match_result:
+                                words = match_result[0]
+                                break
+                            else:
+                                words = ''
+                    print('正则以后的内容是：', words)
+                    if words:
+                        self.extra_result[RECOGNIZE_WORDS] = {name: words}
+                        return 0
+        self.extra_result[RECOGNIZE_WORDS] = {name: ''}
+        return 1
 
     def clear(self, result, t_guard):
         if t_guard is None or t_guard == 1:

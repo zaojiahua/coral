@@ -37,6 +37,7 @@ class EblockSchema(BaseSchema):
     block_source = fields.Str(required=True)
     work_path = fields.Str(required=True)
     rds_path = fields.Str(required=True)
+    share_path = fields.Str(required=True)
     temp_port_list = fields.List(fields.Str(), required=True)
     ip_address = fields.Str(required=True)
     unit_lists = fields.Nested(UnitListSchema, many=True, required=True, data_key="unitLists")

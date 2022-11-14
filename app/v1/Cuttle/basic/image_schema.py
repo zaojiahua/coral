@@ -4,6 +4,9 @@ import os
 import cv2
 from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE
 
+from app.execption.outer.error_code.camera import MaxFpsSupport, MaxShotTimeSupport
+from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
+
 
 def verify_exist(path):
     if not os.path.exists(path):
@@ -73,6 +76,22 @@ def verify_image(image_path):
     s = im.shape[0] * im.shape[1]
     if s < 100:
         raise ValidationError('image need bigger size ')
+
+
+def verify_input_fps(input_fps):
+    """
+    验证帧率，验证条件：
+    1. default
+    2. 非default需要大于0且小于该柜子最小帧率
+    """
+    if input_fps != "default":
+        if float(input_fps) > FpsMax or float(input_fps) <= 0:
+            raise MaxFpsSupport
+
+
+def verify_shot_time(input_shot_time):
+    if input_shot_time != "default" and float(input_shot_time) < 0:
+        raise MaxShotTimeSupport
 
 
 def verify_has_grep(cmd):
@@ -324,14 +343,23 @@ class SimpleVideoPullSchema(Schema):
     fileName = fields.String(required=True, validate=has_format)
 
 
-class PerformanceSchemaCompare(Schema):
-    config = fields.String(data_key="configArea")
+class PerformanceFpsShotTimeSchema(Schema):
+    set_fps = fields.String(required=False, data_key="setFpsByUser", validate=verify_input_fps)
+    set_shot_time = fields.String(required=False, data_key="setShotTime", validate=verify_shot_time)
 
     class Meta:
         unknown = INCLUDE
 
     @post_load()
     def explain(self, data, **kwargs):
+        data['set_fps'] = float(data.get('set_fps')) if data.get('set_fps', 'default') != "default" else FpsMax
+        if data.get('set_shot_time', 'default') != "default" and (
+                float(data.get('set_shot_time')) * data['set_fps']) <= CameraMax:
+            data['set_shot_time'] = float(data.get('set_shot_time'))
+        elif data.get('set_shot_time', "default") == 'default':
+            data['set_shot_time'] = "default"
+        else:
+            raise MaxShotTimeSupport
         try:
             with open(data.get('config'), "r") as json_file:
                 json_data = json.load(json_file)
@@ -341,10 +369,19 @@ class PerformanceSchemaCompare(Schema):
             data["areas"] = areas if areas != [] else [[1, 1, 1, 1]]
             data["threshold"] = threshold
             return data
-        except (FileNotFoundError,TypeError):
+        except (FileNotFoundError, TypeError):
             data["areas"] = [[0, 0, 1, 1]]
             data["threshold"] = 0.99
             return data
+
+
+class PerformanceSchemaCompare(PerformanceFpsShotTimeSchema):
+    config = fields.String(data_key="configArea")
+
+
+class PerformanceKeyNameSchema(PerformanceFpsShotTimeSchema):
+    key_name = fields.String(data_key="keyName")
+    press_time = fields.String(required=False, data_key="pressTime")
 
 
 class PerformanceSchemaFps(PerformanceSchemaCompare):

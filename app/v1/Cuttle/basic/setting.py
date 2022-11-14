@@ -23,8 +23,6 @@ def get_global_value(key, def_value=None):
 # import的时候可能存在问题，所以变量都声明一下
 m_location = None
 m_location_center = None
-Z_DOWN = None
-Z_DOWN_1 = None  # Tcab-5D的右机械臂
 ARM_MOVE_REGION = None
 DOUBLE_ARM_MOVE_REGION = None
 ARM_MAX_X = None
@@ -66,18 +64,9 @@ try:
 except ImportError:
     pass
 try:
-    from app.config.ip import Z_DOWN
-    set_global_value('Z_DOWN_INIT', Z_DOWN)
-    set_global_value('Z_DOWN', Z_DOWN)
+    from app.config.ip import CAMERA_CONVERT
 except ImportError:
-    raise Exception("ip.py文件异常，检查Z_DOWN值")
-
-if CORAL_TYPE == 5.3:
-    try:
-        from app.config.ip import Z_DOWN_1
-        set_global_value('Z_DOWN_1', Z_DOWN_1)
-    except ImportError:
-        set_global_value('Z_DOWN_1', Z_DOWN)
+    CAMERA_CONVERT = False
 
 # 3c 同时有旋转机械臂和三轴机械臂，所以必须区分开来
 hand_serial_obj_dict = {}
@@ -85,6 +74,10 @@ rotate_hand_serial_obj_dict = {}
 hand_origin_cmd_prefix = 'Hand'
 hand_used_list = []
 camera_dq_dict = {}
+# 将摄像机拍照需要的参数，传递到这里
+camera_kwargs_dict = {}
+# 将拍摄照片返回的参数，传递到这里，为了做进程之间的同步
+camera_ret_kwargs_dict = {}
 sensor_serial_obj_dict = {}
 
 # 相机的参数和柜子类型紧密相关，所以应该根据柜子类型来区分，而不是功能测试还是性能测试
@@ -116,7 +109,7 @@ else:
                                          ("PixelFormat", 0x01080009, 'enum'),
                                          ("ExposureTime", 3500.0)]
 
-camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 180.0)]
+camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
 # Tcab-5se功能测试使用的参数
 camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
                                       ('GammaEnable', True),
@@ -126,7 +119,7 @@ camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
                                 ("PixelFormat", 0x01080009, 'enum'),
                                 ("ExposureTime", 3500.0),
                                 ("AcquisitionFrameRate", 240.0)]
-camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 200.0)]
+camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
                     ("OffsetX", 0),
@@ -151,10 +144,10 @@ camera_params_54 = [("OffsetY", 0),
                     ("OffsetX", 0),
                     ("Width", 720),
                     ("Height", 540),
-                    ("ExposureTime", 2000.0),
+                    ("ExposureTime", 1200.0),
                     ('ADCBitDepth', 2, 'enum'),
-                    ("Gain", 2.5),
-                    ("AcquisitionFrameRate", 320.0),
+                    # ("Gain", 2.5),
+                    ("AcquisitionFrameRate", 480.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
 
@@ -181,24 +174,28 @@ HAND_MAX_Z = 5
 if CORAL_TYPE == 5.3:
     # Z_UP = -22
     Z_UP = 0
-    Z_START = -32
+    Z_START = -20
     arm_wait_position = f"G01 X0Y0Z{Z_UP}F15000 \r\n"
     HAND_MAX_X = DOUBLE_ARM_MOVE_REGION[0]
     HAND_MAX_Y = DOUBLE_ARM_MOVE_REGION[1]
 else:
     Z_UP = 0
     Z_START = 0
-    if CORAL_TYPE in [5, 5.1]:
+    if CORAL_TYPE in [5, 5.1, 5.4]:
         arm_wait_position = f"G01 X10Y-170Z{Z_UP}F15000 \r\n"
     else:
         arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
+
+MAX_SCOPE_5SE = [234, -245]  # 带延长杆的小型龙门架机械臂,行程 [320, 245]
+MAX_SCOPE_5 = [235, -420]  # 带延长杆的Y400龙门架机械臂，行程[320, 423]
+MAX_SCOPE_5L = [320, -420]  # 不带延长杆的Y400龙门架机械臂
 
 DIFF_X = 30
 MOVE_SPEED = 15000
 SWIPE_TIME = 1
 # 按压侧边键参数
 X_SIDE_KEY_OFFSET = 15
-X_SIDE_OFFSET_DISTANCE = 5
+X_SIDE_OFFSET_DISTANCE = 20
 PRESS_SIDE_KEY_SPEED = 3000
 Z_SIDE = -30
 Z_MIN_VALUE = -10
@@ -228,7 +225,6 @@ chinese_ingore = 0.55
 # 屏幕右侧开关占比
 right_switch_percent = 0.87
 
-CamObjList = {}
 normal_result = (False, None)
 blur_signal = "[B]"
 # 需要按常见顺序调整 亮度百分比的顺序 尽可能优先匹配到常见亮度变化。
@@ -252,30 +248,6 @@ KILL_SERVER = "kill-server"
 START_SERVER = "start-server"
 # 本来没有这条指令 但是为了让skill-server start-server作为一个原子操作，做一个这样的指令
 RESTART_SERVER = 'restart-server'
-SERVER_OPERATE_LOCK = 'server_operate_lock'
-NORMAL_OPERATE_LOCK = 'normal_lock'
-
-get_lock = '''
-local is_exist = redis.call("GET", KEYS[1])
-if is_exist then
-    return 1
-else
-    redis.call("SET", ARGV[1], ARGV[2])
-    return 0
-end
-'''
-unlock = '''
-local random_value = redis.call("GET", KEYS[1])
-if random_value == ARGV[1] then
-    return redis.call("DEL", KEYS[1])
-else
-    return 0
-end
-'''
-
-get_lock_cmd = redis_client.register_script(get_lock)
-unlock_cmd = redis_client.register_script(unlock)
-
 SCREENCAP_CMD = 'exec-out screencap -p >'
 # 兼容更早的Android版本
 SCREENCAP_CMD_EARLY_VERSION = "shell screencap -p | sed 's/\r$//' >"
@@ -311,10 +283,35 @@ SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
 
 click_loop_stop_flag = True  # 如果为True, 则停止多次点击
 set_global_value("click_loop_stop_flag", click_loop_stop_flag)
+COORDINATE_POINT_FILE = "app/config/point.py"
+Z_POINT_FILE = "app/config/zpoint.py"
 
 # 相机外触发端子的指令
 camera_power_open = "01050000ff008c3a"
 camera_power_close = "010500000000cdca"
 
+# 压感数值范围
+MAX_SENSOR_VALUE = 50
 # 判断关机的电量阈值
 POWER_OFF_BATTERY_LEVEL = 8
+
+# 参考的dpi和mlocation值
+REFERENCE_VALUE = {
+    "reference_50": {"dpi": 8.631, "m_location": [11, -81]},
+    "reference_51": {"dpi": 7.707, "m_location": [18, -52]},
+    "reference_52": {"dpi": 8.502, "m_location": [15, -39]},
+    "reference_53": {"dpi": 4.643, "m_location": [-18, 41]},
+    "reference_54": {"dpi": 5.502, "m_location": [12, -87]},
+}
+
+# USB通断控制相关
+usb_power_check_status = "A10102A4"
+usb_power_close = "A00101A2"
+usb_power_open = "A00100A1"
+usb_power_close_recv = "A10101A3"
+usb_power_open_recv = "A10101A3"
+
+# 机械臂的点击时间
+CLICK_TIME = 'click_time'
+# 机械臂移动起来的加速度时间
+ACCELERATION_TIME = 0.040

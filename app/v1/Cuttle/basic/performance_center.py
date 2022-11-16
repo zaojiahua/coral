@@ -57,6 +57,12 @@ class PerformanceCenter(object):
         # icon 和scope 这里都是相对的坐标
         self.icon_scope = icon_area[0] if isinstance(icon_area, list) else None
         self.judge_icon = self.get_icon(refer_im_path)
+
+        # 记录用户框选的图标原始区域
+        if 'start_template_area' in kwargs:
+            self.start_template_area = kwargs.get('start_template_area')[0]
+            self.start_template_icon = self.get_icon(refer_im_path, self.start_template_area)
+
         self.scope = scope
         self.threshold = threshold
         self.move_flag = True
@@ -117,9 +123,23 @@ class PerformanceCenter(object):
                     self.start_number, _ = self.get_picture_number(self.start_timestamp)
                     is_find = True
             time.sleep(0.1)
+        elif self.start_method == 5:
+            min_value, _ = self.template_match(picture)
+            if min_value < 1 - threshold:
+                self.start_number = number
+                self.start_timestamp = timestamp
+                is_find = True
         else:
             is_find = False
         return is_find
+
+    def template_match(self, picture):
+        target = cv2.cvtColor(picture, cv2.COLOR_BGR2GRAY)
+        template = cv2.cvtColor(self.start_template_icon, cv2.COLOR_BGR2GRAY)
+
+        result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
+        min_val, _, min_loc, _ = cv2.minMaxLoc(result)
+        return min_val, min_loc
 
     # 判断图片是否发生了变化
     @staticmethod
@@ -195,15 +215,18 @@ class PerformanceCenter(object):
 
         return find_begin_point
 
-    def get_icon(self, refer_im_path):
+    def get_icon(self, refer_im_path, icon_scope=None):
         # 在使用黑色区域计算时，self.icon_scope为实际出现在snap图中的位置，此方法无意义
         # 在使用icon surf计算时，self.icon_scope为编辑时出现在refer图中的位置，此方拿到的是icon标准图
-        if not all((refer_im_path, self.icon_scope)):
+        if icon_scope is None:
+            icon_scope = self.icon_scope
+        if not all((refer_im_path, icon_scope)):
             return None
+
         picture = cv2.imread(refer_im_path)
         h, w = picture.shape[:2]
         area = [int(i) if i > 0 else 0 for i in
-                [self.icon_scope[0] * w, self.icon_scope[1] * h, self.icon_scope[2] * w, self.icon_scope[3] * h]]
+                [icon_scope[0] * w, icon_scope[1] * h, icon_scope[2] * w, icon_scope[3] * h]]
         return picture[area[1]:area[3], area[0]:area[2]]
 
     def camera_loop(self):
@@ -231,7 +254,7 @@ class PerformanceCenter(object):
             # 裁剪图片获取当前和下两张
             # start点的确认主要就是判定是否特定位置全部变成了黑色，既_black_field方法 （主要）/丢帧检测时是判定区域内有无变化（稀有）
             # 这部分如果是判定是否变成黑色（黑色就是机械臂刚要点下的时候，挡住图标所以黑色），其实只用到当前图，下两张没有使用
-            if self.start_method in [0, 3]:
+            if self.start_method in [0, 3, 5]:
                 picture, next_pic, __, timestamp = self.picture_prepare(number, area)
                 if picture is None:
                     print('图片不够，start loop')
@@ -611,6 +634,16 @@ class PerformanceCenter(object):
                                                   f'force: {force[force_index: force_index + step]}',
                                                   (20, 400 + force_index * 20),
                                                   cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                    elif self.start_method in [5]:
+                        min_value, min_loc = self.template_match(picture)
+                        w, h = self.start_template_icon.shape[:2]
+                        right_bottom = (min_loc[0] + w, min_loc[1] + h)
+                        picture = cv2.putText(picture.copy(),
+                                              f'{1- min_value}',
+                                              (min_loc[0] + w / 2, min_loc[1] + h / 2),
+                                              cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        picture = cv2.rectangle(picture.copy(), min_loc, right_bottom, (0, 0, 255), 2)
+                        picture_info['parameter'] = str(1 - min_value)
 
                 # 对丢帧检测的结果进行绘图
                 if self.start_method == 3:

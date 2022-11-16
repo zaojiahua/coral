@@ -44,6 +44,8 @@ class PerformanceMinix(object):
         # 使用实际位置是否为黑色（机械臂遮挡）判定起始按下时间
         data = self._validate(exec_content, PerformanceSchema)
         content = exec_content.copy()
+        # 保存原始用户标记的区域，后边areas被改变掉了
+        template_area = data.get('icon_areas')
         # 获取refer图的size用于计算裁剪后的补偿
         src = cv2.imread(data.get("refer_im"))
         h, w = src.shape[:2]
@@ -89,7 +91,7 @@ class PerformanceMinix(object):
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
                                         self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
-                                        set_shot_time=data.get("set_shot_time"))
+                                        set_shot_time=data.get("set_shot_time"), start_template_area=template_area)
         return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
 
     def start_point_with_point(self, exec_content):

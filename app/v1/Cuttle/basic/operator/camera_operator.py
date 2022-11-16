@@ -385,7 +385,11 @@ class CameraHandler(Handler):
                 # cv2.imwrite('camera/camera_2.png', img2)
                 h = self.get_homography(img1, img2)
 
-            result = self.warp_two_images(img2, img1, h)
+            try:
+                result = self.warp_two_images(img2, img1, h)
+            except Exception as e:
+                print('图片拼接发生错误', e)
+                break
 
             if not self.original:
                 if CORAL_TYPE == 5.3:

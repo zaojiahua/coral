@@ -814,7 +814,7 @@ class PaneCoordinateView(MethodView):
             for i in range(len(all_contours)):
                 for j in range(i + 1, len(all_contours)):
                     # x坐标基本一样
-                    if abs(all_contours[i][0][0] - all_contours[j][0][0]) < 6 and abs(
+                    if abs(all_contours[i][0][0] - all_contours[j][0][0]) < 7 and abs(
                             all_contours[i][0][1] - all_contours[j][0][1]) > 100:
                         return [all_contours[i], all_contours[j]]
 

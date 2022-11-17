@@ -124,7 +124,13 @@ class PerformanceCenter(object):
                     is_find = True
             time.sleep(0.1)
         elif self.start_method == 5:
-            min_value, _ = self.template_match(picture)
+            min_value, min_loc = self.template_match(picture)
+
+            picture_info = self.back_up_dq[number]
+            # 记录相关信息，debug的时候不需要再获取信息了
+            picture_info['min_value'] = str(round(1 - min_value, 2))
+            picture_info['min_loc'] = min_loc
+
             if min_value < 1 - threshold:
                 self.start_number = number
                 self.start_timestamp = timestamp
@@ -139,6 +145,7 @@ class PerformanceCenter(object):
 
         result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
         min_val, _, min_loc, _ = cv2.minMaxLoc(result)
+
         return min_val, min_loc
 
     # 判断图片是否发生了变化
@@ -601,6 +608,7 @@ class PerformanceCenter(object):
             for cur_index in range(end_number):
                 picture_info = self.back_up_dq[cur_index]
                 picture = self.get_back_up_image(picture_info['image'])
+                pic_h, pic_w, _ = picture.shape
 
                 # 在这个地方画上要找的起始点，调试的时候使用
                 if not hasattr(self, 'start_number') or self.start_number == 0\
@@ -635,15 +643,17 @@ class PerformanceCenter(object):
                                                   (20, 400 + force_index * 20),
                                                   cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
                     elif self.start_method in [5]:
-                        min_value, min_loc = self.template_match(picture)
-                        w, h = self.start_template_icon.shape[:2]
-                        right_bottom = (min_loc[0] + w, min_loc[1] + h)
-                        picture = cv2.putText(picture.copy(),
-                                              f'{1- min_value}',
-                                              (min_loc[0] + w / 2, min_loc[1] + h / 2),
-                                              cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
-                        picture = cv2.rectangle(picture.copy(), min_loc, right_bottom, (0, 0, 255), 2)
-                        picture_info['parameter'] = str(1 - min_value)
+                        h, w = self.start_template_icon.shape[:2]
+                        if 'min_loc' in picture_info:
+                            min_loc = picture_info['min_loc']
+                            min_value = picture_info['min_value']
+                            right_bottom = (min_loc[0] + w, min_loc[1] + h)
+                            picture = cv2.putText(picture.copy(),
+                                                  f'{min_value}',
+                                                  (int(min_loc[0] + w / 2), int(min_loc[1] + h / 2)),
+                                                  cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                            picture = cv2.rectangle(picture.copy(), min_loc, right_bottom, (0, 0, 255), 2)
+                            picture_info['parameter'] = min_value
 
                 # 对丢帧检测的结果进行绘图
                 if self.start_method == 3:

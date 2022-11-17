@@ -15,7 +15,7 @@ from app.execption.outer.error_code.imgtool import VideoStartPointNotFound, \
     VideoEndPointNotFound, FpsLostWrongValue, PerformanceNotStart
 from app.v1.Cuttle.basic.operator.hand_operate import creat_sensor_obj, close_all_sensor_connect
 from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, set_global_value, \
-    CAMERA_IN_LOOP, sensor_serial_obj_dict, get_global_value, camera_dq_dict, CLICK_TIME
+    CAMERA_IN_LOOP, sensor_serial_obj_dict, get_global_value, camera_dq_dict, CLICK_TIME, light_pyramid_setting
 from app.v1.Cuttle.basic.operator.camera_operator import get_camera_ids
 from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
@@ -128,7 +128,7 @@ class PerformanceCenter(object):
 
             picture_info = self.back_up_dq[number]
             # 记录相关信息，debug的时候不需要再获取信息了
-            picture_info['min_value'] = str(round(1 - min_value, 2))
+            picture_info['min_value'] = str(round(1 - min_value, 3))
             picture_info['min_loc'] = min_loc
 
             if min_value < 1 - threshold:
@@ -140,11 +140,20 @@ class PerformanceCenter(object):
         return is_find
 
     def template_match(self, picture):
-        target = cv2.cvtColor(picture, cv2.COLOR_BGR2GRAY)
-        template = cv2.cvtColor(self.start_template_icon, cv2.COLOR_BGR2GRAY)
+        target = picture
+        template = self.start_template_icon
 
-        result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
-        min_val, _, min_loc, _ = cv2.minMaxLoc(result)
+        # 5se的功能和性能用的是不同的相机参数，亮度不一样
+        template_list = [np.clip(template * present, 0, 255).astype(np.uint8) for present in
+                         light_pyramid_setting] if CORAL_TYPE == 5.2 else [template]
+        min_val = 1
+        min_loc = None
+        for template in template_list:
+            result = cv2.matchTemplate(target, template, cv2.TM_SQDIFF_NORMED)
+            val, _, loc, _ = cv2.minMaxLoc(result)
+            if val < min_val:
+                min_val = val
+                min_loc = loc
 
         return min_val, min_loc
 

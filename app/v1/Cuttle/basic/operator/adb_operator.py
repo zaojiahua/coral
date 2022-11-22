@@ -75,7 +75,11 @@ class AdbHandler(Handler, ChineseMixin):
 
     def str_func(self, exec_content, **kwargs) -> str:
         exec_content = self._compatible_sleep(exec_content)
-        self._model.logger.debug(f"adb input:{exec_content}")
+        is_get_battery = True if ("dumpsys battery" in exec_content) or ("battery mark" in exec_content) else False
+        if is_get_battery:
+            self._model.logger_battery.debug(f"adb input:{exec_content}")
+        else:
+            self._model.logger.debug(f"adb input:{exec_content}")
         if len(exec_content) == 0:
             return ""
 
@@ -110,8 +114,10 @@ class AdbHandler(Handler, ChineseMixin):
         except UnicodeDecodeError:
             execute_result = restr.strip().decode("gbk")
             print("cmd to exec:", exec_content, "decode error happened")
-
-        self._model.logger.debug(f"adb response:{execute_result}")
+        if is_get_battery:
+            self._model.logger_battery.debug(f"adb response:{execute_result}")
+        else:
+            self._model.logger.debug(f"adb response:{execute_result}")
         return execute_result
 
     def reconnect(self, *args):
@@ -238,7 +244,7 @@ class AdbHandler(Handler, ChineseMixin):
             device.battery_level = int(battery_level)
 
         # 2022.3.31  根据充电口的充电策略进行充电
-        self._model.logger.debug(f"根据充电策略充电.....battery_level: {battery_level}")
+        self._model.logger_battery.debug(f"根据充电策略充电.....battery_level: {battery_level}")
         self.set_power_port_status_by_battery(battery_level)
 
         self._model.disconnect_times = 0
@@ -251,7 +257,7 @@ class AdbHandler(Handler, ChineseMixin):
                 "charging": charging
             }
             response = request(method="POST", url=battery_url, data=json_data)
-            self._model.logger.info(f"push battery to reef response:{response}")
+            self._model.logger_battery.info(f"push battery to reef response:{response}")
         except ServerError:
             pass
 
@@ -343,12 +349,12 @@ class AdbHandler(Handler, ChineseMixin):
                 break
 
         if ac_power is None and usb_power is None:
-            self._model.logger.error("Get the battery.dat file but unable to obtain charge state")
+            self._model.logger_battery.error("Get the battery.dat file but unable to obtain charge state")
             return
         if battery_level is None:
-            self._model.logger.error("Get the battery.dat file but unable to obtain power")
+            self._model.logger_battery.error("Get the battery.dat file but unable to obtain power")
             return
-        self._model.logger.debug(f"battery fail mark, 根据充电策略充电.....battery_level: {battery_level}")
+        self._model.logger_battery.debug(f"battery fail mark, 根据充电策略充电.....battery_level: {battery_level}")
         from app.v1.device_common.device_model import Device
         device = Device(pk=self._model.pk)
         if int(battery_level) != 0:
@@ -363,11 +369,11 @@ class AdbHandler(Handler, ChineseMixin):
             "battery_level": int(battery_level),
             "charging": literal_eval(ac_power.capitalize()) or literal_eval(usb_power.capitalize())
         }
-        self._model.logger.debug(f"send battery info to reef:{json_data}")
+        self._model.logger_battery.debug(f"send battery info to reef:{json_data}")
         self._model.disconnect_times = 0
         try:
             response = request(method="POST", url=battery_url, data=json_data)
-            self._model.logger.info(f"push battery to reef response:{response}")
+            self._model.logger_battery.info(f"push battery to reef response:{response}")
         except ServerError:
             pass
         return 0
@@ -397,20 +403,20 @@ class AdbHandler(Handler, ChineseMixin):
 
         def compare_battery_level(max_level, min_level, level):
             if level <= min_level:
-                print("当前电量低于mix_level, 开始充电")
+                self._model.logger_battery.info("当前电量低于mix_level, 开始充电")
                 on_or_off_singal_port({
                     "port": port,
                     "action": True
                 })
             elif level >= max_level:
-                print("当前电量高于max_level, 停止充电")
+                self._model.logger_battery.info("当前电量高于max_level, 停止充电")
                 on_or_off_singal_port({
                     "port": port,
                     "action": False
                 })
 
         port_slg = get_global_value("port_charge_strategy")[port]
-        print("当前绑定端口是：", port, "当前端口充电策略是：", port_slg)
+        self._model.logger_battery.info("当前绑定端口是：", port, "当前端口充电策略是：", port_slg)
         slgs_by_user: list[dict] = port_slg["set_by_user_slg"]
         is_use_slgs_by_user = False
         if slgs_by_user:
@@ -420,13 +426,13 @@ class AdbHandler(Handler, ChineseMixin):
                 current_time = time.strftime('%H:%M', time.localtime())
                 if slg["timer"][0] <= current_time < slg["timer"][1]:
                     is_use_slgs_by_user = True
-                    print("当前使用了定时充电策略： ", slg)
+                    self._model.logger_battery.info("当前使用了定时充电策略： ", slg)
                     compare_battery_level(int(slg["max_value"]), int(slg["min_value"]), int(battery_level))
 
         if not is_use_slgs_by_user:
             # 未找到包含当前时间点的定时充电策略，或者当前充电端口不存在定时充电策略
             # 则使用默认充电策略
-            print("当前使用了默认充电策略： ", port_slg["default_slg"])
+            self._model.logger_battery.info("当前使用了默认充电策略： ", port_slg["default_slg"])
             compare_battery_level(int(port_slg["default_slg"]["max_value"]), int(port_slg["default_slg"]["min_value"]),
                                   int(battery_level))
         return 0

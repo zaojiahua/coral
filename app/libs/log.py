@@ -32,7 +32,8 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG, log_path=os.path.jo
         log_obj.setLevel(level)
 
         if LOG_TO_CONSOLE and is_out_console:
-            log_obj.addHandler(stream_handler)
+            if logger_name:
+                log_obj.addHandler(stream_handler)
         if LOG_TO_FILE:
             log_obj.addHandler(file_handler)
 

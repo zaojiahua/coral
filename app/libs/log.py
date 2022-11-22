@@ -9,7 +9,8 @@ from app.libs.ospathutil import asure_path_exist
 
 
 # 不同的手机，不同的天数放到一个log文件中，方便查看
-def setup_logger(logger_name, log_file, level=logging.DEBUG, log_path=os.path.join(LOG_DIR, "log")):
+def setup_logger(logger_name, log_file, level=logging.DEBUG, log_path=os.path.join(LOG_DIR, "log"),
+                 is_out_console=True):
     last_time = LOGGER_OBJ_DICT.get(logger_name, {}).get('last_time')
     now = datetime.datetime.now()
     if last_time is None:
@@ -30,7 +31,7 @@ def setup_logger(logger_name, log_file, level=logging.DEBUG, log_path=os.path.jo
 
         log_obj.setLevel(level)
 
-        if LOG_TO_CONSOLE:
+        if LOG_TO_CONSOLE and is_out_console:
             log_obj.addHandler(stream_handler)
         if LOG_TO_FILE:
             log_obj.addHandler(file_handler)

@@ -192,7 +192,7 @@ class Dut(BaseModel):
     def get_current_standby_time(self):
         total_standby_time = 0
         for job_index in range(self.current_job_index):
-            job_label = self.get_job_label_by_index(self.current_job_index)
+            job_label = self.get_job_label_by_index(job_index)
             msg = self.job_msg[job_label]
             if 'job_parameter' in msg and 'standby_time' in msg['job_parameter']:
                 total_standby_time += msg['job_parameter']['standby_time']

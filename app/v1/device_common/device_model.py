@@ -471,6 +471,7 @@ class Device(BaseModel):
                     get_port_temperature(self.temp_port_list.smembers())
                 send_battery_check(self.device_label, self.connect_number)
             except BaseException as e:
+                traceback.print_exc()
                 self.logger.error(f"Exception in async_loop: {repr(e)}")
         self.logger.warning(f"--flag changed--：{self.flag}")
 

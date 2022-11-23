@@ -121,6 +121,7 @@ class Device(BaseModel):
     def __init__(self, *args, **kwargs):
         super(Device, self).__init__(*args, **kwargs)
         self.logger = setup_logger(f'{self.pk}', f'{self.pk}.log')
+        self.logger_battery = setup_logger(f'{self.pk}_battery', f'{self.pk}_battery.log', is_out_console=False)
         self.flag = True
 
     def __repr__(self):
@@ -470,6 +471,7 @@ class Device(BaseModel):
                     get_port_temperature(self.temp_port_list.smembers())
                 send_battery_check(self.device_label, self.connect_number)
             except BaseException as e:
+                traceback.print_exc()
                 self.logger.error(f"Exception in async_loop: {repr(e)}")
         self.logger.warning(f"--flag changed--：{self.flag}")
 

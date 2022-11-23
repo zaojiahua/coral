@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import time
+import traceback
 import zipfile
 
 import cv2
@@ -248,6 +249,7 @@ class Unit(BaseModel):
                 self.detail = {"result": e.error_code}
                 raise e
             except Exception as e:
+                traceback.print_exc()
                 logger.debug(f'unit 不正常结束 {e}')
                 if isinstance(e, APIException):
                     detail = {"result": e.error_code}

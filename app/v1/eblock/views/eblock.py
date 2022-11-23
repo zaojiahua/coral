@@ -6,7 +6,7 @@ from flask import request
 from flask.views import MethodView
 
 from app.config.setting import TOTAL_LOG_NAME
-from app.libs.ospathutil import makedirs_new_folder, deal_dir_file
+from app.libs.ospathutil import makedirs_new_folder, deal_dir_file, asure_path_exist
 from app.v1.djob.viewModel.device import DeviceViewModel
 from app.v1.djob.viewModel.job import macro_repalce
 from app.v1.eblock.model.eblock import Eblock
@@ -47,6 +47,7 @@ class UnitView(MethodView):
 
         makedirs_new_folder(device_vm.rds_data_path)
         makedirs_new_folder(device_vm.djob_work_path)
+        asure_path_exist(device_vm.share_path)
         device_vm._get_device_msg()
 
         handler = MacroHandler(

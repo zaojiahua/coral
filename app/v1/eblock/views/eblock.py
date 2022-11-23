@@ -54,7 +54,8 @@ class UnitView(MethodView):
             work_path=device_vm.djob_work_path,
             rds_path=device_vm.rds_data_path,
             ip_address=Device(pk=validate_data["device_label"]).connect_number,
-            block_index=0)
+            block_index=0,
+            share_path=device_vm.share_path)
 
         fs = request.files.getlist('file')
 

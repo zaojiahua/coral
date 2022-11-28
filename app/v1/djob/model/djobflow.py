@@ -536,9 +536,11 @@ class DJobFlow(BaseModel):
         # 将共享目录下的文件进行上传，上传完以后需要删除文件，否则下次还会上传
         for file_name in os.listdir(self.device.share_path):
             file_path = os.path.join(self.device.share_path, file_name)
-            if os.path.getsize(file_path):
+            # 只上传文件，文件夹不管
+            if os.path.getsize(file_path) and not os.path.isdir(file_path):
                 self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
-            deal_dir_file(file_path)
+            if not os.path.isdir(file_path):
+                deal_dir_file(file_path)
 
     def _send_file(self, base_data, file_name, file_path, url, key):
         base_data["file_name"] = file_name

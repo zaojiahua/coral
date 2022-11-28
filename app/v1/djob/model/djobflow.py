@@ -521,7 +521,7 @@ class DJobFlow(BaseModel):
                         self._send_file(base_data, file_name, file_path, upload_rds_screen_shot_url, "rds_screen_shot")
                     elif file_name.endswith(".zip"):
                         self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
-                if file_name.endswith((".txt", ".log", ".json")):
+                if file_name.endswith((".txt", ".log", ".json", 'xlsx')):
                     self._send_file(base_data, file_name, file_path, upload_rds_log_file_url, "log_file")
                 # 针对bugreport的特殊逻辑
                 elif BUGREPORT in file_name and int(job_assessment_value) == 0:

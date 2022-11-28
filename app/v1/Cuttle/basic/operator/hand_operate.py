@@ -281,6 +281,21 @@ class HandHandler(Handler, DefaultMixin):
         self.kwargs["exec_repeat_sliding_obj"] = kwargs["exec_serial_obj"]
         return 0
 
+    @allot_serial_obj
+    def fast_swipe_orders(self, axis, *args, **kwargs):
+        # 对坐标进行预处理
+        for axis_index in range(len(axis)):
+            axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
+
+        # 计算滑动速度
+        swipe_speed = self.speed * 60
+        # 生成滑动指令集
+        self.kwargs["repeat_sliding_order"] = self.__fast_sliding_order(axis[0], axis[1], swipe_speed)
+
+        self.kwargs["exec_repeat_sliding_obj"] = kwargs["exec_serial_obj"]
+
+        return 0
+
     def repeat_sliding(self, *args, **kwargs):
         # 传入滑动重复次数
         if isinstance(self.speed, int) and 1 <= self.speed <= 10:
@@ -293,6 +308,21 @@ class HandHandler(Handler, DefaultMixin):
                                                                    ignore_reset=ignore_reset)
             time.sleep(0.5)
         self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=repeat_time * 8 * 4)
+        return 0
+
+    def repeat_fast_sliding(self, *args, **kwargs):
+        # 传入滑动重复次数
+        if isinstance(self.speed, int) and 1 <= self.speed <= 30:
+            repeat_time = self.speed  # 为整型，且需在1-30之间
+        else:
+            raise RepeatTimeInvalid
+
+        for repeat_num in range(repeat_time):
+            ignore_reset = False if repeat_num == (repeat_time - 1) else True
+            self.kwargs["exec_repeat_sliding_obj"].send_list_order(self.kwargs["repeat_sliding_order"],
+                                                                   ignore_reset=ignore_reset)
+            self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=32, is_init=True)
+        time.sleep(2)
         return 0
 
     def record_repeat_count(self, *args, **kwargs):
@@ -876,6 +906,18 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 3, speed),
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
             ]
+
+    @staticmethod
+    def __fast_sliding_order(start_point, end_point, speed=MOVE_SPEED):
+        start_x, start_y, start_z = start_point
+        end_x, end_y, _ = end_point
+        commend_list = [
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z + 2, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fF%d \r\n' % (end_x, end_y, speed),
+            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 2, MOVE_SPEED),
+        ]
+        return commend_list
 
     @staticmethod
     def __straight_sliding_order(start_point, end_point, speed=MOVE_SPEED, arm_num=0):

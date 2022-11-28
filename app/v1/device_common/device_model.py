@@ -604,12 +604,6 @@ class Device(BaseModel):
 
         return click_x, click_y, click_z
 
-    # 获取设备的左上角点和右下角点的物理坐标
-    def get_roi_physical_coordinate(self):
-        left_top_coordinate = self.get_click_position(0, 0, absolute=True)
-        right_lower_coordinate = self.get_click_position(1, 1, absolute=True)
-        return left_top_coordinate, right_lower_coordinate
-
     # 将截图获取统一到这里
     def get_snapshot(self, image_path, high_exposure=False, original=False, connect_number=None,
                      max_retry_time=None, record_video=False, record_time=0, timeout=None, back_up_dq=None,

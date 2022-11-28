@@ -143,7 +143,7 @@ class HandHandler(Handler, DefaultMixin):
         "double hand zoom": "_relative_double_hand",
     }
     arm_exec_content_str = ["arm_back_home", "open_usb_power", "close_usb_power", "cal_swipe_speed",
-                            "double_hand_swipe", "repeat_sliding", "record_repeat_count"]
+                            "double_hand_swipe", "repeat_sliding", "record_repeat_count", "repeat_fast_sliding"]
 
     def __init__(self, *args, **kwargs):
         super(HandHandler, self).__init__(*args, **kwargs)
@@ -279,6 +279,10 @@ class HandHandler(Handler, DefaultMixin):
                                                                    arm_num=kwargs["arm_num"])
 
         self.kwargs["exec_repeat_sliding_obj"] = kwargs["exec_serial_obj"]
+
+        self.kwargs["sliding_spend_time"] = ((np.hypot(axis[1][0] - axis[0][0],
+                                                       axis[1][1] - axis[0][1])) / swipe_speed) * 60
+
         return 0
 
     @allot_serial_obj
@@ -290,10 +294,9 @@ class HandHandler(Handler, DefaultMixin):
         # 计算滑动速度
         swipe_speed = self.speed * 60
         # 生成滑动指令集
-        self.kwargs["repeat_sliding_order"] = self.__fast_sliding_order(axis[0], axis[1], swipe_speed)
+        self.kwargs["repeat_sliding_order"] = self.fast_sliding_order(axis[0], axis[1], swipe_speed)
 
         self.kwargs["exec_repeat_sliding_obj"] = kwargs["exec_serial_obj"]
-
         return 0
 
     def repeat_sliding(self, *args, **kwargs):
@@ -311,6 +314,8 @@ class HandHandler(Handler, DefaultMixin):
         return 0
 
     def repeat_fast_sliding(self, *args, **kwargs):
+        if CORAL_TYPE == 5.3:
+            raise TcabNotAllowExecThisUnit
         # 传入滑动重复次数
         if isinstance(self.speed, int) and 1 <= self.speed <= 30:
             repeat_time = self.speed  # 为整型，且需在1-30之间
@@ -321,8 +326,11 @@ class HandHandler(Handler, DefaultMixin):
             ignore_reset = False if repeat_num == (repeat_time - 1) else True
             self.kwargs["exec_repeat_sliding_obj"].send_list_order(self.kwargs["repeat_sliding_order"],
                                                                    ignore_reset=ignore_reset)
-            self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=32, is_init=True)
+            if repeat_num % 2 == 0:
+                time.sleep(self.kwargs["sliding_spend_time"] * 6.5)
+
         time.sleep(2)
+        self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=40 * repeat_time, is_init=True)
         return 0
 
     def record_repeat_count(self, *args, **kwargs):
@@ -907,17 +915,45 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, y4, Z_UP, MOVE_SPEED),
             ]
 
-    @staticmethod
-    def __fast_sliding_order(start_point, end_point, speed=MOVE_SPEED):
+    def fast_sliding_order(self, start_point, end_point, speed=MOVE_SPEED):
+        # start_x, start_y, start_z = start_point
+        # end_x, end_y, _ = end_point
+        # commend_list = [
+        #     'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z + 2.5, MOVE_SPEED),
+        #     'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
+        #     'G01 X%0.1fY%0.1fF%d \r\n' % (end_x, end_y, speed),
+        #     'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 2.5, MOVE_SPEED),
+        # ]
+        # return commend_list
+        device_obj = self.get_device_obj()
+        left_top, right_lower = device_obj.get_roi_physical_coordinate()
         start_x, start_y, start_z = start_point
         end_x, end_y, _ = end_point
-        commend_list = [
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z + 2, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fF%d \r\n' % (end_x, end_y, speed),
-            'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 2, MOVE_SPEED),
-        ]
-        return commend_list
+        # 左右滑动
+        if abs(start_x - end_x) > abs(start_y - end_y):
+            # 左右滑动
+            commend_list = [
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z + 3, MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
+                'G01 X%0.1fY%0.1fF%d \r\n' % (end_x, end_y, speed),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 3.5, MOVE_SPEED),
+            ]
+            return commend_list
+        else:
+            x4 = min(max(end_x + (start_x - end_x) * trapezoid, 0), right_lower[0])
+            # 上下滑动
+            if start_y < end_y:
+                # 上滑
+                y4 = min((end_y + 5), left_top[1])
+            else:
+                # 下滑
+                y4 = max((end_y - 5, 0), right_lower[1])
+            return [
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z + 3, MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, start_z + 3, speed),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (x4, y4, start_z + 5, MOVE_SPEED),
+            ]
 
     @staticmethod
     def __straight_sliding_order(start_point, end_point, speed=MOVE_SPEED, arm_num=0):

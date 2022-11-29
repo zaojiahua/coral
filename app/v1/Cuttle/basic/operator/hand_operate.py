@@ -316,8 +316,8 @@ class HandHandler(Handler, DefaultMixin):
         if CORAL_TYPE == 5.3:
             raise TcabNotAllowExecThisUnit
         # 传入滑动重复次数
-        if isinstance(self.speed, int) and 1 <= self.speed <= 30:
-            repeat_time = self.speed  # 为整型，且需在1-30之间
+        if isinstance(self.speed, int) and 1 <= self.speed <= 50:
+            repeat_time = self.speed  # 为整型，且需在1-50之间
         else:
             raise RepeatTimeInvalid
 
@@ -326,7 +326,7 @@ class HandHandler(Handler, DefaultMixin):
             self.kwargs["exec_repeat_sliding_obj"].send_list_order(self.kwargs["repeat_sliding_order"],
                                                                    ignore_reset=ignore_reset)
             if repeat_num > 1 and repeat_num % 2 == 0:
-                time.sleep(self.kwargs["sliding_spend_time"] * 5)
+                time.sleep(self.kwargs["sliding_spend_time"] * 7)
 
         time.sleep(2)
         self.kwargs["exec_repeat_sliding_obj"].recv(buffer_size=40 * repeat_time, is_init=True)

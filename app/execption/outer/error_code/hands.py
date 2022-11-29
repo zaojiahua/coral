@@ -106,7 +106,7 @@ class RepeatTimeInvalid(APIException):
     """
     error_code = 3012
     code = 400
-    description = "Repeat Time Out of Range 1-10"
+    description = "Repeat Time Out of limit"
 
 
 class UsingHandFail(APIException):

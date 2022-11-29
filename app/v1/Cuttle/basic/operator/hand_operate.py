@@ -918,9 +918,9 @@ class HandHandler(Handler, DefaultMixin):
         start_x, start_y, start_z = start_point
         end_x, end_y, _ = end_point
         commend_list = [
-            'G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (start_x, start_y, start_z + 3, MOVE_SPEED),
+            'G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (start_x, start_y, start_z + 2, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
-            'G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (end_x, end_y, start_z + 3, speed),
+            'G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (end_x, end_y, start_z, speed),
         ]
         return commend_list
 

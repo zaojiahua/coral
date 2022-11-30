@@ -186,9 +186,10 @@ class DJob(BaseModel):
 
         # 保存frame_data的数据
         if self.frame_data:
-            json_data['frame_data'] = []
+            temp_frame_data = []
             for frame_info in self.frame_data:
-                json_data['frame_data'].append(frame_info)
+                temp_frame_data.append(frame_info)
+            json_data['frame_data'] = json.dumps(temp_frame_data)
 
         if len(rds_result) != 0:
             app_info = []

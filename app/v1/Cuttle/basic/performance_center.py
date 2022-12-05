@@ -703,7 +703,8 @@ class PerformanceCenter(object):
             for frame_num in range(min(len(self.back_up_dq), end_number + int(1 * FpsMax))):
                 frame_data = {}
                 picture_info = self.back_up_dq[frame_num]
-                frame_data['frame_num'] = frame_num
+                # 帧号从1开始
+                frame_data['frame_num'] = frame_num + 1
                 frame_data['timestamp'] = picture_info['host_timestamp']
                 frame_data['parameter'] = picture_info.get('parameter')
                 try:

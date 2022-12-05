@@ -1,3 +1,5 @@
+import time
+
 import traceback
 
 from flask import request, jsonify
@@ -41,6 +43,7 @@ class UnitFactory(object):
         input_data['handler_type'] = handler_type
         from app.v1.device_common.device_model import Device
         model_obj = Device(pk=pk)
+        time.sleep(input_data.get("before_exec_sleep", 0))
         # 此处，会根据handler_type(是个字符串)实例化一个对应的handler（eg:AdbHandler,ImageHandler），并把刚刚的model，
         # 和执行中unit的信息（input_data）传入handler的构造函数，并显示的调用execute方法。
         return eval(handler_type)(model=model_obj, many=isinstance(input_data.get('execCmdList'), list),

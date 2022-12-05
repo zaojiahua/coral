@@ -98,23 +98,23 @@ class PerformanceCenter(object):
 
     def start_judge_function(self, picture, threshold, number=None, timestamp=None, next_pic=None):
         is_find = False
-        if self.start_method == 0:
+        if self.start_method == 0:  # 按下算法
             # 传过来的图片不知为何，有可能是空的
             if picture is not None:
                 is_find = self._black_field(picture, threshold)
                 if is_find and timestamp is not None:
                     self.start_number = number
                     self.start_timestamp = timestamp
-        elif self.start_method == 1:
+        elif self.start_method == 1:    # 按下压感
             is_find = self.sensor_press_down()
-        elif self.start_method == 2:
+        elif self.start_method == 2:    # 抬起压感
             is_find = self.sensor_press_down(up=True)
-        elif self.start_method == 3:
+        elif self.start_method == 3:    # 图片变化
             is_find = self.picture_changed(picture, next_pic, threshold)
             if is_find and timestamp is not None:
                 self.start_number = number
                 self.start_timestamp = timestamp
-        elif self.start_method == 4:
+        elif self.start_method == 4:    # 自定义按键
             click_time = redis_client.get(CLICK_TIME)
             if click_time is not None and click_time != '0':
                 if time.time() >= float(click_time):

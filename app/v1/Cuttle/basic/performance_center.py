@@ -40,6 +40,7 @@ class PerformanceCenter(object):
     max_force = 0
     sensor_index = None
     force_dict = {}
+    result = {}
 
     # 这部分是性能测试的中心对象，性能测试主要测试启动点 和终止点两个点位，并根据拍照频率计算实际时间
     # 终止点比较简单，但是启动点由于现有机械臂无法确认到具体点压的时间，只能通过机械臂遮挡关键位置时间+补偿时间（机械臂下落按压时间）计算得到
@@ -74,8 +75,6 @@ class PerformanceCenter(object):
         self.kwargs = kwargs
         self.set_fps = kwargs.get('set_fps', FpsMax)
         self.set_shot_time = kwargs.get('set_shot_time', CameraMax / FpsMax)
-        # 图片保存的路径是固定的
-        self.result = {'url_prefix': "path=" + self.work_path, 'frame_data': []}
         # 记录丢帧检测的所有组数
         self.groups = []
 
@@ -254,6 +253,8 @@ class PerformanceCenter(object):
 
     def start_loop(self, start_method=0):
         number = 0
+        # 图片保存的路径是固定的
+        self.result = {'url_prefix': "path=" + self.work_path, 'frame_data': []}
         self.start_method = start_method
         self.start_number = 0
         self.end_number = 0

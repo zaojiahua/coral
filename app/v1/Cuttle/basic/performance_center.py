@@ -222,6 +222,8 @@ class PerformanceCenter(object):
                 if cur_force > 0 and not up:
                     find_begin_point = True
                     break
+            # 等待一会再获取力值
+            time.sleep(1 / (FpsMax * 2))
 
         if find_begin_point:
             self.start_timestamp = force_time
@@ -638,19 +640,20 @@ class PerformanceCenter(object):
                         force, timestamp = self.get_force(host_timestamp)
                         timestamp = time.strftime(
                             "%H:%M:%S", time.localtime(timestamp / 1000)) + '.' + str(timestamp)[-3:]
-                        host_timestamp = time.strftime(
-                            "%H:%M:%S", time.localtime(host_timestamp / 1000)) + '.' + str(host_timestamp)[-3:]
+                        # host_timestamp = time.strftime(
+                        #     "%H:%M:%S", time.localtime(host_timestamp / 1000)) + '.' + str(host_timestamp)[-3:]
                         print('force:', force)
-                        picture = cv2.putText(picture.copy(), f'snap time: {host_timestamp}',
-                                              (20, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        # picture = cv2.putText(picture.copy(), f'snap time: {host_timestamp}',
+                        #                       (20, 200), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
                         picture = cv2.putText(picture.copy(), f'force time: {timestamp}',
                                               (20, 300), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
-                        step = 5
-                        for force_index in range(0, len(force), step):
-                            picture = cv2.putText(picture.copy(),
-                                                  f'force: {force[force_index: force_index + step]}',
-                                                  (20, 400 + force_index * 20),
-                                                  cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        # step = 5
+                        # for force_index in range(0, len(force), step):
+                        #     picture = cv2.putText(picture.copy(),
+                        #                           f'force: {force[force_index: force_index + step]}',
+                        #                           (20, 400 + force_index * 20),
+                        #                           cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
+                        picture_info['parameter'] = ','.join([str(f) for f in force])
                     elif self.start_method in [5]:
                         h, w = self.start_template_icon.shape[:2]
                         if 'min_loc' in picture_info:
@@ -701,17 +704,20 @@ class PerformanceCenter(object):
             self.result['set_shot_time'] = self.set_shot_time
             # 保存性能测试过程中的相关数据，推送到服务器，方便前端展示
             for frame_num in range(min(len(self.back_up_dq), end_number + int(1 * FpsMax))):
+                # 去掉第0帧数据，前端显示好看
+                if frame_num == 0:
+                    continue
                 frame_data = {}
                 picture_info = self.back_up_dq[frame_num]
                 # 帧号从1开始
-                frame_data['frame_num'] = frame_num + 1
+                frame_data['frame_num'] = frame_num
                 frame_data['timestamp'] = picture_info['host_timestamp']
                 frame_data['parameter'] = picture_info.get('parameter')
                 try:
                     frame_data['frame_duration'] = self.back_up_dq[frame_num + 1]['host_timestamp'] - \
                                                    picture_info['host_timestamp']
                 except IndexError:
-                    pass
+                    break
                 self.result['frame_data'].append(frame_data)
             if len(self.result['frame_data']) > 0:
                 self.result['fps'] = round(len(self.result['frame_data']) /
@@ -728,7 +734,7 @@ class PerformanceCenter(object):
 
         number = self.end_number + 1
         # 额外再保留1s的图片
-        for i in range(int(1 * FpsMax)):
+        for i in range(int(1 * FpsMax) + 1):
             try:
                 src = self.get_back_up_image(self.back_up_dq[number]['image'])
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)

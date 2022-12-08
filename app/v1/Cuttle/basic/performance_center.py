@@ -609,12 +609,13 @@ class PerformanceCenter(object):
                 self.bias = self.start_number
                 print('在最后重新设置起始点：', self.start_number)
                 self.result['start_point'] = self.start_number
-                if find_end:
-                    # 修改time_per_unit，便于前端计算
-                    end_host_timestamp = self.back_up_dq[self.end_number]['host_timestamp']
-                    job_duration = max(round((end_host_timestamp - host_timestamp) / 1000, 3), 0)
-                    time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
-                    self.result['time_per_unit'] = time_per_unit
+
+        # 修改job_duration
+        if find_end:
+            start_host_timestamp = self.back_up_dq[self.start_number]['host_timestamp']
+            end_host_timestamp = self.back_up_dq[self.end_number]['host_timestamp']
+            job_duration = max(round((end_host_timestamp - start_host_timestamp) / 1000, 3), 0)
+            self.result['job_duration'] = job_duration
 
         end_number = self.end_number + 1 if find_end else len(self.back_up_dq)
         print('保存图片时候的end number', end_number, '*' * 10)

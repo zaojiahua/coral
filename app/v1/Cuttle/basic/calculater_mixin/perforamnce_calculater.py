@@ -94,9 +94,8 @@ class PerformanceMinix(object):
         # 创建performance对象，并开始找起始点
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
-                                        set_shot_time=data.get("set_shot_time"), start_template_area=template_area)
-        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
+                                        self.kwargs.get("work_path"), start_template_area=template_area)
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1, set_fps=data.get("set_fps"), set_shot_time=data.get("set_shot_time"), )
 
     def start_point_with_point(self, exec_content):
         # 跟上面那个方法差不多，就是把模板匹配换成surf特征了，其实可以重构时候做些合并
@@ -151,9 +150,8 @@ class PerformanceMinix(object):
         # 创建performance对象，
         performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
-                                        set_shot_time=data.get("set_shot_time"))
-        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1, set_fps=data.get("set_fps"), set_shot_time=data.get("set_shot_time"))
 
     def start_point_with_point_fixed(self, exec_content):
         # 与上面两个方法也差不多，不做图标搜索了，就是按给的图标位置直接按，适合特别难识别的图标，但没有抵抗变化的能力
@@ -175,9 +173,8 @@ class PerformanceMinix(object):
             return 0
         performance = PerformanceCenter(self._model.pk, data.get("areas"), data.get("refer_im"),
                                         data.get("areas")[0], data.get("threshold", 0.99),
-                                        self.kwargs.get("work_path"), set_fps=data.get("set_fps"),
-                                        set_shot_time=data.get("set_shot_time"))
-        return performance.start_loop(self.kwargs.get('start_method', 1) - 1)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop(self.kwargs.get('start_method', 1) - 1, set_fps=data.get("set_fps"), set_shot_time=data.get("set_shot_time"))
 
     # 性能测试起点，按压自定义按键
     def start_point_with_press_key(self, exec_content):
@@ -200,10 +197,8 @@ class PerformanceMinix(object):
                                         None,
                                         [0, 0, 1, 1],
                                         None,
-                                        self.kwargs.get("work_path"),
-                                        set_fps=data.get("set_fps"),
-                                        set_shot_time=data.get("set_shot_time"))
-        return performance.start_loop(4)
+                                        self.kwargs.get("work_path"))
+        return performance.start_loop(4, set_fps=data.get("set_fps"), set_shot_time=data.get("set_shot_time"))
 
     # 下面几个就是上面那几个结束点版本
     def end_point_with_icon(self, exec_content):

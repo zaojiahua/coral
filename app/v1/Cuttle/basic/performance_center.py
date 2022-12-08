@@ -263,8 +263,8 @@ class PerformanceCenter(object):
         self.sensor_index = None
         self.start_timestamp = 0
         self.force_dict = collections.defaultdict(list)
-        self.set_fps = float(set_fps)
-        self.set_shot_time = float(set_shot_time)
+        self.set_fps = FpsMax if set_fps == 'default' else float(set_fps)
+        self.set_shot_time = (CameraMax / FpsMax) if set_shot_time == 'default' else float(set_shot_time)
 
         self.camera_loop()
 

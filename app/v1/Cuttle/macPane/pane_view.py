@@ -25,7 +25,8 @@ from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotRe
     CrossMax
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.basic_views import UnitFactory
-from app.v1.Cuttle.basic.hand_serial import controlUsbPower, read_z_down_from_file
+from app.v1.Cuttle.basic.hand_serial import controlUsbPower
+from app.v1.Cuttle.basic.component.hand_component import read_z_down_from_file, read_wait_position, get_wait_position
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler, judge_start_x, \
@@ -33,8 +34,9 @@ from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_ini
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
-    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, arm_wait_position, set_global_value, \
-    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME, HAND_MAX_X, Z_POINT_FILE
+    MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, set_global_value, \
+    COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME, \
+    HAND_MAX_X, Z_POINT_FILE, WAIT_POSITION_FILE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -453,7 +455,7 @@ class PaneClickTestView(MethodView):
         is_exec_loop: 是否正在执行测试点击多次
         """
         # 在这里计算点击或者按压的时间点 写入到redis中，用来辅助性能测试
-        move_times = hand_move_times(orders)
+        move_times = hand_move_times(orders, exec_serial_obj)
         if exec_action == "click":
             # 需要注意可能存在多个机械臂
             redis_client.set(CLICK_TIME, time.time() + move_times[0] + move_times[1] +
@@ -474,7 +476,8 @@ class PaneClickTestView(MethodView):
     def exec_action_loop(exec_serial_obj, orders, exec_action, click_count, random_dir):
         for num in range(click_count):
             if get_global_value("click_loop_stop_flag"):
-                exec_serial_obj.send_single_order(arm_wait_position)
+                wait_position = get_wait_position(exec_serial_obj.ser.port)
+                exec_serial_obj.send_single_order(wait_position)
                 exec_serial_obj.recv()
                 break
             ignore_reset = False if num == click_count - 1 else True
@@ -627,6 +630,51 @@ class PaneGetZDown(MethodView):
         return jsonify(dict(error_code=0, data=data))
 
 
+# 待命位置
+class PaneWaitPosition(MethodView):
+
+    # 获取待命位置
+    def get(self):
+        data = {"arm_wait_point": get_global_value("arm_wait_point")}
+        if CORAL_TYPE == 5.3:
+            data.update({"arm_wait_point_1": get_global_value("arm_wait_point_1")})
+        return jsonify(dict(error_code=0, data=data))
+
+    # 测试待命位置
+    def post(self):
+        device_label = request.get_json()["device_label"]
+        arm_num = request.get_json().get('arm_num', 0)
+        wait_point = request.get_json().get('arm_wait_point', 0)
+        exec_serial_obj, now_wait_position, orders = None, None, []
+        if CORAL_TYPE == 5.3:  # 5d
+            if arm_num == 1:
+                exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
+                now_wait_position = get_global_value("arm_wait_point_1")
+        else:
+            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
+            now_wait_position = get_global_value("arm_wait_point")
+        move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
+                     now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]
+        for move in move_list:
+            orders.append('G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (move[0], move[1], move[2], move[3]))
+        if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):
+            return jsonify(dict(error_code=UsingHandFail.error_code,
+                                description=UsingHandFail.description))
+        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click", wait_time=2)
+        return jsonify(dict(error_code=0))
+
+    # 更新待命位置
+    def put(self):
+        arm_wait_point = request.get_json()["arm_wait_point"]
+        with open(Z_POINT_FILE, "w+") as f:
+            f.write(f"arm_wait_point={arm_wait_point}\n")
+            if CORAL_TYPE == 5.3:
+                arm_wait_point_1 = request.get_json()["arm_wait_point_1"]
+                f.write(f"arm_wait_point_1={arm_wait_point_1}\n")
+        read_wait_position()
+        return jsonify(dict(error_code=0))
+
+
 # 获取坐标换算时的点击坐标
 class PaneGetCoordinateView(MethodView):
 
@@ -759,16 +807,17 @@ class PaneCoordinateView(MethodView):
 
     # 传入x,y俩个值即可
     @staticmethod
-    def get_click_orders(pos_x, pos_y):
+    def get_click_orders(pos_x, pos_y, hand_obj):
         z_down = get_global_value('Z_DOWN')
         z_up = round(z_down + 10, 2)
+        wait_position = get_wait_position(hand_obj.ser.port)
         return [f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
                 f"G01 X{pos_x}Y{pos_y}Z{z_down}F15000\r\n",
                 f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
-                arm_wait_position]
+                wait_position]
 
     def click(self, pos_x, pos_y, hand_obj):
-        click_orders = self.get_click_orders(pos_x, pos_y)
+        click_orders = self.get_click_orders(pos_x, pos_y, hand_obj)
         for order in click_orders:
             hand_obj.send_single_order(order)
         hand_obj.recv(buffer_size=64)
@@ -884,7 +933,8 @@ class PaneLocateDeviceView(MethodView):
                 hand_obj.recv(buffer_size=32)
                 # 等待一段时间，方便用户调试
                 time.sleep(5)
-                click_orders = [f"G01 X{pos_x}Y{pos_y}Z{z_down + 10}F15000\r\n", arm_wait_position]
+                wait_postion = get_wait_position(hand_obj.ser.port)
+                click_orders = [f"G01 X{pos_x}Y{pos_y}Z{z_down + 10}F15000\r\n", wait_postion]
                 for order in click_orders:
                     hand_obj.send_single_order(order)
                 hand_obj.recv(buffer_size=32)
@@ -1106,18 +1156,19 @@ class ClickCenterPointFive(MethodView):
     def click(self, device_obj, hand_obj, point_x, point_y):
         pos_x, pos_y, pos_z = device_obj.get_click_position(point_x, point_y, absolute=True)
         print(pos_x, pos_y, pos_z, '*' * 10)
-        click_orders = self.get_click_orders(pos_x, -pos_y, pos_z)
+        click_orders = self.get_click_orders(pos_x, -pos_y, pos_z, hand_obj)
         for order in click_orders:
             hand_obj.send_single_order(order)
         hand_obj.recv(buffer_size=64)
 
     @staticmethod
-    def get_click_orders(pos_x, pos_y, pos_z):
+    def get_click_orders(pos_x, pos_y, pos_z, hand_obj):
+        wait_position = get_wait_position(hand_obj.ser.port)
         z_up = pos_z + 5
         return [f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
                 f"G01 X{pos_x}Y{pos_y}Z{pos_z}F15000\r\n",
                 f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
-                arm_wait_position]
+                wait_position]
 
 
 class PaneMkDir(MethodView):

@@ -5,7 +5,8 @@ import cv2
 import numpy as np
 
 from app.execption.outer.error_code.imgtool import ColorPositionCrossMax
-from app.v1.Cuttle.basic.setting import blur_signal, arm_wait_position
+from app.v1.Cuttle.basic.component.hand_component import get_wait_position
+from app.v1.Cuttle.basic.setting import blur_signal
 
 
 def get_file_name(path):
@@ -146,13 +147,14 @@ def suit_for_blur(exec_content):
 
 
 # 计算机械臂执行某一步指令需要的时间
-def hand_move_times(orders):
+def hand_move_times(orders, exec_serial_obj):
+    wait_position = get_wait_position(exec_serial_obj.ser.port)
     spend_times = []
     for order_index in range(len(orders)):
         # 根据距离，自己计算等待时间
         regex = re.compile("[-\d.]+")
         if order_index == 0:
-            begin_point = [float(point) for point in re.findall(regex, arm_wait_position)[1:4]]
+            begin_point = [float(point) for point in re.findall(regex, wait_position)[1:4]]
         else:
             begin_point = [float(point) for point in re.findall(regex, orders[order_index - 1])[1:4]]
 

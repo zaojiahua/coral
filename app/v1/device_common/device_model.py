@@ -10,7 +10,7 @@ from app.config.url import device_create_update_url, device_url, device_phone_mo
 from app.libs.extension.model import BaseModel
 from app.libs.http_client import request
 from app.libs.log import setup_logger
-from app.v1.Cuttle.basic.hand_serial import read_z_down_from_file
+from app.v1.Cuttle.basic.component.hand_component import read_z_down_from_file
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.boxSvc.box_views import get_port_temperature
 from app.v1.device_common.setting import key_map_position, default_key_map_position

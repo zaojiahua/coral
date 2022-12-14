@@ -175,16 +175,12 @@ if CORAL_TYPE == 5.3:
     # Z_UP = -22
     Z_UP = 0
     Z_START = -20
-    arm_wait_position = f"G01 X0Y0Z{Z_UP}F15000 \r\n"
     HAND_MAX_X = DOUBLE_ARM_MOVE_REGION[0]
     HAND_MAX_Y = DOUBLE_ARM_MOVE_REGION[1]
 else:
     Z_UP = 0
     Z_START = 0
-    if CORAL_TYPE in [5, 5.1, 5.4]:
-        arm_wait_position = f"G01 X10Y-170Z{Z_UP}F15000 \r\n"
-    else:
-        arm_wait_position = f"G01 X10Y-95Z{Z_UP}F15000 \r\n"
+
 
 MAX_SCOPE_5SE = [234, -245]  # 带延长杆的小型龙门架机械臂,行程 [320, 245]
 MAX_SCOPE_5 = [235, -420]  # 带延长杆的Y400龙门架机械臂，行程[320, 423]
@@ -285,6 +281,7 @@ click_loop_stop_flag = True  # 如果为True, 则停止多次点击
 set_global_value("click_loop_stop_flag", click_loop_stop_flag)
 COORDINATE_POINT_FILE = "app/config/point.py"
 Z_POINT_FILE = "app/config/zpoint.py"
+WAIT_POSITION_FILE = "app/config/wait_point.py"
 
 # 相机外触发端子的指令
 camera_power_open = "01050000ff008c3a"

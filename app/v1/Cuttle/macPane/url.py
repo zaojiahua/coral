@@ -3,7 +3,7 @@ from flask import Blueprint
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
     AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView, \
     PaneLocateDeviceView, PaneVideoView, PaneUpdateMLocation, PaneClickMLocation, ClickCenterPointFive, PaneUpdateZDown, \
-    PaneClickZDown, PaneGetZDown, PaneClickCoordinateView, PaneGetCoordinateView, PaneMkDir
+    PaneClickZDown, PaneGetZDown, PaneClickCoordinateView, PaneGetCoordinateView, PaneMkDir, PaneWaitPosition
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, \
     PaneBorderView
 
@@ -54,6 +54,9 @@ pane.add_url_rule('/update_z_down/', view_func=PaneUpdateZDown.as_view('update_z
 pane.add_url_rule("/click_z_down/", view_func=PaneClickZDown.as_view('click_z_down'))
 # 获取Z_DOWN值
 pane.add_url_rule("/get_z_down/", view_func=PaneGetZDown.as_view('get_z_down'))
+
+# 待命位置
+pane.add_url_rule("/wait_position/", view_func=PaneWaitPosition.as_view('wait_position'))
 
 
 # 泰尔五星认证

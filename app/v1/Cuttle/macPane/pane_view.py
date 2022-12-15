@@ -650,6 +650,7 @@ class PaneWaitPosition(MethodView):
             if arm_num == 1:
                 exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
                 now_wait_position = get_global_value("arm_wait_point_1")
+                wait_point[0] = -wait_point[0]
         else:
             exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
             now_wait_position = get_global_value("arm_wait_point")

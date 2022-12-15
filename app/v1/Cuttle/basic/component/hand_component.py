@@ -40,7 +40,7 @@ def read_wait_position():
                                                          MOVE_SPEED)
     set_global_value("arm_wait_position", arm_wait_position)
     if CORAL_TYPE == 5.3:
-        arm_wait_position_1 = 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (get_global_value("arm_wait_point_1")[0],
+        arm_wait_position_1 = 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (-get_global_value("arm_wait_point_1")[0],
                                                                get_global_value("arm_wait_point_1")[1],
                                                                get_global_value("arm_wait_point_1")[2],
                                                                MOVE_SPEED)

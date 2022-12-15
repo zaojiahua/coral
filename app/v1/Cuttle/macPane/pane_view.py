@@ -654,19 +654,19 @@ class PaneWaitPosition(MethodView):
             exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
             now_wait_position = get_global_value("arm_wait_point")
         move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
-                     now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]
+                     [now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
         for move in move_list:
             orders.append('G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (move[0], move[1], move[2], move[3]))
         if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):
             return jsonify(dict(error_code=UsingHandFail.error_code,
                                 description=UsingHandFail.description))
-        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click", wait_time=2)
+        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click", ignore_reset=True, wait_time=2)
         return jsonify(dict(error_code=0))
 
     # 更新待命位置
     def put(self):
         arm_wait_point = request.get_json()["arm_wait_point"]
-        with open(Z_POINT_FILE, "w+") as f:
+        with open(WAIT_POSITION_FILE, "w+") as f:
             f.write(f"arm_wait_point={arm_wait_point}\n")
             if CORAL_TYPE == 5.3:
                 arm_wait_point_1 = request.get_json()["arm_wait_point_1"]

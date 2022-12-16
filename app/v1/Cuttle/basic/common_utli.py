@@ -167,3 +167,16 @@ def hand_move_times(orders):
 
     print('移动过程中的所有耗时如下：', spend_times)
     return spend_times
+
+
+# 复位机械臂 需要指定复位的是哪个机械臂
+def reset_arm(device_label, arm_com):
+    request_body = {
+        "device_label": device_label,
+        "execCmdList": ["armReset"],
+        'max_retry_time': 1,
+        'timeout': 60,
+        'arm_com': arm_com
+    }
+    result = handler_exec(request_body, 'HandHandler')
+    return result

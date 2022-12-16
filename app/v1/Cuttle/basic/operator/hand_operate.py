@@ -529,9 +529,11 @@ class HandHandler(Handler, DefaultMixin):
         return ret
 
     def arm_back_home(self, *args, **kwargs):
-        back_order = self.arm_back_home_order()
+        arm_com = self.kwargs.get('arm_com', '')
         for obj_key in hand_serial_obj_dict.keys():
-            if obj_key.startswith(self._model.pk):
+            back_order = self.arm_back_home_order()
+            # 对指定的机械臂进行复位操作
+            if obj_key.startswith(self._model.pk) and arm_com in obj_key:
                 serial_obj = hand_serial_obj_dict.get(obj_key)
                 for order in back_order:
                     serial_obj.send_single_order(order)

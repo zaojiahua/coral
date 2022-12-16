@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from flask import request
+from flask import request, jsonify
 from flask.views import MethodView
 
 from app.config.setting import TOTAL_LOG_NAME
@@ -14,6 +14,7 @@ from app.v1.eblock.model.macro_replace import MacroHandler
 from app.v1.eblock.model.unit import Unit
 from app.v1.eblock.validators.tboardSchema import EblockSchema, UnitSchema
 from app.v1.eblock.model.bounced_words import BouncedWords
+from app.v1.Cuttle.basic.common_utli import reset_arm
 
 eblock_schema = EblockSchema()
 
@@ -120,3 +121,19 @@ def stop_eblock(id):
     eblock_instance = Eblock(pk=id)
     eblock_instance.stop()
     return 0
+
+
+# 复位机械臂
+class ArmResetView(MethodView):
+
+    def post(self):
+        request_data = request.get_json()
+        device_label = request_data.get('device_label') if request_data else ''
+        # 传入端口号 复位哪个机械臂
+        arm_com = request_data.get('arm_com') if request_data else ''
+
+        if not device_label:
+            return jsonify(dict(code=1, message='need device label!'))
+
+        result = reset_arm(device_label, arm_com)
+        return jsonify(dict(code=result))

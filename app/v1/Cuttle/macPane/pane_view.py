@@ -29,7 +29,7 @@ from app.v1.Cuttle.basic.hand_serial import controlUsbPower, read_z_down_from_fi
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler, judge_start_x, \
-    pre_point, sensor_init
+    pre_point, sensor_init, get_hand_serial_key
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
@@ -107,7 +107,7 @@ class PaneDeleteView(MethodView):
                 self._reset_arm(device_object)
             if device_object.has_arm:
                 try:
-                    hand_serial_obj = hand_serial_obj_dict[device_object.pk + arm_com]
+                    hand_serial_obj = hand_serial_obj_dict[get_hand_serial_key(device_object.pk, arm_com)]
                     hand_serial_obj.close()
                 except KeyError:
                     # 多见与机柜型号填写有误时
@@ -423,7 +423,7 @@ class PaneClickTestView(MethodView):
             press_side_speed = PRESS_SIDE_KEY_SPEED if is_normal_speed else PRESS_SIDE_KEY_SPEED / 2
             orders = HandHandler.press_side_order([click_x, click_y, click_z], is_left=is_left_side, speed=speed,
                                                   press_side_speed=press_side_speed)
-            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
+            exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
 
         return exec_serial_obj, orders, exec_action
 
@@ -558,7 +558,7 @@ class PaneClickZDown(MethodView):
         device_label = request.get_json()["device_label"]
         device_obj = Device(pk=device_label)
         click_z = -recv_z_down + float(device_obj.ply) if CORAL_TYPE != 5.3 else -recv_z_down
-        exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
+        exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
         if CORAL_TYPE == 5.3:  # 5d
             if arm_num == 1:
                 exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)

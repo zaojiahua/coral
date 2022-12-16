@@ -9,7 +9,9 @@ from mcush import *
 from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com, IP_FILE_PATH
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
 from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open, MAX_SENSOR_VALUE, \
-    usb_power_open, usb_power_close, usb_power_open_recv, usb_power_close_recv, usb_power_check_status
+    usb_power_open, usb_power_close, usb_power_open_recv, usb_power_close_recv, usb_power_check_status, \
+    ARM_COUNTER_PREFIX
+from redis_init import redis_client
 
 
 class HandSerial:
@@ -18,8 +20,10 @@ class HandSerial:
         self.baud_rate = baud_rate
         self.timeout = timeout
         self.ser = None
+        self.com_id = None
 
     def connect(self, com_id):
+        self.com_id = com_id
         self.ser = serial.Serial(com_id, self.baud_rate, timeout=self.timeout)
         return 0
 
@@ -108,6 +112,9 @@ class HandSerial:
         if content == "<SLEEP>":
             time.sleep(0.8)
             return ""
+
+        # 这里记录写入机械臂的指令条数，方便自动做复位功能
+        redis_client.incr(f'{ARM_COUNTER_PREFIX}{self.com_id}')
         # print('写入机械臂：', self.ser, content)
         return self.ser.write(content.encode())
 

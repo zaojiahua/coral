@@ -24,6 +24,7 @@ from app.config.ip import ADB_TYPE
 from app.config.setting import CORAL_TYPE
 from app.libs.ospathutil import deal_dir_file
 from app.v1.Cuttle.basic.operator.image_operator import RECOGNIZE_WORDS
+from app.v1.Cuttle.basic.operator.hand_operate import hand_reset
 
 """
 inner job 只有一个 job flow
@@ -111,6 +112,9 @@ class DJob(BaseModel):
             if int(self.current_djob_flow.job_assessment_value) == TERMINATE:
                 from app.v1.tboard.views.remove_tboard import remove_tboard_inner
                 remove_tboard_inner(self.tboard_id, False)
+
+            # djob 完成的时候查看是否需要复位机械臂
+            hand_reset(self.device_label)
 
     def analysis_result(self):
 

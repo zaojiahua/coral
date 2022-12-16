@@ -18,8 +18,15 @@ from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, \
     arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X
+    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X, \
+    ARM_COUNTER_PREFIX, ARM_RESET_THRESHOLD
 from app.execption.outer.error_code.camera import CoordinateConvert
+from redis_init import redis_client
+from app.v1.Cuttle.basic.common_utli import reset_arm
+
+
+def get_hand_serial_key(device_label, arm_com_id):
+    return device_label + '@' + arm_com_id
 
 
 def hand_init(arm_com_id, device_obj, **kwargs):
@@ -30,7 +37,7 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     3. 设置HOME点为操作原点
     :return:
     """
-    obj_key = device_obj.pk + arm_com_id
+    obj_key = get_hand_serial_key(device_obj.pk, arm_com_id)
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[obj_key] = hand_serial_obj
@@ -45,6 +52,25 @@ def hand_init(arm_com_id, device_obj, **kwargs):
         hand_serial_obj.send_single_order(orders)
         hand_serial_obj.recv(buffer_size=64, is_init=True)
     return 0
+
+
+# 当执行的指令条数达到一定的数目的时候，复位机械臂，并且重新开始计数
+def hand_reset(target_device_label=None):
+    for com_id in hand_serial_obj_dict.keys():
+        # 查看当前机械臂已经执行了多少条指令了
+        device_label, com_id = com_id.split('@')
+
+        # 和指定设备关联的机械臂进行复位
+        if target_device_label is not None:
+            if device_label != target_device_label:
+                continue
+
+        counter = redis_client.get(f'{ARM_COUNTER_PREFIX}{com_id}')
+        if int(counter) > ARM_RESET_THRESHOLD:
+            # 复位机械臂，并且清空计数器
+            print(f'{counter} 机械臂执行指令达到了{ARM_RESET_THRESHOLD}，开始复位')
+            reset_arm(device_label, com_id)
+            redis_client.set(f'{ARM_COUNTER_PREFIX}{com_id}', 0)
 
 
 def rotate_hand_init(arm_com_id, device_obj, **kwargs):
@@ -117,7 +143,7 @@ def judge_start_x(start_x_point, device_level):
     if CORAL_TYPE == 5.3:
         suffix_key = arm_com if start_x_point < ARM_MOVE_REGION[0] else arm_com_1
         arm_num = 0 if suffix_key == arm_com else 1
-    exec_serial_obj = hand_serial_obj_dict.get(device_level + suffix_key)
+    exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_level, suffix_key))
     return exec_serial_obj, arm_num
 
 
@@ -247,7 +273,7 @@ class HandHandler(Handler, DefaultMixin):
             # 双指机械臂在滑动前，先判断另一个机械臂是否为idle状态
             other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1) if kwargs[
                                                                                            "arm_num"] == 0 else hand_serial_obj_dict.get(
-                self._model.pk + arm_com)
+                get_hand_serial_key(self._model.pk, arm_com))
             while not other_serial_obj.check_hand_status():
                 time.sleep(0.3)
             kwargs["exec_serial_obj"].send_and_read(sliding_order)
@@ -405,7 +431,7 @@ class HandHandler(Handler, DefaultMixin):
         arm_num = 0
         exec_serial_obj = None
         if CORAL_TYPE != 5.3:
-            exec_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com)
+            exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com))
         else:
             if kwargs.get('index', 0) == 0:
                 exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
@@ -531,6 +557,7 @@ class HandHandler(Handler, DefaultMixin):
     def arm_back_home(self, *args, **kwargs):
         arm_com = self.kwargs.get('arm_com', '')
         for obj_key in hand_serial_obj_dict.keys():
+            # 这里应该根据端口号，获取back_order，因为不同的机械臂等待位置不一样
             back_order = self.arm_back_home_order()
             # 对指定的机械臂进行复位操作
             if obj_key.startswith(self._model.pk) and arm_com in obj_key:
@@ -765,8 +792,8 @@ class HandHandler(Handler, DefaultMixin):
         self.exec_double_hand_swipe(left_order, right_order)
         if min(left_swipe_speed, right_swipe_speed) < 2000:
             time.sleep(self.speed + 0.5)
-        hand_serial_obj_dict.get(self._model.pk + arm_com).recv(64)
-        hand_serial_obj_dict.get(self._model.pk + arm_com_1).recv(64)
+        hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com)).recv(64)
+        hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com_1)).recv(64)
         return 0
 
     def record_double_hand_point(self, axis, *args, **kwargs):
@@ -791,8 +818,8 @@ class HandHandler(Handler, DefaultMixin):
         return swipe_speed
 
     def exec_double_hand_swipe(self, left_order, right_order):
-        left_obj = hand_serial_obj_dict.get(self._model.pk + arm_com)
-        right_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1)
+        left_obj = hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com))
+        right_obj = hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com_1))
 
         exec_t1 = threading.Thread(target=left_obj.send_list_order, args=[[left_order[0]]],
                                    kwargs={"ignore_reset": True})

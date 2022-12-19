@@ -6,11 +6,11 @@ from serial import SerialException
 
 from mcush import *
 
-from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com, IP_FILE_PATH
+from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
-from app.v1.Cuttle.basic.setting import arm_wait_position, camera_power_close, camera_power_open, MAX_SENSOR_VALUE, \
-    usb_power_open, usb_power_close, usb_power_open_recv, usb_power_close_recv, usb_power_check_status, \
-    ARM_COUNTER_PREFIX
+from app.v1.Cuttle.basic.setting import camera_power_close, camera_power_open, MAX_SENSOR_VALUE, \
+    usb_power_open, usb_power_close, usb_power_open_recv, usb_power_close_recv, usb_power_check_status, ARM_COUNTER_PREFIX
+from app.v1.Cuttle.basic.component.hand_component import get_wait_position
 from redis_init import redis_client
 
 
@@ -31,7 +31,7 @@ class HandSerial:
         return self.write(g_order)
 
     def send_out_key_order(self, g_orders, others_orders, wait_time=0, **kwargs):
-        deviate_order = arm_wait_position
+        deviate_order = get_wait_position(self.ser.port)
         for o_order in g_orders:
             self.write(o_order)
         if wait_time != 0:
@@ -42,7 +42,7 @@ class HandSerial:
         return 0
 
     def send_list_order(self, g_orders, **kwargs):
-        deviate_order = arm_wait_position
+        deviate_order = get_wait_position(self.ser.port)
         if kwargs.get("wait"):
             for g_order in g_orders:
                 self.write(g_order)
@@ -63,11 +63,12 @@ class HandSerial:
             return 0
 
     def send_and_read(self, g_orders, **kwargs):
+        deviate_order = get_wait_position(self.ser.port)
         for order in g_orders:
             self.write(order)
             rev = self.ser.read(8).decode()
             print("rev: ", rev)
-        self.write(arm_wait_position)
+        self.write(deviate_order)
         self.ser.read(8).decode()
         if CORAL_TYPE == 5.3:
             time.sleep(3)
@@ -250,15 +251,3 @@ class SensorSerial(HandSerial):
         if value > MAX_SENSOR_VALUE:  # 超过一定范围的力值也过滤掉
             return False
         return value
-
-
-def read_z_down_from_file():
-    Z_DOWN = None
-    Z_DOWN_1 = None
-    with open(IP_FILE_PATH, "r", encoding="utf-8") as f:
-        for line in f:
-            if "Z_DOWN" in line and line[0] != '#' and "_1" not in line:
-                Z_DOWN = float(line.split('=')[1].split('#')[0])
-            if "Z_DOWN_1" in line and line[0] != '#' and CORAL_TYPE == 5.3:
-                Z_DOWN_1 = float(line.split('=')[1].split('#')[0])
-    return Z_DOWN, Z_DOWN_1

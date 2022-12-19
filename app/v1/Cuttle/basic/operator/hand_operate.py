@@ -15,11 +15,12 @@ from app.libs.http_client import request
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower, SensorSerial
 from app.v1.Cuttle.basic.operator.handler import Handler
+from app.v1.Cuttle.basic.component.hand_component import read_wait_position, get_wait_position
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
-    hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_wait_position, \
-    arm_move_position, rotate_hand_serial_obj_dict, hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X, \
-    ARM_COUNTER_PREFIX, ARM_RESET_THRESHOLD
+    ARM_COUNTER_PREFIX, ARM_RESET_THRESHOLD, \
+    hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_move_position, rotate_hand_serial_obj_dict, \
+    hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
+    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, ARM_MOVE_REGION, DIFF_X
 from app.execption.outer.error_code.camera import CoordinateConvert
 from redis_init import redis_client
 from app.v1.Cuttle.basic.common_utli import reset_arm
@@ -38,15 +39,18 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     :return:
     """
     obj_key = get_hand_serial_key(device_obj.pk, arm_com_id)
+    # 不同的机柜设置的待命位置不同，需要先从配置文件中读取当前的
+    read_wait_position()
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[obj_key] = hand_serial_obj
+    wait_position = get_wait_position(arm_com_id)
     hand_reset_orders = [
         "$x \r\n",
         "$h \r\n",
         f"G92 X0Y0Z0 \r\n",
         "G90 \r\n",
-        arm_wait_position
+        wait_position
     ]
     for orders in hand_reset_orders:
         hand_serial_obj.send_single_order(orders)
@@ -411,18 +415,20 @@ class HandHandler(Handler, DefaultMixin):
         if kwargs['arm_num'] == 1: time.sleep(0.5)
         return kwargs["exec_serial_obj"].recv(**self.kwargs)
 
-    def reset_hand(self, reset_orders=arm_wait_position, rotate=False, **kwargs):
+    def reset_hand(self, rotate=False, **kwargs):
         # 恢复手臂位置 可能是龙门架也可能是旋转机械臂
-        self._model.logger.info(f"reset hand order:{reset_orders}")
         serial_obj = None
         if rotate is True:
             serial_obj = rotate_hand_serial_obj_dict.get(self._model.pk)
-            serial_obj.send_single_order(reset_orders)
+            self._model.logger.info(f"reset hand order:{arm_move_position}")
+            serial_obj.send_single_order(arm_move_position)
         else:
             for obj_key in hand_serial_obj_dict.keys():
                 if obj_key.startswith(self._model.pk):
                     serial_obj = hand_serial_obj_dict.get(obj_key)
-                    serial_obj.send_single_order(reset_orders)
+                    reset_order = get_wait_position(serial_obj.ser.port)
+                    self._model.logger.info(f"reset hand order:{reset_order}")
+                    serial_obj.send_single_order(reset_order)
         serial_obj.recv()
         return 0
 
@@ -471,8 +477,9 @@ class HandHandler(Handler, DefaultMixin):
 
             # 根据距离，自己计算等待时间
             regex = re.compile("[-\d.]+")
+            wait_position = get_wait_position(exec_serial_obj.ser.port)
             if order_index == 0:
-                begin_point = [float(point) for point in re.findall(regex, arm_wait_position)[1:4]]
+                begin_point = [float(point) for point in re.findall(regex, wait_position)[1:4]]
             else:
                 begin_point = [float(point) for point in re.findall(regex, sliding_order[order_index - 1])[1:4]]
             end_point = [float(point) for point in re.findall(regex, sliding_order[order_index])[1:4]]
@@ -562,6 +569,7 @@ class HandHandler(Handler, DefaultMixin):
             # 对指定的机械臂进行复位操作
             if obj_key.startswith(self._model.pk) and arm_com in obj_key:
                 serial_obj = hand_serial_obj_dict.get(obj_key)
+                back_order = self.arm_back_home_order(serial_obj)
                 for order in back_order:
                     serial_obj.send_single_order(order)
                     serial_obj.recv(buffer_size=32, is_init=True)
@@ -755,7 +763,7 @@ class HandHandler(Handler, DefaultMixin):
             move = True
         target_hand_serial_obj_dict.get(self._model.pk).send_single_order(commend)
         if move:
-            self.reset_hand(reset_orders=arm_move_position if rotate else arm_wait_position, rotate=rotate, **kwargs)
+            self.reset_hand(rotate=rotate, **kwargs)
         target_hand_serial_obj_dict.get(self._model.pk).recv()
         self.ignore_reset = True
         return 0
@@ -953,7 +961,6 @@ class HandHandler(Handler, DefaultMixin):
         ]
         return commend_list
 
-
     @staticmethod
     def __straight_sliding_order(start_point, end_point, speed=MOVE_SPEED, arm_num=0):
         """
@@ -1030,13 +1037,14 @@ class HandHandler(Handler, DefaultMixin):
         ]
 
     @staticmethod
-    def arm_back_home_order():
+    def arm_back_home_order(serial_obj):
+        wait_position = get_wait_position(serial_obj.ser.port)
         return [
-            'G01 Z%dF5000 \r\n' % (Z_UP),
+            'G01 Z%dF5000 \r\n' % Z_UP,
             '$H \r\n',
             'G92 X0Y0Z0 \r\n',
             'G90 \r\n',
-            arm_wait_position,
+            wait_position,
         ]
 
 

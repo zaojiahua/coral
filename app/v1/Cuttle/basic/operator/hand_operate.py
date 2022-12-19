@@ -559,16 +559,17 @@ class HandHandler(Handler, DefaultMixin):
         except CoordinatesNotReasonable:
             raise CoordinatesNotReasonable
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
+        # 点击完自定义按键复位机械臂
+        redis_client.set(f'{ARM_COUNTER_PREFIX}{exec_serial_obj.com_id}', ARM_RESET_THRESHOLD + 1)
         return ret
 
     def arm_back_home(self, *args, **kwargs):
         arm_com = self.kwargs.get('arm_com', '')
         for obj_key in hand_serial_obj_dict.keys():
-            # 这里应该根据端口号，获取back_order，因为不同的机械臂等待位置不一样
-            back_order = self.arm_back_home_order()
             # 对指定的机械臂进行复位操作
             if obj_key.startswith(self._model.pk) and arm_com in obj_key:
                 serial_obj = hand_serial_obj_dict.get(obj_key)
+                # 这里应该根据端口号，获取back_order，因为不同的机械臂等待位置不一样
                 back_order = self.arm_back_home_order(serial_obj)
                 for order in back_order:
                     serial_obj.send_single_order(order)

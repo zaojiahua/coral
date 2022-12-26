@@ -662,7 +662,8 @@ class PaneWaitPosition(MethodView):
         if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):
             return jsonify(dict(error_code=UsingHandFail.error_code,
                                 description=UsingHandFail.description))
-        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click", ignore_reset=True, wait_time=2)
+        exec_serial_obj.send_out_key_order(orders[:1], others_orders=orders[1:], wait_time=2, ignore_reset=True)
+        exec_serial_obj.recv()
         return jsonify(dict(error_code=0))
 
     # 更新待命位置
@@ -674,6 +675,13 @@ class PaneWaitPosition(MethodView):
                 arm_wait_point_1 = request.get_json()["arm_wait_point_1"]
                 f.write(f"arm_wait_point_1={arm_wait_point_1}\n")
         read_wait_position()
+        for obj_key in hand_serial_obj_dict.keys():
+            if arm_com in obj_key and not obj_key[-1].isdigit():
+                hand_serial_obj_dict[obj_key].send_single_order(get_global_value("arm_wait_position"))
+                hand_serial_obj_dict[obj_key].recv()
+            if arm_com_1 in obj_key and obj_key[-1].isdigit():
+                hand_serial_obj_dict[obj_key].send_single_order(get_global_value("arm_wait_position_1"))
+                hand_serial_obj_dict[obj_key].recv()
         return jsonify(dict(error_code=0))
 
 

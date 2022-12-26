@@ -646,17 +646,17 @@ class PaneWaitPosition(MethodView):
         arm_num = request.get_json().get('arm_num', 0)
         wait_point = request.get_json().get('arm_wait_point', 0)
         exec_serial_obj, now_wait_position, orders = None, None, []
-        if CORAL_TYPE == 5.3:  # 5d
-            if arm_num == 1:
-                exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
-                now_wait_position = get_global_value("arm_wait_point_1")
-                wait_point[0] = -wait_point[0]
-                now_wait_position[0] = -now_wait_position[0]
+        if CORAL_TYPE == 5.3 and arm_num == 1:  # 5d
+            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
+            now_wait_position = get_global_value("arm_wait_point_1")
+            wait_point[0] = -wait_point[0]
+            move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
+                         [-now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
         else:
             exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
             now_wait_position = get_global_value("arm_wait_point")
-        move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
-                     [now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
+            move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
+                         [now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
         for move in move_list:
             orders.append('G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (move[0], move[1], move[2], move[3]))
         if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):

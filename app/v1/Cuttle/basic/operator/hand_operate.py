@@ -168,7 +168,7 @@ class HandHandler(Handler, DefaultMixin):
     before_match_rules = {
         # 用在执行之前，before_execute中针对不同方法正则替换其中的相对坐标到绝对坐标
         "input tap": "_relative_point",
-        "input swipe": "_relative_swipe",
+        "input swipe": "_multi_swipe",
         "multi swipe": "_multi_swipe",
         "double_point": "_relative_double_point",
         "double hand zoom": "_relative_double_hand",

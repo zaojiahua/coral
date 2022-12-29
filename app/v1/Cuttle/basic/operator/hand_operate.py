@@ -17,10 +17,11 @@ from app.v1.Cuttle.basic.hand_serial import HandSerial, controlUsbPower, SensorS
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.component.hand_component import read_wait_position, get_wait_position
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
-    ARM_COUNTER_PREFIX, ARM_RESET_THRESHOLD, \
     hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_move_position, rotate_hand_serial_obj_dict, \
     hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, ARM_MOVE_REGION, DIFF_X
+    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, ARM_MOVE_REGION, DIFF_X, \
+    ARM_COUNTER_PREFIX, ARM_RESET_THRESHOLD
+
 from app.execption.outer.error_code.camera import CoordinateConvert
 from redis_init import redis_client
 from app.v1.Cuttle.basic.common_utli import reset_arm
@@ -38,9 +39,9 @@ def hand_init(arm_com_id, device_obj, **kwargs):
     3. 设置HOME点为操作原点
     :return:
     """
-    obj_key = get_hand_serial_key(device_obj.pk, arm_com_id)
     # 不同的机柜设置的待命位置不同，需要先从配置文件中读取当前的
     read_wait_position()
+    obj_key = get_hand_serial_key(device_obj.pk, arm_com_id)
     hand_serial_obj = HandSerial(timeout=2)
     hand_serial_obj.connect(com_id=arm_com_id)
     hand_serial_obj_dict[obj_key] = hand_serial_obj

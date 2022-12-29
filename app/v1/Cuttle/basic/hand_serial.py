@@ -9,7 +9,8 @@ from mcush import *
 from app.config.setting import CORAL_TYPE, usb_power_com, camera_power_com
 from app.execption.outer.error_code.hands import ControlUSBPowerFail
 from app.v1.Cuttle.basic.setting import camera_power_close, camera_power_open, MAX_SENSOR_VALUE, \
-    usb_power_open, usb_power_close, usb_power_open_recv, usb_power_close_recv, usb_power_check_status, ARM_COUNTER_PREFIX
+    usb_power_open, usb_power_close, usb_power_open_recv, usb_power_close_recv, usb_power_check_status, \
+    ARM_COUNTER_PREFIX
 from app.v1.Cuttle.basic.component.hand_component import get_wait_position
 from redis_init import redis_client
 

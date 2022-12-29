@@ -646,22 +646,24 @@ class PaneWaitPosition(MethodView):
         arm_num = request.get_json().get('arm_num', 0)
         wait_point = request.get_json().get('arm_wait_point', 0)
         exec_serial_obj, now_wait_position, orders = None, None, []
-        if CORAL_TYPE == 5.3:  # 5d
-            if arm_num == 1:
-                exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
-                now_wait_position = get_global_value("arm_wait_point_1")
-                wait_point[0] = -wait_point[0]
+        if CORAL_TYPE == 5.3 and arm_num == 1:  # 5d
+            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
+            now_wait_position = get_global_value("arm_wait_point_1")
+            wait_point[0] = -wait_point[0]
+            move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
+                         [-now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
         else:
             exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
             now_wait_position = get_global_value("arm_wait_point")
-        move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
-                     [-now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
+            move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
+                         [now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
         for move in move_list:
             orders.append('G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (move[0], move[1], move[2], move[3]))
         if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):
             return jsonify(dict(error_code=UsingHandFail.error_code,
                                 description=UsingHandFail.description))
-        PaneClickTestView().exec_hand_action(exec_serial_obj, orders, exec_action="click", ignore_reset=True, wait_time=2)
+        exec_serial_obj.send_out_key_order(orders[:1], others_orders=orders[1:], wait_time=2, ignore_reset=True)
+        exec_serial_obj.recv()
         return jsonify(dict(error_code=0))
 
     # 更新待命位置
@@ -673,6 +675,13 @@ class PaneWaitPosition(MethodView):
                 arm_wait_point_1 = request.get_json()["arm_wait_point_1"]
                 f.write(f"arm_wait_point_1={arm_wait_point_1}\n")
         read_wait_position()
+        for obj_key in hand_serial_obj_dict.keys():
+            if arm_com in obj_key and not obj_key[-1].isdigit():
+                hand_serial_obj_dict[obj_key].send_single_order(get_global_value("arm_wait_position"))
+                hand_serial_obj_dict[obj_key].recv()
+            if arm_com_1 in obj_key and obj_key[-1].isdigit():
+                hand_serial_obj_dict[obj_key].send_single_order(get_global_value("arm_wait_position_1"))
+                hand_serial_obj_dict[obj_key].recv()
         return jsonify(dict(error_code=0))
 
 

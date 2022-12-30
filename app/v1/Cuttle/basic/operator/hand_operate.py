@@ -168,7 +168,7 @@ class HandHandler(Handler, DefaultMixin):
     before_match_rules = {
         # 用在执行之前，before_execute中针对不同方法正则替换其中的相对坐标到绝对坐标
         "input tap": "_relative_point",
-        "input swipe": "_relative_swipe",
+        "input swipe": "_multi_swipe",
         "multi swipe": "_multi_swipe",
         "double_point": "_relative_double_point",
         "double hand zoom": "_relative_double_hand",
@@ -575,6 +575,8 @@ class HandHandler(Handler, DefaultMixin):
                 for order in back_order:
                     serial_obj.send_single_order(order)
                     serial_obj.recv(buffer_size=32, is_init=True)
+                # 只要复位就重新计数
+                redis_client.set(f'{ARM_COUNTER_PREFIX}{arm_com}', 0)
         return 0
 
     @allot_serial_obj

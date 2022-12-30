@@ -575,6 +575,8 @@ class HandHandler(Handler, DefaultMixin):
                 for order in back_order:
                     serial_obj.send_single_order(order)
                     serial_obj.recv(buffer_size=32, is_init=True)
+                # 只要复位就重新计数
+                redis_client.set(f'{ARM_COUNTER_PREFIX}{arm_com}', 0)
         return 0
 
     @allot_serial_obj

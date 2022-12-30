@@ -647,13 +647,13 @@ class PaneWaitPosition(MethodView):
         wait_point = request.get_json().get('arm_wait_point', 0)
         exec_serial_obj, now_wait_position, orders = None, None, []
         if CORAL_TYPE == 5.3 and arm_num == 1:  # 5d
-            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com_1)
+            exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
             now_wait_position = get_global_value("arm_wait_point_1")
             wait_point[0] = -wait_point[0]
             move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
                          [-now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
         else:
-            exec_serial_obj = hand_serial_obj_dict.get(device_label + arm_com)
+            exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
             now_wait_position = get_global_value("arm_wait_point")
             move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
                          [now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]

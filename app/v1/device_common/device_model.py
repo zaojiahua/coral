@@ -584,7 +584,7 @@ class Device(BaseModel):
                         y = roi[2] - y
                     elif rotate_time == 3:
                         origin_x = x
-                        x = h - roi[1] + y
+                        x = h - (roi[1] + y)
                         y = roi[0] + origin_x
                     # 以左下角为m_location的时候
                     # y = w - (y + roi[0])

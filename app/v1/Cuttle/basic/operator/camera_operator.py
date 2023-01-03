@@ -171,7 +171,7 @@ class CameraHandler(Handler):
             else:
                 image = queue.get(block=True, timeout=3)['image']
                 if not self.original:
-                    image = np.rot90(self.get_roi(image, False), 3)
+                    image = self.get_roi(image, False)
 
                 try:
                     self.src = image
@@ -341,16 +341,29 @@ class CameraHandler(Handler):
         self.frames.clear()
 
     def get_roi(self, src, multi=True):
+        ret_src = src
         if int(self._model.y1) == 0 and int(self._model.y2) == 0 and int(self._model.x1) == 0 and int(
                 self._model.x2) == 0:
-            return src
-        if multi:
-            # 只针对多摄像机，多摄像机没有把参数设置到摄像机上，后续有需求可以直接设置到相机的参数上
-            return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
+            ret_src = src
         else:
-            # 硬件roi获取的是一个较大的区域，需要再次通过软件roi将区域缩到用户设置的roi大小
-            return src[int(self._model.y1) - int(self._model.roi_y1): int(self._model.y2) - int(self._model.roi_y1),
-                       int(self._model.x1) - int(self._model.roi_x1): int(self._model.x2) - int(self._model.roi_x1)]
+            if multi:
+                # 只针对多摄像机，多摄像机没有把参数设置到摄像机上，后续有需求可以直接设置到相机的参数上
+                ret_src = src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
+            else:
+                # 硬件roi获取的是一个较大的区域，需要再次通过软件roi将区域缩到用户设置的roi大小
+                ret_src = src[int(self._model.y1) - int(self._model.roi_y1): int(self._model.y2) - int(self._model.roi_y1),
+                              int(self._model.x1) - int(self._model.roi_x1): int(self._model.x2) - int(self._model.roi_x1)]
+
+        # 加入旋转
+        camera_rotate = get_global_value('camera_rotate')
+        rotate_time = camera_rotate % 90
+        if CORAL_TYPE == 5.3:
+            rotate_time = 1 - (int(rotate_time))
+            result = np.rot90(ret_src, rotate_time)
+        else:
+            rotate_time = -(int(rotate_time) + 1)
+            result = np.rot90(ret_src, rotate_time)
+        return result
 
     # 从多个相机中获取同步的内容
     def get_syn_frame(self, camera_ids):
@@ -392,10 +405,7 @@ class CameraHandler(Handler):
                 break
 
             if not self.original:
-                if CORAL_TYPE == 5.3:
-                    result = np.rot90(self.get_roi(result))
-                else:
-                    result = np.rot90(self.get_roi(result), 3)
+                result = self.get_roi(result)
 
             self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1, 'frame_num': frame_num})
             del result

@@ -134,10 +134,10 @@ class ArmResetView(MethodView):
         arm_com = request_data.get('arm_com') if request_data else ''
 
         if not device_label:
-            return jsonify(dict(code=1, message='need device label!'))
+            return jsonify(dict(error_code=1, message='need device label!'))
 
         result = reset_arm(device_label, arm_com)
-        return jsonify(dict(code=result))
+        return jsonify(dict(error_code=result))
 
 
 # 相机参数配置相关
@@ -148,13 +148,13 @@ class CameraConfigView(MethodView):
         # 为以后四摄做准备
         camera_index = request_data.get('camera_index') if request_data else 0
 
-        return jsonify(dict(code=0, data=self.get_camera_config(camera_index)))
+        return jsonify(dict(error_code=0, data=self.get_camera_config(camera_index)))
 
     def post(self):
         request_data = request.get_json()
 
         if request_data is None:
-            return jsonify(dict(code=1, message='缺少必要的参数'))
+            return jsonify(dict(error_code=1, message='缺少必要的参数'))
 
         # 为四摄做准备
         camera_index = request_data.get('camera_index') if request_data else 0
@@ -180,7 +180,7 @@ class CameraConfigView(MethodView):
         except Exception as e:
             print(e)
 
-        return jsonify(dict(code=0, data=self.get_camera_config(camera_index)))
+        return jsonify(dict(error_code=0, data=self.get_camera_config(camera_index)))
 
     @staticmethod
     def get_camera_config(camera_index=0):
@@ -191,7 +191,7 @@ class CameraConfigView(MethodView):
                     if '=' not in line:
                         continue
                     key, value = line.strip('\n').split('=')
-                    camera_config[key.strip()] = value.strip()
+                    camera_config[key.strip()] = int(value.strip())
         except Exception as e:
             print(e)
 

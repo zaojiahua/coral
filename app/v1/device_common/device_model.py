@@ -177,7 +177,11 @@ class Device(BaseModel):
     @property
     def device_height(self):
         if self.order == 0:
-            return self.pix_height if math.floor(CORAL_TYPE) != 5 else (int(self.x2) - int(self.x1))
+            # 根据不同的旋转角度换算坐标
+            camera_rotate = get_global_value('camera_rotate')
+            rotate_time = camera_rotate // 90
+            return self.pix_height if math.floor(CORAL_TYPE) != 5 else (
+                    int(self.x2) - int(self.x1) if rotate_time in [0, 2] else int(self.y2) - int(self.y1))
         else:
             return self.pix_height
 
@@ -185,7 +189,11 @@ class Device(BaseModel):
     def device_width(self):
         # 区分主机和僚机
         if self.order == 0:
-            return self.pix_width if math.floor(CORAL_TYPE) != 5 else (int(self.y2) - int(self.y1))
+            # 根据不同的旋转角度换算坐标
+            camera_rotate = get_global_value('camera_rotate')
+            rotate_time = camera_rotate // 90
+            return self.pix_width if math.floor(CORAL_TYPE) != 5 else (
+                    int(self.y2) - int(self.y1) if rotate_time in [0, 2] else int(self.x2) - int(self.x1))
         else:
             return self.pix_width
 
@@ -572,7 +580,7 @@ class Device(BaseModel):
                         x = y + h - roi[3]
                         y = roi[2] - origin_x
                     elif rotate_time == 2:
-                        x = h - roi[1] + x
+                        x = h - roi[1] - x
                         y = roi[2] - y
                     elif rotate_time == 3:
                         origin_x = x

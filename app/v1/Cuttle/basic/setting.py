@@ -2,6 +2,7 @@ import math
 
 from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
+from app.config import camera_config
 
 _global_dict = {}
 
@@ -257,6 +258,7 @@ DEVICE_DETECT_ERROR_MAX_TIME = 30 * 60
 set_global_value('merge_image_h', None)  # 图片拼接的h矩阵
 COORDINATE_CONFIG_FILE = 'app/config/coordinate.py'
 MERGE_IMAGE_H = 'app/config/merge_image_h.npy'
+CAMERA_CONFIG_FILE = 'app/config/camera_config.py'
 CAMERA_IN_LOOP = 'camera_in_loop'  # 性能测试控制摄像机是否继续获取图片
 set_global_value(CAMERA_IN_LOOP, False)
 
@@ -316,3 +318,8 @@ ACCELERATION_TIME = 0.040
 # 对机械臂执行的指令进行计数
 ARM_COUNTER_PREFIX = 'arm_counter_'
 ARM_RESET_THRESHOLD = 1000
+
+# 写入相机的相关配置信息
+for config_key in dir(camera_config):
+    if not config_key.startswith('__'):
+        set_global_value(config_key, getattr(camera_config, config_key))

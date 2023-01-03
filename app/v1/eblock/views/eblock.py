@@ -15,6 +15,7 @@ from app.v1.eblock.model.unit import Unit
 from app.v1.eblock.validators.tboardSchema import EblockSchema, UnitSchema
 from app.v1.eblock.model.bounced_words import BouncedWords
 from app.v1.Cuttle.basic.common_utli import reset_arm
+from app.v1.Cuttle.basic.setting import CAMERA_CONFIG_FILE, set_global_value
 
 eblock_schema = EblockSchema()
 
@@ -137,3 +138,61 @@ class ArmResetView(MethodView):
 
         result = reset_arm(device_label, arm_com)
         return jsonify(dict(code=result))
+
+
+# 相机参数配置相关
+class CameraConfigView(MethodView):
+
+    def get(self):
+        request_data = request.get_json()
+        # 为以后四摄做准备
+        camera_index = request_data.get('camera_index') if request_data else 0
+
+        return jsonify(dict(code=0, data=self.get_camera_config(camera_index)))
+
+    def post(self):
+        request_data = request.get_json()
+
+        if request_data is None:
+            return jsonify(dict(code=1, message='缺少必要的参数'))
+
+        # 为四摄做准备
+        camera_index = request_data.get('camera_index') if request_data else 0
+
+        try:
+            camera_config = {}
+            with open(CAMERA_CONFIG_FILE, 'rt', encoding='utf-8') as f:
+                for line in f.readlines():
+                    if '=' not in line:
+                        continue
+                    key, value = [k.strip() for k in line.strip('\n').split('=')]
+                    if key in request_data:
+                        camera_config[key] = request_data.get(key)
+                    else:
+                        camera_config[key] = value
+
+            print(camera_config)
+            # 写入到文件中  # 写入到内存中
+            with open(CAMERA_CONFIG_FILE, 'wt', encoding='utf-8') as f:
+                for key, value in camera_config.items():
+                    f.writelines(f'{key} = {value}\n')
+                    set_global_value(key, value)
+        except Exception as e:
+            print(e)
+
+        return jsonify(dict(code=0, data=self.get_camera_config(camera_index)))
+
+    @staticmethod
+    def get_camera_config(camera_index=0):
+        camera_config = {}
+        try:
+            with open(CAMERA_CONFIG_FILE, 'rt', encoding='utf-8') as f:
+                for line in f.readlines():
+                    if '=' not in line:
+                        continue
+                    key, value = line.strip('\n').split('=')
+                    camera_config[key.strip()] = value.strip()
+        except Exception as e:
+            print(e)
+
+        return camera_config

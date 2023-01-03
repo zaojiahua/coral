@@ -88,7 +88,7 @@ class PerformanceCenter(object):
             return image
         else:
             camera_rotate = get_global_value('camera_rotate')
-            rotate_time = camera_rotate % 90
+            rotate_time = camera_rotate // 90
             return np.rot90(self.get_roi(image), -(int(rotate_time) + 1))
 
     # 这的逻辑和camera operator中有些重复

@@ -356,7 +356,7 @@ class CameraHandler(Handler):
 
         # 加入旋转
         camera_rotate = get_global_value('camera_rotate')
-        rotate_time = camera_rotate % 90
+        rotate_time = camera_rotate // 90
         if CORAL_TYPE == 5.3:
             rotate_time = 1 - (int(rotate_time))
             result = np.rot90(ret_src, rotate_time)

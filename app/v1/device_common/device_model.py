@@ -561,8 +561,23 @@ class Device(BaseModel):
                     x = x + roi[1]
                     y = y + w - roi[2]
                 else:
-                    x = x + h - roi[3]
-                    y = y + roi[0]
+                    # 根据不同的旋转角度换算坐标
+                    camera_rotate = get_global_value('camera_rotate')
+                    rotate_time = camera_rotate // 90
+                    if rotate_time == 0:
+                        x = x + h - roi[3]
+                        y = y + roi[0]
+                    elif rotate_time == 1:
+                        origin_x = x
+                        x = y + h - roi[3]
+                        y = roi[2] - origin_x
+                    elif rotate_time == 2:
+                        x = h - roi[1] + x
+                        y = roi[2] - y
+                    elif rotate_time == 3:
+                        origin_x = x
+                        x = h - roi[1] + y
+                        y = roi[0] + origin_x
                     # 以左下角为m_location的时候
                     # y = w - (y + roi[0])
                 click_x = m_location[0] + x / dpi

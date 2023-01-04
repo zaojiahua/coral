@@ -1,8 +1,6 @@
 import math
 
 from app.config.setting import CORAL_TYPE
-from redis_init import redis_client
-from app.config import camera_config
 
 _global_dict = {}
 
@@ -320,6 +318,12 @@ ARM_COUNTER_PREFIX = 'arm_counter_'
 ARM_RESET_THRESHOLD = 1000
 
 # 写入相机的相关配置信息
-for config_key in dir(camera_config):
-    if not config_key.startswith('__'):
-        set_global_value(config_key, getattr(camera_config, config_key))
+try:
+    from app.config import camera_config
+    for config_key in dir(camera_config):
+        if not config_key.startswith('__'):
+            set_global_value(config_key, getattr(camera_config, config_key))
+except Exception:
+    camera_config = {'exposure': 1, 'camera_rotate': 0}
+    for config_key in camera_config:
+        set_global_value(config_key, camera_config[config_key])

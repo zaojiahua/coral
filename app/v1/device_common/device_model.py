@@ -565,13 +565,25 @@ class Device(BaseModel):
 
             # 5D的原点在右上角，其他在左下角，所以计算方法有所不同
             if absolute:
+                # 根据不同的旋转角度换算坐标
+                camera_rotate = get_global_value('camera_rotate')
+                rotate_time = camera_rotate // 90
                 if CORAL_TYPE == 5.3:
-                    x = x + roi[1]
-                    y = y + w - roi[2]
+                    if rotate_time == 0:
+                        x = x + roi[1]
+                        y = y + w - roi[2]
+                    elif rotate_time == 1:
+                        origin_x = x
+                        x = roi[1] + y
+                        y = w - (roi[0] + origin_x)
+                    elif rotate_time == 2:
+                        x = roi[3] - x
+                        y = w - (roi[0] + y)
+                    elif rotate_time == 3:
+                        origin_x = x
+                        x = roi[3] - y
+                        y = w - roi[2] + origin_x
                 else:
-                    # 根据不同的旋转角度换算坐标
-                    camera_rotate = get_global_value('camera_rotate')
-                    rotate_time = camera_rotate // 90
                     if rotate_time == 0:
                         x = x + h - roi[3]
                         y = y + roi[0]

@@ -23,7 +23,7 @@ class UnitSchema(BaseSchema):
     # 性能测试时候判断的字段
     start_method = fields.Integer()
     # 是否要对图片进行旋转
-    camera_rotate = fields.Integer()
+    camera_rotate = fields.Integer(missing=-1)
 
 
 class UnitListSchema(BaseSchema):

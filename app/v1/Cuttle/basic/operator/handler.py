@@ -313,6 +313,11 @@ class Handler():
         if len(all_points) % 2 == 1:
             all_points = all_points[:-1]
 
+        # 可能传过来的数据是转换以后的坐标，所以这里需要进行判断
+        for point in all_points:
+            if point > 1:
+                return
+
         results_points = []
         step = 2
         for i in range(0, len(all_points), step):

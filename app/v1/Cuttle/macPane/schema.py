@@ -6,13 +6,17 @@ from concurrent.futures import ThreadPoolExecutor
 
 from flask import Response, jsonify
 from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE
+import numpy as np
+import cv2
 
 from app.config.setting import PROJECT_SIBLING_DIR
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 
 from app.v1.device_common.device_model import Device
+from app.config.setting import CORAL_TYPE
 from redis_init import redis_client
 from app.v1.eblock.model.unit import get_assist_device_ident
+from app.v1.Cuttle.basic.setting import get_global_value, set_global_value
 
 
 def validate_ip(ip):
@@ -29,12 +33,25 @@ class PaneSchema(Schema):
     device_label = fields.String(required=True)
     device_ip = fields.String(required=True, validate=validate_ip)
     assist_device = fields.Integer(required=False)
+    camera_rotate = fields.Integer(required=False)
 
     @post_load
     def make_sure(self, data, **kwargs):
         picture_name = data.get("picture_name")
         device_label = data.get("device_label")
         assist_device = data.get('assist_device')
+
+        # 如果传过来的旋转角度和设置的值不一样，则按照传过来的值旋转，如果一样，就不需要动了
+        camera_rotate = data.get('camera_rotate')
+        default_camera_rotate = get_global_value('camera_rotate')
+        try:
+            camera_rotate = int(camera_rotate)
+        except Exception:
+            camera_rotate = default_camera_rotate
+
+        # 对图片进行旋转
+        set_global_value('camera_rotate', camera_rotate)
+
         from app.v1.device_common.device_model import Device
         device_obj = Device(pk=device_label)
         if not str.endswith(picture_name, (".png", ".jpg")):
@@ -59,6 +76,7 @@ class PaneSchema(Schema):
                 print(repr(e))
             finally:
                 os.remove(image_path)
+                set_global_value('camera_rotate', default_camera_rotate)
         else:
             return jsonify({"status": ret_code}), 400
 

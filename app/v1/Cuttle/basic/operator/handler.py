@@ -315,7 +315,7 @@ class Handler():
 
         # 可能传过来的数据是转换以后的坐标，所以这里需要进行判断
         for point in all_points:
-            if int(point) > 1:
+            if float(point) > 1:
                 return
 
         results_points = []

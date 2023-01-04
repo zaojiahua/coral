@@ -160,19 +160,20 @@ class CameraConfigView(MethodView):
         camera_index = request_data.get('camera_index') if request_data else 0
 
         try:
-            dir_name, _ = CAMERA_CONFIG_FILE.split(CAMERA_CONFIG_FILE)
-            if not os.path.exists(dir_name):
-                os.makedirs(dir_name)
-
             camera_config = {}
-            with open(CAMERA_CONFIG_FILE, 'rt', encoding='utf-8') as f:
-                for line in f.readlines():
-                    if '=' not in line:
-                        continue
-                    key, value = [k.strip() for k in line.strip('\n').split('=')]
-                    if key in request_data:
-                        camera_config[key] = request_data.get(key)
-                    else:
+            if os.path.exists(CAMERA_CONFIG_FILE):
+                with open(CAMERA_CONFIG_FILE, 'rt', encoding='utf-8') as f:
+                    for line in f.readlines():
+                        if '=' not in line:
+                            continue
+                        key, value = [k.strip() for k in line.strip('\n').split('=')]
+                        if key in request_data:
+                            camera_config[key] = request_data.get(key)
+                        else:
+                            camera_config[key] = value
+            else:
+                for key, value in request_data.items():
+                    if key != 'camera_index':
                         camera_config[key] = value
 
             print(camera_config)

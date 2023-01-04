@@ -120,6 +120,7 @@ class Unit(BaseModel):
     optionalInputImage = models.IntegerField()
     portrait = models.IntegerField()
     start_method = models.IntegerField()
+    camera_rotate = models.IntegerField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures', 'timestamps', 'assistDevice')
 
@@ -229,6 +230,8 @@ class Unit(BaseModel):
                 sending_data['portrait'] = self.portrait
             if self.start_method:
                 sending_data['start_method'] = self.start_method
+            if self.camera_rotate:
+                sending_data['camera_rotate'] = self.camera_rotate
             logger.info(f'target is {target}')
             logger.info(f"unit:{sending_data}")
 

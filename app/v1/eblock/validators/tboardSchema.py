@@ -22,6 +22,8 @@ class UnitSchema(BaseSchema):
     portrait = fields.Integer()
     # 性能测试时候判断的字段
     start_method = fields.Integer()
+    # 是否要对图片进行旋转
+    camera_rotate = fields.Integer()
 
 
 class UnitListSchema(BaseSchema):

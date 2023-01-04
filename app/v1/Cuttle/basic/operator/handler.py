@@ -54,6 +54,7 @@ class Handler():
         self.extra_result = {'not_compress_png_list': []}
         self.optional_input_image = self.kwargs.get('optional_input_image') or 0
         self.portrait = self.kwargs.get('portrait', 1)
+        self.camera_rotate = self.kwargs.get('camera_rotate')
         self.handler_type = self.kwargs.get('handler_type')
         # adb 指令都是开启了一个新的进程来做的，这里记录一下进程id，方便强制结束进程
         self.working_process = None

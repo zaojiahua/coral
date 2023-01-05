@@ -46,6 +46,8 @@ class PaneSchema(Schema):
         default_camera_rotate = get_global_value('camera_rotate')
         try:
             camera_rotate = int(camera_rotate)
+            if camera_rotate == -1:
+                camera_rotate = default_camera_rotate
         except Exception:
             camera_rotate = default_camera_rotate
 

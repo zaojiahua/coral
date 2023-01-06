@@ -134,7 +134,8 @@ class CameraHandler(Handler):
                     'modify_fps': self.modify_fps,
                     'soft_sync': soft_sync,
                     'set_fps': self.set_fps,
-                    'set_shot_time': self.set_shot_time
+                    'set_shot_time': self.set_shot_time,
+                    'exposure': get_global_value('exposure')
                 }
                 camera_kwargs_dict[self._model.pk + camera_id].put(put_kwargs)
                 # 因为出现了bug，所以这里打印一下日志，后续解决了可以去掉打印

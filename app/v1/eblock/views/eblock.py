@@ -15,7 +15,7 @@ from app.v1.eblock.model.unit import Unit
 from app.v1.eblock.validators.tboardSchema import EblockSchema, UnitSchema
 from app.v1.eblock.model.bounced_words import BouncedWords
 from app.v1.Cuttle.basic.common_utli import reset_arm
-from app.v1.Cuttle.basic.setting import CAMERA_CONFIG_FILE, set_global_value
+from app.v1.Cuttle.basic.setting import CAMERA_CONFIG_FILE, set_global_value, set_fps_max
 
 eblock_schema = EblockSchema()
 
@@ -182,6 +182,7 @@ class CameraConfigView(MethodView):
                 for key, value in camera_config.items():
                     f.writelines(f'{key} = {value}\n')
                     set_global_value(key, value)
+            set_fps_max()
         except Exception as e:
             print(e)
 

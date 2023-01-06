@@ -108,24 +108,24 @@ else:
                                          ("ExposureTime", 3500.0)]
 
 camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
-camera_params_50_dark = camera_params_50
+camera_params_50_light = camera_params_50
 
 # Tcab-5se功能测试使用的参数
 camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
                                       ('GammaEnable', True),
                                       ('Gamma', 0.7000)]
-camera_params_52_dark = camera_params_52
+camera_params_52_light = camera_params_52
 
 # Tcab-5se切换到性能测试时，相机需要修改的帧率相关参数
 camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
                                 ("PixelFormat", 0x01080009, 'enum'),
                                 ("ExposureTime", 3500.0),
                                 ("AcquisitionFrameRate", 240.0)]
-camera_params_52_performance_dark = camera_params_52_performance
+camera_params_52_performance_light = camera_params_52_performance
 
 # 5D
 camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
-camera_params_53_dark = camera_params_53
+camera_params_53_light = camera_params_53
 
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
@@ -137,7 +137,7 @@ camera_params_51 = [("OffsetY", 0),
                     ("AcquisitionFrameRate", 60.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
-camera_params_51_dark = camera_params_51
+camera_params_51_light = camera_params_51
 
 # 5L改进版参数
 # camera_params_51 = [("OffsetY", 0),
@@ -161,7 +161,7 @@ camera_params_54 = [("OffsetY", 0),
                     ("AcquisitionFrameRate", 480.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
-camera_params_54_dark = camera_params_54 + [("ExposureTime", 2400.0),
+camera_params_54_light = camera_params_54 + [("ExposureTime", 2400.0),
                                             ("Gain", 2.5),
                                             ("AcquisitionFrameRate", 400.0)]
 
@@ -335,7 +335,7 @@ def set_fps_max():
     global FpsMax
     global CameraMax
     exposure = get_global_value('exposure')
-    exposure = '' if int(exposure) == 1 else '_dark'
+    exposure = '' if int(exposure) == 1 else '_light'
     for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)) + exposure, []):
         if key[0] == 'AcquisitionFrameRate':
             FpsMax = key[1]

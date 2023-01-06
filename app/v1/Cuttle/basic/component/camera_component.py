@@ -142,7 +142,9 @@ def camera_init_hk(camera_id, device_label, **kwargs):
             check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
             check_result(CamObj.MV_CC_OpenDevice, 5, 0)
 
-    for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
+    exposure = get_global_value('exposure')
+    exposure = '' if int(exposure) == 1 else '_dark'
+    for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10)) + exposure]:
         if isinstance(key[1], bool):
             check_result(CamObj.MV_CC_SetBoolValue, key[0], key[1])
         elif len(key) == 3 and key[2] == 'enum':

@@ -96,7 +96,6 @@ camera_params_5 = [("OffsetY", 0),
                    ('BalanceRatio', 950),
                    ('BalanceRatioSelector', 2, 'enum'),
                    ('BalanceRatio', 1850)]
-# ("PixelFormat", 0x01080009, 'enum')]
 
 if CORAL_TYPE == 5.2:
     # Tcab-5se进行功能测试的相机参数
@@ -109,16 +108,25 @@ else:
                                          ("ExposureTime", 3500.0)]
 
 camera_params_50 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+camera_params_50_dark = camera_params_50
+
 # Tcab-5se功能测试使用的参数
 camera_params_52 = camera_params_5 + [("AcquisitionFrameRate", 80.0),
                                       ('GammaEnable', True),
                                       ('Gamma', 0.7000)]
+camera_params_52_dark = camera_params_52
+
 # Tcab-5se切换到性能测试时，相机需要修改的帧率相关参数
 camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
                                 ("PixelFormat", 0x01080009, 'enum'),
                                 ("ExposureTime", 3500.0),
                                 ("AcquisitionFrameRate", 240.0)]
+camera_params_52_performance_dark = camera_params_52_performance
+
+# 5D
 camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+camera_params_53_dark = camera_params_53
+
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
                     ("OffsetX", 0),
@@ -129,6 +137,8 @@ camera_params_51 = [("OffsetY", 0),
                     ("AcquisitionFrameRate", 60.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
+camera_params_51_dark = camera_params_51
+
 # 5L改进版参数
 # camera_params_51 = [("OffsetY", 0),
 #                     ("OffsetX", 0),
@@ -139,6 +149,8 @@ camera_params_51 = [("OffsetY", 0),
 #                     ("AcquisitionFrameRate", 240.0),
 #                     ("AcquisitionFrameRateEnable", True),
 #                     ("PixelFormat", 0x01080009, 'enum')]
+
+# 5pro
 camera_params_54 = [("OffsetY", 0),
                     ("OffsetX", 0),
                     ("Width", 720),
@@ -149,6 +161,9 @@ camera_params_54 = [("OffsetY", 0),
                     ("AcquisitionFrameRate", 480.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
+camera_params_54_dark = camera_params_54 + [("ExposureTime", 1200.0),
+                                            ("Gain", 2.5),
+                                            ("AcquisitionFrameRate", 480.0)]
 
 high_exposure_params = [("ExposureTime", 200000.0),
                         ("Gain", 15)]
@@ -260,23 +275,6 @@ CAMERA_CONFIG_FILE = 'app/config/camera_config.py'
 CAMERA_IN_LOOP = 'camera_in_loop'  # 性能测试控制摄像机是否继续获取图片
 set_global_value(CAMERA_IN_LOOP, False)
 
-# 跟性能测试相关的参数
-FpsMax = 240
-for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)), []):
-    if key[0] == 'AcquisitionFrameRate':
-        FpsMax = key[1]
-        break
-# 性能测试参数有可能单独设置
-for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)) + '_performance', []):
-    if key[0] == 'AcquisitionFrameRate':
-        FpsMax = key[1]
-        break
-if CORAL_TYPE == 5.1:
-    CameraMax = int(FpsMax * 10)  # 5l可以拍10s
-else:
-    CameraMax = int(FpsMax * 7)  # 5系列其他相机拍5s
-SWIPE_BIAS = int(FpsMax / 120 * (19 + 50))
-
 click_loop_stop_flag = True  # 如果为True, 则停止多次点击
 set_global_value("click_loop_stop_flag", click_loop_stop_flag)
 COORDINATE_POINT_FILE = "app/config/point.py"
@@ -327,3 +325,30 @@ except Exception:
     camera_config = {'exposure': 1, 'camera_rotate': 0}
     for config_key in camera_config:
         set_global_value(config_key, camera_config[config_key])
+
+# 跟性能测试相关的参数
+FpsMax = 240
+CameraMax = int(FpsMax * 10)
+
+
+def set_fps_max():
+    global FpsMax
+    global CameraMax
+    exposure = get_global_value('exposure')
+    exposure = '' if int(exposure) == 1 else '_dark'
+    for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)) + exposure, []):
+        if key[0] == 'AcquisitionFrameRate':
+            FpsMax = key[1]
+            break
+    # 性能测试参数有可能单独设置
+    for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)) + '_performance' + exposure, []):
+        if key[0] == 'AcquisitionFrameRate':
+            FpsMax = key[1]
+            break
+    if CORAL_TYPE == 5.1:
+        CameraMax = int(FpsMax * 10)  # 5l可以拍10s
+    else:
+        CameraMax = int(FpsMax * 7)  # 5系列其他相机拍5s
+
+
+set_fps_max()

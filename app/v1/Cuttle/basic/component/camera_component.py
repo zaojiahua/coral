@@ -142,7 +142,7 @@ def camera_init_hk(camera_id, device_label, **kwargs):
             check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
             check_result(CamObj.MV_CC_OpenDevice, 5, 0)
 
-    exposure = kwargs.get('exposure')
+    exposure = kwargs.get('exposure', 1)
     exposure = '' if int(exposure) == 1 else '_light'
     for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10)) + exposure]:
         if isinstance(key[1], bool):

@@ -161,9 +161,9 @@ camera_params_54 = [("OffsetY", 0),
                     ("AcquisitionFrameRate", 480.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
-camera_params_54_dark = camera_params_54 + [("ExposureTime", 1200.0),
+camera_params_54_dark = camera_params_54 + [("ExposureTime", 2400.0),
                                             ("Gain", 2.5),
-                                            ("AcquisitionFrameRate", 480.0)]
+                                            ("AcquisitionFrameRate", 400.0)]
 
 high_exposure_params = [("ExposureTime", 200000.0),
                         ("Gain", 15)]

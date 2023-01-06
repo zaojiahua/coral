@@ -177,7 +177,11 @@ class Device(BaseModel):
     @property
     def device_height(self):
         if self.order == 0:
-            return self.pix_height if math.floor(CORAL_TYPE) != 5 else (int(self.x2) - int(self.x1))
+            # 根据不同的旋转角度换算坐标
+            camera_rotate = get_global_value('camera_rotate')
+            rotate_time = camera_rotate // 90
+            return self.pix_height if math.floor(CORAL_TYPE) != 5 else (
+                    int(self.x2) - int(self.x1) if rotate_time in [0, 2] else int(self.y2) - int(self.y1))
         else:
             return self.pix_height
 
@@ -185,7 +189,11 @@ class Device(BaseModel):
     def device_width(self):
         # 区分主机和僚机
         if self.order == 0:
-            return self.pix_width if math.floor(CORAL_TYPE) != 5 else (int(self.y2) - int(self.y1))
+            # 根据不同的旋转角度换算坐标
+            camera_rotate = get_global_value('camera_rotate')
+            rotate_time = camera_rotate // 90
+            return self.pix_width if math.floor(CORAL_TYPE) != 5 else (
+                    int(self.y2) - int(self.y1) if rotate_time in [0, 2] else int(self.x2) - int(self.x1))
         else:
             return self.pix_width
 
@@ -557,12 +565,39 @@ class Device(BaseModel):
 
             # 5D的原点在右上角，其他在左下角，所以计算方法有所不同
             if absolute:
+                # 根据不同的旋转角度换算坐标
+                camera_rotate = get_global_value('camera_rotate')
+                rotate_time = camera_rotate // 90
                 if CORAL_TYPE == 5.3:
-                    x = x + roi[1]
-                    y = y + w - roi[2]
+                    if rotate_time == 0:
+                        x = x + roi[1]
+                        y = y + w - roi[2]
+                    elif rotate_time == 1:
+                        origin_x = x
+                        x = roi[1] + y
+                        y = w - (roi[0] + origin_x)
+                    elif rotate_time == 2:
+                        x = roi[3] - x
+                        y = w - (roi[0] + y)
+                    elif rotate_time == 3:
+                        origin_x = x
+                        x = roi[3] - y
+                        y = w - roi[2] + origin_x
                 else:
-                    x = x + h - roi[3]
-                    y = y + roi[0]
+                    if rotate_time == 0:
+                        x = x + h - roi[3]
+                        y = y + roi[0]
+                    elif rotate_time == 1:
+                        origin_x = x
+                        x = y + h - roi[3]
+                        y = roi[2] - origin_x
+                    elif rotate_time == 2:
+                        x = h - roi[1] - x
+                        y = roi[2] - y
+                    elif rotate_time == 3:
+                        origin_x = x
+                        x = h - (roi[1] + y)
+                        y = roi[0] + origin_x
                     # 以左下角为m_location的时候
                     # y = w - (y + roi[0])
                 click_x = m_location[0] + x / dpi

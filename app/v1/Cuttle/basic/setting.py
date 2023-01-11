@@ -350,5 +350,8 @@ def set_fps_max():
     else:
         CameraMax = int(FpsMax * 7)  # 5系列其他相机拍5s
 
+    set_global_value('FpsMax', FpsMax)
+    set_global_value('CameraMax', CameraMax)
+
 
 set_fps_max()

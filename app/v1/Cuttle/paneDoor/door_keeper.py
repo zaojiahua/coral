@@ -21,7 +21,7 @@ from app.execption.outer.error_code.adb import DeviceNotInUsb, NoMoreThanOneDevi
 from app.execption.outer.error_code.total import RequestException
 from app.libs.http_client import request
 from app.v1.Cuttle.basic.setting import hand_used_list, camera_dq_dict, CameraMax, camera_kwargs_dict, \
-    camera_ret_kwargs_dict
+    camera_ret_kwargs_dict, get_global_value
 from app.v1.Cuttle.macPane.pane_view import PaneConfigView
 from app.v1.Cuttle.network.network_api import batch_bind_ip, bind_spec_ip
 from app.v1.device_common.device_model import Device, DeviceStatus
@@ -92,7 +92,7 @@ class DoorKeeper(object):
                 if attribute == 'has_camera':
                     # 必须等待一段时间 相机同时初始化有bug发生 以后解决吧
                     # mp.set_start_method('spawn')
-                    queue = mp.Queue(maxsize=CameraMax)
+                    queue = mp.Queue(maxsize=get_global_value('CameraMax', CameraMax))
                     kwargs_queue = mp.Queue(maxsize=1)
                     ret_kwargs_queue = mp.Queue(maxsize=1)
                     camera_dq_dict[device_object.pk + port] = queue

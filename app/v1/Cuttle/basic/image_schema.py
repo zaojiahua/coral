@@ -5,7 +5,7 @@ import cv2
 from marshmallow import Schema, fields, ValidationError, post_load, INCLUDE
 
 from app.execption.outer.error_code.camera import MaxFpsSupport, MaxShotTimeSupport
-from app.v1.Cuttle.basic.setting import FpsMax, CameraMax
+from app.v1.Cuttle.basic.setting import FpsMax, CameraMax, get_global_value
 
 
 def verify_exist(path):
@@ -85,7 +85,7 @@ def verify_input_fps(input_fps):
     2. 非default需要大于0且小于该柜子最小帧率
     """
     if input_fps != "default":
-        if float(input_fps) > FpsMax or float(input_fps) <= 0:
+        if float(input_fps) > get_global_value('FpsMax', FpsMax) or float(input_fps) <= 0:
             raise MaxFpsSupport
 
 
@@ -352,9 +352,10 @@ class PerformanceFpsShotTimeSchema(Schema):
 
     @post_load()
     def explain(self, data, **kwargs):
-        data['set_fps'] = float(data.get('set_fps')) if data.get('set_fps', 'default') != "default" else FpsMax
+        data['set_fps'] = float(data.get('set_fps')) if data.get('set_fps', 'default') != "default" \
+            else get_global_value('FpsMax', FpsMax)
         if data.get('set_shot_time', 'default') != "default" and (
-                float(data.get('set_shot_time')) * data['set_fps']) <= CameraMax:
+                float(data.get('set_shot_time')) * data['set_fps']) <= get_global_value('CameraMax', CameraMax):
             data['set_shot_time'] = float(data.get('set_shot_time'))
         elif data.get('set_shot_time', "default") == 'default':
             data['set_shot_time'] = "default"

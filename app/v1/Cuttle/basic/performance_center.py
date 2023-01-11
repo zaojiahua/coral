@@ -26,7 +26,7 @@ EXTRA_PIC_NUMBER = 40
 
 class PerformanceCenter(object):
     # dq存储起始点前到终止点后的每一帧图片
-    inner_back_up_dq = deque(maxlen=CameraMax)
+    inner_back_up_dq = deque(maxlen=get_global_value('CameraMax', CameraMax))
     # 0: _black_field 1: 按下压感 2: 抬起压感 3: 图标膨胀
     start_method = 0
     start_area = None
@@ -225,7 +225,7 @@ class PerformanceCenter(object):
                     find_begin_point = True
                     break
             # 等待一会再获取力值
-            time.sleep(1 / (FpsMax * 2))
+            time.sleep(1 / (get_global_value('FpsMax', FpsMax) * 2))
 
         if find_begin_point:
             self.start_timestamp = force_time
@@ -265,8 +265,10 @@ class PerformanceCenter(object):
         self.sensor_index = None
         self.start_timestamp = 0
         self.force_dict = collections.defaultdict(list)
-        self.set_fps = FpsMax if set_fps == 'default' else float(set_fps)
-        self.set_shot_time = (CameraMax / FpsMax) if set_shot_time == 'default' else float(set_shot_time)
+        self.set_fps = get_global_value('FpsMax', FpsMax) if set_fps == 'default' \
+            else float(set_fps)
+        self.set_shot_time = (get_global_value('CameraMax', CameraMax) / get_global_value('FpsMax', FpsMax)) if set_shot_time == 'default' \
+            else float(set_shot_time)
 
         self.camera_loop()
 
@@ -307,7 +309,7 @@ class PerformanceCenter(object):
         set_global_value(CAMERA_IN_LOOP, False)
 
         if 'time_per_unit' not in self.result or self.start_method in [1, 2]:
-            self.result['time_per_unit'] = round(1 / FpsMax, 4)
+            self.result['time_per_unit'] = round(1 / get_global_value('FpsMax', FpsMax), 4)
 
         if 'picture_count' not in self.result:
             if len(self.back_up_dq) > 1:
@@ -386,7 +388,7 @@ class PerformanceCenter(object):
             # 准确度上就是有50%概率晚一帧，不过在240帧水平上，1帧误差可以接受
             # 这部分我们自己知道就好，千万别给客户解释出去了。
             picture, next_picture, third_pic, timestamp = self.picture_prepare(number, area)
-            if picture is None or number >= CameraMax - 2:
+            if picture is None or number >= get_global_value('CameraMax', CameraMax) - 2:
                 print('图片不够或者已经达到了取图的最大值')
                 # 用上一次的图片时间，计算time per unit
                 _, __, ___, pre_timestamp = self.picture_prepare(number - 2, area)
@@ -411,7 +413,7 @@ class PerformanceCenter(object):
                 print(f"发现了终点: {number} bias：", self.bias, timestamp)
 
                 # 保留1s的图片
-                if len(self.back_up_dq) < number + 1 * FpsMax:
+                if len(self.back_up_dq) < number + 1 * get_global_value('FpsMax', FpsMax):
                     # 实际帧率达不到，所以按照帧率缩小3倍算，这样基本足够了
                     time.sleep(1)
 
@@ -428,7 +430,7 @@ class PerformanceCenter(object):
                 # 找到终止点后，包装一个json格式，推到reef
                 job_duration = max(round((timestamp - self.start_timestamp) / 1000, 3), 0)
                 time_per_unit = round(job_duration / (self.end_number - self.start_number), 4)
-                picture_count = int(self.end_number + FpsMax - 1)
+                picture_count = int(self.end_number + get_global_value('FpsMax', FpsMax) - 1)
 
                 self.result['start_point'] = self.start_number
                 self.result['end_point'] = self.end_number
@@ -478,7 +480,7 @@ class PerformanceCenter(object):
         while self.loop_flag:
             number += 1
             picture, _, _, timestamp = self.picture_prepare(number, self.end_area)
-            if picture is None or number >= CameraMax - 1:
+            if picture is None or number >= get_global_value('CameraMax', CameraMax) - 1:
                 print('图片不够或已经达到了取图的最大值')
                 self.result['picture_count'] = number - 1
                 self.result['start_point'] = self.start_number
@@ -501,15 +503,15 @@ class PerformanceCenter(object):
                     group_start_pic = picture
                 else:
                     # 连续多张图片没有变化就认为找到了终点 能检测到的最低帧率是10
-                    if current_group['start_number'] < number - FpsMax / 10:
+                    if current_group['start_number'] < number - get_global_value('FpsMax', FpsMax) / 10:
                         print('找到终点了', number)
                         self.end_number = number
                         # 保留1s的图片 方便用户查看
-                        if len(self.back_up_dq) < number + 1 * FpsMax:
+                        if len(self.back_up_dq) < number + 1 * get_global_value('FpsMax', FpsMax):
                             time.sleep(1)
 
                         set_global_value(CAMERA_IN_LOOP, False)
-                        picture_count = int(self.end_number + FpsMax - 1)
+                        picture_count = int(self.end_number + get_global_value('FpsMax', FpsMax) - 1)
                         self.result['start_point'] = self.start_number
                         self.result['end_point'] = self.end_number
                         self.result['picture_count'] = len(self.back_up_dq) \
@@ -684,7 +686,7 @@ class PerformanceCenter(object):
                         try:
                             fps = round(1 / (group_info['end_time'] - group_info['start_time']) * 1000, 1)
                         except ZeroDivisionError:
-                            fps = FpsMax
+                            fps = get_global_value('FpsMax', FpsMax)
                         # print(fps, group_info)
                         picture = cv2.putText(picture.copy(), f'fps: {fps}', (self.end_area[0], self.end_area[1] - 10),
                                               cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 2)
@@ -710,7 +712,7 @@ class PerformanceCenter(object):
             self.result['set_fps'] = self.set_fps
             self.result['set_shot_time'] = self.set_shot_time
             # 保存性能测试过程中的相关数据，推送到服务器，方便前端展示
-            for frame_num in range(min(len(self.back_up_dq), end_number + int(1 * FpsMax))):
+            for frame_num in range(min(len(self.back_up_dq), end_number + int(1 * get_global_value('FpsMax', FpsMax)))):
                 # 去掉第0帧数据，前端显示好看
                 if frame_num == 0:
                     continue
@@ -741,7 +743,7 @@ class PerformanceCenter(object):
 
         number = self.end_number + 1
         # 额外再保留1s的图片
-        for i in range(int(1 * FpsMax) + 1):
+        for i in range(int(1 * get_global_value('FpsMax', FpsMax)) + 1):
             try:
                 src = self.get_back_up_image(self.back_up_dq[number]['image'])
                 picture_save = cv2.resize(src, dsize=(0, 0), fx=0.7, fy=0.7)

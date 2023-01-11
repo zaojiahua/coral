@@ -101,7 +101,7 @@ class DoorKeeper(object):
                     camera_process = mp.Process(name=CAMERA_PROCESS_NAME, target=function, args=(
                         port, device_label, queue, kwargs_queue, ret_kwargs_queue))
                     print('-------摄像机进程开启-------', camera_process)
-                    kwargs_queue.put({'original': True})
+                    kwargs_queue.put({'original': True, 'set_fps': get_global_value('FpsMax')})
                     redis_client.set(f"g_bExit_{port}", "0")
                     redis_client.set(f"camera_process_{port}", '1')
                     camera_process.start()

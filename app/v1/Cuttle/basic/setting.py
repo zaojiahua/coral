@@ -162,8 +162,8 @@ camera_params_54 = [("OffsetY", 0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
 camera_params_54_light = camera_params_54 + [("ExposureTime", 2400.0),
-                                            ("Gain", 2.5),
-                                            ("AcquisitionFrameRate", 400.0)]
+                                             ("Gain", 2.5),
+                                             ("AcquisitionFrameRate", 380.0)]
 
 high_exposure_params = [("ExposureTime", 200000.0),
                         ("Gain", 15)]
@@ -339,12 +339,10 @@ def set_fps_max():
     for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)) + exposure, []):
         if key[0] == 'AcquisitionFrameRate':
             FpsMax = key[1]
-            break
     # 性能测试参数有可能单独设置
     for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)) + '_performance' + exposure, []):
         if key[0] == 'AcquisitionFrameRate':
             FpsMax = key[1]
-            break
     if CORAL_TYPE == 5.1:
         CameraMax = int(FpsMax * 10)  # 5l可以拍10s
     else:

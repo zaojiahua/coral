@@ -335,7 +335,7 @@ def set_fps_max():
     global FpsMax
     global CameraMax
     exposure = get_global_value('exposure')
-    exposure = '' if int(exposure) == 1 else '_light'
+    exposure = '' if exposure and int(exposure) == 1 else '_light'
     for key in globals().get('camera_params_' + str(int(CORAL_TYPE * 10)) + exposure, []):
         if key[0] == 'AcquisitionFrameRate':
             FpsMax = key[1]

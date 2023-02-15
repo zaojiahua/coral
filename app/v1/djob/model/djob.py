@@ -277,9 +277,12 @@ class DJob(BaseModel):
         if work_path:
             all_files = []
 
-            for filename in os.listdir(work_path):
-                file_path = os.path.join(work_path, filename)
-                all_files.append(file_path)
+            try:
+                for filename in os.listdir(work_path):
+                    file_path = os.path.join(work_path, filename)
+                    all_files.append(file_path)
+            except Exception as e:
+                print('push performance file:', e)
 
             # 控制一次传输图片的数量
             step = 300

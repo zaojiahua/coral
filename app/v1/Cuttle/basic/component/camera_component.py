@@ -142,7 +142,9 @@ def camera_init_hk(camera_id, device_label, **kwargs):
             check_result(CamObj.MV_CC_CreateHandle, stDeviceList)
             check_result(CamObj.MV_CC_OpenDevice, 5, 0)
 
-    for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10))]:
+    exposure = kwargs.get('exposure', 1)
+    exposure = '' if exposure and int(exposure) == 1 else '_light'
+    for key in globals()['camera_params_' + str(int(CORAL_TYPE * 10)) + exposure]:
         if isinstance(key[1], bool):
             check_result(CamObj.MV_CC_SetBoolValue, key[0], key[1])
         elif len(key) == 3 and key[2] == 'enum':
@@ -173,8 +175,7 @@ def camera_init_hk(camera_id, device_label, **kwargs):
             elif isinstance(key[1], float):
                 check_result(CamObj.MV_CC_SetFloatValue, key[0], key[1])
 
-    if kwargs.get('set_fps', FpsMax) != FpsMax:
-        check_result(CamObj.MV_CC_SetFloatValue, "AcquisitionFrameRate", float(kwargs.get('set_fps')))
+    check_result(CamObj.MV_CC_SetFloatValue, "AcquisitionFrameRate", float(kwargs.get('set_fps')))
 
     # 设置roi 多摄像机暂时不设置
     if not kwargs.get('original') and not kwargs.get('sync_camera'):

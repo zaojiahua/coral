@@ -54,7 +54,7 @@ class CameraHandler(Handler):
         # 性能测试的时候，用来实时的存放图片，如果传入这个参数，则可以实时的获取dp里边的图片
         self.back_up_dq = kwargs.get('back_up_dq')
         self.modify_fps = kwargs.get("modify_fps")
-        self.set_fps = kwargs.get('set_fps', FpsMax)
+        self.set_fps = kwargs.get('set_fps', get_global_value('FpsMax', FpsMax))
         self.set_shot_time = kwargs.get('set_shot_time', 'default')
         # 图片拼接时候用到的几个参数
         self.x_min = None
@@ -134,7 +134,9 @@ class CameraHandler(Handler):
                     'modify_fps': self.modify_fps,
                     'soft_sync': soft_sync,
                     'set_fps': self.set_fps,
-                    'set_shot_time': self.set_shot_time
+                    'set_shot_time': self.set_shot_time,
+                    'exposure': get_global_value('exposure'),
+                    'camera_max': get_global_value('CameraMax', CameraMax)
                 }
                 camera_kwargs_dict[self._model.pk + camera_id].put(put_kwargs)
                 # 因为出现了bug，所以这里打印一下日志，后续解决了可以去掉打印
@@ -171,7 +173,7 @@ class CameraHandler(Handler):
             else:
                 image = queue.get(block=True, timeout=3)['image']
                 if not self.original:
-                    image = np.rot90(self.get_roi(image, False), 3)
+                    image = self.get_roi(image, False)
 
                 try:
                     self.src = image
@@ -196,7 +198,7 @@ class CameraHandler(Handler):
 
             # 初始化临时存放图片的缓存
             for camera_id in camera_ids:
-                self.cache_dict[self._model.pk + camera_id] = deque(maxlen=CameraMax)
+                self.cache_dict[self._model.pk + camera_id] = deque(maxlen=get_global_value('CameraMax', CameraMax))
 
             # 实时的获取到图片
             if self.back_up_dq is not None:
@@ -210,7 +212,7 @@ class CameraHandler(Handler):
                     empty_times = 0
                     while get_global_value(CAMERA_IN_LOOP):
                         # 必须等待，否则while死循环导致其他线程没有机会执行
-                        time.sleep(merge_frame_num / FpsMax)
+                        time.sleep(merge_frame_num / get_global_value('FpsMax', FpsMax))
                         self.get_queue(merge_frame_num * 1.2)
                         # 判断图片是否全部处理完毕
                         self.cur_frame_num += merge_frame_num
@@ -237,8 +239,8 @@ class CameraHandler(Handler):
                     redis_client.set(f"g_bExit_{camera_id}", "1")
 
                 # 后续再保存一些图片，因为结束点之后还需要一些图片
-                self.get_queue(FpsMax)
-                self.cur_frame_num += FpsMax
+                self.get_queue(get_global_value('FpsMax', FpsMax))
+                self.cur_frame_num += get_global_value('FpsMax', FpsMax)
                 self.merge_frame(camera_ids, self.cur_frame_num)
             else:
                 if self.high_exposure:
@@ -341,16 +343,29 @@ class CameraHandler(Handler):
         self.frames.clear()
 
     def get_roi(self, src, multi=True):
+        ret_src = src
         if int(self._model.y1) == 0 and int(self._model.y2) == 0 and int(self._model.x1) == 0 and int(
                 self._model.x2) == 0:
-            return src
-        if multi:
-            # 只针对多摄像机，多摄像机没有把参数设置到摄像机上，后续有需求可以直接设置到相机的参数上
-            return src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
+            ret_src = src
         else:
-            # 硬件roi获取的是一个较大的区域，需要再次通过软件roi将区域缩到用户设置的roi大小
-            return src[int(self._model.y1) - int(self._model.roi_y1): int(self._model.y2) - int(self._model.roi_y1),
-                       int(self._model.x1) - int(self._model.roi_x1): int(self._model.x2) - int(self._model.roi_x1)]
+            if multi:
+                # 只针对多摄像机，多摄像机没有把参数设置到摄像机上，后续有需求可以直接设置到相机的参数上
+                ret_src = src[int(self._model.y1):int(self._model.y2), int(self._model.x1):int(self._model.x2)]
+            else:
+                # 硬件roi获取的是一个较大的区域，需要再次通过软件roi将区域缩到用户设置的roi大小
+                ret_src = src[int(self._model.y1) - int(self._model.roi_y1): int(self._model.y2) - int(self._model.roi_y1),
+                              int(self._model.x1) - int(self._model.roi_x1): int(self._model.x2) - int(self._model.roi_x1)]
+
+        # 加入旋转
+        camera_rotate = get_global_value('camera_rotate')
+        rotate_time = camera_rotate // 90
+        if CORAL_TYPE == 5.3:
+            rotate_time = 1 - (int(rotate_time))
+            result = np.rot90(ret_src, rotate_time)
+        else:
+            rotate_time = -(int(rotate_time) + 1)
+            result = np.rot90(ret_src, rotate_time)
+        return result
 
     # 从多个相机中获取同步的内容
     def get_syn_frame(self, camera_ids):
@@ -392,10 +407,7 @@ class CameraHandler(Handler):
                 break
 
             if not self.original:
-                if CORAL_TYPE == 5.3:
-                    result = np.rot90(self.get_roi(result))
-                else:
-                    result = np.rot90(self.get_roi(result), 3)
+                result = self.get_roi(result)
 
             self.back_up_dq.append({'image': result, 'host_timestamp': host_t_1, 'frame_num': frame_num})
             del result
@@ -540,7 +552,7 @@ class CameraHandler(Handler):
     # 把他作为一个测试帧率的接口，这样不会受到其他线程的干扰
     def get_video(self, *args, **kwargs):
         # 注意这里可能造成内存泄漏 执行完这个方法最好重启容器
-        self.back_up_dq = deque(maxlen=CameraMax)
+        self.back_up_dq = deque(maxlen=get_global_value('CameraMax', CameraMax))
         self.modify_fps = True
         set_global_value(CAMERA_IN_LOOP, True)
         self.snap_shot()

@@ -19,8 +19,9 @@ from app.v1.Cuttle.basic.component.hand_component import read_wait_position, get
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, SWIPE_TIME, Z_START, Z_UP, MOVE_SPEED, \
     hand_serial_obj_dict, normal_result, trapezoid, arm_default, arm_move_position, rotate_hand_serial_obj_dict, \
     hand_origin_cmd_prefix, X_SIDE_KEY_OFFSET, \
-    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, X_SIDE_OFFSET_DISTANCE, ARM_MOVE_REGION, DIFF_X, \
+    sensor_serial_obj_dict, PRESS_SIDE_KEY_SPEED, get_global_value, ARM_MOVE_REGION, DIFF_X, \
     ARM_COUNTER_PREFIX, ARM_RESET_THRESHOLD
+
 from app.execption.outer.error_code.camera import CoordinateConvert
 from redis_init import redis_client
 from app.v1.Cuttle.basic.common_utli import reset_arm
@@ -559,17 +560,23 @@ class HandHandler(Handler, DefaultMixin):
         except CoordinatesNotReasonable:
             raise CoordinatesNotReasonable
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
+        # 点击完自定义按键复位机械臂
+        redis_client.set(f'{ARM_COUNTER_PREFIX}{exec_serial_obj.com_id}', ARM_RESET_THRESHOLD + 1)
         return ret
 
     def arm_back_home(self, *args, **kwargs):
         arm_com = self.kwargs.get('arm_com', '')
         for obj_key in hand_serial_obj_dict.keys():
-            if obj_key.startswith(self._model.pk):
+            # 对指定的机械臂进行复位操作
+            if obj_key.startswith(self._model.pk) and arm_com in obj_key:
                 serial_obj = hand_serial_obj_dict.get(obj_key)
+                # 这里应该根据端口号，获取back_order，因为不同的机械臂等待位置不一样
                 back_order = self.arm_back_home_order(serial_obj)
                 for order in back_order:
                     serial_obj.send_single_order(order)
                     serial_obj.recv(buffer_size=32, is_init=True)
+                # 只要复位就重新计数
+                redis_client.set(f'{ARM_COUNTER_PREFIX}{arm_com}', 0)
         return 0
 
     @allot_serial_obj

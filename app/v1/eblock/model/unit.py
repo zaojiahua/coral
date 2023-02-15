@@ -24,6 +24,7 @@ from app.v1.eblock.model.macro_replace import MacroHandler
 from app.execption.outer.error_code.imgtool import DetectNoResponse
 from app.libs.ospathutil import get_picture_create_time
 from app.config.restart_coral import restart_coral
+from app.v1.Cuttle.basic.setting import get_global_value, set_global_value
 
 
 def get_assist_device_ident(device_label, assist_device_serial_number):
@@ -120,6 +121,7 @@ class Unit(BaseModel):
     optionalInputImage = models.IntegerField()
     portrait = models.IntegerField()
     start_method = models.IntegerField()
+    camera_rotate = models.IntegerField()
 
     load = ("detail", "key", "execModName", "jobUnitName", "finalResult", 'pictures', 'timestamps', 'assistDevice')
 
@@ -229,8 +231,21 @@ class Unit(BaseModel):
                 sending_data['portrait'] = self.portrait
             if self.start_method:
                 sending_data['start_method'] = self.start_method
+            if self.camera_rotate is not None:
+                sending_data['camera_rotate'] = self.camera_rotate
             logger.info(f'target is {target}')
             logger.info(f"unit:{sending_data}")
+
+            # 临时对图片进行旋转
+            camera_rotate = self.camera_rotate
+            default_camera_rotate = get_global_value('camera_rotate')
+            try:
+                camera_rotate = int(camera_rotate)
+                if camera_rotate == -1:
+                    camera_rotate = default_camera_rotate
+            except Exception:
+                camera_rotate = default_camera_rotate
+            set_global_value('camera_rotate', camera_rotate)
 
             try:
                 for i in range(3):
@@ -261,6 +276,7 @@ class Unit(BaseModel):
                     raise e
             finally:
                 self.copy_save_file(save_list, handler)
+                set_global_value('camera_rotate', default_camera_rotate)
 
         return _inner_func()
 

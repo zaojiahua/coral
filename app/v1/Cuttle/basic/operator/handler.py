@@ -54,6 +54,7 @@ class Handler():
         self.extra_result = {'not_compress_png_list': []}
         self.optional_input_image = self.kwargs.get('optional_input_image') or 0
         self.portrait = self.kwargs.get('portrait', 1)
+        self.camera_rotate = self.kwargs.get('camera_rotate')
         self.handler_type = self.kwargs.get('handler_type')
         # adb 指令都是开启了一个新的进程来做的，这里记录一下进程id，方便强制结束进程
         self.working_process = None
@@ -311,6 +312,11 @@ class Handler():
         # 如果出现奇数，最后一个是速度，所以去掉
         if len(all_points) % 2 == 1:
             all_points = all_points[:-1]
+
+        # 可能传过来的数据是转换以后的坐标，所以这里需要进行判断
+        for point in all_points:
+            if float(point) > 1:
+                return
 
         results_points = []
         step = 2

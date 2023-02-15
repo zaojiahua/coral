@@ -123,9 +123,6 @@ camera_params_52_performance = [('ADCBitDepth', 2, 'enum'),
                                 ("AcquisitionFrameRate", 240.0)]
 camera_params_52_performance_light = camera_params_52_performance
 
-# 5D
-camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
-camera_params_53_light = camera_params_53
 
 # 5L相机初始化参数
 camera_params_51 = [("OffsetY", 0),
@@ -138,6 +135,14 @@ camera_params_51 = [("OffsetY", 0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]
 camera_params_51_light = camera_params_51
+
+
+# 5D 高速版参数
+camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+# 5D 高清版参数
+# camera_params_53 = camera_params_51
+camera_params_53_light = camera_params_53
+
 
 # 5L改进版参数
 # camera_params_51 = [("OffsetY", 0),

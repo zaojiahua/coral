@@ -254,19 +254,18 @@ class PerformanceCenter(object):
         executer = ThreadPoolExecutor()
         self.move_src_future = executer.submit(self.move_src_to_backup)
 
-    @staticmethod
-    def reset_loop_var(start_method, set_fps, set_shot_time):
-        PerformanceCenter.result = {}
-        PerformanceCenter.start_method = start_method
-        PerformanceCenter.start_number = 0
-        PerformanceCenter.end_number = 0
-        PerformanceCenter.max_force = 0
-        PerformanceCenter.sensor_index = None
-        PerformanceCenter.start_timestamp = 0
-        PerformanceCenter.force_dict = collections.defaultdict(list)
-        PerformanceCenter.set_fps = get_global_value('FpsMax', FpsMax) if set_fps == 'default' \
+    def reset_loop_var(self, start_method, set_fps, set_shot_time):
+        self.result = {}
+        self.start_method = start_method
+        self.start_number = 0
+        self.end_number = 0
+        self.max_force = 0
+        self.sensor_index = None
+        self.start_timestamp = 0
+        self.force_dict = collections.defaultdict(list)
+        self.set_fps = get_global_value('FpsMax', FpsMax) if set_fps == 'default' \
             else float(set_fps)
-        PerformanceCenter.set_shot_time = (get_global_value('CameraMax', CameraMax) / get_global_value('FpsMax',
+        self.set_shot_time = (get_global_value('CameraMax', CameraMax) / get_global_value('FpsMax',
                                                                                           FpsMax)) if set_shot_time == 'default' \
             else float(set_shot_time)
 

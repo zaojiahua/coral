@@ -48,8 +48,9 @@ class PerformanceMinix(object):
         template_area = data.get('icon_areas')
 
         # 在无法点击起点的时候，重置一下数据，否则使用的是上次的数据
-        PerformanceCenter.reset_loop_var(self.kwargs.get('start_method', 1) - 1, set_fps=data.get("set_fps"),
-                                         set_shot_time=data.get("set_shot_time"))
+        PerformanceCenter(None, None, None, None, None, '')\
+            .reset_loop_var(self.kwargs.get('start_method', 1) - 1, set_fps=data.get("set_fps"),
+                            set_shot_time=data.get("set_shot_time"))
 
         # 6的算法是图标出现，不需要机械臂实际点击
         if self.kwargs.get('start_method', 1) != 6:
@@ -120,7 +121,8 @@ class PerformanceMinix(object):
         camera_x0, camera_y0 = int(data.get("areas")[0][0] * w), int(data.get("areas")[0][1] * h)
 
         # 在无法点击起点的时候，重置一下数据，否则使用的是上次的数据
-        PerformanceCenter.reset_loop_var(self.kwargs.get('start_method', 1) - 1, set_fps=data.get("set_fps"), set_shot_time=data.get("set_shot_time"))
+        PerformanceCenter(None, None, None, None, None, '')\
+            .reset_loop_var(self.kwargs.get('start_method', 1) - 1, set_fps=data.get("set_fps"), set_shot_time=data.get("set_shot_time"))
 
         # 实时截图
         with Complex_Center(**self.kwargs) as ocr_obj:

@@ -276,8 +276,8 @@ class HandHandler(Handler, DefaultMixin):
 
         if CORAL_TYPE == 5.3:
             # 双指机械臂在滑动前，先判断另一个机械臂是否为idle状态
-            other_serial_obj = hand_serial_obj_dict.get(self._model.pk + arm_com_1) if kwargs[
-                                                                                           "arm_num"] == 0 else hand_serial_obj_dict.get(
+            other_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com_1)) if kwargs[
+                                                                                                               "arm_num"] == 0 else hand_serial_obj_dict.get(
                 get_hand_serial_key(self._model.pk, arm_com))
             while not other_serial_obj.check_hand_status():
                 time.sleep(0.3)

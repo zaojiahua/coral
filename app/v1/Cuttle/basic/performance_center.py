@@ -256,6 +256,7 @@ class PerformanceCenter(object):
 
     @staticmethod
     def reset_loop_var(start_method, set_fps, set_shot_time):
+        PerformanceCenter.result = {}
         PerformanceCenter.start_method = start_method
         PerformanceCenter.start_number = 0
         PerformanceCenter.end_number = 0

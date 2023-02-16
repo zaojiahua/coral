@@ -47,6 +47,10 @@ class PerformanceMinix(object):
         # 保存原始用户标记的区域，后边areas被改变掉了
         template_area = data.get('icon_areas')
 
+        # 在无法点击起点的时候，重置一下数据，否则使用的是上次的数据
+        PerformanceCenter.reset_loop_var(self.kwargs.get('start_method', 1) - 1, set_fps=data.get("set_fps"),
+                                         set_shot_time=data.get("set_shot_time"))
+
         # 6的算法是图标出现，不需要机械臂实际点击
         if self.kwargs.get('start_method', 1) != 6:
             # 获取refer图的size用于计算裁剪后的补偿
@@ -114,6 +118,9 @@ class PerformanceMinix(object):
 
         # 先记录下裁剪位置的左上点拍摄图下的绝对坐标
         camera_x0, camera_y0 = int(data.get("areas")[0][0] * w), int(data.get("areas")[0][1] * h)
+
+        # 在无法点击起点的时候，重置一下数据，否则使用的是上次的数据
+        PerformanceCenter.reset_loop_var(self.kwargs.get('start_method', 1) - 1, set_fps=data.get("set_fps"), set_shot_time=data.get("set_shot_time"))
 
         # 实时截图
         with Complex_Center(**self.kwargs) as ocr_obj:
@@ -359,9 +366,9 @@ class PerformanceMinix(object):
 
         # 5双摄升级版的柜子，机械臂离设备比较近，等待时间需要长一点，否则机械臂按完以后压力传感器才开始获取压力值
         if CORAL_TYPE == 5:
-            time.sleep(kwargs.get("sleep", 1.3))
+            time.sleep(kwargs.get("sleep", 1.7))
         elif CORAL_TYPE == 5.2:
-            time.sleep(kwargs.get("sleep", 1.3))
+            time.sleep(kwargs.get("sleep", 1.7))
         elif CORAL_TYPE == 5.4:
             time.sleep(kwargs.get("sleep", 2))
         else:

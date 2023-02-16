@@ -279,6 +279,8 @@ MERGE_IMAGE_H = 'app/config/merge_image_h.npy'
 CAMERA_CONFIG_FILE = 'app/config/camera_config.py'
 CAMERA_IN_LOOP = 'camera_in_loop'  # 性能测试控制摄像机是否继续获取图片
 set_global_value(CAMERA_IN_LOOP, False)
+SNAPSHOT_IN_USE = 'snapshot_in_use'
+set_global_value(SNAPSHOT_IN_USE, False)
 
 click_loop_stop_flag = True  # 如果为True, 则停止多次点击
 set_global_value("click_loop_stop_flag", click_loop_stop_flag)

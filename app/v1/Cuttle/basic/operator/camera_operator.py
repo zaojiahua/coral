@@ -3,6 +3,7 @@ import os.path
 import re
 import time
 from collections import deque
+from threading import Lock
 
 import cv2
 import numpy as np
@@ -20,6 +21,7 @@ from app.v1.Cuttle.basic.component.camera_component import camera_start
 
 MoveToPress = 9
 ImageNumberFile = "__number.txt"
+snapshot_lock = Lock()
 
 
 def get_camera_ids():
@@ -104,9 +106,30 @@ class CameraHandler(Handler):
                 self.cache_dict[self._model.pk + camera_id].append(queue.get())
                 current_count += 1
 
+    # 判断是否在获取图片中，原来的g_bExit留下来，可以判断单个相机是否在使用中
     def snap_shot(self):
+        if redis_client.get(SNAPSHOT_IN_USE) == "1":
+            raise CameraInUse()
+
+        if snapshot_lock.acquire():
+            try:
+                redis_client.set(SNAPSHOT_IN_USE, 1)
+                self.snap_shot_exclude()
+            except Exception as e:
+                print('snap shot过程中发生失败', e)
+            finally:
+                redis_client.set(SNAPSHOT_IN_USE, 0)
+                snapshot_lock.release()
+
+    def snap_shot_exclude(self):
         # 摄像头数量不一样的时候，方案不同
         camera_ids = get_camera_ids()
+
+        # 判断相机是否在使用中
+        for camera_id in camera_ids:
+            # 相机正在获取图片的时候 不能再次使用
+            if redis_client.get(f"g_bExit_{camera_id}") == "0":
+                raise CameraInUse()
 
         temporary = False if len(camera_ids) > 1 else self.back_up_dq is None
         sync_camera = True if len(camera_ids) > 1 else False
@@ -117,10 +140,6 @@ class CameraHandler(Handler):
             max_retry = 3
             # 存在初始化失败的可能
             while max_retry > 0:
-                # 相机正在获取图片的时候 不能再次使用
-                if redis_client.get(f"g_bExit_{camera_id}") == "0":
-                    raise CameraInUse()
-
                 redis_client.set(f"camera_loop_{camera_id}", 0)
                 redis_client.set(f'camera_grabbing_{camera_id}', 0)
 

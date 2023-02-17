@@ -271,10 +271,10 @@ class PerformanceCenter(object):
 
     def start_loop(self, start_method=0, set_fps=FpsMax, set_shot_time=(CameraMax / FpsMax)):
         number = 0
-        # 图片保存的路径是固定的
-        self.result = {'url_prefix': "path=" + self.work_path, 'frame_data': []}
         # 修复没有找到起点，数据不对的bug
         self.reset_loop_var(start_method, set_fps, set_shot_time)
+        # 图片保存的路径是固定的
+        self.result = {'url_prefix': "path=" + self.work_path, 'frame_data': []}
 
         self.camera_loop()
 

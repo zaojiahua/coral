@@ -3,7 +3,7 @@ import math
 
 from app.config.setting import CORAL_TYPE
 
-if math.floor(CORAL_TYPE) == 5:
+if math.floor(CORAL_TYPE) == 5 or math.floor(CORAL_TYPE) == 6:
     if platform.system() == 'Linux':
         from app.v1.Cuttle.basic.MvImport.linux.CameraParams_const import MV_USB_DEVICE, MV_GIGE_DEVICE
         from app.v1.Cuttle.basic.MvImport.linux.CameraParams_header import MV_CC_DEVICE_INFO_LIST, MVCC_INTVALUE, \

@@ -364,6 +364,9 @@ class CameraHandler(Handler):
         self.frames.clear()
 
     def get_roi(self, src, multi=True):
+        if CORAL_TYPE == 6.0:
+            return src
+
         ret_src = src
         if int(self._model.y1) == 0 and int(self._model.y2) == 0 and int(self._model.x1) == 0 and int(
                 self._model.x2) == 0:

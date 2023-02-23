@@ -2,6 +2,7 @@ import collections
 import os.path
 import re
 import time
+import traceback
 from collections import deque
 from threading import Lock
 
@@ -117,6 +118,7 @@ class CameraHandler(Handler):
                 self.snap_shot_exclude()
             except Exception as e:
                 print('snap shot过程中发生失败', e)
+                traceback.print_exc()
             finally:
                 redis_client.set(SNAPSHOT_IN_USE, 0)
                 snapshot_lock.release()

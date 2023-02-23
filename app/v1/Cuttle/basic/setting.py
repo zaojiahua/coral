@@ -176,7 +176,7 @@ camera_params_60 = [("OffsetY", 0),
                     ("Width", 2448),
                     ("Height", 2048),
                     ("ExposureTime", 100000.0),
-                    ("Gain", 15),
+                    ("Gain", 15.0),
                     ("AcquisitionFrameRate", 60.0),
                     ("AcquisitionFrameRateEnable", True),
                     ("PixelFormat", 0x01080009, 'enum')]

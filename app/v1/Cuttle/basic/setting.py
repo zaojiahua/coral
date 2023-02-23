@@ -171,7 +171,7 @@ camera_params_54_light = camera_params_54 + [("ExposureTime", 2400.0),
                                              ("AcquisitionFrameRate", 380.0)]
 
 # abot
-camera_params_60 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+camera_params_60 = []
 camera_params_60_light = camera_params_60
 
 high_exposure_params = [("ExposureTime", 200000.0),

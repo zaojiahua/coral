@@ -171,7 +171,15 @@ camera_params_54_light = camera_params_54 + [("ExposureTime", 2400.0),
                                              ("AcquisitionFrameRate", 380.0)]
 
 # abot
-camera_params_60 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+camera_params_60 = [("OffsetY", 0),
+                    ("OffsetX", 0),
+                    ("Width", 2448),
+                    ("Height", 2048),
+                    ("ExposureTime", 100000.0),
+                    ("Gain", 15.0),
+                    ("AcquisitionFrameRate", 60.0),
+                    ("AcquisitionFrameRateEnable", True),
+                    ("PixelFormat", 0x01080009, 'enum')]
 camera_params_60_light = camera_params_60
 
 high_exposure_params = [("ExposureTime", 200000.0),

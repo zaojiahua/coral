@@ -12,7 +12,7 @@ from app.v1.Cuttle.basic.MvImport.HK_import import *
 from app.v1.Cuttle.basic.setting import *
 from redis_init import redis_client
 
-GET_ONE_FRAME_TIMEOUT = 5
+GET_ONE_FRAME_TIMEOUT = 10
 # 统计帧率 多摄的时候，因为在消耗图片的时候，会减少队列中图片的数量，算出来的帧率是某一段时间的帧率，不是拍摄
 # 整个过程中的帧率，所以加入这个数据结构，用来做统计，方便调试和测试性能
 frame_rate_dict = {}

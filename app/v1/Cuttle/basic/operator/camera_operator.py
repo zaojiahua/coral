@@ -2,6 +2,7 @@ import collections
 import os.path
 import re
 import time
+import traceback
 from collections import deque
 from threading import Lock
 
@@ -117,6 +118,7 @@ class CameraHandler(Handler):
                 self.snap_shot_exclude()
             except Exception as e:
                 print('snap shot过程中发生失败', e)
+                traceback.print_exc()
             finally:
                 redis_client.set(SNAPSHOT_IN_USE, 0)
                 snapshot_lock.release()
@@ -362,6 +364,9 @@ class CameraHandler(Handler):
         self.frames.clear()
 
     def get_roi(self, src, multi=True):
+        if CORAL_TYPE == 6.0:
+            return src
+
         ret_src = src
         if int(self._model.y1) == 0 and int(self._model.y2) == 0 and int(self._model.x1) == 0 and int(
                 self._model.x2) == 0:

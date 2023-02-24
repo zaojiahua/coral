@@ -364,3 +364,7 @@ def set_fps_max():
 
 
 set_fps_max()
+
+# 电爪相关
+jaw_serial_obj_dict = {}
+MAX_WIDTH = 50

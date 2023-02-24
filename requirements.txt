@@ -1,3 +1,4 @@
+crcmod==1.7
 mcush==1.5.7
 absl-py==0.7.1
 astor==0.7.1

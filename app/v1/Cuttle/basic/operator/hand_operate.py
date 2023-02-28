@@ -440,8 +440,8 @@ class HandHandler(Handler, DefaultMixin):
         if CORAL_TYPE != 5.3:
             exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com))
         else:
-            if kwargs.get('index', 0) == 0:
-                exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
+            #if kwargs.get('index', 0) == 0:
+            exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
 
         commend[0] = pre_point(commend[0], arm_num=arm_num)
         commend[1] = pre_point(commend[1], arm_num=arm_num)

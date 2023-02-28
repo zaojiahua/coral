@@ -142,6 +142,9 @@ class TestMixin(object):
             response = request(method="POST", url=coral_ocr_url + '?is_test=true', files={"image_body": open(pic_path, "rb")},
                                ip=f"http://{OCR_IP}:8091")
         self.remove_if_exist(pic_path, data.get("input_image"))
+        if 'img_detected' in response:
+            response['data'] = {'img_detected': response['img_detected']}
+            del response['img_detected']
         return response
 
     def remove_if_exist(self, *args):

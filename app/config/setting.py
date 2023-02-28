@@ -67,7 +67,8 @@ CORAL_TYPE_NAME = {
     5.1: 'Tcab_5L',
     5.2: 'Tcab_5se',
     5.3: 'Tcab_5D',
-    5.4: 'Tcab_5pro'
+    5.4: 'Tcab_5pro',
+    6.0: 'ABot',
 }
 
 arm_com = os.environ.get('ARM_COM', '/dev/arm')
@@ -92,6 +93,8 @@ elif CORAL_TYPE == 5.3:
     HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_1]
 elif CORAL_TYPE == 5.4:
     HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_sensor]
+elif CORAL_TYPE == 6.0:
+    HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_1]
 else:
     HARDWARE_MAPPING_LIST = ['1', arm_com, arm_com_sensor]
 

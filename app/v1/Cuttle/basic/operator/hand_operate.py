@@ -863,8 +863,12 @@ class HandHandler(Handler, DefaultMixin):
         判断双指滑动坐标的合理性,
         2022.4.22 目前仅支持双指缩小和放大的坐标合理性判断
         axis：[[左机械臂起点],[左机械臂终点],[右机械臂起点],[右机械臂终点]]
+        判断逻辑: 左机械臂起点终点的X值均需小于右机械臂的起点和终点的X值
+                四个点之间的X轴间距必须保持安全距离
         :return:
         """
+        if axis[0][0] >= axis[2][0] or axis[1][0] > axis[3][0]:
+            raise InvalidCoordinates
         self.judge_diff_x(axis[0][0], axis[2][0])
         self.judge_diff_x(axis[1][0], axis[2][0])
         self.judge_diff_x(axis[0][0], axis[3][0])

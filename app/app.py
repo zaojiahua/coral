@@ -68,7 +68,7 @@ def create_app():
 
     register_extensions(flask_app)
 
-    redis_client.set(SNAPSHOT_IN_USE, 1)
+    redis_client.set(SNAPSHOT_IN_USE, 0)
 
     # 从这个地方开始，恢复上次中断的任务，或者等待执行新的任务
     pane_init()

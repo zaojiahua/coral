@@ -568,7 +568,7 @@ class PerformanceCenter(object):
                     break
                 except IndexError as e:
                     print("error in picture_prepare", repr(e))
-            time.sleep(0.2)
+            time.sleep(0.5)
             max_retry_time -= 1
 
         if picture is not None:

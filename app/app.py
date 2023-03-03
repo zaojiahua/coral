@@ -18,6 +18,8 @@ from app.config.url import bounced_words_url
 from extensions import ma
 from app.v1.eblock.model.bounced_words import BouncedWords
 from app.libs.http_client import _parse_url
+from redis_init import redis_client
+from app.v1.Cuttle.basic.setting import SNAPSHOT_IN_USE
 
 
 def register_blueprints(app: Flask):
@@ -65,6 +67,8 @@ def create_app():
     register_blueprints(flask_app)
 
     register_extensions(flask_app)
+
+    redis_client.set(SNAPSHOT_IN_USE, 0)
 
     # 从这个地方开始，恢复上次中断的任务，或者等待执行新的任务
     pane_init()

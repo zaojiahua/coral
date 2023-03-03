@@ -138,7 +138,8 @@ def pre_point(point, arm_num=0):
         if CORAL_TYPE == 5.3:
             z_point = get_global_value('Z_DOWN_1')
         x_point = HAND_MAX_X - point[0]
-        return [-x_point, -point[1], z_point]
+        y_point = -point[1] + 1
+        return [-x_point, y_point, z_point]
     raise ChooseSerialObjFail
 
 
@@ -440,7 +441,7 @@ class HandHandler(Handler, DefaultMixin):
         if CORAL_TYPE != 5.3:
             exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com))
         else:
-            #if kwargs.get('index', 0) == 0:
+            # if kwargs.get('index', 0) == 0:
             exec_serial_obj, arm_num = judge_start_x(commend[0][0], self._model.pk)
 
         commend[0] = pre_point(commend[0], arm_num=arm_num)

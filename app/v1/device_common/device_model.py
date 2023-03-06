@@ -37,7 +37,7 @@ class DeviceStatus(object):
 
 class Device(BaseModel):
     # attribute that only coral have
-    exclude_list = ["src_list", "has_camera", "has_arm", "flag", "is_bind", "kx1", "kx2", "ky1",
+    exclude_list = ["src_list", "has_camera", "has_arm", "has_jaw", "flag", "is_bind", "kx1", "kx2", "ky1",
                     "ky2", "assis_1", "assis_2", "assis_3", "x1", "x2", "y1", "y2", 'subsidiarydevice',
                     'disconnect_times_timestamp', 'battery_level']
     # device basic attribute
@@ -74,6 +74,7 @@ class Device(BaseModel):
     has_arm = models.BooleanField()
     has_camera = models.BooleanField()
     has_rotate_arm = models.BooleanField()
+    has_jaw = models.BooleanField()
     # 设备左上角点和右下角点的坐标（在摄像机模式下）
     x1 = models.CharField()
     y1 = models.CharField()

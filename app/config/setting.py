@@ -76,6 +76,9 @@ arm_com_1 = os.environ.get('ARM_COM_1', '/dev/arm_1')
 # 命名的时候和arm_com统一
 arm_com_sensor = os.environ.get('ARM_COM_SENSOR', '/dev/arm_sensor')
 arm_com_1_sensor = os.environ.get('ARM_COM_1_SENSOR', '/dev/arm_sensor_1')
+# 电爪
+arm_com_jaw = os.environ.get('ARM_COM_JAW', '/dev/arm_jaw')
+arm_com_1_jaw = os.environ.get('ARM_COM_1_JAW', '/dev/arm_jaw_1')
 rotate_com = os.environ.get('ROTATE_COM', '/dev/rotate')
 usb_power_com = os.environ.get("USB_COM", '/dev/USBPower')
 camera_power_com = os.environ.get('CAMERA_COM', '/dev/CameraPower')
@@ -94,7 +97,7 @@ elif CORAL_TYPE == 5.3:
 elif CORAL_TYPE == 5.4:
     HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_sensor]
 elif CORAL_TYPE == 6.0:
-    HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_1]
+    HARDWARE_MAPPING_LIST = ['1', '2', arm_com, arm_com_1, arm_com_jaw, arm_com_1_jaw]
 else:
     HARDWARE_MAPPING_LIST = ['1', arm_com, arm_com_sensor]
 

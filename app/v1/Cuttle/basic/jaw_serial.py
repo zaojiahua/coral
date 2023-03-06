@@ -78,10 +78,10 @@ class JawSerial:
         return crc_data[2:4] + " " + crc_data[:2]
 
     def generate_order(self, action_prefix="CLOSURE_ORDER_PREFIX", target_data=None):
-        if action_prefix not in JawHandler.__dict__.keys():
+        if action_prefix not in JawSerial.__dict__.keys():
             raise ActionNotAllow
         else:
-            action_prefix = JawHandler.__dict__[action_prefix]
+            action_prefix = JawSerial.__dict__[action_prefix]
         if target_data:
             target_data_to_hex = self.hex_to_str((self.float_to_hex(target_data))).upper()
             crc_data = self.crc16Add(action_prefix + " " + target_data_to_hex)
@@ -98,10 +98,10 @@ class JawSerial:
         return 0
 
     def recv_reply(self, action_type="CLOSURE_ORDER_REPLY", buffer_size=24):
-        if action_type not in JawHandler.__dict__.keys():
+        if action_type not in JawSerial.__dict__.keys():
             raise ActionNotAllow
         else:
-            action_reply = JawHandler.__dict__[action_type]
+            action_reply = JawSerial.__dict__[action_type]
             return_data = self.ser.read(buffer_size)
             str_return_data = str(return_data.hex()).upper()
             if action_reply == str_return_data:
@@ -113,7 +113,7 @@ class JawSerial:
 
 
 if __name__ == '__main__':
-    jaw_obj = JawHandler()
+    jaw_obj = JawSerial()
     jaw_obj.connect("com11")
     jaw_obj.set_jaw_to_spec_width(30)
     time.sleep(2)

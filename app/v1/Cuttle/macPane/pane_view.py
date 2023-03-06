@@ -18,7 +18,7 @@ from serial import SerialException
 
 from app.config.ip import HOST_IP, ADB_TYPE
 from app.config.setting import SUCCESS_PIC_NAME, FAIL_PIC_NAME, LEAVE_PIC_NAME, PANE_LOG_NAME, DEVICE_BRIGHTNESS, \
-    arm_com_1, CORAL_TYPE, arm_com, arm_com_1_sensor, IP_FILE_PATH
+    arm_com_1, CORAL_TYPE, arm_com, arm_com_1_sensor, IP_FILE_PATH, arm_com_1_jaw
 from app.execption.outer.error_code.camera import PerformancePicNotFound, CoordinateConvertFail, CoordinateConvert, \
     MergeShapeNone
 from app.execption.outer.error_code.hands import UsingHandFail, CoordinatesNotReasonable, TcabNotAllowExecThisUnit, \
@@ -31,6 +31,7 @@ from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import camera_start
 from app.v1.Cuttle.basic.operator.hand_operate import hand_init, rotate_hand_init, HandHandler, judge_start_x, \
     pre_point, sensor_init, get_hand_serial_key
+from app.v1.Cuttle.basic.operator.jaw_operate import jaw_init
 from app.v1.Cuttle.basic.calculater_mixin.default_calculate import DefaultMixin
 from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
@@ -202,6 +203,12 @@ class PaneConfigView(MethodView):
             function, attribute = (rotate_hand_init, "has_rotate_arm")
         elif port.split("/")[-1].isdigit():
             function, attribute = (camera_start, "has_camera")
+        # 电爪
+        elif port.startswith('/dev/arm_jaw_'):
+            com_index = arm_com_1_jaw.split('_')[-1]
+            function, attribute = (jaw_init, "has_jaw_" + com_index)
+        elif port.startswith('/dev/arm_jaw'):
+            function, attribute = (jaw_init, 'has_jaw')
         # 传感器
         elif port.startswith('/dev/arm_sensor_'):
             com_index = arm_com_1_sensor.split('_')[-1]

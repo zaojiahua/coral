@@ -9,6 +9,7 @@ from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
 from app.v1.Cuttle.basic.operator.camera_operator import CameraHandler
 from app.v1.Cuttle.basic.operator.complex_operator import ComplexHandler
 from app.v1.Cuttle.basic.operator.hand_operate import HandHandler
+from app.v1.Cuttle.basic.operator.jaw_operate import JawHandler
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 from app.v1.Cuttle.basic.operator.image_operator import ImageHandler
 

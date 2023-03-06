@@ -185,6 +185,8 @@ class Unit(BaseModel):
                     elif Device(pk=self.device_label).has_arm and Device(
                             pk=self.device_label).has_camera and cmd_dict.get("have_second_choice", 0) == 4:
                         target = PROCESSER_LIST[1]
+                    elif Device(pk=self.device_label).has_jaw and cmd_dict.get("have_second_choice", 0) == 6:
+                        target = PROCESSER_LIST[3]
                     else:
                         target = PROCESSER_LIST[0]
                 else:

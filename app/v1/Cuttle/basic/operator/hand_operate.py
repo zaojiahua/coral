@@ -135,9 +135,12 @@ def pre_point(point, arm_num=0):
     if arm_num == 0:
         return [point[0], -point[1], z_point]
     if arm_num == 1:
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE == 5.3 or CORAL_TYPE == 5.5:
             z_point = get_global_value('Z_DOWN_1')
-        x_point = HAND_MAX_X - point[0]
+        if CORAL_TYPE == 5.5:
+            x_point = -HAND_MAX_X + point[0]
+        else:
+            x_point = HAND_MAX_X - point[0]
         y_point = -point[1] + 1
         return [-x_point, y_point, z_point]
     raise ChooseSerialObjFail
@@ -146,7 +149,7 @@ def pre_point(point, arm_num=0):
 def judge_start_x(start_x_point, device_level):
     arm_num = 0
     suffix_key = arm_com
-    if CORAL_TYPE == 5.3:
+    if CORAL_TYPE == 5.3 or CORAL_TYPE == 5.5:
         suffix_key = arm_com if start_x_point < ARM_MOVE_REGION[0] else arm_com_1
         arm_num = 0 if suffix_key == arm_com else 1
     exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_level, suffix_key))
@@ -228,6 +231,8 @@ class HandHandler(Handler, DefaultMixin):
         click_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
         if CORAL_TYPE == 5.3:
             time.sleep(1)
+        if CORAL_TYPE == 5.5:
+            time.sleep(2)
         return click_result
 
     @allot_serial_obj
@@ -275,7 +280,7 @@ class HandHandler(Handler, DefaultMixin):
         if CORAL_TYPE in [5, 5.1, 5.2]:
             return kwargs["exec_serial_obj"].send_and_read(sliding_order)
 
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE == 5.3 or CORAL_TYPE == 5.5:
             # 双指机械臂在滑动前，先判断另一个机械臂是否为idle状态
             other_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com_1)) if kwargs[
                                                                                                                "arm_num"] == 0 else hand_serial_obj_dict.get(
@@ -345,7 +350,7 @@ class HandHandler(Handler, DefaultMixin):
         return 0
 
     def repeat_fast_sliding(self, *args, **kwargs):
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE == 5.3 or CORAL_TYPE == 5.5:
             raise TcabNotAllowExecThisUnit
         # 传入滑动重复次数
         if isinstance(self.speed, int) and 1 <= self.speed <= 50:
@@ -375,7 +380,7 @@ class HandHandler(Handler, DefaultMixin):
     def repeat_click(self, axis, *args, **kwargs):
         # 连续多次点击, 先记录所有要点击的点，记录完成后，进行重复点击
         # 暂不支持5D执行该unit
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE == 5.3 or CORAL_TYPE == 5.5:
             raise TcabNotAllowExecThisUnit
         axis = pre_point(axis[0], arm_num=kwargs["arm_num"])
         exec_serial_obj = kwargs["exec_serial_obj"]
@@ -438,7 +443,7 @@ class HandHandler(Handler, DefaultMixin):
         # 连续滑动方法，多次滑动之间不抬起，执行完不做等待
         arm_num = 0
         exec_serial_obj = None
-        if CORAL_TYPE != 5.3:
+        if CORAL_TYPE != 5.3 and CORAL_TYPE != 5.5:
             exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com))
         else:
             # if kwargs.get('index', 0) == 0:

@@ -36,7 +36,7 @@ from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, set_global_value, \
     COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME, \
-    HAND_MAX_X, Z_POINT_FILE, WAIT_POSITION_FILE
+    Z_POINT_FILE, WAIT_POSITION_FILE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -565,7 +565,7 @@ class PaneClickZDown(MethodView):
         if CORAL_TYPE == 5.3:  # 5d
             if arm_num == 1:
                 exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
-                point = [-(HAND_MAX_X - point[0]), point[1]]
+                point = pre_point([point[0], -point[1]], arm_num=1)
         orders = [
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z + 5, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z, MOVE_SPEED),

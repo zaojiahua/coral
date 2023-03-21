@@ -503,7 +503,7 @@ class CameraHandler(Handler):
                 self.weights = np.ones(result.shape)
                 for y in range(merge_min_y, merge_max_y):
                     weight = (y - merge_min_y) / (merge_max_y - merge_min_y)
-                    if t[1] < merge_min_y:
+                    if t[1] > merge_min_y:
                         result[y, merge_min_x: merge_max_x, :] = \
                             result_copy[y, merge_min_x: merge_max_x, :] * \
                             (1 - weight) + result[y, merge_min_x: merge_max_x, :] * weight
@@ -513,7 +513,7 @@ class CameraHandler(Handler):
                             + result[y, merge_min_x: merge_max_x, :] * (1 - weight)
                     self.weights[y, merge_min_x: merge_max_x, :] = 1 - weight
             else:
-                if t[1] < merge_min_y:
+                if t[1] > merge_min_y:
                     result[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] = \
                         result_copy[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] * \
                         self.weights[merge_min_y: merge_max_y, merge_min_x: merge_max_x, :] + \

@@ -18,7 +18,7 @@ def read_z_down_from_file():
 
 def read_wait_position():
     if not os.path.exists(WAIT_POSITION_FILE):
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE in [5.3, 5.5]:
             set_global_value("arm_wait_point", [0, 0, 0])
             set_global_value("arm_wait_point_1", [0, 0, 0])
         elif CORAL_TYPE in [5, 5.1, 5.4]:
@@ -45,6 +45,13 @@ def read_wait_position():
                                                                get_global_value("arm_wait_point_1")[2],
                                                                MOVE_SPEED)
         set_global_value("arm_wait_position_1", arm_wait_position_1)
+    if CORAL_TYPE == 5.5:
+        arm_wait_position_1 = 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (get_global_value("arm_wait_point_1")[0],
+                                                               get_global_value("arm_wait_point_1")[1],
+                                                               get_global_value("arm_wait_point_1")[2],
+                                                               MOVE_SPEED)
+        set_global_value("arm_wait_position_1", arm_wait_position_1)
+
     return 0
 
 

@@ -636,7 +636,7 @@ class PaneWaitPosition(MethodView):
     # 获取待命位置
     def get(self):
         data = {"arm_wait_point": get_global_value("arm_wait_point")}
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE in [5.3, 5.5]:
             data.update({"arm_wait_point_1": get_global_value("arm_wait_point_1")})
         return jsonify(dict(error_code=0, data=data))
 

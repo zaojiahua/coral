@@ -143,7 +143,9 @@ camera_params_51_light = camera_params_51
 camera_params_53 = camera_params_51
 camera_params_53_light = camera_params_53
 
-
+# 5D plus参数
+camera_params_56 = camera_params_51
+camera_params_56_light = camera_params_53
 # 5L改进版参数
 # camera_params_51 = [("OffsetY", 0),
 #                     ("OffsetX", 0),

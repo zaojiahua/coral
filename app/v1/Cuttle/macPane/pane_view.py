@@ -562,9 +562,9 @@ class PaneClickZDown(MethodView):
         device_obj = Device(pk=device_label)
         click_z = -recv_z_down + float(device_obj.ply) if CORAL_TYPE != 5.3 else -recv_z_down
         exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
-        if CORAL_TYPE == 5.3:  # 5d
-            if arm_num == 1:
-                exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
+        if arm_num == 1:
+            exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
+            if CORAL_TYPE in [5.3, 5.5]:  # 5d
                 point = pre_point([point[0], -point[1]], arm_num=1)
         orders = [
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z + 5, MOVE_SPEED),
@@ -592,7 +592,12 @@ class PaneUpdateZDown(MethodView):
         device_obj = Device(pk=device_label)
         device_obj.update_m_location()
         click_xy = request.get_json()["click_xy"]
-        click_xy_1 = request.get_json()["click_xy_1"] if CORAL_TYPE == 5.3 else click_xy
+        if CORAL_TYPE == 5.3:
+            click_xy_1 = request.get_json()["click_xy_1"]
+        elif CORAL_TYPE == 5.5:
+            click_xy_1 = pre_point(request.get_json()["click_xy_1"], arm_num=1)
+        else:
+            click_xy_1 = click_xy
         with open(Z_POINT_FILE, "w+") as f:
             f.write(f"click_xy={click_xy}\n")
             f.write(f"click_xy_1={click_xy_1}\n")
@@ -614,6 +619,8 @@ class PaneGetZDown(MethodView):
                 click_xy = [90, -120]
             elif CORAL_TYPE in [5, 5.4]:  # 5升级版加了延长杆
                 click_xy = [85, -170]
+            elif CORAL_TYPE == 5.5:
+                click_xy = [85, -300]
             else:  # 5l
                 click_xy = [170, -170]
         else:
@@ -645,18 +652,24 @@ class PaneWaitPosition(MethodView):
         device_label = request.get_json()["device_label"]
         arm_num = request.get_json().get('arm_num', 0)
         wait_point = request.get_json().get('arm_wait_point', 0)
-        exec_serial_obj, now_wait_position, orders = None, None, []
-        if CORAL_TYPE == 5.3 and arm_num == 1:  # 5d
+        exec_serial_obj, now_wait_position, orders, move_list = None, None, [], []
+        if arm_num == 1:
             exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
             now_wait_position = get_global_value("arm_wait_point_1")
-            wait_point[0] = -wait_point[0]
-            move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
-                         [-now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
+            if CORAL_TYPE == 5.3:  # 5d
+                wait_point[0] = -wait_point[0]
+                move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
+                             [-now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
+            if CORAL_TYPE == 5.5:  # 5d plus
+                wait_point = pre_point(wait_point, arm_num=1)
+                move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
+                             [now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
         else:
             exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
             now_wait_position = get_global_value("arm_wait_point")
             move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
                          [now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
+
         for move in move_list:
             orders.append('G01 X%0.1fY%0.1fZ%0.1fF%d \r\n' % (move[0], move[1], move[2], move[3]))
         if (not get_global_value("click_loop_stop_flag")) or (not exec_serial_obj.check_hand_status):
@@ -673,6 +686,9 @@ class PaneWaitPosition(MethodView):
             f.write(f"arm_wait_point={arm_wait_point}\n")
             if CORAL_TYPE == 5.3:
                 arm_wait_point_1 = request.get_json()["arm_wait_point_1"]
+                f.write(f"arm_wait_point_1={arm_wait_point_1}\n")
+            if CORAL_TYPE == 5.5:
+                arm_wait_point_1 = pre_point(request.get_json()["arm_wait_point_1"], arm_num=1)
                 f.write(f"arm_wait_point_1={arm_wait_point_1}\n")
         read_wait_position()
         for obj_key in hand_serial_obj_dict.keys():

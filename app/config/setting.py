@@ -68,7 +68,7 @@ CORAL_TYPE_NAME = {
     5.2: 'Tcab_5se',
     5.3: 'Tcab_5D',
     5.4: 'Tcab_5pro',
-    5.5: 'Tcab-5D plus',
+    5.5: 'Tcab_5D plus',
     6.0: 'ABot',
 }
 

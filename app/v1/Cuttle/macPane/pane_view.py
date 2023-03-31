@@ -739,12 +739,13 @@ class PaneClickCoordinateView(MethodView):
     def post(self):
         device_label = request.get_json()["device_label"]
         point = request.get_json()["point"]
-        judge_ret = DefaultMixin.judge_coordinate_in_arm(point)
+
+        # 获取机械臂执行对象
+        exec_serial_obj, arm_num = judge_start_x(point[0], device_label)
+        judge_ret = DefaultMixin.judge_coordinate_in_arm(point, arm_num=arm_num)
         if not judge_ret:
             return jsonify(dict(error_code=CrossMax.error_code,
                                 description=CrossMax.description))
-        # 获取机械臂执行对象
-        exec_serial_obj, arm_num = judge_start_x(point[0], device_label)
         axis = pre_point([point[0], abs(point[1])], arm_num=arm_num)
 
         # 判断机械臂状态是否在执行循环

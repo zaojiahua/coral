@@ -52,6 +52,13 @@ elif CORAL_TYPE == 5.3:
         ARM_MOVE_REGION = [201, 240]
         DOUBLE_ARM_MOVE_REGION = [365, 239]
         ARM_MAX_X = 340
+elif CORAL_TYPE == 5.5:
+    try:
+        from app.config.ip import ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION, ARM_MAX_X
+    except ImportError:
+        ARM_MOVE_REGION = [170, 650]
+        DOUBLE_ARM_MOVE_REGION = [340, 650]
+        ARM_MAX_X = 340
 elif math.floor(CORAL_TYPE) == 5:
     try:
         from app.config.ip import m_location_center
@@ -192,7 +199,7 @@ except ImportError:
         HAND_MAX_Y = 420  # 5L机械臂Y最大行程
 HAND_MAX_Z = 5
 
-if CORAL_TYPE == 5.3:
+if CORAL_TYPE in [5.3, 5.5]:
     # Z_UP = -22
     Z_UP = 0
     Z_START = -20
@@ -206,6 +213,8 @@ else:
 MAX_SCOPE_5SE = [234, -245]  # 带延长杆的小型龙门架机械臂,行程 [320, 245]
 MAX_SCOPE_5 = [235, -420]  # 带延长杆的Y400龙门架机械臂，行程[320, 423]
 MAX_SCOPE_5L = [320, -420]  # 不带延长杆的Y400龙门架机械臂
+MAX_SCOPE_5DPlus_LEFT = [170, -650]  # 5D plus左机械臂行程
+MAX_SCOPE_5DPlus_RIGHT = [180, -650]  # 5D plus右机械臂行程
 
 DIFF_X = 30
 MOVE_SPEED = 15000

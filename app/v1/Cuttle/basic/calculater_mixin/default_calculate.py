@@ -10,7 +10,8 @@ from app.execption.outer.error_code.hands import CrossMax, CoordinateWrongFormat
     ExecContentFormatError, CoordinatesNotReasonable
 from app.execption.outer.error_code.adb import NoContent
 from app.v1.Cuttle.basic.setting import HAND_MAX_Y, HAND_MAX_X, MOVE_SPEED, Z_MIN_VALUE, get_global_value, \
-    X_SIDE_OFFSET_DISTANCE, MAX_SCOPE_5L, MAX_SCOPE_5, MAX_SCOPE_5SE
+    X_SIDE_OFFSET_DISTANCE, MAX_SCOPE_5L, MAX_SCOPE_5, MAX_SCOPE_5SE, MAX_SCOPE_5DPlus_LEFT, MAX_SCOPE_5DPlus_RIGHT, \
+    ARM_MAX_X
 
 
 class DefaultMixin(object):
@@ -188,7 +189,7 @@ class DefaultMixin(object):
         raise CoordinatesNotReasonable
 
     @staticmethod
-    def judge_coordinate_in_arm(point):
+    def judge_coordinate_in_arm(point, arm_num=0):
         # 判断物理坐标点是否在机械臂范围内
         """
         point: [x, y, z]  物理坐标，单位mm
@@ -202,11 +203,20 @@ class DefaultMixin(object):
             max_scope_x, max_scope_y = MAX_SCOPE_5L
         elif CORAL_TYPE == 5.3:
             max_scope_x, max_scope_y = HAND_MAX_X, -HAND_MAX_Y
+        elif CORAL_TYPE == 5.5:
+            if arm_num == 0:
+                max_scope_x, max_scope_y = MAX_SCOPE_5DPlus_LEFT[0], MAX_SCOPE_5DPlus_LEFT[1]
+            else:
+                max_scope_x, max_scope_y = MAX_SCOPE_5DPlus_RIGHT[0], MAX_SCOPE_5DPlus_RIGHT[1]
         else:
             return False
 
-        if point[0] < 0 or point[0] >= max_scope_x or point[1] <= max_scope_y or point[1] > 0:
-            return False
+        if CORAL_TYPE == 5.5 and arm_num == 1:
+            if point[0] > ARM_MAX_X or point[0] < max_scope_x or point[1] <= max_scope_y or point[1] > 0:
+                return False
+        else:
+            if point[0] < 0 or point[0] >= max_scope_x or point[1] <= max_scope_y or point[1] > 0:
+                return False
 
         return True
 

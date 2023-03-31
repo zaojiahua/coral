@@ -564,8 +564,10 @@ class PaneClickZDown(MethodView):
         exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
         if arm_num == 1:
             exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
-            if CORAL_TYPE in [5.3, 5.5]:  # 5d
+            if CORAL_TYPE == 5.3:  # 5d
                 point = pre_point([point[0], -point[1]], arm_num=1)
+            if CORAL_TYPE == 5.5:
+                point = pre_point(point, arm_num=1)
         orders = [
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z + 5, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z, MOVE_SPEED),
@@ -584,7 +586,7 @@ class PaneUpdateZDown(MethodView):
     def post(self):
         Z_DOWN = -request.get_json()["z_down"]
         PaneUpdateMLocation.update_ip_file('Z_DOWN', Z_DOWN)
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE in [5.3, 5.5]:
             Z_DOWN_1 = - request.get_json()["z_down_1"]
             PaneUpdateMLocation.update_ip_file('Z_DOWN_1', Z_DOWN_1)
         device_label = request.get_json()["device_label"]
@@ -608,11 +610,11 @@ class PaneGetZDown(MethodView):
     def get(self):
         Z_DOWN, Z_DOWN_1 = read_z_down_from_file()
         data = {"z_down": -Z_DOWN}
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE in [5.3, 5.5]:
             data.update({'z_down_1': (-Z_DOWN if not Z_DOWN_1 else -Z_DOWN_1)})
         click_xy = []
         if not os.path.exists(Z_POINT_FILE):
-            if CORAL_TYPE == 5.3:  # 5d
+            if CORAL_TYPE in [5.3, 5.5]:  # 5d
                 click_xy = [100, -100]
                 data.update({'click_xy_1': [200, -100]})
             elif CORAL_TYPE == 5.2:  # 5se
@@ -631,7 +633,7 @@ class PaneGetZDown(MethodView):
                         click_xy = eval(value)
                     if key == 'click_xy_1':
                         click_xy_1 = eval(value)
-                if CORAL_TYPE == 5.3:
+                if CORAL_TYPE in [5.3, 5.5]:
                     data.update({'click_xy_1': click_xy_1})
         data.update({'click_xy': click_xy})
         return jsonify(dict(error_code=0, data=data))
@@ -661,8 +663,8 @@ class PaneWaitPosition(MethodView):
                 move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
                              [-now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
             if CORAL_TYPE == 5.5:  # 5d plus
-                wait_point = pre_point(wait_point, arm_num=1)
-                move_list = [[wait_point[0], wait_point[1], wait_point[2], 8000],
+                wait_point_new = pre_point(wait_point, arm_num=1)
+                move_list = [[wait_point_new[0], wait_point_new[1], wait_point[2], 8000],
                              [now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
         else:
             exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))

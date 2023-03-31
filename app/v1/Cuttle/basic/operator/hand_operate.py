@@ -136,12 +136,13 @@ def pre_point(point, arm_num=0):
         return [point[0], -point[1], z_point]
     if arm_num == 1:
         if CORAL_TYPE == 5.3 or CORAL_TYPE == 5.5:
-            z_point = get_global_value('Z_DOWN_1')
+            z_point = point[2] if len(point) == 3 else get_global_value('Z_DOWN_1')
         if CORAL_TYPE == 5.5:
             x_point = -HAND_MAX_X + point[0]
+            y_point = point[1]
         else:
             x_point = HAND_MAX_X - point[0]
-        y_point = -point[1] + 1
+            y_point = -point[1] + 1
         return [-x_point, y_point, z_point]
     raise ChooseSerialObjFail
 

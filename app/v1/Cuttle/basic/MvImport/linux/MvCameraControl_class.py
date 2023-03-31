@@ -294,4 +294,12 @@ class MvCamera():
         # C原型:int __stdcall MV_CC_GetOptimalPacketSize(void* handle);
         return MvCamCtrldll.MV_CC_GetOptimalPacketSize(self.handle)
 
+    # ch:插值算法类型设置 | en:Interpolation algorithm type setting
+    def MV_CC_SetBayerCvtQuality(self, nBayerCvtQuality):
+        MvCamCtrldll.MV_CC_SetBayerCvtQuality.argtype = (c_void_p, c_uint)
+        MvCamCtrldll.MV_CC_SetBayerCvtQuality.restype = c_uint
+        # C原型:int MV_CC_SetBayerCvtQuality(IN void* handle, IN unsigned int nBayerCvtQuality);
+        return MvCamCtrldll.MV_CC_SetBayerCvtQuality(self.handle, c_uint(nBayerCvtQuality))
+
+
     

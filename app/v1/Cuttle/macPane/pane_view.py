@@ -594,10 +594,8 @@ class PaneUpdateZDown(MethodView):
         device_obj = Device(pk=device_label)
         device_obj.update_m_location()
         click_xy = request.get_json()["click_xy"]
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE in [5.3, 5.5]:
             click_xy_1 = request.get_json()["click_xy_1"]
-        elif CORAL_TYPE == 5.5:
-            click_xy_1 = pre_point(request.get_json()["click_xy_1"], arm_num=1)
         else:
             click_xy_1 = click_xy
         with open(Z_POINT_FILE, "w+") as f:

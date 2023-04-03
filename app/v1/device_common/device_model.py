@@ -512,7 +512,7 @@ class Device(BaseModel):
                         if key == 'm_location':
                             m_l = eval(value)
                             # 5D的z_down用户可以手调，其他柜子确定一个底部的z_down，然后根据不同的厚度动态算
-                            if CORAL_TYPE == 5.3:
+                            if CORAL_TYPE in [5.3, 5.5]:
                                 m_l.append(Z_DOWN)
                             else:
                                 if self.ply:
@@ -540,7 +540,7 @@ class Device(BaseModel):
                 self.screen_z = str(get_global_value('m_location')[2])
                 set_global_value('Z_DOWN', get_global_value('m_location')[2])
             print('new Z_DOWN', get_global_value('Z_DOWN'))
-        elif Z_DOWN and CORAL_TYPE != 5.3:
+        elif Z_DOWN and CORAL_TYPE not in [5.3, 5.5]:
             set_global_value('Z_DOWN', round(Z_DOWN + float(self.ply), 2))
             print('new Z_DOWN', get_global_value('Z_DOWN'))
 

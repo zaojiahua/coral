@@ -12,7 +12,7 @@ def read_z_down_from_file():
         for line in f:
             if "Z_DOWN" in line and line[0] != '#' and "_1" not in line:
                 Z_DOWN = float(line.split('=')[1].split('#')[0])
-            if "Z_DOWN_1" in line and line[0] != '#' and CORAL_TYPE == 5.3:
+            if "Z_DOWN_1" in line and line[0] != '#' and CORAL_TYPE in [5.3, 5.5]:
                 Z_DOWN_1 = float(line.split('=')[1].split('#')[0])
     return Z_DOWN, Z_DOWN_1
 

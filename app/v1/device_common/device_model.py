@@ -499,7 +499,7 @@ class Device(BaseModel):
         Z_DOWN, Z_DOWN_1 = read_z_down_from_file()
         if not Z_DOWN:
             self.logger.error('缺少必要的Z_DOWN相关配置, 请检查配置文件！！！')
-        if CORAL_TYPE == 5.3 and (not Z_DOWN_1):
+        if CORAL_TYPE in [5.3, 5.5] and (not Z_DOWN_1):
             Z_DOWN_1 = Z_DOWN
         # 新的坐标换算和5D保持一样，也可以使用原始的坐标换算方式
         if CORAL_TYPE == 5.3 or COMPUTE_M_LOCATION:
@@ -531,7 +531,7 @@ class Device(BaseModel):
             if m_location is not None:
                 set_global_value('m_location',
                                  [m_location[0], m_location[1], m_location[2] + (float(self.ply) if self.ply else 0)])
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE in [5.3, 5.5]:
             set_global_value('Z_DOWN', Z_DOWN)
             set_global_value('Z_DOWN_1', Z_DOWN_1)
 

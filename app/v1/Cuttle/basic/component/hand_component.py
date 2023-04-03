@@ -1,7 +1,8 @@
 import os
 
 from app.config.setting import IP_FILE_PATH
-from app.v1.Cuttle.basic.setting import set_global_value, CORAL_TYPE, WAIT_POSITION_FILE, get_global_value, MOVE_SPEED
+from app.v1.Cuttle.basic.setting import set_global_value, CORAL_TYPE, WAIT_POSITION_FILE, get_global_value, MOVE_SPEED, \
+    HAND_MAX_X
 
 
 def read_z_down_from_file():
@@ -32,7 +33,10 @@ def read_wait_position():
                 if key == 'arm_wait_point':
                     set_global_value("arm_wait_point", eval(value))
                 if key == 'arm_wait_point_1':
-                    set_global_value("arm_wait_point_1", eval(value))
+                    if CORAL_TYPE == 5.5:
+                        set_global_value("arm_wait_point_1", HAND_MAX_X - eval(value))
+                    else:
+                        set_global_value("arm_wait_point_1", eval(value))
 
     arm_wait_position = 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (get_global_value("arm_wait_point")[0],
                                                          get_global_value("arm_wait_point")[1],

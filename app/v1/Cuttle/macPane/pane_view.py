@@ -645,8 +645,11 @@ class PaneWaitPosition(MethodView):
     # 获取待命位置
     def get(self):
         data = {"arm_wait_point": get_global_value("arm_wait_point")}
-        if CORAL_TYPE in [5.3, 5.5]:
+        if CORAL_TYPE == 5.3:
             data.update({"arm_wait_point_1": get_global_value("arm_wait_point_1")})
+        if CORAL_TYPE == 5.5:
+            arm_wait_point_1 = get_global_value("arm_wait_point_1")
+            data.update({"arm_wait_point_1": arm_wait_point_1})
         return jsonify(dict(error_code=0, data=data))
 
     # 测试待命位置
@@ -686,11 +689,8 @@ class PaneWaitPosition(MethodView):
         arm_wait_point = request.get_json()["arm_wait_point"]
         with open(WAIT_POSITION_FILE, "w+") as f:
             f.write(f"arm_wait_point={arm_wait_point}\n")
-            if CORAL_TYPE == 5.3:
+            if CORAL_TYPE in [5.3, 5.5]:
                 arm_wait_point_1 = request.get_json()["arm_wait_point_1"]
-                f.write(f"arm_wait_point_1={arm_wait_point_1}\n")
-            if CORAL_TYPE == 5.5:
-                arm_wait_point_1 = pre_point(request.get_json()["arm_wait_point_1"], arm_num=1)
                 f.write(f"arm_wait_point_1={arm_wait_point_1}\n")
         read_wait_position()
         for obj_key in hand_serial_obj_dict.keys():
@@ -718,6 +718,8 @@ class PaneGetCoordinateView(MethodView):
                 start_point, end_point = [35, -210], [85, -210]
             elif CORAL_TYPE == 5.1:
                 start_point, end_point = [110, -220], [160, -220]
+            elif CORAL_TYPE == 5.5:
+                start_point, end_point = [100, -350], [200, -350]
             else:
                 start_point, end_point = [50, -120], [100, -120]
         else:
@@ -766,7 +768,7 @@ class PaneClickCoordinateView(MethodView):
         return jsonify(dict(error_code=0))
 
 
-# 5D等自动建立坐标系统
+# 5D等自动建立坐标系统;
 class PaneCoordinateView(MethodView):
     # 确定俩件事情，一个是比例，也就是一个像素等于实际多少毫米。另一个是图片坐标系统下的原点实际的坐标值。
     def post(self):
@@ -783,18 +785,28 @@ class PaneCoordinateView(MethodView):
             for obj_key in hand_serial_obj_dict.keys():
                 # 单指机械臂直接进来
                 if (arm_com in obj_key and not obj_key[-1].isdigit()) or CORAL_TYPE != 5.3:
-                    hand_obj = hand_serial_obj_dict[obj_key]
-                    # 双指的范围更大，点击的时候尽量在中间点击即可
-                    for click_pos in [pos_a, pos_b]:
-                        self.click(*click_pos, hand_obj)
+                    device_label = None
                     request_data = request.get_json() or request.args
                     if request_data is not None:
                         device_label = request_data.get('device_label')
                         device_obj = Device(pk=device_label)
                     elif len(Device.all()) == 1:
                         device_obj = Device.first()
+                        device_label = device_obj.device_label
                     else:
                         return jsonify(dict(error_code=1, description='坐标换算失败！无法获取图片！'))
+                    if CORAL_TYPE == 5.5:
+                        hand_obj = get_hand_serial_key(device_label, arm_com)
+                        self.click(*pos_a, hand_obj)
+                        time.sleep(2)
+                        hand_obj = get_hand_serial_key(device_label, arm_com_1)
+                        handle_pos_b = pre_point(pos_b, arm_num=1)[:2]
+                        self.click(*handle_pos_b, hand_obj, arm_num=1)
+                    else:
+                        hand_obj = hand_serial_obj_dict[obj_key]
+                        # 双指的范围更大，点击的时候尽量在中间点击即可
+                        for click_pos in [pos_a, pos_b]:
+                            self.click(*click_pos, hand_obj)
 
                     # 拍照
                     filename = 'coordinate.png'
@@ -836,8 +848,8 @@ class PaneCoordinateView(MethodView):
 
     # 传入x,y俩个值即可
     @staticmethod
-    def get_click_orders(pos_x, pos_y, hand_obj):
-        z_down = get_global_value('Z_DOWN')
+    def get_click_orders(pos_x, pos_y, hand_obj, arm_num):
+        z_down = get_global_value('Z_DOWN') if arm_num == 0 else get_global_value('Z_DOWN_1')
         z_up = round(z_down + 10, 2)
         wait_position = get_wait_position(hand_obj.ser.port)
         return [f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
@@ -845,8 +857,8 @@ class PaneCoordinateView(MethodView):
                 f"G01 X{pos_x}Y{pos_y}Z{z_up}F15000\r\n",
                 wait_position]
 
-    def click(self, pos_x, pos_y, hand_obj):
-        click_orders = self.get_click_orders(pos_x, pos_y, hand_obj)
+    def click(self, pos_x, pos_y, hand_obj, arm_num=0):
+        click_orders = self.get_click_orders(pos_x, pos_y, hand_obj, arm_num=arm_num)
         for order in click_orders:
             hand_obj.send_single_order(order)
         hand_obj.recv(buffer_size=64)

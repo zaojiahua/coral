@@ -568,6 +568,7 @@ class PaneClickZDown(MethodView):
                 point = pre_point([point[0], -point[1]], arm_num=1)
             if CORAL_TYPE == 5.5:
                 point = pre_point(point, arm_num=1)
+                point[1] = -point[1]
         orders = [
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z + 5, MOVE_SPEED),
             'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (point[0], point[1], click_z, MOVE_SPEED),
@@ -666,7 +667,7 @@ class PaneWaitPosition(MethodView):
                              [-now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
             if CORAL_TYPE == 5.5:  # 5d plus
                 wait_point_new = pre_point(wait_point, arm_num=1)
-                move_list = [[wait_point_new[0], wait_point_new[1], wait_point[2], 8000],
+                move_list = [[wait_point_new[0], -wait_point_new[1], wait_point[2], 8000],
                              [now_wait_position[0], now_wait_position[1], now_wait_position[2], 8000]]
         else:
             exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
@@ -749,6 +750,7 @@ class PaneClickCoordinateView(MethodView):
         if not judge_ret:
             return jsonify(dict(error_code=CrossMax.error_code,
                                 description=CrossMax.description))
+
         axis = pre_point([point[0], abs(point[1])], arm_num=arm_num)
 
         # 判断机械臂状态是否在执行循环
@@ -795,10 +797,10 @@ class PaneCoordinateView(MethodView):
                     else:
                         return jsonify(dict(error_code=1, description='坐标换算失败！无法获取图片！'))
                     if CORAL_TYPE == 5.5:
-                        hand_obj = get_hand_serial_key(device_label, arm_com)
+                        hand_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
                         self.click(*pos_a, hand_obj)
                         time.sleep(2)
-                        hand_obj = get_hand_serial_key(device_label, arm_com_1)
+                        hand_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
                         handle_pos_b = pre_point(pos_b, arm_num=1)[:2]
                         self.click(*handle_pos_b, hand_obj, arm_num=1)
                     else:

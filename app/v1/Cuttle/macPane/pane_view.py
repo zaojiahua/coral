@@ -802,6 +802,7 @@ class PaneCoordinateView(MethodView):
                         time.sleep(2)
                         hand_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
                         handle_pos_b = pre_point(pos_b, arm_num=1)[:2]
+                        handle_pos_b[1] = - handle_pos_b[1]
                         self.click(*handle_pos_b, hand_obj, arm_num=1)
                     else:
                         hand_obj = hand_serial_obj_dict[obj_key]

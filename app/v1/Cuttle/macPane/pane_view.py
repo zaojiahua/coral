@@ -36,7 +36,7 @@ from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, set_global_value, \
     COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME, \
-    Z_POINT_FILE, WAIT_POSITION_FILE
+    Z_POINT_FILE, WAIT_POSITION_FILE, HAND_MAX_X
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -647,6 +647,7 @@ class PaneWaitPosition(MethodView):
             data.update({"arm_wait_point_1": get_global_value("arm_wait_point_1")})
         if CORAL_TYPE == 5.5:
             arm_wait_point_1 = get_global_value("arm_wait_point_1")
+            arm_wait_point_1[0] = HAND_MAX_X - arm_wait_point_1[0]
             data.update({"arm_wait_point_1": arm_wait_point_1})
         return jsonify(dict(error_code=0, data=data))
 

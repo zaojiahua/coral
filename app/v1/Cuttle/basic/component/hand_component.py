@@ -34,7 +34,9 @@ def read_wait_position():
                     set_global_value("arm_wait_point", eval(value))
                 if key == 'arm_wait_point_1':
                     if CORAL_TYPE == 5.5:
-                        set_global_value("arm_wait_point_1", HAND_MAX_X - eval(value))
+                        point = eval(value)
+                        point[0] = HAND_MAX_X - point[0]
+                        set_global_value("arm_wait_point_1", point)
                     else:
                         set_global_value("arm_wait_point_1", eval(value))
 

@@ -799,7 +799,7 @@ class PaneCoordinateView(MethodView):
                     if CORAL_TYPE == 5.5:
                         hand_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
                         self.click(*pos_a, hand_obj)
-                        time.sleep(2)
+                        time.sleep(3)
                         hand_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
                         handle_pos_b = pre_point(pos_b, arm_num=1)[:2]
                         handle_pos_b[1] = - handle_pos_b[1]

@@ -378,7 +378,7 @@ class CameraHandler(Handler):
         # 加入旋转
         camera_rotate = get_global_value('camera_rotate')
         rotate_time = camera_rotate // 90
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE in [5.3, 5.5]:
             rotate_time = 1 - (int(rotate_time))
             result = np.rot90(ret_src, rotate_time)
         else:
@@ -406,7 +406,7 @@ class CameraHandler(Handler):
                 img2 = frames[0]['image']
                 img1 = frames[1]['image']
             # 有时候俩个相机反了，打开这里
-            if CORAL_TYPE == 5.3 and CAMERA_CONVERT:
+            if CORAL_TYPE in [5.3, 5.5] and CAMERA_CONVERT:
                 img1, img2 = img2, img1
 
             host_t_1 = frames[0]['host_timestamp']
@@ -497,7 +497,7 @@ class CameraHandler(Handler):
         # print(merge_min_x, merge_min_y)
         # print(merge_max_x, merge_max_y)
 
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE in [5.3, 5.5]:
             # 最耗时的地方，所以提前计算出来权重
             if self.weights is None:
                 self.weights = np.ones(result.shape)

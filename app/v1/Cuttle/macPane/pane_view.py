@@ -797,13 +797,12 @@ class PaneCoordinateView(MethodView):
                     else:
                         return jsonify(dict(error_code=1, description='坐标换算失败！无法获取图片！'))
                     if CORAL_TYPE == 5.5:
-                        hand_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
-                        self.click(*pos_a, hand_obj)
-                        time.sleep(3)
-                        hand_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))
-                        handle_pos_b = pre_point(pos_b, arm_num=1)[:2]
-                        handle_pos_b[1] = - handle_pos_b[1]
-                        self.click(*handle_pos_b, hand_obj, arm_num=1)
+                        for click_pos in [pos_a, pos_b]:
+                            hand_obj, arm_num = judge_start_x(click_pos[0], device_label)
+                            point = pre_point(*click_pos, arm_num=arm_num)[:2]
+                            point[1] = -point[1]
+                            self.click(*point, hand_obj, arm_num=arm_num)
+                            time.sleep(2)
                     else:
                         hand_obj = hand_serial_obj_dict[obj_key]
                         # 双指的范围更大，点击的时候尽量在中间点击即可

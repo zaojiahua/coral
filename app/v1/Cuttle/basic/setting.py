@@ -315,6 +315,7 @@ REFERENCE_VALUE = {
     "reference_52": {"dpi": 8.502, "m_location": [15, -39]},
     "reference_53": {"dpi": 4.643, "m_location": [-18, 41]},
     "reference_54": {"dpi": 5.502, "m_location": [12, -87]},
+    "reference_55": {"dpi": 5.502, "m_location": [12, -24]},
 }
 
 # USB通断控制相关

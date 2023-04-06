@@ -425,6 +425,10 @@ class CameraHandler(Handler):
                 print('图片拼接发生错误', e)
                 break
 
+            # 5.5拿到的照片是正的，为了和其他的逻辑兼容，直接把相片做一个旋转
+            if CORAL_TYPE == 5.5:
+                result = np.rot90(result, -1)
+
             if not self.original:
                 result = self.get_roi(result)
 

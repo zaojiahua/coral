@@ -647,9 +647,9 @@ class PaneWaitPosition(MethodView):
         if CORAL_TYPE == 5.3:
             data.update({"arm_wait_point_1": get_global_value("arm_wait_point_1")})
         if CORAL_TYPE == 5.5:
-            arm_wait_point_1 = get_global_value("arm_wait_point_1")
-            arm_wait_point_1[0] = HAND_MAX_X - arm_wait_point_1[0]
-            data.update({"arm_wait_point_1": arm_wait_point_1})
+            arm_wait_1 = get_global_value("arm_wait_point_1")
+            data.update({"arm_wait_point_1": [HAND_MAX_X - arm_wait_1[0],
+                                              arm_wait_1[1], arm_wait_1[2]]})
         return jsonify(dict(error_code=0, data=data))
 
     # 测试待命位置
@@ -746,11 +746,6 @@ class PaneClickCoordinateView(MethodView):
 
         # 获取机械臂执行对象
         exec_serial_obj, arm_num = judge_start_x(point[0], device_label)
-        judge_ret = DefaultMixin.judge_coordinate_in_arm(point, arm_num=arm_num)
-        if not judge_ret:
-            return jsonify(dict(error_code=CrossMax.error_code,
-                                description=CrossMax.description))
-
         axis = pre_point([point[0], abs(point[1])], arm_num=arm_num)
 
         # 判断机械臂状态是否在执行循环
@@ -799,7 +794,7 @@ class PaneCoordinateView(MethodView):
                     if CORAL_TYPE == 5.5:
                         for click_pos in [pos_a, pos_b]:
                             hand_obj, arm_num = judge_start_x(click_pos[0], device_label)
-                            point = pre_point(*click_pos, arm_num=arm_num)[:2]
+                            point = pre_point(click_pos, arm_num=arm_num)[:2]
                             point[1] = -point[1]
                             self.click(*point, hand_obj, arm_num=arm_num)
                             time.sleep(2)

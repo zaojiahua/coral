@@ -71,7 +71,7 @@ class HandSerial:
             print("rev: ", rev)
         self.write(deviate_order)
         self.ser.read(8).decode()
-        if CORAL_TYPE == 5.3:
+        if CORAL_TYPE in [5.3, 5.5]:
             time.sleep(3)
         else:
             time.sleep(2)

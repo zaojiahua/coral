@@ -398,7 +398,7 @@ class PaneClickTestView(MethodView):
                     device_scope[2] <= click_y <= device_scope[3]) else "press"
 
             # 带传感器的柜子不允许按压
-            if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+            if CORAL_TYPE in [5, 5.3, 5.4, 5.5] and exec_action == "press":
                 raise TcabNotAllowExecThisUnit
 
             # 其他柜型（5L-5.1，5se-5.2）支持按压，但需要判断按压侧边键位置的合理性
@@ -560,7 +560,7 @@ class PaneClickZDown(MethodView):
         point = request.get_json().get('point')
         device_label = request.get_json()["device_label"]
         device_obj = Device(pk=device_label)
-        click_z = -recv_z_down + float(device_obj.ply) if CORAL_TYPE != 5.3 else -recv_z_down
+        click_z = -recv_z_down + float(device_obj.ply) if CORAL_TYPE not in [5.3, 5.5] else -recv_z_down
         exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com))
         if arm_num == 1:
             exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_label, arm_com_1))

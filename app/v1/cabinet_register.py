@@ -15,7 +15,7 @@ def cabinet_register():
                   "type": CORAL_TYPE_NAME[CORAL_TYPE],
                   "id": cabinet_id,
                   }
-        if CORAL_TYPE > 4 and CORAL_TYPE != 5.3:
+        if CORAL_TYPE > 4 and CORAL_TYPE not in [5.3, 5.5]:
             m_location = None
             try:
                 """

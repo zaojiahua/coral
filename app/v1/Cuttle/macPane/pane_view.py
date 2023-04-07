@@ -436,7 +436,7 @@ class PaneClickTestView(MethodView):
         click: 物理坐标值, [x, y] or [x, y, z]
         需求得最大[min_x, max_x], [mix_y, mix_y]
         """
-        if CORAL_TYPE in [5.3]:
+        if CORAL_TYPE in [5.3, 5.5]:
             min_x = location[0] + roi[1] / dpi
             max_x = location[0] + roi[3] / dpi
             min_y = -location[1] + (w - roi[2]) / dpi

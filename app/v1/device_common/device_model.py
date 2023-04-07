@@ -551,7 +551,7 @@ class Device(BaseModel):
 
         m_location = get_global_value('m_location')
 
-        if CORAL_TYPE == 5.3 or COMPUTE_M_LOCATION:
+        if CORAL_TYPE in [5.3, 5.5] or COMPUTE_M_LOCATION:
             dpi = get_global_value('pane_dpi')
             if dpi is None:
                 raise CoordinateConvert()
@@ -568,7 +568,7 @@ class Device(BaseModel):
                 # 根据不同的旋转角度换算坐标
                 camera_rotate = get_global_value('camera_rotate')
                 rotate_time = camera_rotate // 90
-                if CORAL_TYPE == 5.3:
+                if CORAL_TYPE in [5.3, 5.5]:
                     if rotate_time == 0:
                         x = x + roi[1]
                         y = y + w - roi[2]
@@ -611,7 +611,7 @@ class Device(BaseModel):
                     x = float(x) * (roi[2] - roi[0]) + roi[0]
                     y = float(y) * (roi[3] - roi[1]) + roi[1]
                 # 程序自己的测试（获得dpi以后，自己自动执行了一个测试）走的这里
-                if CORAL_TYPE == 5.3:
+                if CORAL_TYPE in [5.3, 5.5]:
                     click_x = m_location[0] + y / dpi
                     click_y = abs(m_location[1] - (w - x) / dpi)
                     click_z = m_location[2] + float(z)

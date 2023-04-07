@@ -914,7 +914,7 @@ class PaneCoordinateView(MethodView):
             dpi = round(dis / abs(pos_a[0] - pos_b[0]), 3)
             print(f'dpi:{dpi}', '&' * 10)
             # 计算图片的右上角（5D）或者左下角（5系列的其他相机）对应的坐标点，也就是得出来m_location
-            if CORAL_TYPE == 5.3:
+            if CORAL_TYPE in [5.3, 5.5]:
                 cal_point = target_contours[0] if target_contours[0][0][1] < target_contours[1][0][1] else \
                     target_contours[1]
                 m_x = round(pos_a[0] - cal_point[0][1] / dpi, 2)

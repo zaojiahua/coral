@@ -56,9 +56,9 @@ elif CORAL_TYPE == 5.5:
     try:
         from app.config.ip import ARM_MOVE_REGION, DOUBLE_ARM_MOVE_REGION, ARM_MAX_X
     except ImportError:
-        ARM_MOVE_REGION = [170, 650]
-        DOUBLE_ARM_MOVE_REGION = [340, 650]
-        ARM_MAX_X = 340
+        ARM_MOVE_REGION = [173, 650]
+        DOUBLE_ARM_MOVE_REGION = [346, 650]
+        ARM_MAX_X = 346
 elif math.floor(CORAL_TYPE) == 5:
     try:
         from app.config.ip import m_location_center
@@ -213,7 +213,7 @@ else:
 MAX_SCOPE_5SE = [234, -245]  # 带延长杆的小型龙门架机械臂,行程 [320, 245]
 MAX_SCOPE_5 = [235, -420]  # 带延长杆的Y400龙门架机械臂，行程[320, 423]
 MAX_SCOPE_5L = [320, -420]  # 不带延长杆的Y400龙门架机械臂
-MAX_SCOPE_5DPlus_LEFT = [170, -650]  # 5D plus左机械臂行程
+MAX_SCOPE_5DPlus_LEFT = [172, -650]  # 5D plus左机械臂行程
 MAX_SCOPE_5DPlus_RIGHT = [180, -650]  # 5D plus右机械臂行程
 
 DIFF_X = 30
@@ -315,7 +315,7 @@ REFERENCE_VALUE = {
     "reference_52": {"dpi": 8.502, "m_location": [15, -39]},
     "reference_53": {"dpi": 4.643, "m_location": [-18, 41]},
     "reference_54": {"dpi": 5.502, "m_location": [12, -87]},
-    "reference_55": {"dpi": 5.502, "m_location": [12, -24]},
+    "reference_55": {"dpi": 5.604, "m_location": [-48.36, -13.69]},
 }
 
 # USB通断控制相关

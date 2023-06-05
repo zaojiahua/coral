@@ -138,9 +138,9 @@ camera_params_51_light = camera_params_51
 
 
 # 5D 高速版参数
-# camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
 # 5D 高清版参数
-camera_params_53 = camera_params_51
+# camera_params_53 = camera_params_51
 camera_params_53_light = camera_params_53
 
 

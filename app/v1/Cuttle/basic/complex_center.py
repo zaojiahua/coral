@@ -333,6 +333,7 @@ class Complex_Center(object):
 
             return (int(x_shift), int(y_shift))
         except Exception as e:
+            traceback.print_exc()
             print(repr(e))
             raise OcrShiftWrongFormat
 

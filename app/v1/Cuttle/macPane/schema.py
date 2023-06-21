@@ -43,7 +43,7 @@ class PaneSchema(Schema):
 
         # 如果传过来的旋转角度和设置的值不一样，则按照传过来的值旋转，如果一样，就不需要动了
         camera_rotate = data.get('camera_rotate')
-        default_camera_rotate = get_global_value('camera_rotate')
+        default_camera_rotate = get_global_value('camera_rotate', 0)
         try:
             camera_rotate = int(camera_rotate)
             if camera_rotate == -1:

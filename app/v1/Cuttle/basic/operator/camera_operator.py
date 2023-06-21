@@ -376,7 +376,7 @@ class CameraHandler(Handler):
                               int(self._model.x1) - int(self._model.roi_x1): int(self._model.x2) - int(self._model.roi_x1)]
 
         # 加入旋转
-        camera_rotate = get_global_value('camera_rotate')
+        camera_rotate = get_global_value('camera_rotate', 0)
         rotate_time = camera_rotate // 90
         if CORAL_TYPE in [5.3, 5.5]:
             rotate_time = 1 - (int(rotate_time))

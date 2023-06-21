@@ -178,7 +178,7 @@ class Device(BaseModel):
     def device_height(self):
         if self.order == 0:
             # 根据不同的旋转角度换算坐标
-            camera_rotate = get_global_value('camera_rotate')
+            camera_rotate = get_global_value('camera_rotate', 0)
             rotate_time = camera_rotate // 90
             return self.pix_height if math.floor(CORAL_TYPE) != 5 else (
                     int(self.x2) - int(self.x1) if rotate_time in [0, 2] else int(self.y2) - int(self.y1))
@@ -190,7 +190,7 @@ class Device(BaseModel):
         # 区分主机和僚机
         if self.order == 0:
             # 根据不同的旋转角度换算坐标
-            camera_rotate = get_global_value('camera_rotate')
+            camera_rotate = get_global_value('camera_rotate', 0)
             rotate_time = camera_rotate // 90
             return self.pix_width if math.floor(CORAL_TYPE) != 5 else (
                     int(self.y2) - int(self.y1) if rotate_time in [0, 2] else int(self.x2) - int(self.x1))
@@ -566,7 +566,7 @@ class Device(BaseModel):
             # 5D的原点在右上角，其他在左下角，所以计算方法有所不同
             if absolute:
                 # 根据不同的旋转角度换算坐标
-                camera_rotate = get_global_value('camera_rotate')
+                camera_rotate = get_global_value('camera_rotate', 0)
                 rotate_time = camera_rotate // 90
                 if CORAL_TYPE in [5.3, 5.5]:
                     if rotate_time == 0:

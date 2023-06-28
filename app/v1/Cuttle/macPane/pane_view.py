@@ -36,8 +36,9 @@ from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, set_global_value, \
     COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME, \
-    Z_POINT_FILE, WAIT_POSITION_FILE, HAND_MAX_X
+    Z_POINT_FILE, WAIT_POSITION_FILE, HAND_MAX_X, CAMERA_NUM_FILE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
+from app.v1.Cuttle.paneDoor.door_keeper import DoorKeeper
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
 from app.v1.tboard.views.get_dut_progress import get_dut_progress_inner
@@ -1220,3 +1221,28 @@ class PaneMkDir(MethodView):
             os.makedirs(dir_path)
 
         return jsonify(dict(error_code=0, data={'dir_path': f'mk dir {dir_path} success'}))
+
+
+# 双摄硬件下，单双相机的选择
+class PaneCameraSelect(MethodView):
+
+    def post(self):
+        # camera_list = ['1', '2'] or ['1'] or ['2']
+        camera_list = request.get_json()["camera_list"]
+        device_label = request.get_json()["device_label"]
+        with open(CAMERA_NUM_FILE, 'w') as f:
+            for i in camera_list:
+                f.write(i + ' ')
+
+        new_hardware_list = get_global_value('new_hardware_list')
+        for camera_id in new_hardware_list:
+            if not camera_id.isdigit():
+                continue
+            if camera_id not in camera_list:
+                new_hardware_list.remove(camera_id)
+        set_global_value('new_hardware_list', new_hardware_list)
+
+        # 重新初始化相机
+        DoorKeeper.set_arm_or_camera(device_label, is_camera_select=True)
+
+        return jsonify(dict(error_code=0))

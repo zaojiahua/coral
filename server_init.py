@@ -10,6 +10,7 @@ from app.libs.http_client import _parse_url
 from app.v1.Cuttle.boxSvc import box_init
 from app.v1.cabinet_register import cabinet_register
 from app.v1.djob import djob_flush
+from app.v1.Cuttle.basic.component.camera_extend import init_camera_num
 from app.libs.ospathutil import deal_dir_file
 
 PROJECT_SIBLING_DIR = os.path.dirname((os.path.dirname(os.path.abspath(__file__))))
@@ -32,6 +33,9 @@ def server_init():
         os.makedirs(log_path)
     except Exception:
         pass
+
+    # 双摄机柜初始化相机数量
+    init_camera_num()
 
     init_func = [
         cabinet_register,

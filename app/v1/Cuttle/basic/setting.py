@@ -287,6 +287,7 @@ set_global_value("click_loop_stop_flag", click_loop_stop_flag)
 COORDINATE_POINT_FILE = "app/config/point.py"
 Z_POINT_FILE = "app/config/zpoint.py"
 WAIT_POSITION_FILE = "app/config/wait_point.py"
+CAMERA_NUM_FILE = "app/config/camera_num.py"
 
 # 相机外触发端子的指令
 camera_power_open = "01050000ff008c3a"

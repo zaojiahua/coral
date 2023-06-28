@@ -3,7 +3,8 @@ from flask import Blueprint
 from app.v1.Cuttle.macPane.pane_view import PaneOriginalView, PaneAssisDeleteView, FilePushView, PerformancePictureView, \
     AutoPaneBorderView, update_phone_model, PaneClickTestView, PaneCoordinateView, PaneMergePicView, \
     PaneLocateDeviceView, PaneVideoView, PaneUpdateMLocation, PaneClickMLocation, ClickCenterPointFive, PaneUpdateZDown, \
-    PaneClickZDown, PaneGetZDown, PaneClickCoordinateView, PaneGetCoordinateView, PaneMkDir, PaneWaitPosition
+    PaneClickZDown, PaneGetZDown, PaneClickCoordinateView, PaneGetCoordinateView, PaneMkDir, PaneWaitPosition, \
+    PaneCameraSelect
 from app.v1.Cuttle.macPane.pane_view import PaneUpdateView, PaneDeleteView, PaneFunctionView, \
     PaneBorderView
 
@@ -65,3 +66,6 @@ pane.add_url_rule("/click_center_point_five/", view_func=ClickCenterPointFive.as
 
 # 在coral服务器上，创建文件夹的接口
 pane.add_url_rule('/mk_dir/', view_func=PaneMkDir.as_view('mk_dir'))
+
+# 双摄硬件下，选择单摄/双摄拍摄
+pane.add_url_rule('/camera_select/', view_func=PaneCameraSelect.as_view('camera_select'))

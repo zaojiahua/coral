@@ -12,7 +12,6 @@ from app.execption.outer.error_code.camera import NoSrc, CameraInUse
 from app.v1.Cuttle.basic.operator.handler import Handler
 from app.v1.Cuttle.basic.setting import *
 from app.execption.outer.error_code.imgtool import CameraNotResponse
-from app.config.setting import HARDWARE_MAPPING_LIST
 from app.libs import image_utils
 from redis_init import redis_client
 from app.v1.Cuttle.basic.hand_serial import CameraPower
@@ -26,7 +25,7 @@ snapshot_lock = Lock()
 
 def get_camera_ids():
     camera_ids = []
-    for camera_id in HARDWARE_MAPPING_LIST:
+    for camera_id in get_global_value('new_hardware_list'):
         if not camera_id.isdigit():
             continue
         camera_ids.append(camera_id)

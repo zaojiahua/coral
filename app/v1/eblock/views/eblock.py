@@ -161,6 +161,7 @@ class CameraConfigView(MethodView):
 
         try:
             camera_config = {}
+            """
             if os.path.exists(CAMERA_CONFIG_FILE):
                 with open(CAMERA_CONFIG_FILE, 'rt', encoding='utf-8') as f:
                     for line in f.readlines():
@@ -172,9 +173,10 @@ class CameraConfigView(MethodView):
                         else:
                             camera_config[key] = value
             else:
-                for key, value in request_data.items():
-                    if key != 'camera_index':
-                        camera_config[key] = value
+            """
+            for key, value in request_data.items():
+                if key != 'camera_index':
+                    camera_config[key] = value
 
             print(camera_config)
             # 写入到文件中  # 写入到内存中

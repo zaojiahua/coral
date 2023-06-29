@@ -1213,11 +1213,7 @@ class PaneCameraSelect(MethodView):
         device_label = request.get_json()["device_label"]
 
         new_hardware_list = get_global_value('new_hardware_list')
-        for camera_id in new_hardware_list:
-            if not camera_id.isdigit():
-                continue
-            new_hardware_list.remove(camera_id)
-        new_hardware_list += camera_list
+        new_hardware_list = list(filter(lambda x: not x.isdigit(), new_hardware_list)) + camera_list
         set_global_value('new_hardware_list', new_hardware_list)
 
         with open(CAMERA_NUM_FILE, 'w') as f:

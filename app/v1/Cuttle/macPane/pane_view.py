@@ -1198,6 +1198,15 @@ class PaneMkDir(MethodView):
 # 双摄硬件下，单双相机的选择
 class PaneCameraSelect(MethodView):
 
+    def get(self):
+        camera_list = []
+        new_hardware_list = get_global_value('new_hardware_list')
+        for camera_id in new_hardware_list:
+            if not camera_id.isdigit():
+                continue
+            camera_list.append(camera_id)
+        return jsonify(dict(error_code=0, data={"camera_list": camera_list}))
+
     def post(self):
         # camera_list = ['1', '2'] or ['1'] or ['2']
         camera_list = request.get_json()["camera_list"]

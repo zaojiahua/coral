@@ -74,9 +74,9 @@ class DoorKeeper(object):
         return 0
 
     @staticmethod
-    def set_arm_or_camera(device_label, is_camera_select=False):
+    def set_arm_or_camera(device_label):
         executer = ThreadPoolExecutor()
-        port_list = get_global_value('new_hardware_list').copy()
+        port_list = HARDWARE_MAPPING_LIST.copy()
         try:
             # 3型柜以及以上 一个机柜只放一台主机
             available_port_list = list(set(port_list) ^ set(hand_used_list))
@@ -111,9 +111,8 @@ class DoorKeeper(object):
                     ret_kwargs_queue.get()
                     ret_kwargs_queue.get()
                 else:
-                    if not is_camera_select:
-                        future = executer.submit(function, port, device_object, init=True, original=True, feature_test=True)
-                        futures.append(future)
+                    future = executer.submit(function, port, device_object, init=True, original=True, feature_test=True)
+                    futures.append(future)
 
                 hand_used_list.append(port)
 

@@ -1204,7 +1204,7 @@ class PaneCameraSelect(MethodView):
         device_label = request.get_json()["device_label"]
         with open(CAMERA_NUM_FILE, 'w') as f:
             for i in camera_list:
-                f.write(i + ' ')
+                f.write(str(i) + ' ')
 
         new_hardware_list = get_global_value('new_hardware_list')
         for camera_id in new_hardware_list:
@@ -1213,8 +1213,5 @@ class PaneCameraSelect(MethodView):
             if camera_id not in camera_list:
                 new_hardware_list.remove(camera_id)
         set_global_value('new_hardware_list', new_hardware_list)
-
-        # 重新初始化相机
-        DoorKeeper.set_arm_or_camera(device_label, is_camera_select=True)
 
         return jsonify(dict(error_code=0))

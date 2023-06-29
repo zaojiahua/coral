@@ -1211,16 +1211,17 @@ class PaneCameraSelect(MethodView):
         # camera_list = ['1', '2'] or ['1'] or ['2']
         camera_list = request.get_json()["camera_list"]
         device_label = request.get_json()["device_label"]
-        with open(CAMERA_NUM_FILE, 'w') as f:
-            for i in camera_list:
-                f.write(str(i) + ' ')
 
         new_hardware_list = get_global_value('new_hardware_list')
         for camera_id in new_hardware_list:
             if not camera_id.isdigit():
                 continue
-            if camera_id not in camera_list:
-                new_hardware_list.remove(camera_id)
+            new_hardware_list.remove(camera_id)
+        new_hardware_list += camera_list
         set_global_value('new_hardware_list', new_hardware_list)
+
+        with open(CAMERA_NUM_FILE, 'w') as f:
+            for i in camera_list:
+                f.write(str(i) + ' ')
 
         return jsonify(dict(error_code=0))

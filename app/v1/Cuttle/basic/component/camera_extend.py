@@ -5,7 +5,7 @@ from app.v1.Cuttle.basic.setting import CAMERA_NUM_FILE, set_global_value
 
 
 def init_camera_num():
-    new_hardware_mapping_list = HARDWARE_MAPPING_LIST
+    new_hardware_mapping_list = HARDWARE_MAPPING_LIST.copy()
     if CORAL_TYPE in [5, 5.3, 5.4] and os.path.exists(CAMERA_NUM_FILE):
         with open(CAMERA_NUM_FILE, "r") as f:
             content = f.read()

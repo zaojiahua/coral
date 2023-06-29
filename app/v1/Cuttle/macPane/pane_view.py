@@ -398,7 +398,7 @@ class PaneClickTestView(MethodView):
                     device_scope[2] <= click_y <= device_scope[3]) else "press"
 
             # 带传感器的柜子不允许按压
-            if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+            if CORAL_TYPE in [5.3, 5.4] and exec_action == "press":
                 raise TcabNotAllowExecThisUnit
 
             # 其他柜型（5L-5.1，5se-5.2）支持按压，但需要判断按压侧边键位置的合理性

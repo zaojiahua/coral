@@ -36,7 +36,7 @@ from app.v1.Cuttle.basic.operator.handler import Dummy_model
 from app.v1.Cuttle.basic.setting import hand_serial_obj_dict, rotate_hand_serial_obj_dict, get_global_value, \
     MOVE_SPEED, X_SIDE_OFFSET_DISTANCE, PRESS_SIDE_KEY_SPEED, set_global_value, \
     COORDINATE_CONFIG_FILE, MERGE_IMAGE_H, Z_UP, COORDINATE_POINT_FILE, REFERENCE_VALUE, CLICK_TIME, ACCELERATION_TIME, \
-    Z_POINT_FILE, WAIT_POSITION_FILE
+    Z_POINT_FILE, WAIT_POSITION_FILE, CAMERA_NUM_FILE
 from app.v1.Cuttle.macPane.schema import PaneSchema, OriginalPicSchema, CoordinateSchema, ClickTestSchema
 from app.v1.Cuttle.network.network_api import unbind_spec_ip
 from app.v1.device_common.device_model import Device
@@ -398,7 +398,7 @@ class PaneClickTestView(MethodView):
                     device_scope[2] <= click_y <= device_scope[3]) else "press"
 
             # 带传感器的柜子不允许按压
-            if CORAL_TYPE in [5, 5.3, 5.4] and exec_action == "press":
+            if CORAL_TYPE in [5.3, 5.4] and exec_action == "press":
                 raise TcabNotAllowExecThisUnit
 
             # 其他柜型（5L-5.1，5se-5.2）支持按压，但需要判断按压侧边键位置的合理性
@@ -1193,3 +1193,31 @@ class PaneMkDir(MethodView):
             os.makedirs(dir_path)
 
         return jsonify(dict(error_code=0, data={'dir_path': f'mk dir {dir_path} success'}))
+
+
+# 双摄硬件下，单双相机的选择
+class PaneCameraSelect(MethodView):
+
+    def get(self):
+        camera_list = []
+        new_hardware_list = get_global_value('new_hardware_list')
+        for camera_id in new_hardware_list:
+            if not camera_id.isdigit():
+                continue
+            camera_list.append(camera_id)
+        return jsonify(dict(error_code=0, data={"camera_list": camera_list}))
+
+    def post(self):
+        # camera_list = ['1', '2'] or ['1'] or ['2']
+        camera_list = request.get_json()["camera_list"]
+        device_label = request.get_json()["device_label"]
+
+        new_hardware_list = get_global_value('new_hardware_list')
+        new_hardware_list = list(filter(lambda x: not x.isdigit(), new_hardware_list)) + camera_list
+        set_global_value('new_hardware_list', new_hardware_list)
+
+        with open(CAMERA_NUM_FILE, 'w') as f:
+            for i in camera_list:
+                f.write(str(i) + ' ')
+
+        return jsonify(dict(error_code=0))

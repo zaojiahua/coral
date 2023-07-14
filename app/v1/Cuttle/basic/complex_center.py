@@ -273,7 +273,7 @@ class Complex_Center(object):
                                data=kwargs, ip=f"http://{OCR_IP}:8091")
         else:
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
-                               data=kwargs, ip=f"http://{OCR_IP}:8091")
+                               data=kwargs, ip=f"http://{OCR_IP}:8089")
         return response
 
     @handler_switcher
@@ -333,6 +333,7 @@ class Complex_Center(object):
 
             return (int(x_shift), int(y_shift))
         except Exception as e:
+            traceback.print_exc()
             print(repr(e))
             raise OcrShiftWrongFormat
 

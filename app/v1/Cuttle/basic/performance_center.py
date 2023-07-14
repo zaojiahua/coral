@@ -87,7 +87,7 @@ class PerformanceCenter(object):
         if len(get_camera_ids()) > 1:
             return image
         else:
-            camera_rotate = get_global_value('camera_rotate')
+            camera_rotate = get_global_value('camera_rotate', 0)
             rotate_time = camera_rotate // 90
             return np.rot90(self.get_roi(image), -(int(rotate_time) + 1))
 

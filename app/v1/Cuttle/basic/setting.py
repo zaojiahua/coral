@@ -138,9 +138,9 @@ camera_params_51_light = camera_params_51
 
 
 # 5D 高速版参数
-# camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
+camera_params_53 = camera_params_5 + [("AcquisitionFrameRate", 240.0)]
 # 5D 高清版参数
-camera_params_53 = camera_params_51
+# camera_params_53 = camera_params_51
 camera_params_53_light = camera_params_53
 
 
@@ -210,10 +210,10 @@ MOVE_SPEED = 15000
 SWIPE_TIME = 1
 # 按压侧边键参数
 X_SIDE_KEY_OFFSET = 15
-X_SIDE_OFFSET_DISTANCE = 20
+X_SIDE_OFFSET_DISTANCE = 50
 PRESS_SIDE_KEY_SPEED = 3000
 Z_SIDE = -30
-Z_MIN_VALUE = -10
+Z_MIN_VALUE = -50
 # 梯形滑动连带的比例
 trapezoid = 0.9
 wait_time = 1
@@ -287,6 +287,7 @@ set_global_value("click_loop_stop_flag", click_loop_stop_flag)
 COORDINATE_POINT_FILE = "app/config/point.py"
 Z_POINT_FILE = "app/config/zpoint.py"
 WAIT_POSITION_FILE = "app/config/wait_point.py"
+CAMERA_NUM_FILE = "app/config/camera_num.py"
 
 # 相机外触发端子的指令
 camera_power_open = "01050000ff008c3a"

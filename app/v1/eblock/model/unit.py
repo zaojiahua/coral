@@ -238,7 +238,7 @@ class Unit(BaseModel):
 
             # 临时对图片进行旋转
             camera_rotate = self.camera_rotate
-            default_camera_rotate = get_global_value('camera_rotate')
+            default_camera_rotate = get_global_value('camera_rotate', 0)
             try:
                 camera_rotate = int(camera_rotate)
                 if camera_rotate == -1:

@@ -561,8 +561,9 @@ class HandHandler(Handler, DefaultMixin):
         except CoordinatesNotReasonable:
             raise CoordinatesNotReasonable
         ret = PaneClickTestView.exec_hand_action(exec_serial_obj, orders, exec_action, wait_time=self.speed)
-        # 点击完自定义按键复位机械臂
-        redis_client.set(f'{ARM_COUNTER_PREFIX}{exec_serial_obj.com_id}', ARM_RESET_THRESHOLD + 1)
+        if exec_action == "press":
+            # 按压完侧边按键复位机械臂
+            redis_client.set(f'{ARM_COUNTER_PREFIX}{exec_serial_obj.com_id}', ARM_RESET_THRESHOLD + 1)
         return ret
 
     def arm_back_home(self, *args, **kwargs):

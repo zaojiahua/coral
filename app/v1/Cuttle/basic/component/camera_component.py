@@ -193,7 +193,7 @@ def camera_init_hk(camera_id, device_label, **kwargs):
         add_node_ret = CamObj.MV_CC_SetImageNodeNum(30)
     print("增大缓存节点结果", add_node_ret)
 
-    # check_result(CamObj.MV_CC_SetBayerCvtQuality, 2)
+    check_result(CamObj.MV_CC_SetBayerCvtQuality, 2)
 
     stParam = MVCC_INTVALUE()
     memset(byref(stParam), 0, sizeof(MVCC_INTVALUE))

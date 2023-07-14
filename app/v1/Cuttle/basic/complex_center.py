@@ -273,7 +273,7 @@ class Complex_Center(object):
                                data=kwargs, ip=f"http://{OCR_IP}:8091")
         else:
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
-                               data=kwargs, ip=f"http://{OCR_IP}:8089")
+                               data=kwargs, ip=f"http://{OCR_IP}:8091")
         return response
 
     @handler_switcher

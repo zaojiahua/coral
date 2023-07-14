@@ -136,11 +136,11 @@ class TestMixin(object):
             "areas") else data.get("input_image")
         print(pic_path,os.path.exists(pic_path))
         if data.get("ocr_choice") == "2":
-            response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
+            response = request(method="POST", url=coral_ocr_url + '?is_test=true', files={"image_body": open(pic_path, "rb")},
                                ip=f"http://{OCR_IP}:8091")
         else:
-            response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
-                               ip=f"http://{OCR_IP}:8089")
+            response = request(method="POST", url=coral_ocr_url + '?is_test=true', files={"image_body": open(pic_path, "rb")},
+                               ip=f"http://{OCR_IP}:8091")
         self.remove_if_exist(pic_path, data.get("input_image"))
         if 'img_detected' in response:
             response['data'] = {'img_detected': response['img_detected']}

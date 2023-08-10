@@ -392,6 +392,7 @@ class PerformanceSchemaFps(PerformanceSchemaCompare):
 class PerformanceSchema(PerformanceSchemaCompare):
     icon_config = fields.String(required=True, data_key="configFile")
     refer_im = fields.String(required=True, data_key="referImgFile", validate=(verify_exist, verify_image))
+    offset_frame = fields.Int(required=False, data_key="offsetFrame", default=0)
 
     @post_load()
     def explain(self, data, **kwargs):

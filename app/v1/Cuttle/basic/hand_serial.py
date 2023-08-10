@@ -95,6 +95,8 @@ class HandSerial:
         # print(self.ser.read(buffer_size))
         try:
             rev = self.ser.read(buffer_size).decode()
+        except UnicodeDecodeError:
+            rev = None
         except SerialException as se:
             if "no data" not in se.args[0]:
                 raise

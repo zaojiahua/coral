@@ -85,6 +85,8 @@ class HandSerial:
             rev = self.ser.read(buffer_size).decode()
         except SerialException:
             return False
+        except UnicodeDecodeError:
+            return False
         if "Idle" in rev:
             return True
         return False
@@ -97,7 +99,7 @@ class HandSerial:
             if "no data" not in se.args[0]:
                 raise
             rev = "ok"
-        print('返回：', rev, '*' * 10)
+        print(f'{self.ser.port} 返回：', rev, '*' * 10)
         while not is_init and not self.check_hand_status():
             time.sleep(0.2)
         print("当前动作执行完毕")

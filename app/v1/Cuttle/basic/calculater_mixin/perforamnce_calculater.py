@@ -247,7 +247,7 @@ class PerformanceMinix(object):
 
             performance = PerformanceCenter(self._model.pk, data.get("icon_areas"), data.get("refer_im"),
                                             data.get("areas")[0], data.get("threshold", 0.99),
-                                            self.kwargs.get("work_path"))
+                                            self.kwargs.get("work_path"), frame_offset=data.get('offset_frame'))
             performance.end_loop(judge_function)
             self.extra_result = performance.result
             return 0

@@ -75,6 +75,7 @@ class PerformanceCenter(object):
         if not os.path.exists(work_path):
             os.makedirs(work_path)
         self.work_path = work_path
+        self.frame_offset = kwargs.get('frame_offset', 0)
         self.kwargs = kwargs
         # 记录丢帧检测的所有组数
         self.groups = []
@@ -757,8 +758,16 @@ class PerformanceCenter(object):
                 number += 1
             except Exception as e:
                 traceback.print_exc()
-                self.back_up_clear()
-                return 0
+
+        # 性能测试终点用户可以指定帧偏移
+        if self.frame_offset != 0:
+            offset_end_point = self.result['end_point'] + self.frame_offset
+            if offset_end_point < 1:
+                self.result['end_point'] = 1
+            elif offset_end_point > number:
+                self.result['end_point'] = number
+            else:
+                self.result['end_point'] = offset_end_point
 
         # 销毁
         self.back_up_clear()

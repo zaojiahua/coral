@@ -302,7 +302,7 @@ class PerformanceCenter(object):
             if self.start_judge_function(picture, self.threshold, number, timestamp, next_pic):
                 print(f"循环到的次数 :{number} 发现了起始点 :{self.start_number}", '!' * 10)
                 break
-            elif number >= CameraMax / 2:
+            elif number >= (CameraMax / 2 if self.start_method in [0, 3, 4, 5] else CameraMax):
                 print(f'找不到起点了，开始退出。。。{number}')
                 # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
                 self.start_end_loop_not_found(VideoStartPointNotFound())

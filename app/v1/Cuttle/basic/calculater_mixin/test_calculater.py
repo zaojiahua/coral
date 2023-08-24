@@ -137,7 +137,7 @@ class TestMixin(object):
         print(pic_path,os.path.exists(pic_path))
         if data.get("ocr_choice") == "2":
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
-                               ip=f"http://{OCR_IP}:8091")
+                               ip=f"http://{OCR_IP}:8090")
         else:
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
                                ip=f"http://{OCR_IP}:8089")

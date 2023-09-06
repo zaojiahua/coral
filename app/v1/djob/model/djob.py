@@ -6,6 +6,7 @@ import re
 import time
 from datetime import datetime
 from typing import List
+from concurrent.futures import ThreadPoolExecutor, wait
 
 from astra import models
 
@@ -284,21 +285,30 @@ class DJob(BaseModel):
             except Exception as e:
                 print('push performance file:', e)
 
+            # 并发传输图片
+            begin_time = time.time()
+            executor = ThreadPoolExecutor(max_workers=10)
+            all_task = []
+
             # 控制一次传输图片的数量
-            step = 300
+            step = 30
             for i in range(0, len(all_files), step):
                 files = [('files', (os.path.split(file_path)[-1], open(file_path, 'rb'), 'file'))
                          for file_path in all_files[i: i + step]]
 
                 print('性能测试图片上传中')
                 try:
-                    response = request(method="POST", url=rds_performance_pic, data={'rds': rds_id}, files=files)
+                    # response = request(method="POST", url=rds_performance_pic, data={'rds': rds_id}, files=files)
+                    all_task.append(executor.submit(request, method="POST", url=rds_performance_pic, data={'rds': rds_id}, files=files))
                     # print('performance pic', response)
                 except Exception as e:
                     print(e)
                     print('本次图片上传失败！')
                 # 随机一个时间再上传，防止同一时间并发太多
-                time.sleep(random.random())
+                # time.sleep(random.random())
+
+            wait(all_task)
+            print(f'{len(all_files)}张图片上传所用时间：', time.time() - begin_time)
 
             # 删除掉原始图片
             deal_dir_file(work_path)

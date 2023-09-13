@@ -249,6 +249,7 @@ light_pyramid_setting_simple = [0.1, 0.2, 0.4, 0.7, 1.3, 1.6, 1.8]
 handler_config = {
     # 当复合unit中新增adb方法，需要更新此配置文件，指明其可能性
     "point": ("AdbHandler", "HandHandler"),
+    "double_click": ('HandHandler', 'HandHandler'),
     "long_press": ("AdbHandler", "HandHandler"),
     "swipe": ("AdbHandler", "HandHandler"),
     "snap_shot": ("AdbHandler", "CameraHandler"),

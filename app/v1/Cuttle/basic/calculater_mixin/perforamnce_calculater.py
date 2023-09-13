@@ -85,7 +85,7 @@ class PerformanceMinix(object):
                 executer = ThreadPoolExecutor()
                 # 异步延迟执行点击操作，确保另外一个线程的照片可以涵盖到这个操作
                 executer.submit(self.delay_exec,
-                                ocr_obj.point,
+                                ocr_obj.point if self.kwargs.get('start_method') != 6 else ocr_obj.double_click,
                                 is_init=True) \
                     .add_done_callback(executor_callback)
                 # 兼容其他多选区的格式，增加一层

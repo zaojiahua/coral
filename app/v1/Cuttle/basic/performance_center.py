@@ -142,6 +142,7 @@ class PerformanceCenter(object):
         elif self.start_method == 6:
             is_find = self.sensor_press_down(up=True)
             if is_find:
+                self.max_force = 0
                 self.find_times += 1
 
             if self.find_times == 2:

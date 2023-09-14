@@ -139,7 +139,7 @@ class PerformanceCenter(object):
                 self.start_number = number
                 self.start_timestamp = timestamp
                 is_find = True
-        elif self.start_method == 7:
+        elif self.start_method == 6:
             is_find = self.sensor_press_down(up=True)
             if is_find:
                 self.find_times += 1
@@ -326,7 +326,7 @@ class PerformanceCenter(object):
     def start_end_loop_not_found(self, exp=None):
         set_global_value(CAMERA_IN_LOOP, False)
 
-        if 'time_per_unit' not in self.result or self.start_method in [1, 2]:
+        if 'time_per_unit' not in self.result or self.start_method in [1, 2, 6]:
             self.result['time_per_unit'] = round(1 / get_global_value('FpsMax', FpsMax), 4)
 
         if 'picture_count' not in self.result:
@@ -625,7 +625,7 @@ class PerformanceCenter(object):
             find_end = True
 
         # 如果是双摄，图片没有来得及合并，找的起点图片偏小，所以重新设置一下起点的值
-        if self.start_method in [1, 2, 4]:
+        if self.start_method in [1, 2, 4, 6]:
             if 'start_point' in self.result:
                 self.start_number, host_timestamp = self.get_picture_number(self.start_timestamp)
                 self.bias = self.start_number
@@ -662,7 +662,7 @@ class PerformanceCenter(object):
                         picture = cv2.putText(picture.copy(), str(match_ratio), (self.start_area[2] + 10, self.start_area[1] + 10),
                                               cv2.FONT_HERSHEY_COMPLEX, 1.0, (0, 0, 255), 3)
                         picture_info['parameter'] = str(match_ratio)
-                    elif self.start_method in [1, 2]:
+                    elif self.start_method in [1, 2, 6]:
                         host_timestamp = picture_info['host_timestamp']
                         force, timestamp = self.get_force(host_timestamp)
                         timestamp = time.strftime(

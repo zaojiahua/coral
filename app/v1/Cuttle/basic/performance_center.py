@@ -41,6 +41,7 @@ class PerformanceCenter(object):
     sensor_index = None
     force_dict = {}
     result = {}
+    find_times = 0
     # 帧率相关
     set_fps = None
     set_shot_time = None
@@ -138,6 +139,15 @@ class PerformanceCenter(object):
                 self.start_number = number
                 self.start_timestamp = timestamp
                 is_find = True
+        elif self.start_method == 7:
+            is_find = self.sensor_press_down(up=True)
+            if is_find:
+                self.find_times += 1
+
+            if self.find_times == 2:
+                is_find = True
+            else:
+                is_find = False
         else:
             is_find = False
         return is_find
@@ -261,6 +271,7 @@ class PerformanceCenter(object):
         self.start_number = 0
         self.end_number = 0
         self.max_force = 0
+        self.find_times = 0
         self.sensor_index = None
         self.start_timestamp = 0
         self.force_dict = collections.defaultdict(list)
@@ -302,7 +313,7 @@ class PerformanceCenter(object):
             if self.start_judge_function(picture, self.threshold, number, timestamp, next_pic):
                 print(f"循环到的次数 :{number} 发现了起始点 :{self.start_number}", '!' * 10)
                 break
-            elif number >= (CameraMax / 2 if self.start_method in [0, 3, 4, 5] else CameraMax):
+            elif number >= (CameraMax / 2 if self.start_method in [0, 3, 4, 5] else CameraMax * 3):
                 print(f'找不到起点了，开始退出。。。{number}')
                 # 很久都没找到起始点的情况下，停止复制图片，清空back_up_dq，抛异常
                 self.start_end_loop_not_found(VideoStartPointNotFound())

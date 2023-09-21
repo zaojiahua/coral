@@ -294,6 +294,44 @@ class HandHandler(Handler, DefaultMixin):
         return sliding_result
 
     @allot_serial_obj
+    def swipe_click(self, axis, **kwargs):
+        """
+        2023/9/20 滑动后点击，解决全面屏返回桌面需要先上滑出菜单栏再点击桌面键
+        因为要配合性能测试起点（将点击动作力值作为起点）使用，如果允许设置滑动速度，可能会导致力值变化曲线不好判断，所以暂不允许设置
+        滑动速度
+        """
+        for axis_index in range(len(axis)):
+            axis[axis_index] = pre_point(axis[axis_index], arm_num=kwargs["arm_num"])
+
+        sliding_order = self.__sliding_order(axis[0], axis[1], MOVE_SPEED, arm_num=kwargs["arm_num"], end_z=axis[0][2])
+        click_order = self.__single_click_order(axis[2])
+
+        if CORAL_TYPE in [5, 5.1, 5.2]:
+            kwargs["exec_serial_obj"].send_list_order(sliding_order, ignore_reset=True)
+            kwargs["exec_serial_obj"].send_list_order(click_order)
+            kwargs["exec_serial_obj"].recv(buffer_size=128)
+            time.sleep(1)
+            return 0
+
+        if CORAL_TYPE == 5.3:
+            # 双指机械臂在滑动前，先判断另一个机械臂是否为idle状态
+            other_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(self._model.pk, arm_com_1)) if kwargs[
+                                                                                                               "arm_num"] == 0 else hand_serial_obj_dict.get(
+                get_hand_serial_key(self._model.pk, arm_com))
+            while not other_serial_obj.check_hand_status():
+                time.sleep(0.3)
+            kwargs["exec_serial_obj"].send_and_read(sliding_order+click_order)
+            return 0
+
+        kwargs["exec_serial_obj"].send_list_order(sliding_order+click_order)
+
+        # if swipe_speed == 10000:
+        #     self.ignore_reset = True
+
+        sliding_result = kwargs["exec_serial_obj"].recv(**self.kwargs)
+        return sliding_result
+
+    @allot_serial_obj
     def repeat_slide_order(self, axis, *args, **kwargs):
         """
         :param axis: [[起点坐标], [终点坐标]]
@@ -934,7 +972,7 @@ class HandHandler(Handler, DefaultMixin):
         ]
 
     @staticmethod
-    def __sliding_order(start_point, end_point, speed=MOVE_SPEED, normal=True, arm_num=0):
+    def __sliding_order(start_point, end_point, speed=MOVE_SPEED, normal=True, arm_num=0, end_z=Z_UP):
         start_x, start_y, start_z = start_point
         end_x, end_y, _ = end_point
         if normal:
@@ -942,7 +980,7 @@ class HandHandler(Handler, DefaultMixin):
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z + 5, MOVE_SPEED),
                 'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (start_x, start_y, start_z, MOVE_SPEED),
                 'G01 X%0.1fY%0.1fF%d \r\n' % (end_x, end_y, speed),
-                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, Z_UP, MOVE_SPEED),
+                'G01 X%0.1fY%0.1fZ%dF%d \r\n' % (end_x, end_y, end_z, MOVE_SPEED),
             ]
             return commend_list
         else:

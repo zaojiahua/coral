@@ -69,6 +69,10 @@ class DefaultMixin(object):
             opt_type = "click"
             if self.kwargs.get('repeat'):
                 opt_type = "repeat_click"
+        elif "swipe" in raw_commend and "click" in raw_commend:
+            position_args_list = raw_commend.split("click")[-1].strip().split(' ')
+            pix_points = [float(i) for i in position_args_list[:6]]
+            opt_type = "swipe_click"
         elif "swipe" in raw_commend:
             position_args_list = raw_commend.split("swipe")[-1].strip().split(' ')
             try:

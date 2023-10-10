@@ -42,6 +42,8 @@ class PerformanceCenter(object):
     force_dict = {}
     result = {}
     find_times = 0
+    is_back_zero = False
+    back_zero = False
     # 帧率相关
     set_fps = None
     set_shot_time = None
@@ -225,17 +227,22 @@ class PerformanceCenter(object):
                 if len(self.force_dict[force_time]) == 0 or cur_force != self.force_dict[force_time][-1]:
                     self.force_dict[force_time].append(cur_force)
 
-            if cur_force < self.max_force:
-                # 抬起的起始点
-                find_begin_point = True
-                break
-            elif cur_force > self.max_force:
-                self.max_force = cur_force
-                self.sensor_index = index
-                # 按下的起始点
-                if cur_force > 0 and not up:
+            if (not self.find_times) or (self.is_back_zero and self.back_zero):
+                if cur_force < self.max_force:
+                    # 抬起的起始点
                     find_begin_point = True
                     break
+                elif cur_force > self.max_force:
+                    self.max_force = cur_force
+                    self.sensor_index = index
+                    # 按下的起始点
+                    if cur_force > 0 and not up:
+                        find_begin_point = True
+                        break
+            elif self.is_back_zero:
+                if cur_force == 0:
+                    self.back_zero = True
+
             # 等待一会再获取力值
             time.sleep(1 / (get_global_value('FpsMax', FpsMax) * 2))
 
@@ -273,6 +280,8 @@ class PerformanceCenter(object):
         self.end_number = 0
         self.max_force = 0
         self.find_times = 0
+        self.is_back_zero = False
+        self.back_zero = False
         self.sensor_index = None
         self.start_timestamp = 0
         self.force_dict = collections.defaultdict(list)
@@ -286,6 +295,9 @@ class PerformanceCenter(object):
         number = 0
         # 修复没有找到起点，数据不对的bug
         self.reset_loop_var(start_method, set_fps, set_shot_time)
+        if start_method == 6:
+            self.is_back_zero = True
+            self.back_zero = False
         # 图片保存的路径是固定的
         self.result = {'url_prefix': "path=" + self.work_path, 'frame_data': []}
 

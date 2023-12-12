@@ -136,20 +136,20 @@ def pre_point(point, arm_num=0):
         return [point[0], -point[1], z_point]
     if arm_num == 1:
         if CORAL_TYPE == 5.3:
-            z_point = get_global_value('Z_DOWN_1')
+            z_point = point[2] if len(point) == 3 else get_global_value('Z_DOWN_1')
         x_point = HAND_MAX_X - point[0]
         y_point = -point[1] + 1
         return [-x_point, y_point, z_point]
     raise ChooseSerialObjFail
 
 
-def judge_start_x(start_x_point, device_level):
+def judge_start_x(start_x_point, device_level=None):
     arm_num = 0
     suffix_key = arm_com
     if CORAL_TYPE == 5.3:
         suffix_key = arm_com if start_x_point < ARM_MOVE_REGION[0] else arm_com_1
         arm_num = 0 if suffix_key == arm_com else 1
-    exec_serial_obj = hand_serial_obj_dict.get(get_hand_serial_key(device_level, suffix_key))
+    exec_serial_obj = None if not device_level else hand_serial_obj_dict.get(get_hand_serial_key(device_level, suffix_key))
     return exec_serial_obj, arm_num
 
 
@@ -592,6 +592,7 @@ class HandHandler(Handler, DefaultMixin):
             exec_serial_obj, orders, exec_action = PaneClickTestView.get_exec_info(pix_point[0], pix_point[1],
                                                                                    pix_point[2],
                                                                                    self._model.pk,
+                                                                                   input_z = 0,
                                                                                    roi=[float(value) for value in roi],
                                                                                    is_normal_speed=True)
         except TcabNotAllowExecThisUnit:

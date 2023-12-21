@@ -368,7 +368,7 @@ class PaneClickTestView(MethodView):
         return jsonify(dict(error_code=0))
 
     @staticmethod
-    def get_exec_info(click_x, click_y, click_z, device_label, roi=None, is_normal_speed=False):
+    def get_exec_info(click_x, click_y, click_z, device_label, roi=None, is_normal_speed=False, **kwargs):
         """
         return: serial_obj, orders
         """

@@ -12,6 +12,7 @@ from app.libs.http_client import request
 from app.libs.log import setup_logger
 from app.v1.Cuttle.basic.component.hand_component import read_z_down_from_file
 from app.v1.Cuttle.basic.operator.adb_operator import AdbHandler
+from app.v1.Cuttle.basic.operator.hand_operate import judge_start_x
 from app.v1.Cuttle.boxSvc.box_views import get_port_temperature
 from app.v1.device_common.setting import key_map_position, default_key_map_position
 from app.v1.djob import DJobWorker
@@ -637,6 +638,10 @@ class Device(BaseModel):
             click_y = round((m_location[1] + float(self.height) * y_location_per), 2)
             click_z = m_location[2] + float(z)
 
+        if CORAL_TYPE == 5.3:
+            exec_serial_obj, arm_num = judge_start_x(click_x)
+            if arm_num == 1:
+                click_z = get_global_value('Z_DOWN_1') + float(z)
         return click_x, click_y, click_z
 
     # 将截图获取统一到这里

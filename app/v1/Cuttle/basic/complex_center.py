@@ -270,7 +270,7 @@ class Complex_Center(object):
         # if sys.platform.startswith("win"):
         if self.kwargs.get("ocr_choice") == 2:
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
-                               data=kwargs, ip=f"http://{OCR_IP}:8091")
+                               data=kwargs, ip=f"http://{OCR_IP}:8090")
         else:
             response = request(method="POST", url=coral_ocr_url, files={"image_body": open(pic_path, "rb")},
                                data=kwargs, ip=f"http://{OCR_IP}:8089")
